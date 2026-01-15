@@ -31,6 +31,7 @@ import ProjectEmergency from '../components/projects/ProjectEmergency'
 import ProjectPPE from '../components/projects/ProjectPPE'
 import ProjectComms from '../components/projects/ProjectComms'
 import ProjectRisk from '../components/projects/ProjectRisk'
+import ProjectApprovals from '../components/projects/ProjectApprovals'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FolderKanban },
@@ -316,7 +317,7 @@ export default function ProjectView() {
         )}
         
         {activeTab === 'approvals' && (
-          <PlaceholderSection title="Approvals & Signatures" description="Review, approval, and crew acknowledgments." />
+          <ProjectApprovals project={project} onUpdate={handleUpdate} />
         )}
         
         {activeTab === 'tailgate' && (
