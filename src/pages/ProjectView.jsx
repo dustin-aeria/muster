@@ -25,6 +25,7 @@ import {
 import { getProject, updateProject, deleteProject } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
 import ProjectSections from '../components/projects/ProjectSections'
+import ProjectCrew from '../components/projects/ProjectCrew'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FolderKanban },
@@ -282,7 +283,7 @@ export default function ProjectView() {
         )}
         
         {activeTab === 'crew' && (
-          <PlaceholderSection title="Crew & Roles" description="Assign team members and define their responsibilities." />
+          <ProjectCrew project={project} onUpdate={handleUpdate} />
         )}
         
         {activeTab === 'site' && (
