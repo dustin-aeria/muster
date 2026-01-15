@@ -28,6 +28,7 @@ import ProjectCrew from '../components/projects/ProjectCrew'
 import ProjectFlightPlan from '../components/projects/ProjectFlightPlan'
 import ProjectSiteSurvey from '../components/projects/ProjectSiteSurvey'
 import ProjectEmergency from '../components/projects/ProjectEmergency'
+import ProjectPPE from '../components/projects/ProjectPPE'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FolderKanban },
@@ -305,7 +306,7 @@ export default function ProjectView() {
         )}
         
         {activeTab === 'ppe' && (
-          <PlaceholderSection title="PPE Requirements" description="Required personal protective equipment." />
+          <ProjectPPE project={project} onUpdate={handleUpdate} />
         )}
         
         {activeTab === 'comms' && (
