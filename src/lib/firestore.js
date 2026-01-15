@@ -162,6 +162,11 @@ export async function updateClient(id, data) {
   })
 }
 
+export async function deleteClient(id) {
+  const docRef = doc(db, 'clients', id)
+  await deleteDoc(docRef)
+}
+
 // ============================================
 // OPERATORS
 // ============================================
@@ -203,6 +208,11 @@ export async function updateOperator(id, data) {
     ...data,
     updatedAt: serverTimestamp()
   })
+}
+
+export async function deleteOperator(id) {
+  const docRef = doc(db, 'operators', id)
+  await deleteDoc(docRef)
 }
 
 // ============================================
@@ -248,6 +258,11 @@ export async function updateAircraft(id, data) {
   })
 }
 
+export async function deleteAircraft(id) {
+  const docRef = doc(db, 'aircraft', id)
+  await deleteDoc(docRef)
+}
+
 // ============================================
 // FORMS
 // ============================================
@@ -291,4 +306,9 @@ export async function updateForm(id, data) {
     ...data,
     updatedAt: serverTimestamp()
   })
+}
+
+export async function deleteForm(id) {
+  const docRef = doc(db, 'forms', id)
+  await deleteDoc(docRef)
 }
