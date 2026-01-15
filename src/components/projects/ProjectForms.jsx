@@ -117,10 +117,11 @@ const formStatuses = {
 export default function ProjectForms({ project, onUpdate }) {
   const [expandedSections, setExpandedSections] = useState({
     linked: true,
-    available: false
+    available: true
   })
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [customFormName, setCustomFormName] = useState('')
 
   // Initialize forms if not present
   useEffect(() => {
@@ -545,20 +546,32 @@ export default function ProjectForms({ project, onUpdate }) {
             type="text"
             placeholder="Custom form name"
             className="input flex-1"
-            id="customFormName"
-          />
-          <button
-            onClick={() => {
-              const input = document.getElementById('customFormName')
-              if (input.value.trim()) {
+            value={customFormName}
+            onChange={(e) => setCustomFormName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && customFormName.trim()) {
                 addForm({
                   id: `custom_${Date.now()}`,
-                  name: input.value.trim(),
+                  name: customFormName.trim(),
                   description: 'Custom form',
                   category: 'admin',
                   required: false
                 })
-                input.value = ''
+                setCustomFormName('')
+              }
+            }}
+          />
+          <button
+            onClick={() => {
+              if (customFormName.trim()) {
+                addForm({
+                  id: `custom_${Date.now()}`,
+                  name: customFormName.trim(),
+                  description: 'Custom form',
+                  category: 'admin',
+                  required: false
+                })
+                setCustomFormName('')
               }
             }}
             className="btn-secondary"
