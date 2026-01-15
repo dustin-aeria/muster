@@ -27,6 +27,7 @@ import ProjectSections from '../components/projects/ProjectSections'
 import ProjectCrew from '../components/projects/ProjectCrew'
 import ProjectFlightPlan from '../components/projects/ProjectFlightPlan'
 import ProjectSiteSurvey from '../components/projects/ProjectSiteSurvey'
+import ProjectEmergency from '../components/projects/ProjectEmergency'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FolderKanban },
@@ -300,7 +301,7 @@ export default function ProjectView() {
         )}
         
         {activeTab === 'emergency' && (
-          <PlaceholderSection title="Emergency Plan" description="Emergency contacts, procedures, and first aid." />
+          <ProjectEmergency project={project} onUpdate={handleUpdate} />
         )}
         
         {activeTab === 'ppe' && (
