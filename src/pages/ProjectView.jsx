@@ -30,6 +30,7 @@ import ProjectSiteSurvey from '../components/projects/ProjectSiteSurvey'
 import ProjectEmergency from '../components/projects/ProjectEmergency'
 import ProjectPPE from '../components/projects/ProjectPPE'
 import ProjectComms from '../components/projects/ProjectComms'
+import ProjectRisk from '../components/projects/ProjectRisk'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FolderKanban },
@@ -299,7 +300,7 @@ export default function ProjectView() {
         )}
         
         {activeTab === 'risk' && (
-          <PlaceholderSection title="Risk Assessment" description="SORA assessment and HSE hazard identification." />
+          <ProjectRisk project={project} onUpdate={handleUpdate} />
         )}
         
         {activeTab === 'emergency' && (
