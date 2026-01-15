@@ -26,6 +26,7 @@ import ProjectOverview from '../components/projects/ProjectOverview'
 import ProjectSections from '../components/projects/ProjectSections'
 import ProjectCrew from '../components/projects/ProjectCrew'
 import ProjectFlightPlan from '../components/projects/ProjectFlightPlan'
+import ProjectSiteSurvey from '../components/projects/ProjectSiteSurvey'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FolderKanban },
@@ -287,7 +288,7 @@ export default function ProjectView() {
         )}
         
         {activeTab === 'site' && (
-          <PlaceholderSection title="Site Survey" description="Document the operational area, airspace, obstacles, and access." />
+          <ProjectSiteSurvey project={project} onUpdate={handleUpdate} />
         )}
         
         {activeTab === 'flight' && (
