@@ -18,7 +18,6 @@ import {
   Download,
   MoreVertical,
   Trash2,
-  CheckCircle2,
   Circle,
   Loader2
 } from 'lucide-react'
@@ -26,6 +25,7 @@ import { getProject, updateProject, deleteProject } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
 import ProjectSections from '../components/projects/ProjectSections'
 import ProjectCrew from '../components/projects/ProjectCrew'
+import ProjectFlightPlan from '../components/projects/ProjectFlightPlan'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FolderKanban },
@@ -291,7 +291,7 @@ export default function ProjectView() {
         )}
         
         {activeTab === 'flight' && (
-          <PlaceholderSection title="Flight Plan" description="Define aircraft, flight profile, and contingencies." />
+          <ProjectFlightPlan project={project} onUpdate={handleUpdate} />
         )}
         
         {activeTab === 'risk' && (
