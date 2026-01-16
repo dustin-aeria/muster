@@ -535,10 +535,14 @@ export default function ProjectHSERisk({ project, onUpdate }) {
     matrix: false,
     review: true
   })
+  const [initialized, setInitialized] = useState(false)
 
-  // Initialize if not present
+  // Initialize if not present - using safer pattern
   useEffect(() => {
+    if (initialized || !project) return
+
     if (!project.hseRiskAssessment) {
+      setInitialized(true)
       onUpdate({
         hseRiskAssessment: {
           hazards: [],
@@ -550,8 +554,13 @@ export default function ProjectHSERisk({ project, onUpdate }) {
           approvalDate: ''
         }
       })
+    } else {
+      setInitialized(true)
     }
-  }, [project.hseRiskAssessment, onUpdate])
+  }, [initialized, project, onUpdate])
+
+  // Guard clause for loading state
+  if (!project) return <div className="p-4 text-gray-500">Loading...</div>
 
   const hseRisk = project.hseRiskAssessment || { hazards: [] }
   const hazards = hseRisk.hazards || []
@@ -615,7 +624,7 @@ export default function ProjectHSERisk({ project, onUpdate }) {
           </span>
         </div>
         <p className="text-sm text-gray-600">
-          Identify workplace hazards, assess risks using the 5×5 matrix, and apply the hierarchy of controls 
+          Identify workplace hazards, assess risks using the 5Ã—5 matrix, and apply the hierarchy of controls 
           to reduce residual risk to acceptable levels.
         </p>
       </div>
