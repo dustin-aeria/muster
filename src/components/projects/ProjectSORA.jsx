@@ -378,11 +378,26 @@ STEP 3: FINAL GRC
 -----------------`
 
   const mits = sora.mitigations || {}
-  if (mits.M1A?.enabled) report += `\nM1(A) Sheltering: ${mits.M1A.robustness}`
-  if (mits.M1B?.enabled) report += `\nM1(B) Operational Restrictions: ${mits.M1B.robustness}`
-  if (mits.M1C?.enabled) report += `\nM1(C) Ground Observers: ${mits.M1C.robustness}`
-  if (mits.M2?.enabled) report += `\nM2 Impact Dynamics: ${mits.M2.robustness}`
-  report += `\nM3 ERP: ${mits.M3?.enabled ? 'Applied' : 'NOT APPLIED (+1 penalty)'}`
+  let mitigationsApplied = false
+  if (mits.M1A?.enabled && mits.M1A.robustness !== 'none') {
+    report += `\nM1(A) Sheltering: ${mits.M1A.robustness} (${mits.M1A.robustness === 'low' ? '-1' : '-2'} GRC)`
+    mitigationsApplied = true
+  }
+  if (mits.M1B?.enabled && mits.M1B.robustness !== 'none') {
+    report += `\nM1(B) Operational Restrictions: ${mits.M1B.robustness} (${mits.M1B.robustness === 'medium' ? '-1' : '-2'} GRC)`
+    mitigationsApplied = true
+  }
+  if (mits.M1C?.enabled && mits.M1C.robustness === 'low') {
+    report += `\nM1(C) Ground Observers: low (-1 GRC)`
+    mitigationsApplied = true
+  }
+  if (mits.M2?.enabled && mits.M2.robustness !== 'none') {
+    report += `\nM2 Impact Dynamics: ${mits.M2.robustness} (${mits.M2.robustness === 'medium' ? '-1' : '-2'} GRC)`
+    mitigationsApplied = true
+  }
+  if (!mitigationsApplied) {
+    report += `\nNo mitigations applied`
+  }
   report += `\nFinal GRC: ${finalGRC}
 
 STEPS 4-6: AIR RISK
@@ -400,7 +415,8 @@ STEP 8: CONTAINMENT
 -------------------
 Adjacent Area: ${populationCategories[sora.adjacentAreaPopulation]?.label || sora.adjacentAreaPopulation}
 Adjacent Distance: ${(adjacentDistance / 1000).toFixed(1)} km
-Robustness: ${sora.containment?.robustness || 'none'}
+Required Robustness: ${calculations.requiredContainment || 'low'}
+Actual Robustness: ${sora.containment?.robustness || 'none'}
 
 STEP 9: OSO COMPLIANCE
 ----------------------`
@@ -410,7 +426,7 @@ STEP 9: OSO COMPLIANCE
     const required = oso.requirements[sail]
     if (required === 'O') return
     const compliance = checkOSOCompliance(oso, sail, osoData.robustness || 'none')
-    report += `\n${oso.id}: ${compliance.compliant ? 'âœ“' : 'âœ—'} (Req: ${required}, Actual: ${osoData.robustness || 'none'})`
+    report += `\n${oso.id}: ${compliance.compliant ? '[OK]' : '[GAP]'} (Req: ${required}, Actual: ${osoData.robustness || 'none'})`
   })
 
   report += `\n\n================================\nEND OF REPORT`
@@ -664,7 +680,7 @@ export default function ProjectSORA({ project, onUpdate }) {
 
   const handleExport = () => {
     const report = generateSORAReport(project, sora, {
-      intrinsicGRC, finalGRC, residualARC, sail, adjacentDistance, osoGapCount
+      intrinsicGRC, finalGRC, residualARC, sail, adjacentDistance, osoGapCount, requiredContainment
     })
     const blob = new Blob([report], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
