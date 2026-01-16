@@ -19,6 +19,9 @@ import {
   CheckCircle2
 } from 'lucide-react'
 
+// Import population categories from SORA config for consistency
+import { populationCategories } from '../../lib/soraConfig'
+
 const obstacleTypes = [
   { value: 'tower', label: 'Tower/Mast', icon: Radio },
   { value: 'powerline', label: 'Power Lines', icon: Radio },
@@ -54,6 +57,7 @@ const groundConditions = [
 export default function ProjectSiteSurvey({ project, onUpdate }) {
   const [expandedSections, setExpandedSections] = useState({
     location: true,
+    population: true,  // NEW: Population section expanded by default
     airspace: true,
     obstacles: true,
     access: true,
@@ -73,6 +77,14 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
             coordinates: { lat: '', lng: '' },
             elevation: '',
             description: ''
+          },
+          // NEW: Population density for SORA integration
+          population: {
+            category: 'sparsely',  // Default to sparsely populated
+            justification: '',
+            source: 'visual',  // visual | statscan | map | other
+            adjacentCategory: 'sparsely',  // For containment calculations
+            adjacentJustification: ''
           },
           airspace: {
             classification: 'G',
@@ -115,6 +127,21 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
         }
       })
     }
+    // Migration: Add population field if missing from existing surveys
+    else if (!project.siteSurvey.population) {
+      onUpdate({
+        siteSurvey: {
+          ...project.siteSurvey,
+          population: {
+            category: 'sparsely',
+            justification: '',
+            source: 'visual',
+            adjacentCategory: 'sparsely',
+            adjacentJustification: ''
+          }
+        }
+      })
+    }
   }, [project.siteSurvey])
 
   const siteSurvey = project.siteSurvey || {}
@@ -140,6 +167,13 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
         ...(siteSurvey.location || {}),
         coordinates: { ...(siteSurvey.location?.coordinates || {}), [field]: value }
       }
+    })
+  }
+
+  // NEW: Update population data
+  const updatePopulation = (field, value) => {
+    updateSiteSurvey({
+      population: { ...(siteSurvey.population || {}), [field]: value }
     })
   }
 
@@ -343,6 +377,125 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                 className="input min-h-[80px]"
                 placeholder="Describe the operational area, terrain, notable features..."
               />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* NEW: Population Density Section */}
+      <div className="card">
+        <button
+          onClick={() => toggleSection('population')}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Users className="w-5 h-5 text-aeria-blue" />
+            Population Density
+            <span className="text-xs font-normal text-gray-500 bg-blue-100 px-2 py-0.5 rounded">Used by SORA</span>
+          </h2>
+          {expandedSections.population ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </button>
+
+        {expandedSections.population && (
+          <div className="mt-4 space-y-4">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                Population density determines the Ground Risk Class (GRC) in SORA assessment. 
+                Select the category that best represents the operational area during flight operations.
+              </p>
+            </div>
+
+            {/* Operational Area Population */}
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h3 className="font-medium text-gray-900 mb-3">Operational Area (iGRC Footprint)</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Population Density Category</label>
+                  <select
+                    value={siteSurvey.population?.category || 'sparsely'}
+                    onChange={(e) => updatePopulation('category', e.target.value)}
+                    className="input"
+                  >
+                    {populationCategories.map(pop => (
+                      <option key={pop.value} value={pop.value}>
+                        {pop.label} ({pop.density})
+                      </option>
+                    ))}
+                  </select>
+                  {siteSurvey.population?.category && (
+                    <div className="mt-2 p-2 bg-white rounded border border-gray-200">
+                      <p className="text-xs text-gray-600">
+                        <strong>Description:</strong> {populationCategories.find(p => p.value === siteSurvey.population?.category)?.description}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        <strong>Examples:</strong> {populationCategories.find(p => p.value === siteSurvey.population?.category)?.examples}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="label">Data Source</label>
+                  <select
+                    value={siteSurvey.population?.source || 'visual'}
+                    onChange={(e) => updatePopulation('source', e.target.value)}
+                    className="input"
+                  >
+                    <option value="visual">Visual Assessment (Site Survey)</option>
+                    <option value="statscan">Statistics Canada Data</option>
+                    <option value="map">Population Density Map</option>
+                    <option value="client">Client Provided</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label">Justification</label>
+                  <textarea
+                    value={siteSurvey.population?.justification || ''}
+                    onChange={(e) => updatePopulation('justification', e.target.value)}
+                    className="input min-h-[60px]"
+                    placeholder="Explain how you determined this population category (e.g., 'Industrial site with controlled access, no public present during operations')"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Adjacent Area Population */}
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h3 className="font-medium text-gray-900 mb-3">Adjacent Area (Containment Buffer)</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                The adjacent area extends beyond the operational boundary (typically 3 minutes of flight at max speed). 
+                This affects containment requirements in SORA Step 8.
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Adjacent Area Population Category</label>
+                  <select
+                    value={siteSurvey.population?.adjacentCategory || 'sparsely'}
+                    onChange={(e) => updatePopulation('adjacentCategory', e.target.value)}
+                    className="input"
+                  >
+                    {populationCategories.map(pop => (
+                      <option key={pop.value} value={pop.value}>
+                        {pop.label} ({pop.density})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label">Adjacent Area Notes</label>
+                  <textarea
+                    value={siteSurvey.population?.adjacentJustification || ''}
+                    onChange={(e) => updatePopulation('adjacentJustification', e.target.value)}
+                    className="input min-h-[60px]"
+                    placeholder="Describe what surrounds the operational area (e.g., 'Forest to north and west, rural residential to south, highway 2km east')"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}
