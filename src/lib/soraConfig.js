@@ -13,32 +13,32 @@ export const populationCategories = {
     description: 'Access controlled, no uninvolved persons'
   },
   remote: { 
-    label: 'Remote (< 5 ppl/km²)', 
+    label: 'Remote (< 5 ppl/kmÂ²)', 
     density: 5,
     description: 'Sparsely populated wilderness'
   },
   lightly: { 
-    label: 'Lightly Populated (< 50 ppl/km²)', 
+    label: 'Lightly Populated (< 50 ppl/kmÂ²)', 
     density: 50,
     description: 'Rural areas with scattered homes'
   },
   sparsely: { 
-    label: 'Sparsely Populated (< 500 ppl/km²)', 
+    label: 'Sparsely Populated (< 500 ppl/kmÂ²)', 
     density: 500,
     description: 'Small towns, rural residential'
   },
   suburban: { 
-    label: 'Suburban (< 5,000 ppl/km²)', 
+    label: 'Suburban (< 5,000 ppl/kmÂ²)', 
     density: 5000,
     description: 'Suburban residential areas'
   },
   highdensity: { 
-    label: 'High Density Metro (< 50,000 ppl/km²)', 
+    label: 'High Density Metro (< 50,000 ppl/kmÂ²)', 
     density: 50000,
     description: 'Urban city centers'
   },
   assembly: { 
-    label: 'Assembly of People (> 50,000 ppl/km²)', 
+    label: 'Assembly of People (> 50,000 ppl/kmÂ²)', 
     density: 100000,
     description: 'Crowds, events, stadiums'
   }
@@ -49,31 +49,31 @@ export const populationCategories = {
 // ============================================
 export const uaCharacteristics = {
   '1m_25ms': { 
-    label: '≤1m / ≤25 m/s', 
+    label: 'â‰¤1m / â‰¤25 m/s', 
     maxDimension: 1, 
     maxSpeed: 25,
     description: 'Small consumer drones'
   },
   '3m_35ms': { 
-    label: '≤3m / ≤35 m/s', 
+    label: 'â‰¤3m / â‰¤35 m/s', 
     maxDimension: 3, 
     maxSpeed: 35,
     description: 'Medium commercial UAS'
   },
   '8m_75ms': { 
-    label: '≤8m / ≤75 m/s', 
+    label: 'â‰¤8m / â‰¤75 m/s', 
     maxDimension: 8, 
     maxSpeed: 75,
     description: 'Large industrial UAS'
   },
   '20m_120ms': { 
-    label: '≤20m / ≤120 m/s', 
+    label: 'â‰¤20m / â‰¤120 m/s', 
     maxDimension: 20, 
     maxSpeed: 120,
     description: 'Large fixed-wing UAS'
   },
   '40m_200ms': { 
-    label: '≤40m / ≤200 m/s', 
+    label: 'â‰¤40m / â‰¤200 m/s', 
     maxDimension: 40, 
     maxSpeed: 200,
     description: 'Very large UAS'
@@ -238,7 +238,7 @@ export const tmprDefinitions = {
 
 // ============================================
 // SAIL MATRIX (Table 4)
-// Final GRC (rows) × Residual ARC (columns) = SAIL
+// Final GRC (rows) Ã— Residual ARC (columns) = SAIL
 // ============================================
 export const sailMatrix = {
   1: { 'ARC-a': 'I', 'ARC-b': 'I', 'ARC-c': 'II', 'ARC-d': 'IV' },
@@ -515,7 +515,7 @@ export function getSAIL(finalGRC, residualARC) {
  * @returns {number} Distance in meters (capped at 35km)
  */
 export function calculateAdjacentAreaDistance(maxSpeed) {
-  // 3 minutes × max speed, capped at 35km
+  // 3 minutes Ã— max speed, capped at 35km
   const distance = maxSpeed * 180 // 3 min = 180 seconds
   return Math.min(distance, 35000) // Cap at 35km
 }
