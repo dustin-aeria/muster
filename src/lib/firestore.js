@@ -65,13 +65,12 @@ const getDefaultSoraStructure = () => ({
   populationSource: 'manual',      // manual | siteSurvey
   aircraftSource: 'manual',        // manual | flightPlan
   
-  // Step 3: Ground Risk Mitigations
+  // Step 3: Ground Risk Mitigations (SORA 2.5 Annex B - M3 removed)
   mitigations: {
     M1A: { enabled: false, robustness: 'none', evidence: '' },
     M1B: { enabled: false, robustness: 'none', evidence: '' },
     M1C: { enabled: false, robustness: 'none', evidence: '' },
-    M2: { enabled: false, robustness: 'none', evidence: '' },
-    M3: { enabled: true, robustness: 'low', evidence: 'ERP documented' }
+    M2: { enabled: false, robustness: 'none', evidence: '' }
   },
   
   // Steps 4-6: Air Risk
@@ -567,8 +566,7 @@ export function migrateProjectToDecoupledStructure(project) {
       M1A: { enabled: false, robustness: 'none', evidence: '' },
       M1B: { enabled: false, robustness: 'none', evidence: '' },
       M1C: { enabled: false, robustness: 'none', evidence: '' },
-      M2: { enabled: false, robustness: 'none', evidence: '' },
-      M3: { enabled: true, robustness: 'low', evidence: 'ERP documented' }
+      M2: { enabled: false, robustness: 'none', evidence: '' }
     },
     initialARC: oldSora.initialARC || 'ARC-b',
     tmpr: oldSora.tmpr || { enabled: true, type: 'VLOS', robustness: 'low', evidence: '' },
