@@ -111,9 +111,67 @@ const mapPopulationCategory = (siteSurveyCategory) => {
 }
 
 // ============================================
+// HELPER: Calculate Suggested ARC per Figure 6
+// Based on altitude, airspace type, and environment
+// ============================================
+const calculateSuggestedARC = (altitudeAGL, airspaceType, isAirportEnv, isUrban) => {
+  // Convert meters to feet for comparison (500 ft = 152m threshold)
+  const altitudeFt = altitudeAGL * 3.28084
+  
+  // Step 1: Atypical airspace (segregated/restricted) = ARC-a
+  if (airspaceType === 'atypical' || airspaceType === 'segregated') {
+    return { arc: 'ARC-a', reason: 'Atypical/segregated airspace' }
+  }
+  
+  // Step 2: Very high altitude (> FL600) = ARC-b (rare case)
+  if (altitudeFt > 60000) {
+    return { arc: 'ARC-b', reason: 'Above FL600' }
+  }
+  
+  // Step 3: Airport/Heliport environment
+  if (isAirportEnv) {
+    if (airspaceType === 'controlled' || airspaceType === 'class_b' || 
+        airspaceType === 'class_c' || airspaceType === 'class_d') {
+      return { arc: 'ARC-d', reason: 'Airport environment in controlled airspace' }
+    }
+    return { arc: 'ARC-c', reason: 'Airport environment' }
+  }
+  
+  // Step 4: Above 500 ft AGL (152m)
+  if (altitudeFt > 500) {
+    if (airspaceType === 'mode_c_veil' || airspaceType === 'tmz') {
+      return { arc: 'ARC-c', reason: 'Above 500ft AGL in Mode-C Veil/TMZ' }
+    }
+    if (airspaceType === 'controlled') {
+      return { arc: 'ARC-d', reason: 'Above 500ft AGL in controlled airspace' }
+    }
+    if (isUrban) {
+      return { arc: 'ARC-c', reason: 'Above 500ft AGL over urban area' }
+    }
+    return { arc: 'ARC-c', reason: 'Above 500ft AGL' }
+  }
+  
+  // Step 5: Below 500 ft AGL (152m)
+  if (airspaceType === 'mode_c_veil' || airspaceType === 'tmz') {
+    return { arc: 'ARC-c', reason: 'Below 500ft AGL in Mode-C Veil/TMZ' }
+  }
+  if (airspaceType === 'controlled') {
+    return { arc: 'ARC-c', reason: 'Below 500ft AGL in controlled airspace' }
+  }
+  if (isUrban) {
+    return { arc: 'ARC-c', reason: 'Below 500ft AGL over urban area' }
+  }
+  
+  // Default: Low altitude, uncontrolled, rural = ARC-b
+  return { arc: 'ARC-b', reason: 'Below 500ft AGL in uncontrolled airspace over rural area' }
+}
+
+// ============================================
 // VALIDATION STATUS COMPONENT
 // ============================================
-const ValidationStatus = ({ sail, osoCompliance, containmentCompliant, outsideScope }) => {
+const ValidationStatus = ({ sail, osoCompliance, containmentCompliant, outsideScope, onViewGaps }) => {
+  const [showAllGaps, setShowAllGaps] = useState(false)
+  
   if (outsideScope) {
     return (
       <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -139,6 +197,7 @@ const ValidationStatus = ({ sail, osoCompliance, containmentCompliant, outsideSc
   })
 
   const allCompliant = osoGaps.length === 0 && containmentCompliant
+  const gapsToShow = showAllGaps ? criticalGaps : criticalGaps.slice(0, 3)
 
   return (
     <div className={`p-4 rounded-lg border ${
@@ -168,15 +227,20 @@ const ValidationStatus = ({ sail, osoCompliance, containmentCompliant, outsideSc
           {!allCompliant && (
             <div className="mt-2 space-y-1">
               {!containmentCompliant && (
-                <p className="text-sm text-red-700">â€¢ Containment robustness insufficient</p>
+                <p className="text-sm text-red-700">• Containment robustness insufficient</p>
               )}
-              {criticalGaps.slice(0, 3).map(oso => (
+              {gapsToShow.map(oso => (
                 <p key={oso.id} className="text-sm text-red-700">
-                  â€¢ {oso.id}: {oso.name} (requires {oso.requirements[sail]})
+                  • {oso.id}: {oso.name} (requires {oso.requirements[sail]})
                 </p>
               ))}
               {criticalGaps.length > 3 && (
-                <p className="text-sm text-red-700">â€¢ ...and {criticalGaps.length - 3} more</p>
+                <button
+                  onClick={() => setShowAllGaps(!showAllGaps)}
+                  className="text-sm text-red-600 hover:text-red-800 underline mt-1"
+                >
+                  {showAllGaps ? 'Show less' : `Show ${criticalGaps.length - 3} more gaps...`}
+                </button>
               )}
             </div>
           )}
@@ -386,14 +450,39 @@ export default function ProjectSORA({ project, onUpdate }) {
   const primaryAircraft = fpAircraft.find(a => a.isPrimary) || fpAircraft[0]
   const fpMaxSpeed = primaryAircraft?.maxSpeed || 25
   
-  // Site Survey data
+  // Site Survey data - Population
   const ssPopulation = siteSurvey.population?.category
   const ssAdjacentPopulation = siteSurvey.population?.adjacentCategory
+  
+  // Site Survey data - Airspace (for ARC calculation per Figure 6)
+  const ssAirspaceClass = siteSurvey.airspace?.classification || 'G'
+  const ssNearbyAerodromes = siteSurvey.airspace?.nearbyAerodromes || []
+  const ssIsAirportEnv = ssNearbyAerodromes.length > 0 || siteSurvey.nearAirport || false
+  const ssIsUrban = ['suburban', 'highdensity', 'urban', 'assembly'].includes(
+    ssPopulation || fpGroundAreaType || ''
+  )
+  
+  // Map airspace classification to ARC-relevant type
+  const ssAirspaceType = (() => {
+    const cls = ssAirspaceClass.toUpperCase()
+    if (cls === 'A' || cls === 'B' || cls === 'C' || cls === 'D') return 'controlled'
+    if (cls === 'E') return 'controlled' // Class E is controlled above 700/1200 AGL
+    if (cls === 'G') return 'uncontrolled'
+    return 'uncontrolled'
+  })()
   
   // Derived values
   const derivedPopulation = mapPopulationCategory(ssPopulation || fpGroundAreaType || 'sparsely')
   const derivedAdjacentPopulation = mapPopulationCategory(ssAdjacentPopulation || derivedPopulation)
   const derivedUACharacteristic = getUACharacteristicFromAircraft(fpAircraft)
+  
+  // Calculate suggested ARC based on Figure 6
+  const suggestedARC = calculateSuggestedARC(
+    fpMaxAltitude,
+    ssAirspaceType,
+    ssIsAirportEnv,
+    ssIsUrban
+  )
 
   // ============================================
   // INITIALIZE SORA DATA - Using safer pattern
@@ -527,6 +616,8 @@ export default function ProjectSORA({ project, onUpdate }) {
     }
     if (fpMaxAltitude) {
       updates.maxAltitudeAGL = fpMaxAltitude
+      // Also suggest updating ARC based on new altitude
+      updates.initialARC = suggestedARC.arc
     }
     
     if (Object.keys(updates).length > 0) {
@@ -534,11 +625,13 @@ export default function ProjectSORA({ project, onUpdate }) {
     }
   }
 
-  // Check for mismatches
+  // Check for mismatches - now includes ARC suggestion
   const hasMismatch = (
     (ssPopulation && derivedPopulation !== sora.populationCategory) ||
     (fpMaxSpeed && fpMaxSpeed !== sora.maxSpeed) ||
-    (fpOperationType && fpOperationType !== sora.operationType)
+    (fpOperationType && fpOperationType !== sora.operationType) ||
+    (fpMaxAltitude && fpMaxAltitude !== sora.maxAltitudeAGL) ||
+    (sora.initialARC !== suggestedARC.arc)
   )
 
   // ============================================
@@ -722,8 +815,8 @@ export default function ProjectSORA({ project, onUpdate }) {
             {primaryAircraft && (
               <div className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600">
-                  <strong>Aircraft:</strong> {primaryAircraft.make} {primaryAircraft.model} â€¢ 
-                  Max Speed: {primaryAircraft.maxSpeed || 25} m/s â€¢ 
+                  <strong>Aircraft:</strong> {primaryAircraft.make} {primaryAircraft.model} • 
+                  Max Speed: {primaryAircraft.maxSpeed || 25} m/s • 
                   MTOW: {primaryAircraft.mtow || 'N/A'} kg
                 </p>
               </div>
@@ -848,14 +941,62 @@ export default function ProjectSORA({ project, onUpdate }) {
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
             <Radar className="w-5 h-5 text-purple-500" />
             Steps 4-6: Air Risk
+            {sora.initialARC !== suggestedARC.arc && (
+              <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded">Review Suggested</span>
+            )}
           </h3>
           {expandedSections.airRisk ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
         </button>
 
         {expandedSections.airRisk && (
           <div className="mt-4 space-y-4">
+            {/* ARC Suggestion based on Figure 6 */}
+            <div className={`p-3 rounded-lg border ${
+              sora.initialARC === suggestedARC.arc 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-amber-50 border-amber-200'
+            }`}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    Suggested ARC (per Figure 6):
+                  </p>
+                  <p className="text-lg font-bold text-gray-900">{suggestedARC.arc}</p>
+                  <p className="text-xs text-gray-500 mt-1">{suggestedARC.reason}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Based on: {fpMaxAltitude}m AGL ({Math.round(fpMaxAltitude * 3.28084)}ft) • 
+                    {ssIsUrban ? ' Urban' : ' Rural'} • 
+                    {ssIsAirportEnv ? ' Near aerodrome' : ''} • 
+                    Class {ssAirspaceClass} ({ssAirspaceType})
+                  </p>
+                </div>
+                {sora.initialARC !== suggestedARC.arc && (
+                  <button
+                    onClick={() => updateSora({ initialARC: suggestedARC.arc })}
+                    className="btn btn-secondary text-xs"
+                  >
+                    Apply
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {/* Altitude Warning */}
+            {fpMaxAltitude > 152 && sora.initialARC === 'ARC-b' && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">Altitude exceeds 500ft (152m)</p>
+                  <p className="text-xs text-red-600">
+                    Operations above 500ft AGL typically require ARC-c or higher per SORA Figure 6.
+                    Current selection: {sora.initialARC}
+                  </p>
+                </div>
+              </div>
+            )}
+            
             <div>
-              <label className="label">Initial ARC</label>
+              <label className="label">Initial ARC (Step 4)</label>
               <select
                 value={sora.initialARC || 'ARC-b'}
                 onChange={(e) => updateSora({ initialARC: e.target.value })}
@@ -869,7 +1010,7 @@ export default function ProjectSORA({ project, onUpdate }) {
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="label">TMPR Type</label>
+                <label className="label">TMPR Type (Step 6)</label>
                 <select
                   value={sora.tmpr?.type || 'VLOS'}
                   onChange={(e) => updateTmpr({ type: e.target.value })}
