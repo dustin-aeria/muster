@@ -137,7 +137,7 @@ const getDefaultSiteSurveyStructure = () => ({
   population: {
     category: null,            // controlled | remote | lightly | sparsely | suburban | highdensity | assembly
     adjacentCategory: null,    // Population category of adjacent area
-    density: null,             // people/km² if known
+    density: null,             // people/kmÂ² if known
     justification: '',
     assessmentDate: null
   },
