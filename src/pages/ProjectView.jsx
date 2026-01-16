@@ -19,9 +19,10 @@ import {
   MoreVertical,
   Trash2,
   Circle,
-  Loader2
+  Loader2,
+  Shield  // Added for SORA tab icon
 } from 'lucide-react'
-import { getProject, updateProject, deleteProject } from '../lib/firestore'
+import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
 import ProjectSections from '../components/projects/ProjectSections'
 import ProjectCrew from '../components/projects/ProjectCrew'
@@ -30,19 +31,23 @@ import ProjectSiteSurvey from '../components/projects/ProjectSiteSurvey'
 import ProjectEmergency from '../components/projects/ProjectEmergency'
 import ProjectPPE from '../components/projects/ProjectPPE'
 import ProjectComms from '../components/projects/ProjectComms'
-import ProjectRisk from '../components/projects/ProjectRisk'
+// CHANGED: Import separate HSE and SORA components instead of combined ProjectRisk
+import ProjectHSERisk from '../components/projects/ProjectHSERisk'
+import ProjectSORA from '../components/projects/ProjectSORA'
 import ProjectApprovals from '../components/projects/ProjectApprovals'
 import ProjectTailgate from '../components/projects/ProjectTailgate'
 import ProjectForms from '../components/projects/ProjectForms'
 import ProjectExport from '../components/projects/ProjectExport'
 
+// CHANGED: Split 'risk' tab into 'hseRisk' and 'sora' tabs
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FolderKanban },
   { id: 'sections', label: 'Sections', icon: Settings2 },
   { id: 'crew', label: 'Crew', icon: Users },
   { id: 'site', label: 'Site Survey', icon: MapPin, toggleable: true, sectionKey: 'siteSurvey' },
   { id: 'flight', label: 'Flight Plan', icon: Plane, toggleable: true, sectionKey: 'flightPlan' },
-  { id: 'risk', label: 'Risk Assessment', icon: AlertTriangle },
+  { id: 'hseRisk', label: 'HSE Risk', icon: AlertTriangle },      // NEW: Separate HSE Risk tab
+  { id: 'sora', label: 'SORA', icon: Shield },                     // NEW: Separate SORA tab
   { id: 'emergency', label: 'Emergency', icon: ShieldAlert },
   { id: 'ppe', label: 'PPE', icon: HardHat },
   { id: 'comms', label: 'Communications', icon: Radio },
@@ -79,7 +84,11 @@ export default function ProjectView() {
     setLoading(true)
     setError('')
     try {
-      const data = await getProject(projectId)
+      let data = await getProject(projectId)
+      
+      // CHANGED: Migrate old combined riskAssessment to new separate structure
+      data = migrateProjectToDecoupledStructure(data)
+      
       setProject(data)
     } catch (err) {
       console.error('Error loading project:', err)
@@ -303,8 +312,13 @@ export default function ProjectView() {
           <ProjectFlightPlan project={project} onUpdate={handleUpdate} />
         )}
         
-        {activeTab === 'risk' && (
-          <ProjectRisk project={project} onUpdate={handleUpdate} />
+        {/* CHANGED: Separate HSE Risk and SORA tabs */}
+        {activeTab === 'hseRisk' && (
+          <ProjectHSERisk project={project} onUpdate={handleUpdate} />
+        )}
+        
+        {activeTab === 'sora' && (
+          <ProjectSORA project={project} onUpdate={handleUpdate} />
         )}
         
         {activeTab === 'emergency' && (
