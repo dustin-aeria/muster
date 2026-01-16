@@ -26,8 +26,8 @@ import {
   Package
 } from 'lucide-react'
 import { getAircraft } from '../../lib/firestore'
-import AircraftSpecSheet, { generateAircraftSpecPDF } from './AircraftSpecSheet'
-import { useBranding } from './BrandingSettings'
+import AircraftSpecSheet, { generateAircraftSpecPDF } from '../AircraftSpecSheet'
+import { useBranding } from '../BrandingSettings'
 import { BrandedPDF } from '../../lib/pdfExportService'
 
 // ============================================
