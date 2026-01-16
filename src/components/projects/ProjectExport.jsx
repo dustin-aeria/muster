@@ -1,3 +1,8 @@
+// ============================================
+// PROJECT EXPORT COMPONENT
+// Export project data in multiple formats including PDF
+// ============================================
+
 import { useState } from 'react'
 import { 
   Download,
@@ -13,9 +18,26 @@ import {
   AlertTriangle,
   CheckCircle2,
   Info,
-  Settings
+  Settings,
+  FileImage,
+  Shield,
+  ClipboardList,
+  MapPin,
+  Plane,
+  AlertCircle as AlertIcon,
+  Users
 } from 'lucide-react'
+import { useBranding } from './BrandingSettings'
+import { 
+  exportToPDF, 
+  generateOperationsPlanPDF, 
+  generateSORAPDF, 
+  generateHSERiskPDF 
+} from '../../lib/pdfExportService'
 
+// ============================================
+// EXPORT SECTIONS CONFIGURATION
+// ============================================
 const exportSections = [
   { id: 'overview', label: 'Project Overview', included: true },
   { id: 'crew', label: 'Crew Roster', included: true },
@@ -29,6 +51,75 @@ const exportSections = [
   { id: 'forms', label: 'Forms Checklist', included: false },
 ]
 
+// ============================================
+// PDF EXPORT TYPES
+// ============================================
+const pdfExportTypes = [
+  {
+    id: 'operations-plan',
+    label: 'Full Operations Plan',
+    description: 'Complete project documentation including all sections',
+    icon: FileText,
+    color: 'blue'
+  },
+  {
+    id: 'sora',
+    label: 'SORA Assessment',
+    description: 'Specific Operations Risk Assessment (SORA 2.5)',
+    icon: Shield,
+    color: 'purple',
+    conditional: 'soraAssessment'
+  },
+  {
+    id: 'hse-risk',
+    label: 'HSE Risk Assessment',
+    description: 'Health, Safety & Environment hazard assessment',
+    icon: AlertIcon,
+    color: 'orange',
+    conditional: 'hseRiskAssessment'
+  },
+  {
+    id: 'site-survey',
+    label: 'Site Survey Report',
+    description: 'Site survey documentation and findings',
+    icon: MapPin,
+    color: 'green',
+    conditional: 'siteSurvey'
+  },
+  {
+    id: 'flight-plan',
+    label: 'Flight Plan',
+    description: 'Flight operations plan and aircraft details',
+    icon: Plane,
+    color: 'cyan',
+    conditional: 'flightPlan'
+  },
+  {
+    id: 'tailgate',
+    label: 'Tailgate Meeting',
+    description: 'Pre-deployment safety briefing form',
+    icon: Users,
+    color: 'amber'
+  }
+]
+
+// ============================================
+// DOWNLOAD HELPER
+// ============================================
+const downloadBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 export default function ProjectExport({ project, onUpdate }) {
   const [exporting, setExporting] = useState(false)
   const [exportType, setExportType] = useState(null)
@@ -38,6 +129,11 @@ export default function ProjectExport({ project, onUpdate }) {
   )
   const [includeAppendices, setIncludeAppendices] = useState(true)
   const [includeCoverPage, setIncludeCoverPage] = useState(true)
+  const [showPDFOptions, setShowPDFOptions] = useState(false)
+  const [pdfExportProgress, setPdfExportProgress] = useState(null)
+  
+  // Get branding settings
+  const { branding, loading: brandingLoading } = useBranding()
 
   const toggleSection = (sectionId) => {
     setSelectedSections(prev => ({
@@ -46,14 +142,16 @@ export default function ProjectExport({ project, onUpdate }) {
     }))
   }
 
-  // Generate text summary
+  // ============================================
+  // TEXT EXPORT (existing functionality)
+  // ============================================
   const generateTextSummary = () => {
     const lines = []
     
     // Header
-    lines.push('═'.repeat(60))
+    lines.push('='.repeat(60))
     lines.push(`RPAS OPERATIONS PLAN`)
-    lines.push('═'.repeat(60))
+    lines.push('='.repeat(60))
     lines.push('')
     lines.push(`Project: ${project.name || 'Untitled'}`)
     lines.push(`Code: ${project.projectCode || 'N/A'}`)
@@ -64,9 +162,9 @@ export default function ProjectExport({ project, onUpdate }) {
 
     // Crew
     if (selectedSections.crew) {
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       lines.push('CREW')
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       if (project.crew?.length > 0) {
         project.crew.forEach(member => {
           lines.push(`${member.role}: ${member.name}`)
@@ -81,48 +179,47 @@ export default function ProjectExport({ project, onUpdate }) {
 
     // Flight Plan
     if (selectedSections.flightPlan && project.sections?.flightPlan) {
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       lines.push('FLIGHT PLAN')
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       const fp = project.flightPlan || {}
       lines.push(`Operation Type: ${fp.operationType || 'VLOS'}`)
-      lines.push(`Max Altitude: ${fp.maxAltitude || 'N/A'} ${fp.altitudeUnit || 'AGL'}`)
-      lines.push(`Aircraft: ${fp.aircraft || 'N/A'}`)
-      lines.push(`Ground Type: ${fp.groundType?.replace('_', ' ') || 'N/A'}`)
+      lines.push(`Max Altitude: ${fp.maxAltitudeAGL || fp.maxAltitude || 'N/A'} m AGL`)
+      lines.push(`Aircraft: ${fp.aircraft?.[0]?.registration || 'N/A'}`)
       if (fp.flightArea) lines.push(`Flight Area: ${fp.flightArea}`)
       lines.push('')
     }
 
     // Site Survey
     if (selectedSections.siteSurvey && project.sections?.siteSurvey) {
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       lines.push('SITE SURVEY')
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       const ss = project.siteSurvey || {}
-      lines.push(`Site: ${ss.siteName || 'N/A'}`)
-      if (ss.latitude && ss.longitude) {
-        lines.push(`Coordinates: ${ss.latitude}, ${ss.longitude}`)
+      lines.push(`Site: ${ss.general?.siteName || 'N/A'}`)
+      if (ss.general?.coordinates) {
+        lines.push(`Coordinates: ${ss.general.coordinates.lat}, ${ss.general.coordinates.lng}`)
       }
-      if (ss.hazards) lines.push(`Hazards: ${ss.hazards}`)
-      if (ss.obstacles) lines.push(`Obstacles: ${ss.obstacles}`)
       lines.push('')
     }
 
     // Risk Assessment
     if (selectedSections.riskAssessment) {
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       lines.push('RISK ASSESSMENT')
-      lines.push('─'.repeat(40))
-      const ra = project.riskAssessment || {}
-      if (ra.sora) {
-        lines.push(`Operation Type: ${ra.sora.operationType || 'VLOS'}`)
-        lines.push(`Initial ARC: ${ra.sora.initialARC || 'ARC-a'}`)
-        lines.push(`Risk Acceptable: ${ra.overallRiskAcceptable ? 'YES' : 'REVIEW REQUIRED'}`)
+      lines.push('-'.repeat(40))
+      
+      if (project.soraAssessment) {
+        const sora = project.soraAssessment
+        lines.push(`SORA SAIL: ${sora.sail || 'N/A'}`)
+        lines.push(`Final GRC: ${sora.finalGRC || 'N/A'}`)
+        lines.push(`Residual ARC: ${sora.residualARC || sora.initialARC || 'N/A'}`)
       }
-      if (ra.hazards?.length > 0) {
+      
+      if (project.hseRiskAssessment?.hazards?.length > 0) {
         lines.push('')
         lines.push('Identified Hazards:')
-        ra.hazards.forEach((h, i) => {
+        project.hseRiskAssessment.hazards.forEach((h, i) => {
           lines.push(`${i + 1}. ${h.description || 'Unnamed hazard'}`)
           lines.push(`   Controls: ${h.controls || 'None documented'}`)
         })
@@ -132,24 +229,23 @@ export default function ProjectExport({ project, onUpdate }) {
 
     // Emergency
     if (selectedSections.emergency) {
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       lines.push('EMERGENCY PLAN')
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       const ep = project.emergencyPlan || {}
       const contact = ep.primaryEmergencyContact || {}
       lines.push(`Emergency Contact: ${contact.name || 'Not set'}`)
       if (contact.phone) lines.push(`  Phone: ${contact.phone}`)
       lines.push(`Hospital: ${ep.nearestHospital || 'Not set'}`)
       lines.push(`Rally Point: ${ep.rallyPoint || 'Not set'}`)
-      if (ep.emergencyProcedure) lines.push(`Procedure: ${ep.emergencyProcedure}`)
       lines.push('')
     }
 
     // Communications
     if (selectedSections.communications) {
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       lines.push('COMMUNICATIONS')
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       const comm = project.communications || {}
       lines.push(`Primary: ${comm.primaryChannel || 'Not set'}`)
       lines.push(`Backup: ${comm.backupChannel || 'Not set'}`)
@@ -159,9 +255,9 @@ export default function ProjectExport({ project, onUpdate }) {
 
     // PPE
     if (selectedSections.ppe) {
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       lines.push('PPE REQUIREMENTS')
-      lines.push('─'.repeat(40))
+      lines.push('-'.repeat(40))
       const ppe = project.ppe || {}
       if (ppe.required?.length > 0) {
         ppe.required.forEach(item => lines.push(`• ${item}`))
@@ -171,28 +267,178 @@ export default function ProjectExport({ project, onUpdate }) {
       lines.push('')
     }
 
-    // Approvals
-    if (selectedSections.approvals) {
-      lines.push('─'.repeat(40))
-      lines.push('APPROVALS')
-      lines.push('─'.repeat(40))
-      const app = project.approvals || {}
-      lines.push(`Status: ${app.status?.toUpperCase() || 'PENDING'}`)
-      if (app.submittedBy) lines.push(`Submitted by: ${app.submittedBy} on ${app.submittedDate}`)
-      if (app.reviewer?.name) lines.push(`Reviewed by: ${app.reviewer.name} on ${app.reviewDate}`)
-      lines.push('')
-    }
-
     // Footer
-    lines.push('═'.repeat(60))
+    lines.push('='.repeat(60))
     lines.push(`Generated: ${new Date().toLocaleString()}`)
-    lines.push(`Aeria Solutions Ltd. - Transport Canada Operator #930355`)
-    lines.push('═'.repeat(60))
+    lines.push(`${branding.operator.name} - ${branding.operator.registration}`)
+    lines.push('='.repeat(60))
 
     return lines.join('\n')
   }
 
-  // Export handlers
+  // ============================================
+  // HTML EXPORT
+  // ============================================
+  const generateHTMLReport = () => {
+    const colors = branding.operator.colors
+    
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${project.name || 'Operations Plan'} - ${branding.operator.name}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; }
+    .header { background: ${colors.primary}; color: white; padding: 2rem; }
+    .header h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .header p { opacity: 0.9; font-size: 0.9rem; }
+    .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+    .section { margin-bottom: 2rem; }
+    .section-title { background: ${colors.secondary}; color: white; padding: 0.75rem 1rem; border-radius: 4px; font-weight: 600; margin-bottom: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .field { background: #f9fafb; padding: 0.75rem; border-radius: 4px; }
+    .field-label { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; }
+    .field-value { font-weight: 500; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th { background: ${colors.primary}; color: white; text-align: left; padding: 0.75rem; }
+    td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; }
+    tr:nth-child(even) { background: #f9fafb; }
+    .footer { text-align: center; padding: 2rem; color: #6b7280; font-size: 0.875rem; border-top: 1px solid #e5e7eb; margin-top: 2rem; }
+    @media print { .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${project.name || 'RPAS Operations Plan'}</h1>
+    <p>${project.projectCode || ''} | ${project.clientName || 'No Client'} | ${project.startDate || 'TBD'}</p>
+  </div>
+  
+  <div class="container">
+    ${selectedSections.overview ? `
+    <div class="section">
+      <div class="section-title">Project Overview</div>
+      <div class="grid">
+        <div class="field"><div class="field-label">Project Name</div><div class="field-value">${project.name || 'N/A'}</div></div>
+        <div class="field"><div class="field-label">Project Code</div><div class="field-value">${project.projectCode || 'N/A'}</div></div>
+        <div class="field"><div class="field-label">Client</div><div class="field-value">${project.clientName || 'N/A'}</div></div>
+        <div class="field"><div class="field-label">Status</div><div class="field-value">${project.status?.toUpperCase() || 'DRAFT'}</div></div>
+        <div class="field"><div class="field-label">Start Date</div><div class="field-value">${project.startDate || 'TBD'}</div></div>
+        <div class="field"><div class="field-label">End Date</div><div class="field-value">${project.endDate || 'TBD'}</div></div>
+      </div>
+    </div>
+    ` : ''}
+    
+    ${selectedSections.crew && project.crew?.length > 0 ? `
+    <div class="section">
+      <div class="section-title">Crew Roster</div>
+      <table>
+        <thead><tr><th>Role</th><th>Name</th><th>Certifications</th><th>Phone</th></tr></thead>
+        <tbody>
+          ${project.crew.map(c => `<tr><td>${c.role || 'N/A'}</td><td>${c.name || 'N/A'}</td><td>${c.certifications || 'N/A'}</td><td>${c.phone || 'N/A'}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
+    
+    ${selectedSections.riskAssessment && project.soraAssessment ? `
+    <div class="section">
+      <div class="section-title">SORA Assessment</div>
+      <div class="grid">
+        <div class="field"><div class="field-label">SAIL Level</div><div class="field-value">${project.soraAssessment.sail || 'N/A'}</div></div>
+        <div class="field"><div class="field-label">Final GRC</div><div class="field-value">${project.soraAssessment.finalGRC || 'N/A'}</div></div>
+        <div class="field"><div class="field-label">Initial ARC</div><div class="field-value">${project.soraAssessment.initialARC || 'N/A'}</div></div>
+        <div class="field"><div class="field-label">Operation Type</div><div class="field-value">${project.soraAssessment.operationType || 'VLOS'}</div></div>
+      </div>
+    </div>
+    ` : ''}
+    
+    ${selectedSections.emergency && project.emergencyPlan ? `
+    <div class="section">
+      <div class="section-title">Emergency Response</div>
+      <div class="grid">
+        <div class="field"><div class="field-label">Emergency Contact</div><div class="field-value">${project.emergencyPlan.primaryEmergencyContact?.name || 'N/A'}</div></div>
+        <div class="field"><div class="field-label">Contact Phone</div><div class="field-value">${project.emergencyPlan.primaryEmergencyContact?.phone || 'N/A'}</div></div>
+        <div class="field"><div class="field-label">Nearest Hospital</div><div class="field-value">${project.emergencyPlan.nearestHospital || 'N/A'}</div></div>
+        <div class="field"><div class="field-label">Rally Point</div><div class="field-value">${project.emergencyPlan.rallyPoint || 'N/A'}</div></div>
+      </div>
+    </div>
+    ` : ''}
+  </div>
+  
+  <div class="footer">
+    <p>Generated ${new Date().toLocaleString()}</p>
+    <p>${branding.operator.name} | ${branding.operator.registration}</p>
+  </div>
+</body>
+</html>`
+  }
+
+  // ============================================
+  // PDF EXPORT HANDLER
+  // ============================================
+  const handlePDFExport = async (pdfType) => {
+    setExporting(true)
+    setExportType(pdfType)
+    setPdfExportProgress('Generating PDF...')
+
+    try {
+      // Get client branding if applicable
+      const clientBranding = project.clientId 
+        ? branding.clients.find(c => c.id === project.clientId)
+        : null
+
+      const exportBranding = {
+        operator: branding.operator,
+        client: clientBranding
+      }
+
+      let pdf
+      const filename = `${pdfType}_${project.projectCode || project.name || 'export'}_${new Date().toISOString().split('T')[0]}.pdf`
+
+      switch (pdfType) {
+        case 'operations-plan':
+          pdf = generateOperationsPlanPDF(project, exportBranding)
+          break
+        
+        case 'sora':
+          // Need to calculate SORA values
+          const soraCalcs = {
+            intrinsicGRC: project.soraAssessment?.intrinsicGRC || 3,
+            finalGRC: project.soraAssessment?.finalGRC || 3,
+            residualARC: project.soraAssessment?.residualARC || project.soraAssessment?.initialARC || 'ARC-b',
+            sail: project.soraAssessment?.sail || 'II'
+          }
+          pdf = generateSORAPDF(project, soraCalcs, exportBranding)
+          break
+        
+        case 'hse-risk':
+          pdf = generateHSERiskPDF(project, exportBranding)
+          break
+        
+        default:
+          // For other types, use operations plan as base
+          pdf = generateOperationsPlanPDF(project, exportBranding)
+      }
+
+      setPdfExportProgress('Saving...')
+      pdf.save(filename)
+      setPdfExportProgress(null)
+      
+    } catch (err) {
+      console.error('PDF export failed:', err)
+      setPdfExportProgress('Export failed')
+      setTimeout(() => setPdfExportProgress(null), 3000)
+    } finally {
+      setExporting(false)
+      setExportType(null)
+    }
+  }
+
+  // ============================================
+  // OTHER EXPORT HANDLERS
+  // ============================================
   const handleExport = async (type) => {
     setExporting(true)
     setExportType(type)
@@ -214,165 +460,56 @@ export default function ProjectExport({ project, onUpdate }) {
 
         case 'json':
           const jsonData = {
-            exportDate: new Date().toISOString(),
-            project: {
-              ...project,
-              // Remove internal fields if needed
-            }
+            exportedAt: new Date().toISOString(),
+            project: project
           }
           const jsonBlob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' })
-          downloadBlob(jsonBlob, `${project.projectCode || 'ops-plan'}-${project.name || 'export'}.json`)
+          downloadBlob(jsonBlob, `${project.projectCode || 'project'}-backup.json`)
+          break
+
+        case 'html':
+          const html = generateHTMLReport()
+          const htmlBlob = new Blob([html], { type: 'text/html' })
+          downloadBlob(htmlBlob, `${project.projectCode || 'ops-plan'}-${project.name || 'export'}.html`)
           break
 
         case 'print':
           window.print()
           break
-
-        case 'html':
-          const htmlContent = generateHTMLReport()
-          const htmlBlob = new Blob([htmlContent], { type: 'text/html' })
-          downloadBlob(htmlBlob, `${project.projectCode || 'ops-plan'}-${project.name || 'export'}.html`)
-          break
-
-        default:
-          console.log('Export type not implemented:', type)
       }
-    } catch (error) {
-      console.error('Export error:', error)
-      alert('Export failed. Please try again.')
+    } catch (err) {
+      console.error('Export failed:', err)
     } finally {
       setExporting(false)
       setExportType(null)
     }
   }
 
-  const downloadBlob = (blob, filename) => {
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
-  // Generate HTML report
-  const generateHTMLReport = () => {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>${project.name || 'Operations Plan'} - Aeria Solutions</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; }
-    h1 { color: #1e3a5f; border-bottom: 3px solid #1e3a5f; padding-bottom: 10px; }
-    h2 { color: #1e3a5f; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-    .header { background: #1e3a5f; color: white; padding: 20px; margin: -40px -20px 30px; }
-    .header h1 { color: white; border: none; margin: 0; }
-    .meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 20px 0; }
-    .meta-item { background: #f5f5f5; padding: 10px; border-radius: 4px; }
-    .meta-label { font-size: 12px; color: #666; }
-    .meta-value { font-weight: 600; }
-    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }
-    th { background: #f5f5f5; font-weight: 600; }
-    .emergency { background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 4px; margin: 15px 0; }
-    .emergency h3 { color: #dc2626; margin-top: 0; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; text-align: center; }
-    @media print { .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>${project.name || 'Operations Plan'}</h1>
-    <div style="opacity: 0.8; margin-top: 10px;">
-      ${project.projectCode ? `Code: ${project.projectCode} | ` : ''}
-      ${project.clientName ? `Client: ${project.clientName} | ` : ''}
-      Date: ${project.startDate || 'TBD'}
-    </div>
-  </div>
-
-  <div class="meta">
-    <div class="meta-item">
-      <div class="meta-label">Status</div>
-      <div class="meta-value">${project.status?.toUpperCase() || 'DRAFT'}</div>
-    </div>
-    <div class="meta-item">
-      <div class="meta-label">Operation Type</div>
-      <div class="meta-value">${project.flightPlan?.operationType || 'VLOS'}</div>
-    </div>
-  </div>
-
-  ${selectedSections.crew ? `
-  <h2>Crew</h2>
-  <table>
-    <tr><th>Role</th><th>Name</th><th>Contact</th></tr>
-    ${(project.crew || []).map(m => `
-      <tr><td>${m.role}</td><td>${m.name}</td><td>${m.phone || '-'}</td></tr>
-    `).join('')}
-  </table>
-  ` : ''}
-
-  ${selectedSections.emergency ? `
-  <div class="emergency">
-    <h3>⚠️ Emergency Information</h3>
-    <p><strong>Emergency Contact:</strong> ${project.emergencyPlan?.primaryEmergencyContact?.name || 'Not set'} 
-       ${project.emergencyPlan?.primaryEmergencyContact?.phone ? `(${project.emergencyPlan.primaryEmergencyContact.phone})` : ''}</p>
-    <p><strong>Hospital:</strong> ${project.emergencyPlan?.nearestHospital || 'Not set'}</p>
-    <p><strong>Rally Point:</strong> ${project.emergencyPlan?.rallyPoint || 'Not set'}</p>
-  </div>
-  ` : ''}
-
-  ${selectedSections.riskAssessment && project.riskAssessment?.hazards?.length > 0 ? `
-  <h2>Key Hazards</h2>
-  <table>
-    <tr><th>Hazard</th><th>Controls</th></tr>
-    ${(project.riskAssessment.hazards || []).slice(0, 5).map(h => `
-      <tr><td>${h.description || '-'}</td><td>${h.controls || '-'}</td></tr>
-    `).join('')}
-  </table>
-  ` : ''}
-
-  <div class="footer">
-    <p>Generated ${new Date().toLocaleString()}</p>
-    <p><strong>Aeria Solutions Ltd.</strong> | Transport Canada Operator #930355</p>
-  </div>
-</body>
-</html>
-    `
-  }
-
-  // Check project readiness
-  const readinessChecks = [
-    { label: 'Project name', ok: !!project.name },
+  // ============================================
+  // COMPLETENESS CHECK
+  // ============================================
+  const completenessChecks = [
+    { label: 'Project overview complete', ok: !!project.name && !!project.startDate },
     { label: 'Crew assigned', ok: project.crew?.length > 0 },
-    { label: 'PIC assigned', ok: project.crew?.some(c => c.role === 'PIC') },
-    { label: 'Emergency contact', ok: !!project.emergencyPlan?.primaryEmergencyContact?.name },
-    { label: 'Risk assessment reviewed', ok: project.riskAssessment?.overallRiskAcceptable !== null },
-    { label: 'Plan approved', ok: ['approved', 'conditional'].includes(project.approvals?.status) }
+    { label: 'Flight plan configured', ok: !!project.flightPlan?.operationType },
+    { label: 'Risk assessment complete', ok: !!project.soraAssessment?.sail || !!project.hseRiskAssessment },
+    { label: 'Emergency contacts set', ok: !!project.emergencyPlan?.primaryEmergencyContact?.name },
+    { label: 'Project approved', ok: project.status === 'approved' }
   ]
 
-  const readyCount = readinessChecks.filter(c => c.ok).length
-
+  // ============================================
+  // RENDER
+  // ============================================
   return (
     <div className="space-y-6">
-      {/* Readiness Check */}
+      {/* Completeness Check */}
       <div className="card">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <FileCheck className="w-5 h-5 text-aeria-blue" />
           Export Readiness
-          <span className={`px-2 py-0.5 text-xs rounded-full ${
-            readyCount === readinessChecks.length 
-              ? 'bg-green-100 text-green-700' 
-              : 'bg-amber-100 text-amber-700'
-          }`}>
-            {readyCount}/{readinessChecks.length}
-          </span>
         </h2>
-        
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          {readinessChecks.map((check, i) => (
+          {completenessChecks.map((check, i) => (
             <div 
               key={i}
               className={`flex items-center gap-2 p-2 rounded ${
@@ -389,6 +526,80 @@ export default function ProjectExport({ project, onUpdate }) {
               </span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* PDF Export Section */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <FileImage className="w-5 h-5 text-red-500" />
+            PDF Export
+          </h2>
+          <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded">Professional</span>
+        </div>
+        
+        <p className="text-sm text-gray-500 mb-4">
+          Generate branded PDF reports for clients and regulatory submissions.
+        </p>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {pdfExportTypes.map((pdfType) => {
+            const Icon = pdfType.icon
+            const isDisabled = pdfType.conditional && !project[pdfType.conditional]
+            const colorClasses = {
+              blue: 'bg-blue-100 text-blue-600',
+              purple: 'bg-purple-100 text-purple-600',
+              orange: 'bg-orange-100 text-orange-600',
+              green: 'bg-green-100 text-green-600',
+              cyan: 'bg-cyan-100 text-cyan-600',
+              amber: 'bg-amber-100 text-amber-600'
+            }
+            
+            return (
+              <button
+                key={pdfType.id}
+                onClick={() => handlePDFExport(pdfType.id)}
+                disabled={exporting || isDisabled}
+                className={`p-4 border rounded-lg text-left transition-all ${
+                  isDisabled 
+                    ? 'border-gray-200 opacity-50 cursor-not-allowed' 
+                    : 'border-gray-200 hover:border-red-300 hover:bg-red-50'
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`p-2 rounded-lg ${colorClasses[pdfType.color]}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <span className="font-medium text-gray-900">{pdfType.label}</span>
+                </div>
+                <p className="text-sm text-gray-500">{pdfType.description}</p>
+                {isDisabled && (
+                  <p className="text-xs text-gray-400 mt-2">Section not enabled</p>
+                )}
+                {exporting && exportType === pdfType.id && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                    <span className="text-xs text-red-600">{pdfExportProgress}</span>
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        
+        {/* Branding indicator */}
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center gap-3">
+          {branding.operator.logo ? (
+            <img src={branding.operator.logo} alt="Logo" className="h-8 w-auto" />
+          ) : (
+            <div className="h-8 w-8 bg-gray-300 rounded flex items-center justify-center text-xs text-gray-500">Logo</div>
+          )}
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gray-700">{branding.operator.name}</p>
+            <p className="text-xs text-gray-500">PDFs will be branded with your company identity</p>
+          </div>
+          <a href="/settings" className="text-xs text-aeria-blue hover:underline">Edit branding</a>
         </div>
       </div>
 
@@ -448,11 +659,11 @@ export default function ProjectExport({ project, onUpdate }) {
         </div>
       </div>
 
-      {/* Export Options */}
+      {/* Other Export Options */}
       <div className="card">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Download className="w-5 h-5 text-aeria-blue" />
-          Export Options
+          Other Export Formats
         </h2>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -578,9 +789,8 @@ export default function ProjectExport({ project, onUpdate }) {
           <div>
             <h3 className="font-medium text-blue-900">Export Notes</h3>
             <p className="text-sm text-blue-700 mt-1">
-              Exports include all selected sections with current data. For official submissions, 
-              ensure the plan is approved and all crew have acknowledged. HTML reports can be 
-              saved as PDF using your browser's print function (Print → Save as PDF).
+              PDF exports include professional branding and are suitable for client delivery and regulatory submissions.
+              Configure your company branding in Settings to customize the appearance of all exported documents.
             </p>
           </div>
         </div>
