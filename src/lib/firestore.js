@@ -49,169 +49,73 @@ export async function getProject(id) {
 /**
  * Default SORA structure with proper initialization
  * Matches JARUS SORA 2.5 methodology requirements
+ * Simplified structure to work with ProjectSORA component
  */
 const getDefaultSoraStructure = () => ({
-  // Step 1: ConOps Documentation
-  conops: {
-    operationType: 'VLOS',           // VLOS | EVLOS | BVLOS
-    operationDescription: '',
-    maxAltitudeAGL: 120,             // meters
-    flightGeography: '',
-    contingencyVolume: '',
-    groundRiskBuffer: ''
-  },
+  // Step 1: ConOps (populated from Flight Plan)
+  operationType: 'VLOS',           // VLOS | EVLOS | BVLOS
+  maxAltitudeAGL: 120,             // meters
   
-  // Step 2: UA Characteristics & Population (for iGRC)
-  uaCharacteristics: {
-    characteristicDimension: '1m',   // 1m | 3m | 8m | 20m | 40m
-    maxSpeed: 25,                    // m/s - will be synced from Flight Plan aircraft
-    source: 'manual'                 // manual | flightPlan
-  },
-  populationCategory: 'sparsely',    // controlled | remote | lightly | sparsely | suburban | highdensity | assembly
-  populationSource: 'manual',        // manual | siteSurvey
-  populationJustification: '',
+  // Step 2: iGRC Inputs
+  populationCategory: 'sparsely',  // controlled | remote | lightly | sparsely | suburban | highdensity | assembly
+  uaCharacteristic: '1m_25ms',     // 1m_25ms | 3m_35ms | 8m_75ms | 20m_120ms | 40m_200ms
+  maxSpeed: 25,                    // m/s
   
-  // Step 2 Result
-  intrinsicGRC: null,                // 1-10 or null
+  // Data source tracking
+  populationSource: 'manual',      // manual | siteSurvey
+  aircraftSource: 'manual',        // manual | flightPlan
   
   // Step 3: Ground Risk Mitigations
-  groundRiskMitigations: {
-    m1a: {                           // Strategic Mitigation - Sheltering
-      applied: false,
-      robustness: 'none',            // none | low | medium | high
-      justification: '',
-      reduction: 0                   // -1 for low, -2 for medium
-    },
-    m1b: {                           // Strategic Mitigation - Operational Restrictions
-      applied: false,
-      robustness: 'none',
-      justification: '',
-      reduction: 0
-    },
-    m1c: {                           // Strategic Mitigation - Ground Observers
-      applied: false,
-      robustness: 'none',            // Only 'low' available for M1C
-      justification: '',
-      reduction: 0                   // -1 for low only
-    },
-    m2: {                            // Effects of UA Impact Dynamics Reduced
-      applied: false,
-      robustness: 'none',
-      method: '',                    // parachute | frangibility | autorotation | other
-      justification: '',
-      reduction: 0                   // -1 for low, -2 for medium, -4 for high
-    },
-    m3: {                            // ERP Reduces Effects of Loss of Control
-      applied: false,
-      justification: '',
-      reduction: 0                   // +1 if NOT applied (penalty)
-    }
+  mitigations: {
+    M1A: { enabled: false, robustness: 'none', evidence: '' },
+    M1B: { enabled: false, robustness: 'none', evidence: '' },
+    M1C: { enabled: false, robustness: 'none', evidence: '' },
+    M2: { enabled: false, robustness: 'none', evidence: '' },
+    M3: { enabled: true, robustness: 'low', evidence: 'ERP documented' }
   },
   
-  // Step 3 Result
-  finalGRC: null,                    // 1-7 (capped)
-  
-  // Step 4: Initial ARC Determination
-  airspaceAssessment: {
-    atypicalAirspace: false,         // Operations in atypical airspace?
-    overUrban: false,                // Urban environment?
-    controlledAirspace: false,       // In controlled airspace?
-    airportDistance: null,           // km from nearest airport/heliport
-    crossAirways: false,             // Crossing aerial routes?
-    segregatedAirspace: false,       // In segregated airspace?
-    commonAltitude: false,           // At common altitude with manned aviation?
-    vfrRoutes: false,                // Near VFR routes?
-    ifrRoutes: false,                // Near IFR routes?
-    justification: ''
+  // Steps 4-6: Air Risk
+  initialARC: 'ARC-b',             // ARC-a | ARC-b | ARC-c | ARC-d
+  tmpr: {
+    enabled: true,
+    type: 'VLOS',                  // VLOS | EVLOS | DAA
+    robustness: 'low',
+    evidence: ''
   },
   
-  // Step 4 Result
-  initialARC: 'a',                   // a | b | c | d
-  
-  // Step 5: Air Risk Mitigations (Strategic)
-  airRiskMitigations: {
-    strategicMitigation: {
-      applied: false,
-      type: '',                      // commonStructures | notams | temporaryRestriction
-      justification: ''
-    }
-  },
-  
-  // Step 5 Result (after strategic mitigation)
-  residualARCStrategic: 'a',
-  
-  // Step 6: Tactical Mitigations (TMPR)
-  tacticalMitigations: {
-    tmprLevel: 'low',                // none | low | medium | high
-    vlosCondition: true,             // Operating under VLOS conditions?
-    daaMeans: '',                    // Method of Detect & Avoid
-    separationProvision: '',         // How separation is maintained
-    justification: ''
-  },
-  
-  // Step 6 Result
-  residualARC: 'a',                  // Final ARC after all mitigations
-  
-  // Step 7: SAIL Determination
-  sail: null,                        // I | II | III | IV | V | VI
-  
-  // Step 8: Containment Requirements
+  // Step 8: Containment
+  adjacentAreaPopulation: 'sparsely',
   containment: {
-    adjacentAreaCategory: 'sparsely', // Population of adjacent area
-    adjacentAreaSource: 'manual',     // manual | siteSurvey
-    adjacentAreaDistance: null,       // meters (calculated: 3 min × max speed, max 35km)
-    containmentRobustness: 'low',     // low | medium | high
-    justification: ''
+    method: '',
+    robustness: 'none',
+    evidence: ''
   },
   
-  // Step 9: OSO Compliance
-  // Array of 24 OSOs with compliance status
-  osos: getDefaultOSOStructure(),
+  // Step 9: OSO Compliance (keyed by OSO ID)
+  osoCompliance: getDefaultOSOComplianceStructure(),
   
   // Metadata
-  lastCalculated: null,
-  version: '2.5'                     // SORA version
+  lastUpdated: null,
+  version: '2.5'
 })
 
 /**
- * Default OSO structure for all 24 Operational Safety Objectives
- * Requirements vary by SAIL level (I-VI)
+ * Default OSO Compliance structure (keyed by ID for easy lookup)
  */
-const getDefaultOSOStructure = () => [
-  // Technical Issue with UAS (OSOs 1-6)
-  { id: 'OSO-01', category: 'technical', name: 'Operational procedures are defined, validated & adhered to', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-02', category: 'technical', name: 'UAS manufactured by competent and/or proven entity', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-03', category: 'technical', name: 'UAS maintained by competent and/or proven entity', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-04', category: 'technical', name: 'UAS developed to design standards', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-05', category: 'technical', name: 'UAS is designed considering system safety and reliability', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-06', category: 'technical', name: 'C3 link performance adequate for operation', compliance: null, evidence: '', notes: '' },
-  
-  // Deterioration of External Systems (OSOs 7-8)
-  { id: 'OSO-07', category: 'external', name: 'Inspection of UAS to ensure safe condition', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-08', category: 'external', name: 'Operational procedures for loss of C2 link', compliance: null, evidence: '', notes: '' },
-  
-  // Human Error (OSOs 9-16)
-  { id: 'OSO-09', category: 'human', name: 'Procedures in place for remote crew', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-10', category: 'human', name: 'Safe recovery from technical issue', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-11', category: 'human', name: 'Procedures in place for communication, coordination and handover', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-12', category: 'human', name: 'Remote crew trained for normal procedures', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-13', category: 'human', name: 'Remote crew trained for emergency procedures', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-14', category: 'human', name: 'Multi-crew coordination (if applicable)', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-15', category: 'human', name: 'Fitness of remote crew', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-16', category: 'human', name: 'HMI adequate for operation', compliance: null, evidence: '', notes: '' },
-  
-  // Adverse Operating Conditions (OSOs 17-19)
-  { id: 'OSO-17', category: 'operating', name: 'Operational environment defined', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-18', category: 'operating', name: 'Automatic protection of flight envelope', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-19', category: 'operating', name: 'Safe recovery from adverse conditions', compliance: null, evidence: '', notes: '' },
-  
-  // Air Risk (OSOs 20-24)
-  { id: 'OSO-20', category: 'air', name: 'Strategic mitigation', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-21', category: 'air', name: 'Effects of ground impact reduced', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-22', category: 'air', name: 'ERP appropriate for mission', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-23', category: 'air', name: 'Environmental conditions defined for operation', compliance: null, evidence: '', notes: '' },
-  { id: 'OSO-24', category: 'air', name: 'UAS designed to handle adverse conditions', compliance: null, evidence: '', notes: '' }
-]
+const getDefaultOSOComplianceStructure = () => {
+  const compliance = {}
+  const osoIds = [
+    'OSO-01', 'OSO-02', 'OSO-03', 'OSO-04', 'OSO-05', 'OSO-06',
+    'OSO-07', 'OSO-08',
+    'OSO-09', 'OSO-10', 'OSO-11', 'OSO-12', 'OSO-13', 'OSO-14', 'OSO-15', 'OSO-16',
+    'OSO-17', 'OSO-18', 'OSO-19',
+    'OSO-20', 'OSO-21', 'OSO-22', 'OSO-23', 'OSO-24'
+  ]
+  osoIds.forEach(id => {
+    compliance[id] = { robustness: 'none', evidence: '' }
+  })
+  return compliance
+}
 
 /**
  * Default Site Survey structure with SORA-integrated population fields
@@ -294,6 +198,37 @@ const getDefaultFlightPlanStructure = () => ({
   additionalProcedures: ''
 })
 
+/**
+ * Default HSE Risk Assessment structure (Per HSE1047 & HSE1048)
+ * Separate from SORA - focuses on workplace hazards and hierarchy of controls
+ */
+const getDefaultHSERiskStructure = () => ({
+  hazards: [],  // Array of hazard objects
+  overallRiskAcceptable: null,
+  reviewNotes: '',
+  reviewedBy: '',
+  reviewDate: '',
+  approvedBy: '',
+  approvalDate: ''
+})
+
+/**
+ * Helper to create a default hazard entry
+ */
+export const createDefaultHazard = () => ({
+  id: Date.now().toString(),
+  category: 'environmental',  // environmental | overhead | access | ergonomic | personal | equipment | biological | chemical
+  description: '',
+  likelihood: 3,             // 1-5
+  severity: 3,               // 1-5
+  controlType: 'administrative',  // elimination | substitution | engineering | administrative | ppe
+  controls: '',
+  residualLikelihood: 2,
+  residualSeverity: 2,
+  responsible: '',
+  verification: ''
+})
+
 export async function createProject(data) {
   const project = {
     ...data,
@@ -310,11 +245,16 @@ export async function createProject(data) {
     // Flight Plan with aircraft selection
     flightPlan: getDefaultFlightPlanStructure(),
     
-    // Risk Assessment with full SORA 2.5 structure + HSE hazards
-    riskAssessment: {
-      sora: getDefaultSoraStructure(),
-      hazards: []  // HSE hazard assessment (separate from SORA)
-    },
+    // HSE Risk Assessment (Per HSE1047 & HSE1048)
+    // Separate from SORA - focuses on workplace hazards & hierarchy of controls
+    hseRiskAssessment: getDefaultHSERiskStructure(),
+    
+    // SORA 2.5 Assessment (Per JARUS)
+    // Driven by Flight Plan and Site Survey data
+    soraAssessment: getDefaultSoraStructure(),
+    
+    // Legacy field for migration - will be deprecated
+    riskAssessment: null,
     
     emergencyPlan: {
       musterPoints: [],
@@ -575,43 +515,90 @@ export async function deleteForm(id) {
 // ============================================
 
 /**
- * Migrate existing project to new SORA structure
- * Call this when loading a project that has old/missing SORA data
+ * Migrate existing project to new decoupled HSE/SORA structure
+ * Call this when loading a project that has old data format
  */
-export function migrateProjectToSORA(project) {
-  const needsMigration = !project.riskAssessment?.sora?.version ||
-                         !project.siteSurvey?.population ||
-                         !project.flightPlan?.contingencies
+export function migrateProjectToDecoupledStructure(project) {
+  const hasSeparateStructures = project.hseRiskAssessment && project.soraAssessment
   
-  if (!needsMigration) {
+  if (hasSeparateStructures) {
+    // Already migrated
     return project
+  }
+  
+  // Migrate from old combined riskAssessment structure
+  const oldRiskAssessment = project.riskAssessment || {}
+  const oldSora = oldRiskAssessment.sora || {}
+  const oldHazards = oldRiskAssessment.hazards || []
+  
+  // Build new HSE Risk Assessment structure
+  const hseRiskAssessment = {
+    hazards: oldHazards.map(h => ({
+      id: h.id || Date.now().toString(),
+      category: h.category || 'environmental',
+      description: h.description || '',
+      likelihood: h.likelihood || 3,
+      severity: h.severity || 3,
+      controlType: h.controlType || 'administrative',
+      controls: h.controls || '',
+      residualLikelihood: h.residualLikelihood || 2,
+      residualSeverity: h.residualSeverity || 2,
+      responsible: h.responsible || '',
+      verification: h.verification || ''
+    })),
+    overallRiskAcceptable: oldRiskAssessment.overallRiskAcceptable || null,
+    reviewNotes: oldRiskAssessment.reviewNotes || '',
+    reviewedBy: oldRiskAssessment.reviewedBy || '',
+    reviewDate: oldRiskAssessment.reviewDate || '',
+    approvedBy: '',
+    approvalDate: ''
+  }
+  
+  // Build new SORA Assessment structure
+  const soraAssessment = {
+    operationType: oldSora.tmpr?.type || project.flightPlan?.operationType || 'VLOS',
+    maxAltitudeAGL: oldSora.conops?.maxAltitudeAGL || project.flightPlan?.maxAltitudeAGL || 120,
+    populationCategory: oldSora.populationCategory || 'sparsely',
+    uaCharacteristic: oldSora.uaCharacteristic || '1m_25ms',
+    maxSpeed: oldSora.maxSpeed || 25,
+    populationSource: oldSora.populationFromSiteSurvey ? 'siteSurvey' : 'manual',
+    aircraftSource: project.flightPlan?.aircraft?.length > 0 ? 'flightPlan' : 'manual',
+    mitigations: oldSora.mitigations || {
+      M1A: { enabled: false, robustness: 'none', evidence: '' },
+      M1B: { enabled: false, robustness: 'none', evidence: '' },
+      M1C: { enabled: false, robustness: 'none', evidence: '' },
+      M2: { enabled: false, robustness: 'none', evidence: '' },
+      M3: { enabled: true, robustness: 'low', evidence: 'ERP documented' }
+    },
+    initialARC: oldSora.initialARC || 'ARC-b',
+    tmpr: oldSora.tmpr || { enabled: true, type: 'VLOS', robustness: 'low', evidence: '' },
+    adjacentAreaPopulation: oldSora.adjacentAreaPopulation || 'sparsely',
+    containment: oldSora.containment || { method: '', robustness: 'none', evidence: '' },
+    osoCompliance: oldSora.osoCompliance || getDefaultOSOComplianceStructure(),
+    lastUpdated: new Date().toISOString(),
+    version: '2.5'
   }
   
   return {
     ...project,
     siteSurvey: {
       ...getDefaultSiteSurveyStructure(),
-      ...project.siteSurvey,
-      population: {
-        ...getDefaultSiteSurveyStructure().population,
-        ...project.siteSurvey?.population
-      }
+      ...project.siteSurvey
     },
     flightPlan: {
       ...getDefaultFlightPlanStructure(),
       ...project.flightPlan
     },
-    riskAssessment: {
-      ...project.riskAssessment,
-      sora: {
-        ...getDefaultSoraStructure(),
-        ...project.riskAssessment?.sora,
-        // Preserve any existing OSO compliance data
-        osos: project.riskAssessment?.sora?.osos?.length === 24
-          ? project.riskAssessment.sora.osos
-          : getDefaultOSOStructure()
-      },
-      hazards: project.riskAssessment?.hazards || []
-    }
+    hseRiskAssessment,
+    soraAssessment,
+    riskAssessment: null  // Clear old structure
   }
+}
+
+/**
+ * Legacy migration function (calls new function)
+ * @deprecated Use migrateProjectToDecoupledStructure instead
+ */
+export function migrateProjectToSORA(project) {
+  return migrateProjectToDecoupledStructure(project)
 }
