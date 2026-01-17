@@ -22,7 +22,8 @@ import {
   X,
   Loader2,
   Navigation2,
-  Target
+  Target,
+  Search
 } from 'lucide-react'
 
 // Population categories for SORA integration
@@ -111,17 +112,49 @@ const groundConditions = [
 ]
 
 // ============================================
-// MAP PICKER MODAL COMPONENT
-// Uses Leaflet (loaded via CDN) for free interactive maps
+// UNIFIED MAP COMPONENT
+// Single map with multiple markers (site, launch, recovery) and boundary drawing
 // ============================================
-function MapPickerModal({ isOpen, onClose, initialLat, initialLng, onSelectLocation, title = 'Select Location' }) {
+function SiteMapEditor({ 
+  siteLocation, 
+  launchPoint, 
+  recoveryPoint, 
+  boundary,
+  onUpdate,
+  isOpen, 
+  onClose 
+}) {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
-  const markerRef = useRef(null)
-  const [selectedCoords, setSelectedCoords] = useState({ lat: initialLat || 49.6, lng: initialLng || -123.1 })
+  const markersRef = useRef({})
+  const boundaryLayerRef = useRef(null)
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
+  const [activeMarker, setActiveMarker] = useState('site') // 'site', 'launch', 'recovery'
+  const [isDrawingBoundary, setIsDrawingBoundary] = useState(false)
+  const [boundaryPoints, setBoundaryPoints] = useState(boundary || [])
+  
+  // Refs to track current state for event handlers (closures capture stale state)
+  const activeMarkerRef = useRef(activeMarker)
+  const isDrawingBoundaryRef = useRef(isDrawingBoundary)
+  
+  // Keep refs in sync with state
+  useEffect(() => { activeMarkerRef.current = activeMarker }, [activeMarker])
+  useEffect(() => { isDrawingBoundaryRef.current = isDrawingBoundary }, [isDrawingBoundary])
+  
+  // Local state for coordinates
+  const [coords, setCoords] = useState({
+    site: { lat: siteLocation?.lat || '', lng: siteLocation?.lng || '' },
+    launch: { lat: launchPoint?.lat || '', lng: launchPoint?.lng || '' },
+    recovery: { lat: recoveryPoint?.lat || '', lng: recoveryPoint?.lng || '' }
+  })
+
+  const markerColors = {
+    site: { color: '#1e40af', label: 'Site Location', icon: '📍' },
+    launch: { color: '#16a34a', label: 'Launch Point', icon: '🛫' },
+    recovery: { color: '#d97706', label: 'Recovery Point', icon: '🛬' }
+  }
 
   useEffect(() => {
     if (!isOpen) return
@@ -135,7 +168,6 @@ function MapPickerModal({ isOpen, onClose, initialLat, initialLng, onSelectLocat
       document.head.appendChild(link)
     }
 
-    // Load Leaflet JS
     const loadLeaflet = () => {
       return new Promise((resolve) => {
         if (window.L) {
@@ -152,33 +184,125 @@ function MapPickerModal({ isOpen, onClose, initialLat, initialLng, onSelectLocat
     loadLeaflet().then((L) => {
       if (!mapContainerRef.current || mapRef.current) return
 
-      const lat = initialLat || 49.6
-      const lng = initialLng || -123.1
-      const zoom = initialLat ? 14 : 5
+      // Find initial center from existing coordinates
+      const siteLat = parseFloat(siteLocation?.lat) || 49.5
+      const siteLng = parseFloat(siteLocation?.lng) || -123.1
+      const hasCoords = siteLocation?.lat && siteLocation?.lng
+      const zoom = hasCoords ? 15 : 5
 
-      // Initialize map
-      const map = L.map(mapContainerRef.current).setView([lat, lng], zoom)
+      const map = L.map(mapContainerRef.current).setView([siteLat, siteLng], zoom)
       mapRef.current = map
 
-      // Add OpenStreetMap tiles (free, no API key)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map)
-
-      // Add marker
-      const marker = L.marker([lat, lng], { draggable: true }).addTo(map)
-      markerRef.current = marker
-
-      // Update coords when marker is dragged
-      marker.on('dragend', () => {
-        const pos = marker.getLatLng()
-        setSelectedCoords({ lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) })
+      // Add satellite/hybrid tile layer option
+      const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      })
+      
+      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri'
       })
 
-      // Click on map to move marker
+      osmLayer.addTo(map)
+      
+      L.control.layers({
+        'Street Map': osmLayer,
+        'Satellite': satelliteLayer
+      }).addTo(map)
+
+      // Create custom icon function
+      const createIcon = (color, emoji) => {
+        return L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="background-color: ${color}; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-size: 14px;">${emoji}</div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        })
+      }
+
+      // Create markers for each point type
+      const createMarker = (type, lat, lng) => {
+        if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) return null
+        
+        const { color, icon } = markerColors[type]
+        const marker = L.marker([parseFloat(lat), parseFloat(lng)], {
+          draggable: true,
+          icon: createIcon(color, icon)
+        }).addTo(map)
+
+        marker.on('dragend', () => {
+          const pos = marker.getLatLng()
+          setCoords(prev => ({
+            ...prev,
+            [type]: { lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) }
+          }))
+        })
+
+        marker.bindTooltip(markerColors[type].label, { permanent: false })
+        return marker
+      }
+
+      // Initialize existing markers
+      if (siteLocation?.lat && siteLocation?.lng) {
+        markersRef.current.site = createMarker('site', siteLocation.lat, siteLocation.lng)
+      }
+      if (launchPoint?.lat && launchPoint?.lng) {
+        markersRef.current.launch = createMarker('launch', launchPoint.lat, launchPoint.lng)
+      }
+      if (recoveryPoint?.lat && recoveryPoint?.lng) {
+        markersRef.current.recovery = createMarker('recovery', recoveryPoint.lat, recoveryPoint.lng)
+      }
+
+      // Draw existing boundary
+      if (boundary && boundary.length >= 3) {
+        const polygon = L.polygon(boundary.map(p => [p.lat, p.lng]), {
+          color: '#7c3aed',
+          fillColor: '#7c3aed',
+          fillOpacity: 0.2,
+          weight: 2
+        }).addTo(map)
+        boundaryLayerRef.current = polygon
+        setBoundaryPoints(boundary)
+      }
+
+      // Map click handler - uses refs to get current state values
       map.on('click', (e) => {
-        marker.setLatLng(e.latlng)
-        setSelectedCoords({ lat: e.latlng.lat.toFixed(6), lng: e.latlng.lng.toFixed(6) })
+        const currentActiveMarker = activeMarkerRef.current
+        const currentIsDrawingBoundary = isDrawingBoundaryRef.current
+        
+        if (currentIsDrawingBoundary) {
+          // Add point to boundary
+          setBoundaryPoints(prev => [...prev, { lat: e.latlng.lat.toFixed(6), lng: e.latlng.lng.toFixed(6) }])
+        } else {
+          // Place/move active marker
+          const { color, icon } = markerColors[currentActiveMarker]
+          
+          if (markersRef.current[currentActiveMarker]) {
+            markersRef.current[currentActiveMarker].setLatLng(e.latlng)
+          } else {
+            const marker = L.marker(e.latlng, {
+              draggable: true,
+              icon: createIcon(color, icon)
+            }).addTo(map)
+
+            marker.on('dragend', () => {
+              const pos = marker.getLatLng()
+              const markerType = currentActiveMarker // capture in closure
+              setCoords(prev => ({
+                ...prev,
+                [markerType]: { lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) }
+              }))
+            })
+
+            marker.bindTooltip(markerColors[currentActiveMarker].label, { permanent: false })
+            markersRef.current[currentActiveMarker] = marker
+          }
+
+          setCoords(prev => ({
+            ...prev,
+            [currentActiveMarker]: { lat: e.latlng.lat.toFixed(6), lng: e.latlng.lng.toFixed(6) }
+          }))
+          }))
+        }
       })
 
       setIsLoading(false)
@@ -188,14 +312,51 @@ function MapPickerModal({ isOpen, onClose, initialLat, initialLng, onSelectLocat
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
-        markerRef.current = null
+        markersRef.current = {}
+        boundaryLayerRef.current = null
       }
     }
-  }, [isOpen, initialLat, initialLng])
+  }, [isOpen])
 
-  // Search for location using Nominatim (free geocoding)
+  // Update boundary polygon when points change
+  useEffect(() => {
+    if (!mapRef.current || !window.L) return
+
+    // Remove existing boundary
+    if (boundaryLayerRef.current) {
+      mapRef.current.removeLayer(boundaryLayerRef.current)
+      boundaryLayerRef.current = null
+    }
+
+    // Draw new boundary if we have enough points
+    if (boundaryPoints.length >= 3) {
+      const polygon = window.L.polygon(
+        boundaryPoints.map(p => [parseFloat(p.lat), parseFloat(p.lng)]),
+        {
+          color: '#7c3aed',
+          fillColor: '#7c3aed',
+          fillOpacity: 0.2,
+          weight: 2,
+          dashArray: isDrawingBoundary ? '5, 10' : null
+        }
+      ).addTo(mapRef.current)
+      boundaryLayerRef.current = polygon
+    } else if (boundaryPoints.length >= 1) {
+      // Show points as they're being added
+      const points = boundaryPoints.map(p => [parseFloat(p.lat), parseFloat(p.lng)])
+      if (points.length >= 2) {
+        const polyline = window.L.polyline(points, {
+          color: '#7c3aed',
+          weight: 2,
+          dashArray: '5, 10'
+        }).addTo(mapRef.current)
+        boundaryLayerRef.current = polyline
+      }
+    }
+  }, [boundaryPoints, isDrawingBoundary])
+
   const handleSearch = async () => {
-    if (!searchQuery.trim() || !window.L) return
+    if (!searchQuery.trim() || !window.L || !mapRef.current) return
     setSearching(true)
     
     try {
@@ -206,15 +367,7 @@ function MapPickerModal({ isOpen, onClose, initialLat, initialLng, onSelectLocat
       
       if (data && data.length > 0) {
         const { lat, lon } = data[0]
-        const newLat = parseFloat(lat).toFixed(6)
-        const newLng = parseFloat(lon).toFixed(6)
-        
-        setSelectedCoords({ lat: newLat, lng: newLng })
-        
-        if (mapRef.current && markerRef.current) {
-          mapRef.current.setView([lat, lon], 14)
-          markerRef.current.setLatLng([lat, lon])
-        }
+        mapRef.current.setView([lat, lon], 15)
       } else {
         alert('Location not found. Try a more specific search.')
       }
@@ -226,72 +379,204 @@ function MapPickerModal({ isOpen, onClose, initialLat, initialLng, onSelectLocat
     }
   }
 
-  const handleConfirm = () => {
-    onSelectLocation(selectedCoords.lat, selectedCoords.lng)
+  const handleSave = () => {
+    onUpdate({
+      siteLocation: coords.site,
+      launchPoint: coords.launch,
+      recoveryPoint: coords.recovery,
+      boundary: boundaryPoints.length >= 3 ? boundaryPoints : []
+    })
     onClose()
+  }
+
+  const clearBoundary = () => {
+    setBoundaryPoints([])
+    if (boundaryLayerRef.current && mapRef.current) {
+      mapRef.current.removeLayer(boundaryLayerRef.current)
+      boundaryLayerRef.current = null
+    }
+  }
+
+  const undoLastBoundaryPoint = () => {
+    setBoundaryPoints(prev => prev.slice(0, -1))
+  }
+
+  const toggleBoundaryDrawing = () => {
+    setIsDrawingBoundary(prev => !prev)
   }
 
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col">
         {/* Header */}
         <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Map className="w-5 h-5 text-aeria-blue" />
-            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Site Map Editor</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="p-4 border-b bg-gray-50">
+        {/* Toolbar */}
+        <div className="p-3 border-b bg-gray-50 space-y-3">
+          {/* Search */}
           <div className="flex gap-2">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Search for a location (e.g., Squamish BC, or an address)"
-              className="input flex-1"
+              placeholder="Search for a location..."
+              className="input flex-1 text-sm"
             />
             <button
               onClick={handleSearch}
               disabled={searching}
-              className="btn-secondary flex items-center gap-2"
+              className="btn-secondary text-sm flex items-center gap-1"
             >
-              {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation2 className="w-4 h-4" />}
+              {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               Search
             </button>
+          </div>
+
+          {/* Marker Selection */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-gray-600 mr-2">Click to place:</span>
+            {Object.entries(markerColors).map(([key, { color, label, icon }]) => (
+              <button
+                key={key}
+                onClick={() => { setActiveMarker(key); setIsDrawingBoundary(false); }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${
+                  activeMarker === key && !isDrawingBoundary
+                    ? 'ring-2 ring-offset-2'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+                style={{ 
+                  backgroundColor: `${color}20`, 
+                  color: color,
+                  ringColor: color
+                }}
+              >
+                <span>{icon}</span>
+                {label}
+                {coords[key].lat && <CheckCircle2 className="w-3 h-3" />}
+              </button>
+            ))}
+            
+            <div className="h-6 w-px bg-gray-300 mx-2" />
+            
+            {/* Boundary Drawing */}
+            <button
+              onClick={toggleBoundaryDrawing}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                isDrawingBoundary
+                  ? 'bg-purple-100 text-purple-700 ring-2 ring-purple-500 ring-offset-2'
+                  : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+              }`}
+            >
+              <Target className="w-4 h-4" />
+              {isDrawingBoundary ? 'Drawing Boundary...' : 'Draw Boundary'}
+              {boundaryPoints.length >= 3 && !isDrawingBoundary && <CheckCircle2 className="w-3 h-3" />}
+            </button>
+            
+            {isDrawingBoundary && (
+              <>
+                <button
+                  onClick={undoLastBoundaryPoint}
+                  disabled={boundaryPoints.length === 0}
+                  className="px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50"
+                >
+                  Undo
+                </button>
+                <button
+                  onClick={() => setIsDrawingBoundary(false)}
+                  className="px-2 py-1.5 text-sm text-green-600 hover:bg-green-100 rounded"
+                >
+                  Done ({boundaryPoints.length} pts)
+                </button>
+              </>
+            )}
+            
+            {boundaryPoints.length > 0 && !isDrawingBoundary && (
+              <button
+                onClick={clearBoundary}
+                className="px-2 py-1.5 text-sm text-red-600 hover:bg-red-100 rounded"
+              >
+                Clear Boundary
+              </button>
+            )}
           </div>
         </div>
 
         {/* Map Container */}
-        <div className="flex-1 relative min-h-[400px]">
+        <div className="flex-1 relative" style={{ minHeight: '450px' }}>
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
               <Loader2 className="w-8 h-8 text-aeria-blue animate-spin" />
             </div>
           )}
-          <div ref={mapContainerRef} className="w-full h-full" style={{ minHeight: '400px' }} />
+          <div ref={mapContainerRef} className="w-full h-full" />
+          
+          {/* Instructions overlay */}
+          {isDrawingBoundary && (
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm z-[1000]">
+              Click on map to add boundary points. Click "Done" when finished.
+            </div>
+          )}
         </div>
 
-        {/* Footer with coordinates */}
-        <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            <span className="font-medium">Selected:</span>{' '}
-            <span className="font-mono">{selectedCoords.lat}, {selectedCoords.lng}</span>
+        {/* Coordinates Summary */}
+        <div className="p-3 border-t bg-gray-50">
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="font-medium text-blue-700">📍 Site:</span>{' '}
+              <span className="font-mono text-gray-600">
+                {coords.site.lat && coords.site.lng 
+                  ? `${coords.site.lat}, ${coords.site.lng}`
+                  : 'Not set'}
+              </span>
+            </div>
+            <div>
+              <span className="font-medium text-green-700">🛫 Launch:</span>{' '}
+              <span className="font-mono text-gray-600">
+                {coords.launch.lat && coords.launch.lng
+                  ? `${coords.launch.lat}, ${coords.launch.lng}`
+                  : 'Not set'}
+              </span>
+            </div>
+            <div>
+              <span className="font-medium text-amber-700">🛬 Recovery:</span>{' '}
+              <span className="font-mono text-gray-600">
+                {coords.recovery.lat && coords.recovery.lng
+                  ? `${coords.recovery.lat}, ${coords.recovery.lng}`
+                  : 'Not set'}
+              </span>
+            </div>
           </div>
+          {boundaryPoints.length >= 3 && (
+            <div className="mt-2 text-sm">
+              <span className="font-medium text-purple-700">🔷 Boundary:</span>{' '}
+              <span className="text-gray-600">{boundaryPoints.length} points defined</span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            Drag markers to reposition. Click map to place selected marker type.
+          </p>
           <div className="flex gap-2">
             <button onClick={onClose} className="btn-secondary">
               Cancel
             </button>
-            <button onClick={handleConfirm} className="btn-primary flex items-center gap-2">
+            <button onClick={handleSave} className="btn-primary flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" />
-              Use This Location
+              Save All Points
             </button>
           </div>
         </div>
@@ -302,44 +587,97 @@ function MapPickerModal({ isOpen, onClose, initialLat, initialLng, onSelectLocat
 
 // ============================================
 // MAP PREVIEW COMPONENT
-// Shows embedded map preview of location
+// Shows embedded map preview with all points
 // ============================================
-function MapPreview({ lat, lng, onOpenPicker }) {
-  const hasCoords = lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))
+function MapPreview({ siteLocation, launchPoint, recoveryPoint, boundary, onOpenEditor }) {
+  const hasCoords = siteLocation?.lat && siteLocation?.lng && 
+    !isNaN(parseFloat(siteLocation.lat)) && !isNaN(parseFloat(siteLocation.lng))
   
   if (!hasCoords) {
     return (
       <div 
-        onClick={onOpenPicker}
-        className="h-48 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-aeria-blue hover:bg-gray-50 transition-colors"
+        onClick={onOpenEditor}
+        className="h-56 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-aeria-blue hover:bg-gray-50 transition-colors"
       >
-        <Map className="w-10 h-10 text-gray-400 mb-2" />
-        <p className="text-sm text-gray-500">Click to select location on map</p>
+        <Map className="w-12 h-12 text-gray-400 mb-2" />
+        <p className="text-sm text-gray-500 font-medium">Click to open map editor</p>
+        <p className="text-xs text-gray-400 mt-1">Set site location, launch/recovery points, and boundary</p>
       </div>
     )
   }
 
-  // Use OpenStreetMap embed (free, no API key)
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(lng)-0.01},${parseFloat(lat)-0.01},${parseFloat(lng)+0.01},${parseFloat(lat)+0.01}&layer=mapnik&marker=${lat},${lng}`
+  const lat = parseFloat(siteLocation.lat)
+  const lng = parseFloat(siteLocation.lng)
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.01},${lat-0.01},${lng+0.01},${lat+0.01}&layer=mapnik&marker=${lat},${lng}`
+
+  const hasLaunch = launchPoint?.lat && launchPoint?.lng
+  const hasRecovery = recoveryPoint?.lat && recoveryPoint?.lng
+  const hasBoundary = boundary && boundary.length >= 3
 
   return (
-    <div className="relative rounded-lg overflow-hidden border border-gray-200">
-      <iframe
-        src={mapUrl}
-        width="100%"
-        height="200"
-        style={{ border: 0 }}
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-        title="Location Map"
-      />
-      <button
-        onClick={onOpenPicker}
-        className="absolute top-2 right-2 px-3 py-1.5 bg-white rounded-lg shadow-md text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1"
-      >
-        <Target className="w-4 h-4" />
-        Edit
-      </button>
+    <div className="space-y-3">
+      <div className="relative rounded-lg overflow-hidden border border-gray-200">
+        <iframe
+          src={mapUrl}
+          width="100%"
+          height="220"
+          style={{ border: 0 }}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          title="Location Map"
+        />
+        <button
+          onClick={onOpenEditor}
+          className="absolute top-2 right-2 px-3 py-1.5 bg-white rounded-lg shadow-md text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+        >
+          <Target className="w-4 h-4" />
+          Edit Map
+        </button>
+        
+        {/* Point indicators */}
+        <div className="absolute bottom-2 left-2 flex gap-2">
+          <div className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+            hasCoords ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            📍 Site
+          </div>
+          <div className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+            hasLaunch ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            🛫 Launch
+          </div>
+          <div className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+            hasRecovery ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            🛬 Recovery
+          </div>
+          {hasBoundary && (
+            <div className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
+              🔷 Boundary
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Coordinates display */}
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="p-2 bg-blue-50 rounded">
+          <div className="font-medium text-blue-700 mb-1">📍 Site Location</div>
+          <div className="font-mono text-gray-600">{lat.toFixed(5)}, {lng.toFixed(5)}</div>
+        </div>
+        <div className={`p-2 rounded ${hasLaunch ? 'bg-green-50' : 'bg-gray-50'}`}>
+          <div className={`font-medium mb-1 ${hasLaunch ? 'text-green-700' : 'text-gray-500'}`}>🛫 Launch Point</div>
+          <div className="font-mono text-gray-600">
+            {hasLaunch ? `${parseFloat(launchPoint.lat).toFixed(5)}, ${parseFloat(launchPoint.lng).toFixed(5)}` : 'Not set'}
+          </div>
+        </div>
+        <div className={`p-2 rounded ${hasRecovery ? 'bg-amber-50' : 'bg-gray-50'}`}>
+          <div className={`font-medium mb-1 ${hasRecovery ? 'text-amber-700' : 'text-gray-500'}`}>🛬 Recovery Point</div>
+          <div className="font-mono text-gray-600">
+            {hasRecovery ? `${parseFloat(recoveryPoint.lat).toFixed(5)}, ${parseFloat(recoveryPoint.lng).toFixed(5)}` : 'Not set'}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -350,6 +688,7 @@ function MapPreview({ lat, lng, onOpenPicker }) {
 export default function ProjectSiteSurvey({ project, onUpdate }) {
   const [expandedSections, setExpandedSections] = useState({
     location: true,
+    launchRecovery: true,
     population: true,
     airspace: true,
     obstacles: true,
@@ -360,8 +699,7 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
   const [copiedCoords, setCopiedCoords] = useState(false)
   const [initialized, setInitialized] = useState(false)
   const [gettingLocation, setGettingLocation] = useState(false)
-  const [mapPickerOpen, setMapPickerOpen] = useState(false)
-  const [mapPickerTarget, setMapPickerTarget] = useState('main') // 'main', 'launch', 'recovery'
+  const [mapEditorOpen, setMapEditorOpen] = useState(false)
 
   // Initialize site survey if not present
   useEffect(() => {
@@ -399,6 +737,7 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
             recoveryPoint: { lat: '', lng: '', description: '' },
             alternatePoints: []
           },
+          boundary: [],
           access: {
             type: 'public_road',
             directions: '',
@@ -540,47 +879,28 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
     )
   }
 
-  // Handle map picker location selection
-  const handleMapSelect = (lat, lng) => {
-    if (mapPickerTarget === 'main') {
-      updateSiteSurvey({
-        location: {
-          ...(siteSurvey.location || {}),
-          coordinates: { lat, lng }
+  // Handle unified map editor save
+  const handleMapEditorSave = ({ siteLocation, launchPoint, recoveryPoint, boundary }) => {
+    updateSiteSurvey({
+      location: {
+        ...(siteSurvey.location || {}),
+        coordinates: siteLocation
+      },
+      launchRecovery: {
+        ...(siteSurvey.launchRecovery || {}),
+        launchPoint: { 
+          ...(siteSurvey.launchRecovery?.launchPoint || {}),
+          lat: launchPoint.lat,
+          lng: launchPoint.lng
+        },
+        recoveryPoint: {
+          ...(siteSurvey.launchRecovery?.recoveryPoint || {}),
+          lat: recoveryPoint.lat,
+          lng: recoveryPoint.lng
         }
-      })
-    } else if (mapPickerTarget === 'launch') {
-      updateLaunchRecovery('launchPoint', 'lat', lat)
-      updateLaunchRecovery('launchPoint', 'lng', lng)
-    } else if (mapPickerTarget === 'recovery') {
-      updateLaunchRecovery('recoveryPoint', 'lat', lat)
-      updateLaunchRecovery('recoveryPoint', 'lng', lng)
-    }
-  }
-
-  // Open map picker for different targets
-  const openMapPicker = (target) => {
-    setMapPickerTarget(target)
-    setMapPickerOpen(true)
-  }
-
-  // Get initial coords for map picker based on target
-  const getMapPickerInitialCoords = () => {
-    if (mapPickerTarget === 'launch') {
-      return {
-        lat: siteSurvey.launchRecovery?.launchPoint?.lat || siteSurvey.location?.coordinates?.lat,
-        lng: siteSurvey.launchRecovery?.launchPoint?.lng || siteSurvey.location?.coordinates?.lng
-      }
-    } else if (mapPickerTarget === 'recovery') {
-      return {
-        lat: siteSurvey.launchRecovery?.recoveryPoint?.lat || siteSurvey.location?.coordinates?.lat,
-        lng: siteSurvey.launchRecovery?.recoveryPoint?.lng || siteSurvey.location?.coordinates?.lng
-      }
-    }
-    return {
-      lat: siteSurvey.location?.coordinates?.lat,
-      lng: siteSurvey.location?.coordinates?.lng
-    }
+      },
+      boundary: boundary
+    })
   }
 
   // Obstacles management
@@ -673,9 +993,11 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
           <div className="mt-4 space-y-4">
             {/* Map Preview */}
             <MapPreview
-              lat={siteSurvey.location?.coordinates?.lat}
-              lng={siteSurvey.location?.coordinates?.lng}
-              onOpenPicker={() => openMapPicker('main')}
+              siteLocation={siteSurvey.location?.coordinates}
+              launchPoint={siteSurvey.launchRecovery?.launchPoint}
+              recoveryPoint={siteSurvey.launchRecovery?.recoveryPoint}
+              boundary={siteSurvey.boundary}
+              onOpenEditor={() => setMapEditorOpen(true)}
             />
 
             <div className="grid sm:grid-cols-2 gap-4">
@@ -751,11 +1073,11 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
               </button>
               
               <button
-                onClick={() => openMapPicker('main')}
+                onClick={() => setMapEditorOpen(true)}
                 className="btn-secondary text-sm flex items-center gap-2"
               >
                 <Map className="w-4 h-4" />
-                Pick on Map
+                Open Map Editor
               </button>
 
               {siteSurvey.location?.coordinates?.lat && siteSurvey.location?.coordinates?.lng && (
@@ -773,7 +1095,7 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                     className="btn-secondary text-sm flex items-center gap-2"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    View in Maps
+                    Google Maps
                   </button>
 
                   <button
@@ -781,7 +1103,7 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                     className="btn-secondary text-sm flex items-center gap-2"
                   >
                     <Navigation className="w-4 h-4" />
-                    Get Directions
+                    Directions
                   </button>
                 </>
               )}
@@ -800,7 +1122,7 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
         )}
       </div>
 
-      {/* Launch/Recovery Points */}
+      {/* Launch/Recovery Point Descriptions */}
       <div className="card">
         <button
           onClick={() => toggleSection('launchRecovery')}
@@ -808,139 +1130,83 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
         >
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Navigation className="w-5 h-5 text-aeria-blue" />
-            Launch & Recovery Points
+            Launch & Recovery Details
           </h2>
           {expandedSections.launchRecovery ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
         </button>
 
         {expandedSections.launchRecovery && (
-          <div className="mt-4 space-y-6">
-            {/* Launch Point */}
+          <div className="mt-4 space-y-4">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 flex items-center gap-2">
+              <Map className="w-4 h-4" />
+              <span>Launch and recovery coordinates are set in the <button onClick={() => setMapEditorOpen(true)} className="font-medium underline">Map Editor</button> above.</span>
+            </div>
+
+            {/* Launch Point Description */}
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-              <h3 className="font-medium text-green-800 mb-3 flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full" />
-                Launch Point
-              </h3>
-              <div className="grid sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="label text-xs">Latitude</label>
-                  <input
-                    type="text"
-                    value={siteSurvey.launchRecovery?.launchPoint?.lat || ''}
-                    onChange={(e) => updateLaunchRecovery('launchPoint', 'lat', e.target.value)}
-                    className="input text-sm font-mono"
-                    placeholder="Lat"
-                  />
-                </div>
-                <div>
-                  <label className="label text-xs">Longitude</label>
-                  <input
-                    type="text"
-                    value={siteSurvey.launchRecovery?.launchPoint?.lng || ''}
-                    onChange={(e) => updateLaunchRecovery('launchPoint', 'lng', e.target.value)}
-                    className="input text-sm font-mono"
-                    placeholder="Lng"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={() => openMapPicker('launch')}
-                    className="btn-secondary text-sm w-full flex items-center justify-center gap-1"
-                  >
-                    <Map className="w-4 h-4" />
-                    Pick on Map
-                  </button>
-                </div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium text-green-800 flex items-center gap-2">
+                  <span className="text-lg">🛫</span>
+                  Launch Point
+                </h3>
+                {siteSurvey.launchRecovery?.launchPoint?.lat && (
+                  <span className="text-xs font-mono text-green-600">
+                    {siteSurvey.launchRecovery.launchPoint.lat}, {siteSurvey.launchRecovery.launchPoint.lng}
+                  </span>
+                )}
               </div>
-              <div className="mt-3">
+              <div>
                 <label className="label text-xs">Description</label>
-                <input
-                  type="text"
+                <textarea
                   value={siteSurvey.launchRecovery?.launchPoint?.description || ''}
                   onChange={(e) => updateLaunchRecovery('launchPoint', 'description', e.target.value)}
                   className="input text-sm"
-                  placeholder="e.g., Flat gravel pad near equipment shed"
+                  rows={2}
+                  placeholder="e.g., Flat gravel pad near equipment shed, clear of overhead obstructions"
                 />
               </div>
             </div>
 
-            {/* Recovery Point */}
+            {/* Recovery Point Description */}
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-              <h3 className="font-medium text-amber-800 mb-3 flex items-center gap-2">
-                <div className="w-3 h-3 bg-amber-500 rounded-full" />
-                Recovery Point
-              </h3>
-              <div className="grid sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="label text-xs">Latitude</label>
-                  <input
-                    type="text"
-                    value={siteSurvey.launchRecovery?.recoveryPoint?.lat || ''}
-                    onChange={(e) => updateLaunchRecovery('recoveryPoint', 'lat', e.target.value)}
-                    className="input text-sm font-mono"
-                    placeholder="Lat"
-                  />
-                </div>
-                <div>
-                  <label className="label text-xs">Longitude</label>
-                  <input
-                    type="text"
-                    value={siteSurvey.launchRecovery?.recoveryPoint?.lng || ''}
-                    onChange={(e) => updateLaunchRecovery('recoveryPoint', 'lng', e.target.value)}
-                    className="input text-sm font-mono"
-                    placeholder="Lng"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={() => openMapPicker('recovery')}
-                    className="btn-secondary text-sm w-full flex items-center justify-center gap-1"
-                  >
-                    <Map className="w-4 h-4" />
-                    Pick on Map
-                  </button>
-                </div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium text-amber-800 flex items-center gap-2">
+                  <span className="text-lg">🛬</span>
+                  Recovery Point
+                </h3>
+                {siteSurvey.launchRecovery?.recoveryPoint?.lat && (
+                  <span className="text-xs font-mono text-amber-600">
+                    {siteSurvey.launchRecovery.recoveryPoint.lat}, {siteSurvey.launchRecovery.recoveryPoint.lng}
+                  </span>
+                )}
               </div>
-              <div className="mt-3">
+              <div>
                 <label className="label text-xs">Description</label>
-                <input
-                  type="text"
+                <textarea
                   value={siteSurvey.launchRecovery?.recoveryPoint?.description || ''}
                   onChange={(e) => updateLaunchRecovery('recoveryPoint', 'description', e.target.value)}
                   className="input text-sm"
-                  placeholder="e.g., Same as launch, or alternate location"
+                  rows={2}
+                  placeholder="e.g., Same as launch, or describe alternate recovery location"
                 />
               </div>
             </div>
 
-            {/* Copy from main location buttons */}
-            <div className="flex gap-2 text-sm">
-              <button
-                onClick={() => {
-                  const { lat, lng } = siteSurvey.location?.coordinates || {}
-                  if (lat && lng) {
-                    updateLaunchRecovery('launchPoint', 'lat', lat)
-                    updateLaunchRecovery('launchPoint', 'lng', lng)
-                  }
-                }}
-                className="text-aeria-blue hover:underline"
-              >
-                Copy site location to launch point
-              </button>
-              <span className="text-gray-300">|</span>
-              <button
-                onClick={() => {
-                  const { lat, lng } = siteSurvey.location?.coordinates || {}
-                  if (lat && lng) {
-                    updateLaunchRecovery('recoveryPoint', 'lat', lat)
-                    updateLaunchRecovery('recoveryPoint', 'lng', lng)
-                  }
-                }}
-                className="text-aeria-blue hover:underline"
-              >
-                Copy site location to recovery point
-              </button>
-            </div>
+            {/* Boundary Info */}
+            {siteSurvey.boundary && siteSurvey.boundary.length >= 3 && (
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-purple-800 flex items-center gap-2">
+                    <span className="text-lg">🔷</span>
+                    Operational Boundary
+                  </h3>
+                  <span className="text-xs text-purple-600">{siteSurvey.boundary.length} points defined</span>
+                </div>
+                <p className="text-sm text-purple-700 mt-2">
+                  Operational area boundary has been defined in the map editor.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1471,18 +1737,15 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
         )}
       </div>
 
-      {/* Map Picker Modal */}
-      <MapPickerModal
-        isOpen={mapPickerOpen}
-        onClose={() => setMapPickerOpen(false)}
-        initialLat={parseFloat(getMapPickerInitialCoords().lat) || null}
-        initialLng={parseFloat(getMapPickerInitialCoords().lng) || null}
-        onSelectLocation={handleMapSelect}
-        title={
-          mapPickerTarget === 'launch' ? 'Select Launch Point' :
-          mapPickerTarget === 'recovery' ? 'Select Recovery Point' :
-          'Select Site Location'
-        }
+      {/* Site Map Editor Modal */}
+      <SiteMapEditor
+        isOpen={mapEditorOpen}
+        onClose={() => setMapEditorOpen(false)}
+        siteLocation={siteSurvey.location?.coordinates}
+        launchPoint={siteSurvey.launchRecovery?.launchPoint}
+        recoveryPoint={siteSurvey.launchRecovery?.recoveryPoint}
+        boundary={siteSurvey.boundary}
+        onUpdate={handleMapEditorSave}
       />
     </div>
   )
