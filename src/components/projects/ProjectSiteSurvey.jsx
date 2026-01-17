@@ -143,6 +143,35 @@ function SiteMapEditor({
   useEffect(() => { activeMarkerRef.current = activeMarker }, [activeMarker])
   useEffect(() => { isDrawingBoundaryRef.current = isDrawingBoundary }, [isDrawingBoundary])
   
+  // Invalidate map size when modal is shown (fixes rendering issues)
+  useEffect(() => {
+    if (isOpen && mapRef.current) {
+      // Multiple invalidateSize calls to catch async rendering
+      const timeouts = [0, 100, 200, 500].map(delay => 
+        setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.invalidateSize()
+          }
+        }, delay)
+      )
+      return () => timeouts.forEach(clearTimeout)
+    }
+  }, [isOpen])
+
+  // ResizeObserver to handle container size changes
+  useEffect(() => {
+    if (!mapContainerRef.current || !isOpen) return
+    
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapRef.current) {
+        mapRef.current.invalidateSize()
+      }
+    })
+    
+    resizeObserver.observe(mapContainerRef.current)
+    return () => resizeObserver.disconnect()
+  }, [isOpen])
+  
   // Local state for coordinates
   const [coords, setCoords] = useState({
     site: { lat: siteLocation?.lat || '', lng: siteLocation?.lng || '' },
@@ -173,9 +202,14 @@ function SiteMapEditor({
       const style = document.createElement('style')
       style.id = 'leaflet-modal-fix'
       style.textContent = `
-        .leaflet-container { z-index: 1; }
+        .leaflet-container { 
+          z-index: 1; 
+          width: 100% !important;
+          height: 100% !important;
+        }
         .leaflet-pane { z-index: 1; }
         .leaflet-control { z-index: 2; }
+        .leaflet-control-layers { z-index: 2; }
         .custom-marker { background: transparent !important; border: none !important; }
       `
       document.head.appendChild(style)
@@ -226,10 +260,10 @@ function SiteMapEditor({
           'Satellite': satelliteLayer
         }).addTo(map)
         
-        // Force map to recalculate size after render
-        setTimeout(() => {
-          map.invalidateSize()
-        }, 100)
+        // Force map to recalculate size multiple times to ensure proper rendering
+        setTimeout(() => { if (map) map.invalidateSize() }, 100)
+        setTimeout(() => { if (map) map.invalidateSize() }, 250)
+        setTimeout(() => { if (map) map.invalidateSize() }, 500)
 
       // Create custom icon function
       const createIcon = (color, emoji) => {
@@ -535,13 +569,13 @@ function SiteMapEditor({
         </div>
 
         {/* Map Container */}
-        <div className="flex-1 relative" style={{ minHeight: '450px', height: '450px' }}>
+        <div className="relative" style={{ height: '450px', width: '100%' }}>
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
               <Loader2 className="w-8 h-8 text-aeria-blue animate-spin" />
             </div>
           )}
-          <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+          <div ref={mapContainerRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
           
           {/* Instructions overlay */}
           {isDrawingBoundary && (
