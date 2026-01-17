@@ -499,18 +499,50 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                 </div>
 
                 <div>
-                  <label className="label">Data Source</label>
-                  <select
-                    value={siteSurvey.population?.source || 'visual'}
-                    onChange={(e) => updatePopulation('source', e.target.value)}
-                    className="input"
-                  >
-                    <option value="visual">Visual Assessment (Site Survey)</option>
-                    <option value="statscan">Statistics Canada Data</option>
-                    <option value="map">Population Density Map</option>
-                    <option value="client">Client Provided</option>
-                    <option value="other">Other</option>
-                  </select>
+                  <label className="label">Data Sources (select all that apply)</label>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {[
+                      { value: 'visual', label: 'Visual Assessment (Site Survey)' },
+                      { value: 'statscan', label: 'Statistics Canada Data' },
+                      { value: 'map', label: 'Population Density Map' },
+                      { value: 'satellite', label: 'Satellite/Aerial Imagery' },
+                      { value: 'client', label: 'Client Provided' },
+                      { value: 'municipal', label: 'Municipal Records' },
+                      { value: 'gis', label: 'GIS Data' },
+                      { value: 'other', label: 'Other' }
+                    ].map(source => {
+                      const sources = siteSurvey.population?.sources || []
+                      const isSelected = sources.includes(source.value)
+                      return (
+                        <label 
+                          key={source.value}
+                          className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+                            isSelected 
+                              ? 'bg-green-50 border-green-300' 
+                              : 'bg-white border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const newSources = e.target.checked
+                                ? [...sources, source.value]
+                                : sources.filter(s => s !== source.value)
+                              updatePopulation('sources', newSources)
+                            }}
+                            className="rounded border-gray-300 text-green-600"
+                          />
+                          <span className="text-sm text-gray-700">{source.label}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  {(siteSurvey.population?.sources || []).length === 0 && (
+                    <p className="text-xs text-amber-600 mt-2">
+                      Please select at least one data source
+                    </p>
+                  )}
                 </div>
 
                 <div>
