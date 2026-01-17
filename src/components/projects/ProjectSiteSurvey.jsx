@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   MapPin, 
   Plus,
@@ -16,11 +16,16 @@ import {
   ChevronUp,
   ExternalLink,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Crosshair,
+  Map,
+  X,
+  Loader2,
+  Navigation2,
+  Target
 } from 'lucide-react'
 
 // Population categories for SORA integration
-// FIXED: Using object format with Object.entries() for consistency with soraConfig.js
 const populationCategories = {
   controlled: { 
     label: 'Controlled Ground Area', 
@@ -105,6 +110,243 @@ const groundConditions = [
   { value: 'wetland', label: 'Wetland/Marsh' }
 ]
 
+// ============================================
+// MAP PICKER MODAL COMPONENT
+// Uses Leaflet (loaded via CDN) for free interactive maps
+// ============================================
+function MapPickerModal({ isOpen, onClose, initialLat, initialLng, onSelectLocation, title = 'Select Location' }) {
+  const mapContainerRef = useRef(null)
+  const mapRef = useRef(null)
+  const markerRef = useRef(null)
+  const [selectedCoords, setSelectedCoords] = useState({ lat: initialLat || 49.6, lng: initialLng || -123.1 })
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    // Load Leaflet CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link')
+      link.id = 'leaflet-css'
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
+
+    // Load Leaflet JS
+    const loadLeaflet = () => {
+      return new Promise((resolve) => {
+        if (window.L) {
+          resolve(window.L)
+          return
+        }
+        const script = document.createElement('script')
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+        script.onload = () => resolve(window.L)
+        document.body.appendChild(script)
+      })
+    }
+
+    loadLeaflet().then((L) => {
+      if (!mapContainerRef.current || mapRef.current) return
+
+      const lat = initialLat || 49.6
+      const lng = initialLng || -123.1
+      const zoom = initialLat ? 14 : 5
+
+      // Initialize map
+      const map = L.map(mapContainerRef.current).setView([lat, lng], zoom)
+      mapRef.current = map
+
+      // Add OpenStreetMap tiles (free, no API key)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map)
+
+      // Add marker
+      const marker = L.marker([lat, lng], { draggable: true }).addTo(map)
+      markerRef.current = marker
+
+      // Update coords when marker is dragged
+      marker.on('dragend', () => {
+        const pos = marker.getLatLng()
+        setSelectedCoords({ lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) })
+      })
+
+      // Click on map to move marker
+      map.on('click', (e) => {
+        marker.setLatLng(e.latlng)
+        setSelectedCoords({ lat: e.latlng.lat.toFixed(6), lng: e.latlng.lng.toFixed(6) })
+      })
+
+      setIsLoading(false)
+    })
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+        markerRef.current = null
+      }
+    }
+  }, [isOpen, initialLat, initialLng])
+
+  // Search for location using Nominatim (free geocoding)
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || !window.L) return
+    setSearching(true)
+    
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`
+      )
+      const data = await response.json()
+      
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0]
+        const newLat = parseFloat(lat).toFixed(6)
+        const newLng = parseFloat(lon).toFixed(6)
+        
+        setSelectedCoords({ lat: newLat, lng: newLng })
+        
+        if (mapRef.current && markerRef.current) {
+          mapRef.current.setView([lat, lon], 14)
+          markerRef.current.setLatLng([lat, lon])
+        }
+      } else {
+        alert('Location not found. Try a more specific search.')
+      }
+    } catch (err) {
+      console.error('Search error:', err)
+      alert('Search failed. Please try again.')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleConfirm = () => {
+    onSelectLocation(selectedCoords.lat, selectedCoords.lng)
+    onClose()
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Map className="w-5 h-5 text-aeria-blue" />
+            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="p-4 border-b bg-gray-50">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="Search for a location (e.g., Squamish BC, or an address)"
+              className="input flex-1"
+            />
+            <button
+              onClick={handleSearch}
+              disabled={searching}
+              className="btn-secondary flex items-center gap-2"
+            >
+              {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation2 className="w-4 h-4" />}
+              Search
+            </button>
+          </div>
+        </div>
+
+        {/* Map Container */}
+        <div className="flex-1 relative min-h-[400px]">
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+              <Loader2 className="w-8 h-8 text-aeria-blue animate-spin" />
+            </div>
+          )}
+          <div ref={mapContainerRef} className="w-full h-full" style={{ minHeight: '400px' }} />
+        </div>
+
+        {/* Footer with coordinates */}
+        <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            <span className="font-medium">Selected:</span>{' '}
+            <span className="font-mono">{selectedCoords.lat}, {selectedCoords.lng}</span>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="btn-secondary">
+              Cancel
+            </button>
+            <button onClick={handleConfirm} className="btn-primary flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Use This Location
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// MAP PREVIEW COMPONENT
+// Shows embedded map preview of location
+// ============================================
+function MapPreview({ lat, lng, onOpenPicker }) {
+  const hasCoords = lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))
+  
+  if (!hasCoords) {
+    return (
+      <div 
+        onClick={onOpenPicker}
+        className="h-48 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-aeria-blue hover:bg-gray-50 transition-colors"
+      >
+        <Map className="w-10 h-10 text-gray-400 mb-2" />
+        <p className="text-sm text-gray-500">Click to select location on map</p>
+      </div>
+    )
+  }
+
+  // Use OpenStreetMap embed (free, no API key)
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(lng)-0.01},${parseFloat(lat)-0.01},${parseFloat(lng)+0.01},${parseFloat(lat)+0.01}&layer=mapnik&marker=${lat},${lng}`
+
+  return (
+    <div className="relative rounded-lg overflow-hidden border border-gray-200">
+      <iframe
+        src={mapUrl}
+        width="100%"
+        height="200"
+        style={{ border: 0 }}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        title="Location Map"
+      />
+      <button
+        onClick={onOpenPicker}
+        className="absolute top-2 right-2 px-3 py-1.5 bg-white rounded-lg shadow-md text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+      >
+        <Target className="w-4 h-4" />
+        Edit
+      </button>
+    </div>
+  )
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 export default function ProjectSiteSurvey({ project, onUpdate }) {
   const [expandedSections, setExpandedSections] = useState({
     location: true,
@@ -117,8 +359,11 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
   })
   const [copiedCoords, setCopiedCoords] = useState(false)
   const [initialized, setInitialized] = useState(false)
+  const [gettingLocation, setGettingLocation] = useState(false)
+  const [mapPickerOpen, setMapPickerOpen] = useState(false)
+  const [mapPickerTarget, setMapPickerTarget] = useState('main') // 'main', 'launch', 'recovery'
 
-  // Initialize site survey if not present - using safer pattern
+  // Initialize site survey if not present
   useEffect(() => {
     if (initialized || !project) return
 
@@ -181,7 +426,6 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
         }
       })
     } else if (!project.siteSurvey.population) {
-      // Migration: Add population field if missing from existing surveys
       setInitialized(true)
       onUpdate({
         siteSurvey: {
@@ -200,7 +444,6 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
     }
   }, [initialized, project, onUpdate])
 
-  // Guard clause for loading state
   if (!project) return <div className="p-4 text-gray-500">Loading...</div>
 
   const siteSurvey = project.siteSurvey || {}
@@ -268,6 +511,78 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
     })
   }
 
+  // Get current location using browser geolocation
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser')
+      return
+    }
+
+    setGettingLocation(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude.toFixed(6)
+        const lng = position.coords.longitude.toFixed(6)
+        updateSiteSurvey({
+          location: {
+            ...(siteSurvey.location || {}),
+            coordinates: { lat, lng }
+          }
+        })
+        setGettingLocation(false)
+      },
+      (error) => {
+        console.error('Geolocation error:', error)
+        alert('Unable to get your location. Please check your browser permissions.')
+        setGettingLocation(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  // Handle map picker location selection
+  const handleMapSelect = (lat, lng) => {
+    if (mapPickerTarget === 'main') {
+      updateSiteSurvey({
+        location: {
+          ...(siteSurvey.location || {}),
+          coordinates: { lat, lng }
+        }
+      })
+    } else if (mapPickerTarget === 'launch') {
+      updateLaunchRecovery('launchPoint', 'lat', lat)
+      updateLaunchRecovery('launchPoint', 'lng', lng)
+    } else if (mapPickerTarget === 'recovery') {
+      updateLaunchRecovery('recoveryPoint', 'lat', lat)
+      updateLaunchRecovery('recoveryPoint', 'lng', lng)
+    }
+  }
+
+  // Open map picker for different targets
+  const openMapPicker = (target) => {
+    setMapPickerTarget(target)
+    setMapPickerOpen(true)
+  }
+
+  // Get initial coords for map picker based on target
+  const getMapPickerInitialCoords = () => {
+    if (mapPickerTarget === 'launch') {
+      return {
+        lat: siteSurvey.launchRecovery?.launchPoint?.lat || siteSurvey.location?.coordinates?.lat,
+        lng: siteSurvey.launchRecovery?.launchPoint?.lng || siteSurvey.location?.coordinates?.lng
+      }
+    } else if (mapPickerTarget === 'recovery') {
+      return {
+        lat: siteSurvey.launchRecovery?.recoveryPoint?.lat || siteSurvey.location?.coordinates?.lat,
+        lng: siteSurvey.launchRecovery?.recoveryPoint?.lng || siteSurvey.location?.coordinates?.lng
+      }
+    }
+    return {
+      lat: siteSurvey.location?.coordinates?.lat,
+      lng: siteSurvey.location?.coordinates?.lng
+    }
+  }
+
   // Obstacles management
   const addObstacle = () => {
     updateSiteSurvey({
@@ -332,9 +647,11 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
     }
   }
 
-  // Helper to get population category details
-  const getPopulationCategory = (categoryValue) => {
-    return populationCategories[categoryValue]
+  const openDirections = () => {
+    const { lat, lng } = siteSurvey.location?.coordinates || {}
+    if (lat && lng) {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank')
+    }
   }
 
   return (
@@ -354,6 +671,13 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
 
         {expandedSections.location && (
           <div className="mt-4 space-y-4">
+            {/* Map Preview */}
+            <MapPreview
+              lat={siteSurvey.location?.coordinates?.lat}
+              lng={siteSurvey.location?.coordinates?.lng}
+              onOpenPicker={() => openMapPicker('main')}
+            />
+
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <label className="label">Site Name</label>
@@ -402,34 +726,65 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
               <div>
                 <label className="label">Elevation (m ASL)</label>
                 <input
-                  type="number"
+                  type="text"
                   value={siteSurvey.location?.elevation || ''}
                   onChange={(e) => updateLocation('elevation', e.target.value)}
                   className="input"
-                  placeholder="Meters above sea level"
+                  placeholder="e.g., 1250"
                 />
               </div>
+            </div>
 
-              <div className="flex items-end gap-2">
-                {siteSurvey.location?.coordinates?.lat && siteSurvey.location?.coordinates?.lng && (
-                  <>
-                    <button
-                      onClick={copyCoordinates}
-                      className="btn-secondary text-sm inline-flex items-center gap-1"
-                    >
-                      {copiedCoords ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      {copiedCoords ? 'Copied!' : 'Copy'}
-                    </button>
-                    <button
-                      onClick={openInMaps}
-                      className="btn-secondary text-sm inline-flex items-center gap-1"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Open in Maps
-                    </button>
-                  </>
+            {/* Location Action Buttons */}
+            <div className="flex flex-wrap gap-2 pt-2">
+              <button
+                onClick={getCurrentLocation}
+                disabled={gettingLocation}
+                className="btn-secondary text-sm flex items-center gap-2"
+              >
+                {gettingLocation ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Crosshair className="w-4 h-4" />
                 )}
-              </div>
+                {gettingLocation ? 'Getting Location...' : 'Use My Location'}
+              </button>
+              
+              <button
+                onClick={() => openMapPicker('main')}
+                className="btn-secondary text-sm flex items-center gap-2"
+              >
+                <Map className="w-4 h-4" />
+                Pick on Map
+              </button>
+
+              {siteSurvey.location?.coordinates?.lat && siteSurvey.location?.coordinates?.lng && (
+                <>
+                  <button
+                    onClick={copyCoordinates}
+                    className="btn-secondary text-sm flex items-center gap-2"
+                  >
+                    {copiedCoords ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    {copiedCoords ? 'Copied!' : 'Copy Coords'}
+                  </button>
+
+                  <button
+                    onClick={openInMaps}
+                    className="btn-secondary text-sm flex items-center gap-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    View in Maps
+                  </button>
+
+                  <button
+                    onClick={openDirections}
+                    className="btn-secondary text-sm flex items-center gap-2"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    Get Directions
+                  </button>
+                </>
+              )}
             </div>
 
             <div>
@@ -438,177 +793,35 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                 value={siteSurvey.location?.description || ''}
                 onChange={(e) => updateLocation('description', e.target.value)}
                 className="input min-h-[80px]"
-                placeholder="Describe the operational area, terrain, notable features..."
+                placeholder="General description of the site, landmarks, notable features..."
               />
             </div>
           </div>
         )}
       </div>
 
-      {/* Population Density Section */}
+      {/* Launch/Recovery Points */}
       <div className="card">
         <button
-          onClick={() => toggleSection('population')}
+          onClick={() => toggleSection('launchRecovery')}
           className="flex items-center justify-between w-full text-left"
         >
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Users className="w-5 h-5 text-aeria-blue" />
-            Population Density
-            <span className="text-xs font-normal text-gray-500 bg-blue-100 px-2 py-0.5 rounded">Used by SORA</span>
+            <Navigation className="w-5 h-5 text-aeria-blue" />
+            Launch & Recovery Points
           </h2>
-          {expandedSections.population ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+          {expandedSections.launchRecovery ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
         </button>
 
-        {expandedSections.population && (
-          <div className="mt-4 space-y-4">
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                Population density determines the Ground Risk Class (GRC) in SORA assessment. 
-                Select the category that best represents the operational area during flight operations.
-              </p>
-            </div>
-
-            {/* Operational Area Population */}
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h3 className="font-medium text-gray-900 mb-3">Operational Area (iGRC Footprint)</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="label">Population Density Category</label>
-                  <select
-                    value={siteSurvey.population?.category || 'sparsely'}
-                    onChange={(e) => updatePopulation('category', e.target.value)}
-                    className="input"
-                  >
-                    {Object.entries(populationCategories).map(([key, pop]) => (
-                      <option key={key} value={key}>
-                        {pop.label} ({pop.density} people/km²)
-                      </option>
-                    ))}
-                  </select>
-                  {siteSurvey.population?.category && (
-                    <div className="mt-2 p-2 bg-white rounded border border-gray-200">
-                      <p className="text-xs text-gray-600">
-                        <strong>Description:</strong> {getPopulationCategory(siteSurvey.population?.category)?.description}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        <strong>Examples:</strong> {getPopulationCategory(siteSurvey.population?.category)?.examples}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="label">Data Sources (select all that apply)</label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {[
-                      { value: 'visual', label: 'Visual Assessment (Site Survey)' },
-                      { value: 'statscan', label: 'Statistics Canada Data' },
-                      { value: 'map', label: 'Population Density Map' },
-                      { value: 'satellite', label: 'Satellite/Aerial Imagery' },
-                      { value: 'client', label: 'Client Provided' },
-                      { value: 'municipal', label: 'Municipal Records' },
-                      { value: 'gis', label: 'GIS Data' },
-                      { value: 'other', label: 'Other' }
-                    ].map(source => {
-                      const sources = siteSurvey.population?.sources || []
-                      const isSelected = sources.includes(source.value)
-                      return (
-                        <label 
-                          key={source.value}
-                          className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
-                            isSelected 
-                              ? 'bg-green-50 border-green-300' 
-                              : 'bg-white border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              const newSources = e.target.checked
-                                ? [...sources, source.value]
-                                : sources.filter(s => s !== source.value)
-                              updatePopulation('sources', newSources)
-                            }}
-                            className="rounded border-gray-300 text-green-600"
-                          />
-                          <span className="text-sm text-gray-700">{source.label}</span>
-                        </label>
-                      )
-                    })}
-                  </div>
-                  {(siteSurvey.population?.sources || []).length === 0 && (
-                    <p className="text-xs text-amber-600 mt-2">
-                      Please select at least one data source
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="label">Justification</label>
-                  <textarea
-                    value={siteSurvey.population?.justification || ''}
-                    onChange={(e) => updatePopulation('justification', e.target.value)}
-                    className="input min-h-[60px]"
-                    placeholder="Explain how you determined this population category (e.g., 'Industrial site with controlled access, no public present during operations')"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Adjacent Area Population */}
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h3 className="font-medium text-gray-900 mb-3">Adjacent Area (Containment Buffer)</h3>
-              <p className="text-sm text-gray-600 mb-3">
-                The adjacent area extends beyond the operational boundary (typically 3 minutes of flight at max speed). 
-                This affects containment requirements in SORA Step 8.
-              </p>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="label">Adjacent Area Population Category</label>
-                  <select
-                    value={siteSurvey.population?.adjacentCategory || 'sparsely'}
-                    onChange={(e) => updatePopulation('adjacentCategory', e.target.value)}
-                    className="input"
-                  >
-                    {Object.entries(populationCategories).map(([key, pop]) => (
-                      <option key={key} value={key}>
-                        {pop.label} ({pop.density} people/km²)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="label">Adjacent Area Notes</label>
-                  <textarea
-                    value={siteSurvey.population?.adjacentJustification || ''}
-                    onChange={(e) => updatePopulation('adjacentJustification', e.target.value)}
-                    className="input min-h-[60px]"
-                    placeholder="Describe what surrounds the operational area (e.g., 'Forest to north and west, rural residential to south, highway 2km east')"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Launch & Recovery Points */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-          <Navigation className="w-5 h-5 text-aeria-blue" />
-          Launch & Recovery Points
-        </h2>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Launch Point */}
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-            <h3 className="font-medium text-green-800 mb-3">Launch Point</h3>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
+        {expandedSections.launchRecovery && (
+          <div className="mt-4 space-y-6">
+            {/* Launch Point */}
+            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+              <h3 className="font-medium text-green-800 mb-3 flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full" />
+                Launch Point
+              </h3>
+              <div className="grid sm:grid-cols-3 gap-3">
                 <div>
                   <label className="label text-xs">Latitude</label>
                   <input
@@ -616,7 +829,7 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                     value={siteSurvey.launchRecovery?.launchPoint?.lat || ''}
                     onChange={(e) => updateLaunchRecovery('launchPoint', 'lat', e.target.value)}
                     className="input text-sm font-mono"
-                    placeholder="55.1234"
+                    placeholder="Lat"
                   />
                 </div>
                 <div>
@@ -626,28 +839,38 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                     value={siteSurvey.launchRecovery?.launchPoint?.lng || ''}
                     onChange={(e) => updateLaunchRecovery('launchPoint', 'lng', e.target.value)}
                     className="input text-sm font-mono"
-                    placeholder="-121.5678"
+                    placeholder="Lng"
                   />
                 </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={() => openMapPicker('launch')}
+                    className="btn-secondary text-sm w-full flex items-center justify-center gap-1"
+                  >
+                    <Map className="w-4 h-4" />
+                    Pick on Map
+                  </button>
+                </div>
               </div>
-              <div>
+              <div className="mt-3">
                 <label className="label text-xs">Description</label>
                 <input
                   type="text"
                   value={siteSurvey.launchRecovery?.launchPoint?.description || ''}
                   onChange={(e) => updateLaunchRecovery('launchPoint', 'description', e.target.value)}
                   className="input text-sm"
-                  placeholder="e.g., Flat gravel pad near parking area"
+                  placeholder="e.g., Flat gravel pad near equipment shed"
                 />
               </div>
             </div>
-          </div>
 
-          {/* Recovery Point */}
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h3 className="font-medium text-blue-800 mb-3">Recovery Point</h3>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
+            {/* Recovery Point */}
+            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <h3 className="font-medium text-amber-800 mb-3 flex items-center gap-2">
+                <div className="w-3 h-3 bg-amber-500 rounded-full" />
+                Recovery Point
+              </h3>
+              <div className="grid sm:grid-cols-3 gap-3">
                 <div>
                   <label className="label text-xs">Latitude</label>
                   <input
@@ -655,7 +878,7 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                     value={siteSurvey.launchRecovery?.recoveryPoint?.lat || ''}
                     onChange={(e) => updateLaunchRecovery('recoveryPoint', 'lat', e.target.value)}
                     className="input text-sm font-mono"
-                    placeholder="55.1234"
+                    placeholder="Lat"
                   />
                 </div>
                 <div>
@@ -665,23 +888,159 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                     value={siteSurvey.launchRecovery?.recoveryPoint?.lng || ''}
                     onChange={(e) => updateLaunchRecovery('recoveryPoint', 'lng', e.target.value)}
                     className="input text-sm font-mono"
-                    placeholder="-121.5678"
+                    placeholder="Lng"
                   />
                 </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={() => openMapPicker('recovery')}
+                    className="btn-secondary text-sm w-full flex items-center justify-center gap-1"
+                  >
+                    <Map className="w-4 h-4" />
+                    Pick on Map
+                  </button>
+                </div>
               </div>
-              <div>
+              <div className="mt-3">
                 <label className="label text-xs">Description</label>
                 <input
                   type="text"
                   value={siteSurvey.launchRecovery?.recoveryPoint?.description || ''}
                   onChange={(e) => updateLaunchRecovery('recoveryPoint', 'description', e.target.value)}
                   className="input text-sm"
-                  placeholder="e.g., Same as launch point"
+                  placeholder="e.g., Same as launch, or alternate location"
                 />
               </div>
             </div>
+
+            {/* Copy from main location buttons */}
+            <div className="flex gap-2 text-sm">
+              <button
+                onClick={() => {
+                  const { lat, lng } = siteSurvey.location?.coordinates || {}
+                  if (lat && lng) {
+                    updateLaunchRecovery('launchPoint', 'lat', lat)
+                    updateLaunchRecovery('launchPoint', 'lng', lng)
+                  }
+                }}
+                className="text-aeria-blue hover:underline"
+              >
+                Copy site location to launch point
+              </button>
+              <span className="text-gray-300">|</span>
+              <button
+                onClick={() => {
+                  const { lat, lng } = siteSurvey.location?.coordinates || {}
+                  if (lat && lng) {
+                    updateLaunchRecovery('recoveryPoint', 'lat', lat)
+                    updateLaunchRecovery('recoveryPoint', 'lng', lng)
+                  }
+                }}
+                className="text-aeria-blue hover:underline"
+              >
+                Copy site location to recovery point
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* Population Density */}
+      <div className="card">
+        <button
+          onClick={() => toggleSection('population')}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Users className="w-5 h-5 text-aeria-blue" />
+            Population Density (SORA)
+          </h2>
+          {expandedSections.population ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </button>
+
+        {expandedSections.population && (
+          <div className="mt-4 space-y-4">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+              <strong>SORA Integration:</strong> Population density determines your Ground Risk Class (GRC). 
+              Select the category that best represents your operational area.
+            </div>
+
+            {/* Operational Area Category */}
+            <div>
+              <label className="label">Operational Area Category</label>
+              <div className="grid gap-2">
+                {Object.entries(populationCategories).map(([key, cat]) => (
+                  <label
+                    key={key}
+                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      siteSurvey.population?.category === key
+                        ? 'bg-aeria-sky border-aeria-blue'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="populationCategory"
+                      value={key}
+                      checked={siteSurvey.population?.category === key}
+                      onChange={(e) => updatePopulation('category', e.target.value)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">{cat.label}</div>
+                      <div className="text-sm text-gray-600">{cat.description}</div>
+                      <div className="text-xs text-gray-500 mt-1">Examples: {cat.examples}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Justification */}
+            <div>
+              <label className="label">Justification</label>
+              <textarea
+                value={siteSurvey.population?.justification || ''}
+                onChange={(e) => updatePopulation('justification', e.target.value)}
+                className="input min-h-[80px]"
+                placeholder="Explain why this category was selected (e.g., based on site visit observation, satellite imagery review, census data)..."
+              />
+            </div>
+
+            {/* Source */}
+            <div>
+              <label className="label">Assessment Source</label>
+              <select
+                value={siteSurvey.population?.source || 'visual'}
+                onChange={(e) => updatePopulation('source', e.target.value)}
+                className="input"
+              >
+                <option value="visual">Visual observation (site visit)</option>
+                <option value="satellite">Satellite/aerial imagery</option>
+                <option value="census">Census data</option>
+                <option value="client">Client-provided information</option>
+                <option value="multiple">Multiple sources</option>
+              </select>
+            </div>
+
+            {/* Adjacent Area */}
+            <div className="pt-4 border-t">
+              <h3 className="font-medium text-gray-700 mb-3">Adjacent Area Category</h3>
+              <p className="text-sm text-gray-500 mb-3">
+                If the adjacent areas have different population density, record them here for contingency planning.
+              </p>
+              <select
+                value={siteSurvey.population?.adjacentCategory || 'sparsely'}
+                onChange={(e) => updatePopulation('adjacentCategory', e.target.value)}
+                className="input"
+              >
+                {Object.entries(populationCategories).map(([key, cat]) => (
+                  <option key={key} value={key}>{cat.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Airspace */}
@@ -707,18 +1066,17 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                   onChange={(e) => updateAirspace('classification', e.target.value)}
                   className="input"
                 >
-                  <option value="A">Class A (IFR only)</option>
-                  <option value="B">Class B (Controlled)</option>
-                  <option value="C">Class C (Controlled)</option>
-                  <option value="D">Class D (Controlled)</option>
-                  <option value="E">Class E (Controlled)</option>
-                  <option value="F">Class F (Special Use)</option>
-                  <option value="G">Class G (Uncontrolled)</option>
+                  <option value="G">Class G - Uncontrolled</option>
+                  <option value="E">Class E - Controlled (above 700ft AGL)</option>
+                  <option value="D">Class D - Control Zone</option>
+                  <option value="C">Class C - Terminal Control</option>
+                  <option value="B">Class B - Terminal Control (high density)</option>
+                  <option value="F">Class F - Special Use</option>
                 </select>
               </div>
 
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div>
+                <label className="flex items-center gap-3 cursor-pointer mt-6">
                   <input
                     type="checkbox"
                     checked={siteSurvey.airspace?.navCanadaAuth || false}
@@ -732,73 +1090,75 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
 
             {siteSurvey.airspace?.navCanadaAuth && (
               <div>
-                <label className="label">Authorization Number / Reference</label>
+                <label className="label">Authorization Number</label>
                 <input
                   type="text"
                   value={siteSurvey.airspace?.authNumber || ''}
                   onChange={(e) => updateAirspace('authNumber', e.target.value)}
                   className="input"
-                  placeholder="e.g., NAV-2024-12345"
+                  placeholder="e.g., RPAS-2024-1234"
                 />
               </div>
             )}
 
             {/* Nearby Aerodromes */}
             <div>
-              <label className="label">Nearby Aerodromes (within 5 NM)</label>
-              <div className="space-y-2">
-                {(siteSurvey.airspace?.nearbyAerodromes || []).map((aerodrome, index) => (
-                  <div key={index} className="flex gap-2 items-start p-2 bg-gray-50 rounded-lg">
-                    <div className="flex-1 grid grid-cols-4 gap-2">
-                      <input
-                        type="text"
-                        value={aerodrome.identifier}
-                        onChange={(e) => updateAerodrome(index, 'identifier', e.target.value)}
-                        className="input text-sm"
-                        placeholder="ID (e.g., CYYC)"
-                      />
+              <label className="label">Nearby Aerodromes (within 5nm)</label>
+              {(siteSurvey.airspace?.nearbyAerodromes || []).length === 0 ? (
+                <p className="text-sm text-gray-500 mb-2">No aerodromes added</p>
+              ) : (
+                <div className="space-y-2 mb-2">
+                  {(siteSurvey.airspace?.nearbyAerodromes || []).map((aerodrome, index) => (
+                    <div key={index} className="flex gap-2 items-start p-2 bg-gray-50 rounded">
                       <input
                         type="text"
                         value={aerodrome.name}
                         onChange={(e) => updateAerodrome(index, 'name', e.target.value)}
-                        className="input text-sm"
+                        className="input text-sm flex-1"
                         placeholder="Name"
+                      />
+                      <input
+                        type="text"
+                        value={aerodrome.identifier}
+                        onChange={(e) => updateAerodrome(index, 'identifier', e.target.value)}
+                        className="input text-sm w-24"
+                        placeholder="ID (e.g., CYYJ)"
                       />
                       <input
                         type="text"
                         value={aerodrome.distance}
                         onChange={(e) => updateAerodrome(index, 'distance', e.target.value)}
-                        className="input text-sm"
-                        placeholder="Distance (NM)"
+                        className="input text-sm w-20"
+                        placeholder="nm"
                       />
                       <input
                         type="text"
                         value={aerodrome.bearing}
                         onChange={(e) => updateAerodrome(index, 'bearing', e.target.value)}
-                        className="input text-sm"
-                        placeholder="Bearing (°)"
+                        className="input text-sm w-20"
+                        placeholder="Bearing °"
                       />
+                      <button
+                        onClick={() => removeAerodrome(index)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => removeAerodrome(index)}
-                      className="p-1 text-red-500 hover:bg-red-50 rounded"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  onClick={addAerodrome}
-                  className="text-sm text-aeria-blue hover:text-aeria-navy inline-flex items-center gap-1"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Aerodrome
-                </button>
-              </div>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={addAerodrome}
+                className="text-sm text-aeria-blue hover:text-aeria-navy inline-flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                Add Aerodrome
+              </button>
             </div>
 
             <div>
-              <label className="label">NOTAMs / Airspace Restrictions</label>
+              <label className="label">NOTAMs / Restrictions</label>
               <textarea
                 value={siteSurvey.airspace?.restrictions || ''}
                 onChange={(e) => updateAirspace('restrictions', e.target.value)}
@@ -818,10 +1178,10 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
         >
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-aeria-blue" />
-            Obstacles & Hazards
+            Obstacles
             {(siteSurvey.obstacles || []).length > 0 && (
-              <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                {(siteSurvey.obstacles || []).length} identified
+              <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded">
+                {siteSurvey.obstacles.length}
               </span>
             )}
           </h2>
@@ -831,66 +1191,72 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
         {expandedSections.obstacles && (
           <div className="mt-4 space-y-4">
             {(siteSurvey.obstacles || []).length === 0 ? (
-              <p className="text-sm text-gray-500 italic">No obstacles identified. Add any obstacles or hazards within the operational area.</p>
+              <p className="text-sm text-gray-500">No obstacles recorded</p>
             ) : (
-              (siteSurvey.obstacles || []).map((obstacle, index) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <select
-                      value={obstacle.type}
-                      onChange={(e) => updateObstacle(index, 'type', e.target.value)}
-                      className="input text-sm w-48"
-                    >
-                      {obstacleTypes.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => removeObstacle(index)}
-                      className="p-1 text-red-500 hover:bg-red-50 rounded"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+              (siteSurvey.obstacles || []).map((obstacle, index) => {
+                const ObstacleIcon = obstacleTypes.find(t => t.value === obstacle.type)?.icon || AlertTriangle
+                return (
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ObstacleIcon className="w-4 h-4 text-gray-500" />
+                        <select
+                          value={obstacle.type}
+                          onChange={(e) => updateObstacle(index, 'type', e.target.value)}
+                          className="text-sm font-medium bg-transparent border-none p-0"
+                        >
+                          {obstacleTypes.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <button
+                        onClick={() => removeObstacle(index)}
+                        className="p-1 text-red-500 hover:bg-red-100 rounded"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <input
+                        type="text"
+                        value={obstacle.height}
+                        onChange={(e) => updateObstacle(index, 'height', e.target.value)}
+                        className="input text-sm"
+                        placeholder="Height (m)"
+                      />
+                      <input
+                        type="text"
+                        value={obstacle.distance}
+                        onChange={(e) => updateObstacle(index, 'distance', e.target.value)}
+                        className="input text-sm"
+                        placeholder="Distance (m)"
+                      />
+                      <input
+                        type="text"
+                        value={obstacle.bearing}
+                        onChange={(e) => updateObstacle(index, 'bearing', e.target.value)}
+                        className="input text-sm"
+                        placeholder="Bearing (°)"
+                      />
+                      <input
+                        type="text"
+                        value={obstacle.description}
+                        onChange={(e) => updateObstacle(index, 'description', e.target.value)}
+                        className="input text-sm"
+                        placeholder="Description"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={obstacle.mitigations}
+                      onChange={(e) => updateObstacle(index, 'mitigations', e.target.value)}
+                      className="input text-sm"
+                      placeholder="Mitigations (e.g., maintain 30m lateral clearance)"
+                    />
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    <input
-                      type="text"
-                      value={obstacle.height}
-                      onChange={(e) => updateObstacle(index, 'height', e.target.value)}
-                      className="input text-sm"
-                      placeholder="Height (m AGL)"
-                    />
-                    <input
-                      type="text"
-                      value={obstacle.distance}
-                      onChange={(e) => updateObstacle(index, 'distance', e.target.value)}
-                      className="input text-sm"
-                      placeholder="Distance (m)"
-                    />
-                    <input
-                      type="text"
-                      value={obstacle.bearing}
-                      onChange={(e) => updateObstacle(index, 'bearing', e.target.value)}
-                      className="input text-sm"
-                      placeholder="Bearing (°)"
-                    />
-                    <input
-                      type="text"
-                      value={obstacle.description}
-                      onChange={(e) => updateObstacle(index, 'description', e.target.value)}
-                      className="input text-sm"
-                      placeholder="Description"
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    value={obstacle.mitigations}
-                    onChange={(e) => updateObstacle(index, 'mitigations', e.target.value)}
-                    className="input text-sm"
-                    placeholder="Mitigations (e.g., maintain 30m lateral clearance)"
-                  />
-                </div>
-              ))
+                )
+              })
             )}
 
             <button
@@ -1104,6 +1470,20 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
           </div>
         )}
       </div>
+
+      {/* Map Picker Modal */}
+      <MapPickerModal
+        isOpen={mapPickerOpen}
+        onClose={() => setMapPickerOpen(false)}
+        initialLat={parseFloat(getMapPickerInitialCoords().lat) || null}
+        initialLng={parseFloat(getMapPickerInitialCoords().lng) || null}
+        onSelectLocation={handleMapSelect}
+        title={
+          mapPickerTarget === 'launch' ? 'Select Launch Point' :
+          mapPickerTarget === 'recovery' ? 'Select Recovery Point' :
+          'Select Site Location'
+        }
+      />
     </div>
   )
 }
