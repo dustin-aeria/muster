@@ -168,6 +168,19 @@ function SiteMapEditor({
       document.head.appendChild(link)
     }
 
+    // Add custom styles to fix Leaflet in modal
+    if (!document.getElementById('leaflet-modal-fix')) {
+      const style = document.createElement('style')
+      style.id = 'leaflet-modal-fix'
+      style.textContent = `
+        .leaflet-container { z-index: 1; }
+        .leaflet-pane { z-index: 1; }
+        .leaflet-control { z-index: 2; }
+        .custom-marker { background: transparent !important; border: none !important; }
+      `
+      document.head.appendChild(style)
+    }
+
     const loadLeaflet = () => {
       return new Promise((resolve) => {
         if (window.L) {
@@ -184,30 +197,39 @@ function SiteMapEditor({
     loadLeaflet().then((L) => {
       if (!mapContainerRef.current || mapRef.current) return
 
-      // Find initial center from existing coordinates
-      const siteLat = parseFloat(siteLocation?.lat) || 49.5
-      const siteLng = parseFloat(siteLocation?.lng) || -123.1
-      const hasCoords = siteLocation?.lat && siteLocation?.lng
-      const zoom = hasCoords ? 15 : 5
+      // Small delay to ensure container is ready
+      setTimeout(() => {
+        if (!mapContainerRef.current || mapRef.current) return
+        
+        // Find initial center from existing coordinates
+        const siteLat = parseFloat(siteLocation?.lat) || 49.5
+        const siteLng = parseFloat(siteLocation?.lng) || -123.1
+        const hasCoords = siteLocation?.lat && siteLocation?.lng
+        const zoom = hasCoords ? 15 : 5
 
-      const map = L.map(mapContainerRef.current).setView([siteLat, siteLng], zoom)
-      mapRef.current = map
+        const map = L.map(mapContainerRef.current).setView([siteLat, siteLng], zoom)
+        mapRef.current = map
 
-      // Add satellite/hybrid tile layer option
-      const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-      })
-      
-      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '© Esri'
-      })
+        // Add satellite/hybrid tile layer option
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        })
+        
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: '© Esri'
+        })
 
-      osmLayer.addTo(map)
-      
-      L.control.layers({
-        'Street Map': osmLayer,
-        'Satellite': satelliteLayer
-      }).addTo(map)
+        osmLayer.addTo(map)
+        
+        L.control.layers({
+          'Street Map': osmLayer,
+          'Satellite': satelliteLayer
+        }).addTo(map)
+        
+        // Force map to recalculate size after render
+        setTimeout(() => {
+          map.invalidateSize()
+        }, 100)
 
       // Create custom icon function
       const createIcon = (color, emoji) => {
@@ -304,7 +326,8 @@ function SiteMapEditor({
         }
       })
 
-      setIsLoading(false)
+        setIsLoading(false)
+      }, 50) // end setTimeout
     })
 
     return () => {
@@ -512,13 +535,13 @@ function SiteMapEditor({
         </div>
 
         {/* Map Container */}
-        <div className="flex-1 relative" style={{ minHeight: '450px' }}>
+        <div className="flex-1 relative" style={{ minHeight: '450px', height: '450px' }}>
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
               <Loader2 className="w-8 h-8 text-aeria-blue animate-spin" />
             </div>
           )}
-          <div ref={mapContainerRef} className="w-full h-full" />
+          <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
           
           {/* Instructions overlay */}
           {isDrawingBoundary && (
