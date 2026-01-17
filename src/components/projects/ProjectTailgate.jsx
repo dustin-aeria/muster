@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { 
   FileText,
   RefreshCw,
@@ -28,75 +28,125 @@ import {
   Download,
   HardHat,
   Loader2,
-  Zap
+  Zap,
+  Calendar,
+  Plus,
+  Trash2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { BrandedPDF } from '../../lib/pdfExportService'
+
+// Default tailgate data structure
+const createDefaultTailgateDay = (date) => ({
+  date: date || new Date().toISOString().split('T')[0],
+  generatedAt: null,
+  customNotes: '',
+  weatherBriefing: '',
+  weatherData: {
+    temperature: '',
+    windSpeed: '',
+    windDirection: '',
+    visibility: '',
+    conditions: '',
+    ceiling: ''
+  },
+  checklistCompleted: {
+    siteSecured: false,
+    equipmentChecked: false,
+    crewBriefed: false,
+    commsVerified: false,
+    emergencyReviewed: false,
+    notamsChecked: false,
+    weatherConfirmed: false,
+    riskReviewed: false,
+    clientNotified: false,
+    ppeConfirmed: false
+  },
+  crewAttendance: {},
+  briefingStartTime: '',
+  briefingEndTime: '',
+  goNoGoDecision: null,
+  goNoGoNotes: '',
+  flightLogs: []
+})
 
 export default function ProjectTailgate({ project, onUpdate }) {
   const [copied, setCopied] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0)
   const [expandedSections, setExpandedSections] = useState({
     briefing: true,
     checklist: true,
-    attendance: true
+    attendance: true,
+    weather: true
   })
 
-  // Initialize tailgate data if not present
+  // Initialize tailgate data - support both single day and multi-day
   useEffect(() => {
     if (!project.tailgate) {
+      // New structure: array of days
+      const startDate = project.startDate || new Date().toISOString().split('T')[0]
       onUpdate({
         tailgate: {
-          generatedAt: null,
-          customNotes: '',
-          weatherBriefing: '',
-          checklistCompleted: {
-            siteSecured: false,
-            equipmentChecked: false,
-            crewBriefed: false,
-            commsVerified: false,
-            emergencyReviewed: false,
-            notamsChecked: false,
-            weatherConfirmed: false,
-            riskReviewed: false,
-            clientNotified: false,
-            ppeConfirmed: false
-          },
-          crewAttendance: {},
-          briefingStartTime: '',
-          briefingEndTime: '',
-          goNoGoDecision: null,
-          goNoGoNotes: '',
-          weatherMinimumsConfirmed: false,
-          safetyTopics: []
+          days: [createDefaultTailgateDay(startDate)],
+          isMultiDay: false
+        }
+      })
+    } else if (!project.tailgate.days) {
+      // Migrate old single-day structure to new format
+      const oldData = project.tailgate
+      onUpdate({
+        tailgate: {
+          days: [{
+            date: project.startDate || new Date().toISOString().split('T')[0],
+            generatedAt: oldData.generatedAt,
+            customNotes: oldData.customNotes || '',
+            weatherBriefing: oldData.weatherBriefing || '',
+            weatherData: oldData.weatherData || {},
+            checklistCompleted: oldData.checklistCompleted || {},
+            crewAttendance: oldData.crewAttendance || {},
+            briefingStartTime: oldData.briefingStartTime || '',
+            briefingEndTime: oldData.briefingEndTime || '',
+            goNoGoDecision: oldData.goNoGoDecision,
+            goNoGoNotes: oldData.goNoGoNotes || '',
+            flightLogs: oldData.flightLogs || []
+          }],
+          isMultiDay: false
         }
       })
     }
   }, [project.tailgate])
 
-  const tailgate = project.tailgate || {}
-  
+  const tailgate = project.tailgate || { days: [] }
+  const days = tailgate.days || []
+  const currentDay = days[selectedDayIndex] || createDefaultTailgateDay()
+  const isMultiDay = tailgate.isMultiDay || days.length > 1
+
+  // Update functions
   const updateTailgate = (updates) => {
-    onUpdate({
-      tailgate: {
-        ...tailgate,
-        ...updates
-      }
-    })
+    onUpdate({ tailgate: { ...tailgate, ...updates } })
+  }
+
+  const updateCurrentDay = (updates) => {
+    const newDays = [...days]
+    newDays[selectedDayIndex] = { ...currentDay, ...updates }
+    updateTailgate({ days: newDays })
   }
 
   const updateChecklist = (item, value) => {
-    updateTailgate({
+    updateCurrentDay({
       checklistCompleted: {
-        ...(tailgate.checklistCompleted || {}),
+        ...(currentDay.checklistCompleted || {}),
         [item]: value
       }
     })
   }
 
   const updateCrewAttendance = (crewId, attended) => {
-    updateTailgate({
+    updateCurrentDay({
       crewAttendance: {
-        ...(tailgate.crewAttendance || {}),
+        ...(currentDay.crewAttendance || {}),
         [crewId]: {
           attended,
           timestamp: attended ? new Date().toISOString() : null
@@ -105,38 +155,57 @@ export default function ProjectTailgate({ project, onUpdate }) {
     })
   }
 
+  const updateWeatherData = (field, value) => {
+    updateCurrentDay({
+      weatherData: {
+        ...(currentDay.weatherData || {}),
+        [field]: value
+      }
+    })
+  }
+
+  // Multi-day management
+  const addDay = () => {
+    const lastDay = days[days.length - 1]
+    const lastDate = lastDay?.date ? new Date(lastDay.date) : new Date()
+    lastDate.setDate(lastDate.getDate() + 1)
+    const newDate = lastDate.toISOString().split('T')[0]
+    
+    updateTailgate({
+      days: [...days, createDefaultTailgateDay(newDate)],
+      isMultiDay: true
+    })
+    setSelectedDayIndex(days.length)
+  }
+
+  const removeDay = (index) => {
+    if (days.length <= 1) return
+    const newDays = days.filter((_, i) => i !== index)
+    updateTailgate({ days: newDays, isMultiDay: newDays.length > 1 })
+    if (selectedDayIndex >= newDays.length) {
+      setSelectedDayIndex(newDays.length - 1)
+    }
+  }
+
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
-  // Generate briefing content from project data
+  // Generate briefing
   const generateBriefing = () => {
-    updateTailgate({
+    updateCurrentDay({
       generatedAt: new Date().toISOString(),
       briefingStartTime: new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' })
     })
   }
 
-  // Copy briefing to clipboard
-  const copyBriefing = () => {
-    const text = generateBriefingText()
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  // Get crew by role
-  const getCrew = (role) => {
-    return (project.crew || []).filter(c => c.role === role)
-  }
-
-  const pic = getCrew('PIC')[0]
+  // Crew and helpers
   const allCrew = project.crew || []
+  const pic = allCrew.find(c => c.role === 'PIC')
 
-  // Format helpers
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Not set'
-    return new Date(dateStr).toLocaleDateString('en-CA', { 
+    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-CA', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -144,12 +213,20 @@ export default function ProjectTailgate({ project, onUpdate }) {
     })
   }
 
-  // Get PPE items from project
+  const formatShortDate = (dateStr) => {
+    if (!dateStr) return 'Day'
+    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-CA', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric' 
+    })
+  }
+
+  // Get PPE items
   const getPPEItems = () => {
     const ppe = project.ppe || {}
     const items = []
     
-    // Get selected common items
     if (ppe.selectedItems?.length > 0) {
       const commonPPE = {
         'hi_vis_vest': 'High-Visibility Vest',
@@ -168,17 +245,14 @@ export default function ProjectTailgate({ project, onUpdate }) {
       })
     }
     
-    // Get custom items
     if (ppe.customItems?.length > 0) {
       ppe.customItems.forEach(item => items.push(item.item))
     }
     
-    // Old structure fallback
     if (ppe.items?.length > 0 && items.length === 0) {
       ppe.items.forEach(item => items.push(item.item || item.name || item))
     }
     
-    // Default if nothing
     if (items.length === 0) {
       return ['Safety Vest', 'Safety Boots', 'Safety Glasses (as required)']
     }
@@ -186,73 +260,76 @@ export default function ProjectTailgate({ project, onUpdate }) {
     return items
   }
 
-  // Get hazards from project
+  // Get hazards
   const getHazards = () => {
     const hazards = project.hseRiskAssessment?.hazards || project.riskAssessment?.hazards || []
-    return hazards.slice(0, 6) // Limit to top 6 for briefing
+    return hazards.slice(0, 6)
   }
 
-  // Generate plain text version for copying
+  // Copy briefing text
+  const copyBriefing = () => {
+    const text = generateBriefingText()
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const generateBriefingText = () => {
     const ppeItems = getPPEItems()
     const hazards = getHazards()
+    const weather = currentDay.weatherData || {}
     
     const lines = [
       `PRE-DEPLOYMENT BRIEFING - ${project.name || 'Untitled Project'}`,
       `═`.repeat(50),
-      `Date: ${formatDate(project.startDate)}`,
+      `Date: ${formatDate(currentDay.date)}`,
+      isMultiDay ? `Day ${selectedDayIndex + 1} of ${days.length}` : '',
       `Project Code: ${project.projectCode || 'N/A'}`,
       `Client: ${project.clientName || 'N/A'}`,
       '',
       '─── CREW ───',
       ...allCrew.map(c => `• ${c.role}: ${c.name}${c.phone ? ` (${c.phone})` : ''}`),
       '',
+      '─── WEATHER ───',
+      weather.temperature ? `Temperature: ${weather.temperature}` : '',
+      weather.windSpeed ? `Wind: ${weather.windSpeed} ${weather.windDirection || ''}` : '',
+      weather.visibility ? `Visibility: ${weather.visibility}` : '',
+      weather.conditions ? `Conditions: ${weather.conditions}` : '',
+      currentDay.weatherBriefing || '',
+      '',
       '─── OPERATION OVERVIEW ───',
       `Description: ${project.description || 'No description'}`,
       `Operation Type: ${project.flightPlan?.operationType || 'Standard'}`,
-      `Max Altitude: ${project.flightPlan?.maxAltitudeAGL || project.flightPlan?.maxAltitude || 'N/A'} m AGL`,
-      '',
-      '─── SITE INFORMATION ───',
-      `Location: ${project.siteSurvey?.location?.siteName || project.siteSurvey?.general?.siteName || 'Not specified'}`,
-      `Coordinates: ${project.siteSurvey?.location?.coordinates?.lat || 'N/A'}, ${project.siteSurvey?.location?.coordinates?.lng || 'N/A'}`,
-      `Access: ${project.siteSurvey?.access?.type || 'Not specified'}`,
-      '',
-      '─── EMERGENCY CONTACTS ───',
-      `Primary: ${project.emergencyPlan?.primaryEmergencyContact?.name || 'Not set'} - ${project.emergencyPlan?.primaryEmergencyContact?.phone || 'N/A'}`,
-      `Hospital: ${project.emergencyPlan?.nearestHospital || 'Not set'}`,
-      `Rally Point: ${project.emergencyPlan?.rallyPoint || 'Not set'}`,
-      '',
-      '─── COMMUNICATIONS ───',
-      `Primary Channel: ${project.communications?.primaryChannel || 'Not set'}`,
-      `Backup: ${project.communications?.backupChannel || 'Not set'}`,
-      `Lost Link: ${project.communications?.lostLinkProcedure || 'RTH'}`,
+      `Max Altitude: ${project.flightPlan?.maxAltitudeAGL || 'N/A'} m AGL`,
       '',
       '─── KEY HAZARDS & CONTROLS ───',
       ...(hazards.length > 0 
-        ? hazards.map(h => `• ${h.description || 'Unnamed hazard'}\n  → Controls: ${h.controls || 'None documented'}`)
+        ? hazards.map(h => `• ${h.description || 'Unnamed'}\n  → ${h.controls || 'None'}`)
         : ['No hazards documented']),
       '',
       '─── PPE REQUIREMENTS ───',
       ...ppeItems.map(item => `• ${item}`),
       '',
-      '─── WEATHER BRIEFING ───',
-      tailgate.weatherBriefing || 'Not recorded',
+      '─── EMERGENCY ───',
+      `Contact: ${project.emergencyPlan?.primaryEmergencyContact?.name || 'Not set'} - ${project.emergencyPlan?.primaryEmergencyContact?.phone || 'N/A'}`,
+      `Hospital: ${project.emergencyPlan?.nearestHospital || 'Not set'}`,
+      `Rally Point: ${project.emergencyPlan?.rallyPoint || 'Not set'}`,
       '',
-      tailgate.customNotes ? `─── ADDITIONAL NOTES ───\n${tailgate.customNotes}` : '',
+      currentDay.customNotes ? `─── NOTES ───\n${currentDay.customNotes}` : '',
       '',
       `═`.repeat(50),
-      `Briefing Generated: ${new Date().toLocaleString()}`,
-      `Go/No-Go Decision: ${tailgate.goNoGoDecision === true ? 'GO' : tailgate.goNoGoDecision === false ? 'NO-GO' : 'Pending'}`
+      `Generated: ${new Date().toLocaleString()}`,
+      `Decision: ${currentDay.goNoGoDecision === true ? 'GO' : currentDay.goNoGoDecision === false ? 'NO-GO' : 'Pending'}`
     ]
     return lines.filter(l => l !== '').join('\n')
   }
 
-  // Export to PDF
+  // Export PDF
   const exportToPDF = async () => {
     setExporting(true)
     try {
       const pdf = new BrandedPDF({
-        title: 'Pre-Deployment Briefing',
+        title: `Pre-Deployment Briefing${isMultiDay ? ` - Day ${selectedDayIndex + 1}` : ''}`,
         subtitle: 'Tailgate Safety Meeting',
         projectName: project.name,
         projectCode: project.projectCode,
@@ -263,16 +340,29 @@ export default function ProjectTailgate({ project, onUpdate }) {
       pdf.addCoverPage()
       pdf.addNewPage()
       
-      // Project Info
+      // Operation Details
       pdf.addSectionTitle('Operation Details')
       pdf.addKeyValueGrid([
         { label: 'Project', value: project.name },
-        { label: 'Client', value: project.clientName || 'N/A' },
-        { label: 'Date', value: project.startDate || 'Not set' },
-        { label: 'Operation Type', value: project.flightPlan?.operationType || 'Standard' },
-        { label: 'Max Altitude', value: `${project.flightPlan?.maxAltitudeAGL || 'N/A'} m AGL` },
-        { label: 'Briefing Time', value: tailgate.briefingStartTime || new Date().toLocaleTimeString() }
+        { label: 'Date', value: formatDate(currentDay.date) },
+        { label: 'Day', value: isMultiDay ? `${selectedDayIndex + 1} of ${days.length}` : '1' },
+        { label: 'Briefing Time', value: currentDay.briefingStartTime || 'Not recorded' }
       ])
+      
+      // Weather
+      const weather = currentDay.weatherData || {}
+      if (weather.temperature || weather.windSpeed || currentDay.weatherBriefing) {
+        pdf.addSectionTitle('Weather Conditions')
+        pdf.addKeyValueGrid([
+          { label: 'Temperature', value: weather.temperature || 'N/A' },
+          { label: 'Wind', value: weather.windSpeed ? `${weather.windSpeed} ${weather.windDirection || ''}` : 'N/A' },
+          { label: 'Visibility', value: weather.visibility || 'N/A' },
+          { label: 'Conditions', value: weather.conditions || 'N/A' }
+        ])
+        if (currentDay.weatherBriefing) {
+          pdf.addParagraph(currentDay.weatherBriefing)
+        }
+      }
       
       // Crew
       if (allCrew.length > 0) {
@@ -281,35 +371,10 @@ export default function ProjectTailgate({ project, onUpdate }) {
           c.role || 'N/A',
           c.name || 'N/A',
           c.phone || 'N/A',
-          tailgate.crewAttendance?.[c.id || c.name]?.attended ? '✓ Present' : '○ Absent'
+          currentDay.crewAttendance?.[c.id || c.name]?.attended ? '✓ Present' : '○ Absent'
         ])
         pdf.addTable(['Role', 'Name', 'Phone', 'Attendance'], crewRows)
       }
-      
-      // Site Info
-      pdf.addSectionTitle('Site Information')
-      pdf.addKeyValueGrid([
-        { label: 'Location', value: project.siteSurvey?.location?.siteName || 'Not specified' },
-        { label: 'Coordinates', value: `${project.siteSurvey?.location?.coordinates?.lat || 'N/A'}, ${project.siteSurvey?.location?.coordinates?.lng || 'N/A'}` },
-        { label: 'Access', value: project.siteSurvey?.access?.type || 'Not specified' },
-        { label: 'Ground Conditions', value: project.siteSurvey?.groundConditions?.type || 'Not specified' }
-      ])
-      
-      // Emergency Info
-      pdf.addSectionTitle('Emergency Information')
-      pdf.addKeyValueGrid([
-        { label: 'Emergency Contact', value: `${project.emergencyPlan?.primaryEmergencyContact?.name || 'Not set'} - ${project.emergencyPlan?.primaryEmergencyContact?.phone || 'N/A'}` },
-        { label: 'Nearest Hospital', value: project.emergencyPlan?.nearestHospital || 'Not set' },
-        { label: 'Rally Point', value: project.emergencyPlan?.rallyPoint || 'Not set' }
-      ])
-      
-      // Communications
-      pdf.addSectionTitle('Communications')
-      pdf.addKeyValueGrid([
-        { label: 'Primary Channel', value: project.communications?.primaryChannel || 'Not set' },
-        { label: 'Backup Channel', value: project.communications?.backupChannel || 'Not set' },
-        { label: 'Lost Link Procedure', value: project.communications?.lostLinkProcedure || 'RTH' }
-      ])
       
       // Hazards
       const hazards = getHazards()
@@ -325,39 +390,23 @@ export default function ProjectTailgate({ project, onUpdate }) {
       
       // PPE
       pdf.addSectionTitle('Required PPE')
-      const ppeItems = getPPEItems()
-      pdf.addParagraph(ppeItems.join(' • '))
-      
-      // Weather
-      if (tailgate.weatherBriefing) {
-        pdf.addSectionTitle('Weather Briefing')
-        pdf.addParagraph(tailgate.weatherBriefing)
-      }
+      pdf.addParagraph(getPPEItems().join(' • '))
       
       // Go/No-Go
       pdf.addSectionTitle('Go/No-Go Decision')
-      pdf.addKeyValueGrid([
-        { label: 'Decision', value: tailgate.goNoGoDecision === true ? 'GO' : tailgate.goNoGoDecision === false ? 'NO-GO' : 'Pending' },
-        { label: 'Decision Time', value: new Date().toLocaleString() }
-      ])
-      if (tailgate.goNoGoNotes) {
-        pdf.addParagraph(tailgate.goNoGoNotes)
+      pdf.addLabelValue('Decision', currentDay.goNoGoDecision === true ? 'GO' : currentDay.goNoGoDecision === false ? 'NO-GO' : 'Pending')
+      if (currentDay.goNoGoNotes) {
+        pdf.addParagraph(currentDay.goNoGoNotes)
       }
       
-      // Checklist Summary
-      const checklist = tailgate.checklistCompleted || {}
-      const completedItems = Object.entries(checklist).filter(([_, v]) => v).length
-      pdf.addSectionTitle('Pre-Flight Checklist')
-      pdf.addParagraph(`${completedItems} of 10 items completed`)
-      
       // Signatures
-      pdf.addSectionTitle('Briefing Acknowledgment')
+      pdf.addSectionTitle('Acknowledgment')
       pdf.addSignatureBlock([
         { role: 'Pilot in Command', name: pic?.name },
-        { role: 'All Crew Present', name: `${allCrew.filter(c => tailgate.crewAttendance?.[c.id || c.name]?.attended).length} of ${allCrew.length}` }
+        { role: 'Crew Present', name: `${Object.values(currentDay.crewAttendance || {}).filter(a => a?.attended).length} of ${allCrew.length}` }
       ])
       
-      const filename = `Tailgate_${project.projectCode || project.name || 'briefing'}_${new Date().toISOString().split('T')[0]}.pdf`
+      const filename = `Tailgate_${project.projectCode || project.name || 'briefing'}_Day${selectedDayIndex + 1}_${currentDay.date || 'nodate'}.pdf`
       pdf.save(filename)
     } catch (err) {
       console.error('PDF export failed:', err)
@@ -367,81 +416,141 @@ export default function ProjectTailgate({ project, onUpdate }) {
     }
   }
 
-  // Calculate checklist progress
-  const checklistItems = tailgate.checklistCompleted || {}
+  // Calculate stats
+  const checklistItems = currentDay.checklistCompleted || {}
   const completedCount = Object.values(checklistItems).filter(Boolean).length
   const totalChecklistItems = 10
 
-  // Calculate crew attendance
-  const crewAttendance = tailgate.crewAttendance || {}
+  const crewAttendance = currentDay.crewAttendance || {}
   const attendedCount = Object.values(crewAttendance).filter(a => a?.attended).length
   const allCrewAttended = allCrew.length > 0 && attendedCount === allCrew.length
 
-  // SAIL level from SORA assessment
-  const sail = project.soraAssessment?.sail || null
-
-  // Check if ready for operations
   const isReadyForOps = completedCount === totalChecklistItems && 
                         allCrewAttended && 
-                        tailgate.goNoGoDecision === true
+                        currentDay.goNoGoDecision === true
 
-  // Get hazards for display
+  // Calculate overall operation status
+  const operationStats = useMemo(() => {
+    let completedDays = 0
+    let goDays = 0
+    let noGoDays = 0
+    
+    days.forEach(day => {
+      if (day.goNoGoDecision === true) {
+        goDays++
+        completedDays++
+      } else if (day.goNoGoDecision === false) {
+        noGoDays++
+        completedDays++
+      }
+    })
+    
+    return { total: days.length, completed: completedDays, go: goDays, noGo: noGoDays }
+  }, [days])
+
   const hazards = getHazards()
   const ppeItems = getPPEItems()
 
   return (
     <div className="space-y-6">
+      {/* Multi-Day Header */}
+      {isMultiDay && (
+        <div className="card bg-gradient-to-r from-blue-50 to-white">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                Multi-Day Operation
+              </h3>
+              <p className="text-sm text-gray-600">
+                {operationStats.go} GO / {operationStats.noGo} NO-GO / {operationStats.total - operationStats.completed} Pending
+              </p>
+            </div>
+            <button onClick={addDay} className="btn-secondary text-sm">
+              <Plus className="w-4 h-4 mr-1" />
+              Add Day
+            </button>
+          </div>
+          
+          {/* Day Tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {days.map((day, index) => {
+              const dayChecklist = day.checklistCompleted || {}
+              const dayComplete = Object.values(dayChecklist).filter(Boolean).length
+              const isGo = day.goNoGoDecision === true
+              const isNoGo = day.goNoGoDecision === false
+              
+              return (
+                <button
+                  key={index}
+                  onClick={() => setSelectedDayIndex(index)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-lg border-2 transition-all ${
+                    index === selectedDayIndex
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-center">
+                    <p className={`text-xs font-medium ${index === selectedDayIndex ? 'text-blue-700' : 'text-gray-600'}`}>
+                      Day {index + 1}
+                    </p>
+                    <p className={`text-sm ${index === selectedDayIndex ? 'text-blue-900' : 'text-gray-900'}`}>
+                      {formatShortDate(day.date)}
+                    </p>
+                    <div className="flex items-center justify-center gap-1 mt-1">
+                      {isGo && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                      {isNoGo && <XCircle className="w-4 h-4 text-red-500" />}
+                      {!isGo && !isNoGo && (
+                        <span className="text-xs text-gray-400">{dayComplete}/10</span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Header Actions */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Pre-Deployment Briefing</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {isMultiDay ? `Day ${selectedDayIndex + 1}: ` : ''}Pre-Deployment Briefing
+          </h2>
           <p className="text-sm text-gray-500">
-            {tailgate.generatedAt 
-              ? `Last generated: ${new Date(tailgate.generatedAt).toLocaleString()}`
-              : 'Generate a briefing summary for your tailgate meeting'
-            }
+            {formatDate(currentDay.date)}
+            {currentDay.generatedAt && ` • Generated ${new Date(currentDay.generatedAt).toLocaleTimeString()}`}
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={generateBriefing}
-            className="btn-secondary inline-flex items-center gap-2"
-          >
+          <button onClick={generateBriefing} className="btn-secondary inline-flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
-            {tailgate.generatedAt ? 'Refresh' : 'Generate'}
+            {currentDay.generatedAt ? 'Refresh' : 'Generate'}
           </button>
-          <button
-            onClick={copyBriefing}
-            className="btn-secondary inline-flex items-center gap-2"
-          >
+          <button onClick={copyBriefing} className="btn-secondary inline-flex items-center gap-2">
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             {copied ? 'Copied!' : 'Copy'}
           </button>
-          <button
-            onClick={exportToPDF}
-            disabled={exporting}
-            className="btn-primary inline-flex items-center gap-2"
-          >
-            {exporting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Exporting...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                Export PDF
-              </>
-            )}
+          <button onClick={exportToPDF} disabled={exporting} className="btn-primary inline-flex items-center gap-2">
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {exporting ? 'Exporting...' : 'PDF'}
           </button>
+          {isMultiDay && days.length > 1 && (
+            <button 
+              onClick={() => removeDay(selectedDayIndex)}
+              className="btn-secondary text-red-600 hover:bg-red-50"
+              title="Remove this day"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Readiness Status */}
       <div className={`p-4 rounded-lg border-2 ${
-        isReadyForOps 
-          ? 'bg-green-50 border-green-500' 
-          : 'bg-amber-50 border-amber-300'
+        isReadyForOps ? 'bg-green-50 border-green-500' : 'bg-amber-50 border-amber-300'
       }`}>
         <div className="flex items-center gap-3">
           {isReadyForOps ? (
@@ -456,10 +565,29 @@ export default function ProjectTailgate({ project, onUpdate }) {
             <p className={`text-sm ${isReadyForOps ? 'text-green-600' : 'text-amber-600'}`}>
               Checklist: {completedCount}/{totalChecklistItems} • 
               Crew: {attendedCount}/{allCrew.length} • 
-              Decision: {tailgate.goNoGoDecision === true ? 'GO' : tailgate.goNoGoDecision === false ? 'NO-GO' : 'Pending'}
+              Decision: {currentDay.goNoGoDecision === true ? 'GO' : currentDay.goNoGoDecision === false ? 'NO-GO' : 'Pending'}
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Date Picker (for current day) */}
+      <div className="card">
+        <label className="label">Operation Date</label>
+        <input
+          type="date"
+          value={currentDay.date || ''}
+          onChange={(e) => updateCurrentDay({ date: e.target.value })}
+          className="input max-w-xs"
+        />
+        {!isMultiDay && (
+          <button 
+            onClick={() => updateTailgate({ isMultiDay: true })}
+            className="ml-4 text-sm text-blue-600 hover:text-blue-800"
+          >
+            + Enable multi-day operation
+          </button>
+        )}
       </div>
 
       {/* Go / No-Go Decision */}
@@ -471,9 +599,9 @@ export default function ProjectTailgate({ project, onUpdate }) {
         
         <div className="flex flex-wrap gap-4 mb-4">
           <button
-            onClick={() => updateTailgate({ goNoGoDecision: true })}
+            onClick={() => updateCurrentDay({ goNoGoDecision: true })}
             className={`flex-1 min-w-[150px] p-4 rounded-lg border-2 transition-all flex items-center justify-center gap-3 ${
-              tailgate.goNoGoDecision === true 
+              currentDay.goNoGoDecision === true 
                 ? 'border-green-500 bg-green-50 text-green-700' 
                 : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50'
             }`}
@@ -483,9 +611,9 @@ export default function ProjectTailgate({ project, onUpdate }) {
           </button>
           
           <button
-            onClick={() => updateTailgate({ goNoGoDecision: false })}
+            onClick={() => updateCurrentDay({ goNoGoDecision: false })}
             className={`flex-1 min-w-[150px] p-4 rounded-lg border-2 transition-all flex items-center justify-center gap-3 ${
-              tailgate.goNoGoDecision === false 
+              currentDay.goNoGoDecision === false 
                 ? 'border-red-500 bg-red-50 text-red-700' 
                 : 'border-gray-200 hover:border-red-300 hover:bg-red-50/50'
             }`}
@@ -495,15 +623,114 @@ export default function ProjectTailgate({ project, onUpdate }) {
           </button>
         </div>
         
-        {tailgate.goNoGoDecision === false && (
+        {currentDay.goNoGoDecision === false && (
           <div>
             <label className="label">Reason for No-Go</label>
             <textarea
-              value={tailgate.goNoGoNotes || ''}
-              onChange={(e) => updateTailgate({ goNoGoNotes: e.target.value })}
+              value={currentDay.goNoGoNotes || ''}
+              onChange={(e) => updateCurrentDay({ goNoGoNotes: e.target.value })}
               className="input min-h-[80px]"
               placeholder="Document the reason for the No-Go decision..."
             />
+          </div>
+        )}
+      </div>
+
+      {/* Weather Section */}
+      <div className="card">
+        <button
+          onClick={() => toggleSection('weather')}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Wind className="w-5 h-5 text-blue-500" />
+            Weather Conditions
+          </h2>
+          {expandedSections.weather ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </button>
+
+        {expandedSections.weather && (
+          <div className="mt-4 space-y-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="label flex items-center gap-2">
+                  <Thermometer className="w-4 h-4" />
+                  Temperature
+                </label>
+                <input
+                  type="text"
+                  value={currentDay.weatherData?.temperature || ''}
+                  onChange={(e) => updateWeatherData('temperature', e.target.value)}
+                  className="input"
+                  placeholder="e.g., 15°C"
+                />
+              </div>
+              <div>
+                <label className="label flex items-center gap-2">
+                  <Wind className="w-4 h-4" />
+                  Wind Speed
+                </label>
+                <input
+                  type="text"
+                  value={currentDay.weatherData?.windSpeed || ''}
+                  onChange={(e) => updateWeatherData('windSpeed', e.target.value)}
+                  className="input"
+                  placeholder="e.g., 10 km/h"
+                />
+              </div>
+              <div>
+                <label className="label">Wind Direction</label>
+                <input
+                  type="text"
+                  value={currentDay.weatherData?.windDirection || ''}
+                  onChange={(e) => updateWeatherData('windDirection', e.target.value)}
+                  className="input"
+                  placeholder="e.g., NW"
+                />
+              </div>
+              <div>
+                <label className="label flex items-center gap-2">
+                  <Eye className="w-4 h-4" />
+                  Visibility
+                </label>
+                <input
+                  type="text"
+                  value={currentDay.weatherData?.visibility || ''}
+                  onChange={(e) => updateWeatherData('visibility', e.target.value)}
+                  className="input"
+                  placeholder="e.g., >10 SM"
+                />
+              </div>
+              <div>
+                <label className="label">Ceiling</label>
+                <input
+                  type="text"
+                  value={currentDay.weatherData?.ceiling || ''}
+                  onChange={(e) => updateWeatherData('ceiling', e.target.value)}
+                  className="input"
+                  placeholder="e.g., CLR or 5000 ft"
+                />
+              </div>
+              <div>
+                <label className="label">Conditions</label>
+                <input
+                  type="text"
+                  value={currentDay.weatherData?.conditions || ''}
+                  onChange={(e) => updateWeatherData('conditions', e.target.value)}
+                  className="input"
+                  placeholder="e.g., Clear, Few clouds"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="label">Weather Notes / METAR</label>
+              <textarea
+                value={currentDay.weatherBriefing || ''}
+                onChange={(e) => updateCurrentDay({ weatherBriefing: e.target.value })}
+                className="input min-h-[60px]"
+                placeholder="METAR, TAF, or other weather notes..."
+              />
+            </div>
           </div>
         )}
       </div>
@@ -518,9 +745,7 @@ export default function ProjectTailgate({ project, onUpdate }) {
             <Users className="w-5 h-5 text-aeria-blue" />
             Crew Attendance
             <span className={`px-2 py-0.5 text-xs rounded-full ${
-              allCrewAttended 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-gray-100 text-gray-600'
+              allCrewAttended ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
             }`}>
               {attendedCount}/{allCrew.length}
             </span>
@@ -541,9 +766,7 @@ export default function ProjectTailgate({ project, onUpdate }) {
                   <div 
                     key={member.id || member.name}
                     className={`flex items-center justify-between p-3 rounded-lg border ${
-                      hasAttended 
-                        ? 'bg-green-50 border-green-200' 
-                        : 'bg-gray-50 border-gray-200'
+                      hasAttended ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -626,7 +849,7 @@ export default function ProjectTailgate({ project, onUpdate }) {
                 >
                   <input
                     type="checkbox"
-                    checked={isChecked}
+                    checked={isChecked || false}
                     onChange={(e) => updateChecklist(item.key, e.target.checked)}
                     className="w-5 h-5 rounded border-gray-300 text-green-600"
                   />
@@ -661,136 +884,20 @@ export default function ProjectTailgate({ project, onUpdate }) {
               <h3 className="text-xl font-bold">{project.name || 'Untitled Project'}</h3>
               <div className="grid sm:grid-cols-4 gap-4 mt-3 text-sm">
                 <div>
-                  <p className="text-white/70">Project Code</p>
-                  <p className="font-semibold">{project.projectCode || 'N/A'}</p>
+                  <p className="text-white/70">Date</p>
+                  <p className="font-semibold">{formatShortDate(currentDay.date)}</p>
                 </div>
                 <div>
                   <p className="text-white/70">Client</p>
-                  <p className="font-semibold">{project.clientName || 'No client'}</p>
+                  <p className="font-semibold">{project.clientName || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-white/70">Date</p>
-                  <p className="font-semibold">{formatDate(project.startDate)}</p>
+                  <p className="text-white/70">Operation</p>
+                  <p className="font-semibold">{project.flightPlan?.operationType || 'VLOS'}</p>
                 </div>
                 <div>
-                  <p className="text-white/70">Operation Type</p>
-                  <p className="font-semibold">{project.flightPlan?.operationType || 'Standard'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* SORA / Risk Level */}
-            {(sail || project.soraAssessment) && (
-              <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  Risk Assessment Summary
-                </h4>
-                <div className="grid sm:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-purple-700">SAIL Level</p>
-                    <p className="font-bold text-purple-900 text-lg">{sail || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-purple-700">Final GRC</p>
-                    <p className="font-bold text-purple-900 text-lg">{project.soraAssessment?.finalGRC || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-purple-700">Residual ARC</p>
-                    <p className="font-bold text-purple-900 text-lg">{project.soraAssessment?.residualARC || project.soraAssessment?.initialARC || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Crew List */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4 text-aeria-blue" />
-                Crew
-              </h4>
-              {allCrew.length > 0 ? (
-                <div className="grid sm:grid-cols-2 gap-2">
-                  {allCrew.map((member, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <span className="font-medium text-gray-700">{member.role}:</span>
-                      <span className="text-gray-900">{member.name}</span>
-                      {member.phone && <span className="text-gray-500">({member.phone})</span>}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500 italic">No crew assigned</p>
-              )}
-            </div>
-
-            {/* Site Info */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-aeria-blue" />
-                Site Information
-              </h4>
-              <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500">Location</p>
-                  <p className="font-medium">{project.siteSurvey?.location?.siteName || project.siteSurvey?.general?.siteName || 'Not specified'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Max Altitude</p>
-                  <p className="font-medium">{project.flightPlan?.maxAltitudeAGL || project.flightPlan?.maxAltitude || 'N/A'} m AGL</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Communications */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Radio className="w-4 h-4 text-aeria-blue" />
-                Communications
-              </h4>
-              <div className="grid sm:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500">Primary Channel</p>
-                  <p className="font-medium">{project.communications?.primaryChannel || 'Not set'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Backup</p>
-                  <p className="font-medium">{project.communications?.backupChannel || 'Not set'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Lost Link Action</p>
-                  <p className="font-medium">{project.communications?.lostLinkProcedure || 'RTH'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Emergency Information */}
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <h4 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
-                <AlertOctagon className="w-4 h-4" />
-                Emergency Information
-              </h4>
-              <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-red-700">Emergency Contact</p>
-                  <p className="font-medium text-red-900">
-                    {project.emergencyPlan?.primaryEmergencyContact?.name || 'Not set'}
-                    {project.emergencyPlan?.primaryEmergencyContact?.phone && (
-                      <span className="ml-2">{project.emergencyPlan.primaryEmergencyContact.phone}</span>
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-red-700">Nearest Hospital</p>
-                  <p className="font-medium text-red-900">{project.emergencyPlan?.nearestHospital || 'Not set'}</p>
-                </div>
-                <div>
-                  <p className="text-red-700">Rally Point</p>
-                  <p className="font-medium text-red-900">{project.emergencyPlan?.rallyPoint || 'Not set'}</p>
-                </div>
-                <div>
-                  <p className="text-red-700">Emergency Procedure</p>
-                  <p className="font-medium text-red-900">{project.emergencyPlan?.emergencyProcedure || 'Standard ERP'}</p>
+                  <p className="text-white/70">Max Alt</p>
+                  <p className="font-semibold">{project.flightPlan?.maxAltitudeAGL || 120}m AGL</p>
                 </div>
               </div>
             </div>
@@ -805,8 +912,8 @@ export default function ProjectTailgate({ project, onUpdate }) {
                 <div className="space-y-2">
                   {hazards.map((hazard, i) => (
                     <div key={i} className="text-sm">
-                      <p className="font-medium text-amber-900">{hazard.description || 'Unnamed hazard'}</p>
-                      <p className="text-amber-700">→ {hazard.controls || 'No controls documented'}</p>
+                      <p className="font-medium text-amber-900">{hazard.description || 'Unnamed'}</p>
+                      <p className="text-amber-700">→ {hazard.controls || 'None documented'}</p>
                     </div>
                   ))}
                 </div>
@@ -828,28 +935,34 @@ export default function ProjectTailgate({ project, onUpdate }) {
               </div>
             </div>
 
-            {/* Weather Notes */}
-            <div>
-              <label className="label flex items-center gap-2">
-                <Wind className="w-4 h-4" />
-                Weather Briefing Notes
-              </label>
-              <textarea
-                value={tailgate.weatherBriefing || ''}
-                onChange={(e) => updateTailgate({ weatherBriefing: e.target.value })}
-                className="input min-h-[80px]"
-                placeholder="Current conditions, forecast, wind, visibility, METAR/TAF..."
-              />
+            {/* Emergency */}
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <h4 className="font-semibold text-red-900 mb-2 flex items-center gap-2">
+                <AlertOctagon className="w-4 h-4" />
+                Emergency Information
+              </h4>
+              <div className="grid sm:grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-red-700">Contact: </span>
+                  <span className="text-red-900 font-medium">
+                    {project.emergencyPlan?.primaryEmergencyContact?.name || 'Not set'} - {project.emergencyPlan?.primaryEmergencyContact?.phone || 'N/A'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-red-700">Hospital: </span>
+                  <span className="text-red-900 font-medium">{project.emergencyPlan?.nearestHospital || 'Not set'}</span>
+                </div>
+              </div>
             </div>
 
             {/* Additional Notes */}
             <div>
-              <label className="label">Additional Briefing Notes</label>
+              <label className="label">Additional Notes</label>
               <textarea
-                value={tailgate.customNotes || ''}
-                onChange={(e) => updateTailgate({ customNotes: e.target.value })}
+                value={currentDay.customNotes || ''}
+                onChange={(e) => updateCurrentDay({ customNotes: e.target.value })}
                 className="input min-h-[80px]"
-                placeholder="Any other items to discuss during the briefing..."
+                placeholder="Any other items for today's briefing..."
               />
             </div>
           </div>
