@@ -1,7 +1,7 @@
 /**
  * Aeria Ops - Safety Data Operations
  * Firestore functions for incidents, CAPAs, and KPI calculations
- * 
+ *
  * Phase 1: Foundation for Safety KPI Dashboard
  * @version 1.0.0
  */
