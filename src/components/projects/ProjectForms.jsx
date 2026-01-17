@@ -1140,7 +1140,8 @@ export default function ProjectForms({ project, onUpdate }) {
     loadData()
   }, [])
 
-  const projectForms = project?.forms || []
+  // FIX: Ensure projectForms is ALWAYS an array
+  const projectForms = Array.isArray(project?.forms) ? project.forms : []
 
   const handleSelectForm = (formTemplate) => {
     setSelectedForm(formTemplate)
