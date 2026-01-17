@@ -23,7 +23,7 @@ import {
   getCountFromServer,
   writeBatch
 } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db } from './firebase'
 
 // ============================================
 // COLLECTION REFERENCES
