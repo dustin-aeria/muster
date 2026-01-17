@@ -968,6 +968,127 @@ function MapPreview({ siteLocation, launchPoint, recoveryPoint, boundary, onOpen
 // ============================================
 // MAIN COMPONENT
 // ============================================
+// DISTANCE CALCULATIONS COMPONENT
+// Shows calculated distances and area from map points
+// ============================================
+function DistanceCalculations({ siteLocation, launchPoint, recoveryPoint, boundary }) {
+  // Haversine formula to calculate distance between two points
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    if (!lat1 || !lng1 || !lat2 || !lng2) return null
+    
+    const R = 6371000 // Earth's radius in meters
+    const φ1 = parseFloat(lat1) * Math.PI / 180
+    const φ2 = parseFloat(lat2) * Math.PI / 180
+    const Δφ = (parseFloat(lat2) - parseFloat(lat1)) * Math.PI / 180
+    const Δλ = (parseFloat(lng2) - parseFloat(lng1)) * Math.PI / 180
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+
+    return R * c // Distance in meters
+  }
+
+  // Calculate polygon area using Shoelace formula (approximate for small areas)
+  const calculateBoundaryArea = (points) => {
+    if (!points || points.length < 3) return null
+    
+    // Convert to approximate meters using center point as reference
+    const centerLat = points.reduce((sum, p) => sum + parseFloat(p.lat), 0) / points.length
+    const metersPerDegreeLat = 111320
+    const metersPerDegreeLng = 111320 * Math.cos(centerLat * Math.PI / 180)
+    
+    // Convert points to meters
+    const metersPoints = points.map(p => ({
+      x: parseFloat(p.lng) * metersPerDegreeLng,
+      y: parseFloat(p.lat) * metersPerDegreeLat
+    }))
+    
+    // Shoelace formula
+    let area = 0
+    for (let i = 0; i < metersPoints.length; i++) {
+      const j = (i + 1) % metersPoints.length
+      area += metersPoints[i].x * metersPoints[j].y
+      area -= metersPoints[j].x * metersPoints[i].y
+    }
+    area = Math.abs(area) / 2
+    
+    return area // Area in square meters
+  }
+
+  const formatDistance = (meters) => {
+    if (meters === null) return null
+    if (meters < 1000) return `${Math.round(meters)} m`
+    return `${(meters / 1000).toFixed(2)} km`
+  }
+
+  const formatArea = (sqMeters) => {
+    if (sqMeters === null) return null
+    if (sqMeters < 10000) return `${Math.round(sqMeters).toLocaleString()} m²`
+    return `${(sqMeters / 10000).toFixed(2)} hectares`
+  }
+
+  const hasLaunch = launchPoint?.lat && launchPoint?.lng
+  const hasRecovery = recoveryPoint?.lat && recoveryPoint?.lng
+  const hasBoundary = boundary && boundary.length >= 3
+
+  const siteToLaunch = hasLaunch ? calculateDistance(
+    siteLocation.lat, siteLocation.lng, launchPoint.lat, launchPoint.lng
+  ) : null
+  
+  const siteToRecovery = hasRecovery ? calculateDistance(
+    siteLocation.lat, siteLocation.lng, recoveryPoint.lat, recoveryPoint.lng
+  ) : null
+  
+  const launchToRecovery = hasLaunch && hasRecovery ? calculateDistance(
+    launchPoint.lat, launchPoint.lng, recoveryPoint.lat, recoveryPoint.lng
+  ) : null
+
+  const boundaryArea = hasBoundary ? calculateBoundaryArea(boundary) : null
+
+  // Don't render if no data to show
+  if (!hasLaunch && !hasRecovery && !hasBoundary) return null
+
+  return (
+    <div className="p-3 bg-gray-50 rounded-lg border">
+      <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+        <Navigation2 className="w-4 h-4" />
+        Calculated Measurements
+      </h4>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+        {siteToLaunch !== null && (
+          <div>
+            <div className="text-xs text-gray-500">Site → Launch</div>
+            <div className="font-medium text-green-700">{formatDistance(siteToLaunch)}</div>
+          </div>
+        )}
+        {siteToRecovery !== null && (
+          <div>
+            <div className="text-xs text-gray-500">Site → Recovery</div>
+            <div className="font-medium text-amber-700">{formatDistance(siteToRecovery)}</div>
+          </div>
+        )}
+        {launchToRecovery !== null && (
+          <div>
+            <div className="text-xs text-gray-500">Launch → Recovery</div>
+            <div className="font-medium text-blue-700">{formatDistance(launchToRecovery)}</div>
+          </div>
+        )}
+        {boundaryArea !== null && (
+          <div>
+            <div className="text-xs text-gray-500">Boundary Area</div>
+            <div className="font-medium text-purple-700">{formatArea(boundaryArea)}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 export default function ProjectSiteSurvey({ project, onUpdate }) {
   const [expandedSections, setExpandedSections] = useState({
     location: true,
@@ -1283,65 +1404,16 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
               onOpenEditor={() => setMapEditorOpen(true)}
             />
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <label className="label">Site Name</label>
-                <input
-                  type="text"
-                  value={siteSurvey.location?.name || ''}
-                  onChange={(e) => updateLocation('name', e.target.value)}
-                  className="input"
-                  placeholder="e.g., Quintette Mine North Pit"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="label">Address / Location Description</label>
-                <input
-                  type="text"
-                  value={siteSurvey.location?.address || ''}
-                  onChange={(e) => updateLocation('address', e.target.value)}
-                  className="input"
-                  placeholder="e.g., 15km NW of Tumbler Ridge, BC"
-                />
-              </div>
-
-              <div>
-                <label className="label">Latitude (decimal degrees)</label>
-                <input
-                  type="text"
-                  value={siteSurvey.location?.coordinates?.lat || ''}
-                  onChange={(e) => updateCoordinates('lat', e.target.value)}
-                  className="input font-mono"
-                  placeholder="e.g., 55.1234"
-                />
-              </div>
-
-              <div>
-                <label className="label">Longitude (decimal degrees)</label>
-                <input
-                  type="text"
-                  value={siteSurvey.location?.coordinates?.lng || ''}
-                  onChange={(e) => updateCoordinates('lng', e.target.value)}
-                  className="input font-mono"
-                  placeholder="e.g., -121.5678"
-                />
-              </div>
-
-              <div>
-                <label className="label">Elevation (m ASL)</label>
-                <input
-                  type="text"
-                  value={siteSurvey.location?.elevation || ''}
-                  onChange={(e) => updateLocation('elevation', e.target.value)}
-                  className="input"
-                  placeholder="e.g., 1250"
-                />
-              </div>
-            </div>
-
-            {/* Location Action Buttons */}
-            <div className="flex flex-wrap gap-2 pt-2">
+            {/* Quick Actions */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setMapEditorOpen(true)}
+                className="btn-primary text-sm flex items-center gap-2"
+              >
+                <Map className="w-4 h-4" />
+                Edit Map & Points
+              </button>
+              
               <button
                 onClick={getCurrentLocation}
                 disabled={gettingLocation}
@@ -1353,14 +1425,6 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                   <Crosshair className="w-4 h-4" />
                 )}
                 {gettingLocation ? 'Getting Location...' : 'Use My Location'}
-              </button>
-              
-              <button
-                onClick={() => setMapEditorOpen(true)}
-                className="btn-secondary text-sm flex items-center gap-2"
-              >
-                <Map className="w-4 h-4" />
-                Open Map Editor
               </button>
 
               {siteSurvey.location?.coordinates?.lat && siteSurvey.location?.coordinates?.lng && (
@@ -1392,13 +1456,126 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
               )}
             </div>
 
+            {/* Site Details */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="label">Site Name *</label>
+                <input
+                  type="text"
+                  value={siteSurvey.location?.name || ''}
+                  onChange={(e) => updateLocation('name', e.target.value)}
+                  className="input"
+                  placeholder="e.g., Quintette Mine North Pit"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label mb-0">Address / Location Description</label>
+                  {siteSurvey.location?.coordinates?.lat && !siteSurvey.location?.address && (
+                    <button
+                      onClick={async () => {
+                        const { lat, lng } = siteSurvey.location.coordinates
+                        try {
+                          const response = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14`
+                          )
+                          const data = await response.json()
+                          if (data.display_name) {
+                            updateLocation('address', data.display_name)
+                          }
+                        } catch (err) {
+                          console.error('Reverse geocode failed:', err)
+                        }
+                      }}
+                      className="text-xs text-aeria-blue hover:underline flex items-center gap-1"
+                    >
+                      <MapPin className="w-3 h-3" />
+                      Auto-fill from coordinates
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={siteSurvey.location?.address || ''}
+                  onChange={(e) => updateLocation('address', e.target.value)}
+                  className="input"
+                  placeholder="e.g., 15km NW of Tumbler Ridge, BC"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label mb-0">Elevation (m ASL)</label>
+                  {siteSurvey.location?.coordinates?.lat && !siteSurvey.location?.elevation && (
+                    <button
+                      onClick={async () => {
+                        const { lat, lng } = siteSurvey.location.coordinates
+                        try {
+                          const response = await fetch(
+                            `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`
+                          )
+                          const data = await response.json()
+                          if (data.results?.[0]?.elevation) {
+                            updateLocation('elevation', Math.round(data.results[0].elevation).toString())
+                          }
+                        } catch (err) {
+                          console.error('Elevation lookup failed:', err)
+                        }
+                      }}
+                      className="text-xs text-aeria-blue hover:underline flex items-center gap-1"
+                    >
+                      <Mountain className="w-3 h-3" />
+                      Auto-fill elevation
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={siteSurvey.location?.elevation || ''}
+                  onChange={(e) => updateLocation('elevation', e.target.value)}
+                  className="input"
+                  placeholder="e.g., 1250"
+                />
+              </div>
+
+              <div>
+                <label className="label">Coordinates</label>
+                <div className="input bg-gray-50 font-mono text-sm flex items-center justify-between">
+                  {siteSurvey.location?.coordinates?.lat && siteSurvey.location?.coordinates?.lng ? (
+                    <>
+                      <span>{siteSurvey.location.coordinates.lat}, {siteSurvey.location.coordinates.lng}</span>
+                      <button 
+                        onClick={() => setMapEditorOpen(true)}
+                        className="text-aeria-blue text-xs hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">Set via Map Editor</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Calculated Distances */}
+            {siteSurvey.location?.coordinates?.lat && (
+              <DistanceCalculations 
+                siteLocation={siteSurvey.location?.coordinates}
+                launchPoint={siteSurvey.launchRecovery?.launchPoint}
+                recoveryPoint={siteSurvey.launchRecovery?.recoveryPoint}
+                boundary={siteSurvey.boundary}
+              />
+            )}
+
             <div>
               <label className="label">Site Description</label>
               <textarea
                 value={siteSurvey.location?.description || ''}
                 onChange={(e) => updateLocation('description', e.target.value)}
                 className="input min-h-[80px]"
-                placeholder="General description of the site, landmarks, notable features..."
+                placeholder="General description of the site, terrain, landmarks, notable features..."
               />
             </div>
           </div>
@@ -1420,76 +1597,172 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
 
         {expandedSections.launchRecovery && (
           <div className="mt-4 space-y-4">
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 flex items-center gap-2">
-              <Map className="w-4 h-4" />
-              <span>Launch and recovery coordinates are set in the <button onClick={() => setMapEditorOpen(true)} className="font-medium underline">Map Editor</button> above.</span>
-            </div>
-
-            {/* Launch Point Description */}
+            {/* Launch Point */}
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium text-green-800 flex items-center gap-2">
                   <span className="text-lg">🛫</span>
                   Launch Point
                 </h3>
-                {siteSurvey.launchRecovery?.launchPoint?.lat && (
-                  <span className="text-xs font-mono text-green-600">
-                    {siteSurvey.launchRecovery.launchPoint.lat}, {siteSurvey.launchRecovery.launchPoint.lng}
-                  </span>
+                <div className="flex items-center gap-2">
+                  {siteSurvey.launchRecovery?.launchPoint?.lat ? (
+                    <span className="text-xs font-mono text-green-600 bg-green-100 px-2 py-0.5 rounded">
+                      {siteSurvey.launchRecovery.launchPoint.lat}, {siteSurvey.launchRecovery.launchPoint.lng}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">Not set</span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Quick actions */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                <button
+                  onClick={() => setMapEditorOpen(true)}
+                  className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center gap-1"
+                >
+                  <Target className="w-3 h-3" />
+                  Set on Map
+                </button>
+                {siteSurvey.location?.coordinates?.lat && !siteSurvey.launchRecovery?.launchPoint?.lat && (
+                  <button
+                    onClick={() => {
+                      const { lat, lng } = siteSurvey.location.coordinates
+                      updateLaunchRecovery('launchPoint', 'lat', lat)
+                      updateLaunchRecovery('launchPoint', 'lng', lng)
+                    }}
+                    className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    Use Site Location
+                  </button>
                 )}
               </div>
+              
               <div>
-                <label className="label text-xs">Description</label>
+                <label className="label text-xs">Description *</label>
                 <textarea
                   value={siteSurvey.launchRecovery?.launchPoint?.description || ''}
                   onChange={(e) => updateLaunchRecovery('launchPoint', 'description', e.target.value)}
                   className="input text-sm"
                   rows={2}
-                  placeholder="e.g., Flat gravel pad near equipment shed, clear of overhead obstructions"
+                  placeholder="Describe the launch area: surface type, dimensions, clearances, obstacles..."
                 />
               </div>
             </div>
 
-            {/* Recovery Point Description */}
+            {/* Recovery Point */}
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium text-amber-800 flex items-center gap-2">
                   <span className="text-lg">🛬</span>
                   Recovery Point
                 </h3>
-                {siteSurvey.launchRecovery?.recoveryPoint?.lat && (
-                  <span className="text-xs font-mono text-amber-600">
-                    {siteSurvey.launchRecovery.recoveryPoint.lat}, {siteSurvey.launchRecovery.recoveryPoint.lng}
-                  </span>
+                <div className="flex items-center gap-2">
+                  {siteSurvey.launchRecovery?.recoveryPoint?.lat ? (
+                    <span className="text-xs font-mono text-amber-600 bg-amber-100 px-2 py-0.5 rounded">
+                      {siteSurvey.launchRecovery.recoveryPoint.lat}, {siteSurvey.launchRecovery.recoveryPoint.lng}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">Not set</span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Quick actions */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                <button
+                  onClick={() => setMapEditorOpen(true)}
+                  className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded hover:bg-amber-200 flex items-center gap-1"
+                >
+                  <Target className="w-3 h-3" />
+                  Set on Map
+                </button>
+                {siteSurvey.launchRecovery?.launchPoint?.lat && (
+                  <button
+                    onClick={() => {
+                      const { lat, lng, description } = siteSurvey.launchRecovery.launchPoint
+                      updateLaunchRecovery('recoveryPoint', 'lat', lat)
+                      updateLaunchRecovery('recoveryPoint', 'lng', lng)
+                      if (!siteSurvey.launchRecovery?.recoveryPoint?.description) {
+                        updateLaunchRecovery('recoveryPoint', 'description', 'Same as launch point')
+                      }
+                    }}
+                    className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded hover:bg-amber-200 flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    Same as Launch
+                  </button>
+                )}
+                {siteSurvey.location?.coordinates?.lat && !siteSurvey.launchRecovery?.recoveryPoint?.lat && (
+                  <button
+                    onClick={() => {
+                      const { lat, lng } = siteSurvey.location.coordinates
+                      updateLaunchRecovery('recoveryPoint', 'lat', lat)
+                      updateLaunchRecovery('recoveryPoint', 'lng', lng)
+                    }}
+                    className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded hover:bg-amber-200 flex items-center gap-1"
+                  >
+                    <MapPin className="w-3 h-3" />
+                    Use Site Location
+                  </button>
                 )}
               </div>
+              
               <div>
-                <label className="label text-xs">Description</label>
+                <label className="label text-xs">Description *</label>
                 <textarea
                   value={siteSurvey.launchRecovery?.recoveryPoint?.description || ''}
                   onChange={(e) => updateLaunchRecovery('recoveryPoint', 'description', e.target.value)}
                   className="input text-sm"
                   rows={2}
-                  placeholder="e.g., Same as launch, or describe alternate recovery location"
+                  placeholder="Describe the recovery area, or note if same as launch point..."
                 />
               </div>
             </div>
 
             {/* Boundary Info */}
-            {siteSurvey.boundary && siteSurvey.boundary.length >= 3 && (
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-purple-800 flex items-center gap-2">
-                    <span className="text-lg">🔷</span>
-                    Operational Boundary
-                  </h3>
-                  <span className="text-xs text-purple-600">{siteSurvey.boundary.length} points defined</span>
-                </div>
-                <p className="text-sm text-purple-700 mt-2">
-                  Operational area boundary has been defined in the map editor.
-                </p>
+            <div className={`p-4 rounded-lg border ${
+              siteSurvey.boundary && siteSurvey.boundary.length >= 3 
+                ? 'bg-purple-50 border-purple-200' 
+                : 'bg-gray-50 border-gray-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <h3 className={`font-medium flex items-center gap-2 ${
+                  siteSurvey.boundary && siteSurvey.boundary.length >= 3 
+                    ? 'text-purple-800' 
+                    : 'text-gray-600'
+                }`}>
+                  <span className="text-lg">🔷</span>
+                  Operational Boundary
+                </h3>
+                {siteSurvey.boundary && siteSurvey.boundary.length >= 3 ? (
+                  <span className="text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded">
+                    {siteSurvey.boundary.length} points defined
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                    Not defined
+                  </span>
+                )}
               </div>
-            )}
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={() => setMapEditorOpen(true)}
+                  className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
+                    siteSurvey.boundary && siteSurvey.boundary.length >= 3
+                      ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Target className="w-3 h-3" />
+                  {siteSurvey.boundary && siteSurvey.boundary.length >= 3 ? 'Edit Boundary' : 'Draw Boundary'}
+                </button>
+                <span className="text-xs text-gray-500">
+                  Define the operational area perimeter for SORA assessment
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </div>
