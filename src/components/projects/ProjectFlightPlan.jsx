@@ -378,13 +378,26 @@ function LaunchRecoveryMapEditor({
       document.head.appendChild(link)
     }
 
+    const loadLeaflet = () => {
+      return new Promise((resolve) => {
+        if (window.L) {
+          resolve(window.L)
+          return
+        }
+        const script = document.createElement('script')
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+        script.onload = () => resolve(window.L)
+        document.body.appendChild(script)
+      })
+    }
+
     const initMap = async () => {
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
       }
 
-      const L = await import('leaflet')
+      const L = await loadLeaflet()
       await new Promise(resolve => setTimeout(resolve, 100))
       
       if (!mapContainerRef.current) return
