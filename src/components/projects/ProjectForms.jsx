@@ -247,14 +247,44 @@ function FormModal({ form, formTemplate, project, operators = [], aircraft = [],
                 const now = new Date()
                 initial[section.id][field.id] = now.toTimeString().slice(0, 5)
               }
-              // Auto-fill from project if specified
-              if (field.autoFill && project) {
+              
+              // Enhanced auto-fill from project if specified
+              if (field.autoFill && project && !initial[section.id][field.id]) {
                 const path = field.autoFill.replace('project.', '').split('.')
                 let value = project
-                for (const key of path) {
-                  value = value?.[key]
+                
+                // Handle special auto-fill paths
+                if (field.autoFill === 'project.hazards') {
+                  // Try multiple locations for hazards
+                  value = project.hseRisk?.hazards || project.siteSurvey?.hazards || []
+                } else if (field.autoFill === 'project.controls') {
+                  // Try multiple locations for controls
+                  value = project.hseRisk?.controls || project.siteSurvey?.controls || []
+                } else if (field.autoFill === 'project.ppe') {
+                  // Get PPE from project or defaults
+                  value = project.ppe?.required || project.hseRisk?.ppe || {
+                    high_vis: true,
+                    safety_boots: true,
+                    safety_glasses: true
+                  }
+                } else if (field.autoFill === 'project.muster_point') {
+                  value = project.emergency?.musterPoint || project.siteSurvey?.musterPoint || ''
+                } else if (field.autoFill === 'project.location') {
+                  value = project.siteSurvey?.location?.description || 
+                          project.overview?.location || 
+                          project.location || ''
+                } else if (field.autoFill === 'project.crew') {
+                  value = project.crew?.members?.map(m => m.id) || []
+                } else if (field.autoFill === 'project.aircraft') {
+                  value = project.flightPlan?.aircraft || project.equipment?.primaryAircraft || ''
+                } else {
+                  // Standard path traversal
+                  for (const key of path) {
+                    value = value?.[key]
+                  }
                 }
-                if (value && !initial[section.id][field.id]) {
+                
+                if (value !== undefined && value !== null) {
                   initial[section.id][field.id] = value
                 }
               }
