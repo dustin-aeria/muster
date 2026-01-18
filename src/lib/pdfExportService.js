@@ -161,9 +161,60 @@ export class BrandedPDF {
   }
 
   // ============================================
-  // COVER PAGE
+  // LOGO HELPER
   // ============================================
-  addCoverPage() {
+  async addLogo(x, y, maxWidth, maxHeight) {
+    const logo = this.branding?.operator?.logo
+    if (!logo) return false
+    
+    try {
+      // Logo should be base64 data URL
+      if (!logo.startsWith('data:image')) {
+        console.warn('Invalid logo format - expected base64 data URL')
+        return false
+      }
+      
+      // Get image dimensions using a promise-based approach
+      const img = new window.Image()
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+        img.src = logo
+      })
+      
+      // Calculate scaled dimensions maintaining aspect ratio
+      let width = img.width
+      let height = img.height
+      const aspectRatio = width / height
+      
+      if (width > maxWidth) {
+        width = maxWidth
+        height = width / aspectRatio
+      }
+      if (height > maxHeight) {
+        height = maxHeight
+        width = height * aspectRatio
+      }
+      
+      // Determine format from data URL
+      let format = 'PNG'
+      if (logo.includes('image/jpeg') || logo.includes('image/jpg')) {
+        format = 'JPEG'
+      }
+      
+      // Add image to PDF
+      this.doc.addImage(logo, format, x, y, width, height)
+      return { width, height }
+    } catch (err) {
+      console.warn('Failed to add logo to PDF:', err)
+      return false
+    }
+  }
+
+  // ============================================
+  // COVER PAGE (with logo support)
+  // ============================================
+  async addCoverPage() {
     // Background header
     this.setFillColor('primary')
     this.doc.rect(0, 0, this.pageWidth, 80, 'F')
@@ -172,11 +223,28 @@ export class BrandedPDF {
     this.setFillColor('secondary')
     this.doc.rect(0, 80, this.pageWidth, 4, 'F')
     
-    // Company name
+    // Try to add logo
+    const logo = this.branding?.operator?.logo
+    let logoAdded = false
+    let textStartX = this.margin
+    
+    if (logo) {
+      try {
+        const logoResult = await this.addLogo(this.margin, 12, 50, 25)
+        if (logoResult) {
+          logoAdded = true
+          textStartX = this.margin + logoResult.width + 10
+        }
+      } catch (err) {
+        console.warn('Logo add failed, using text fallback')
+      }
+    }
+    
+    // Company name (positioned after logo if present)
     this.doc.setTextColor(255, 255, 255)
-    this.doc.setFontSize(18)
+    this.doc.setFontSize(logoAdded ? 14 : 18)
     this.doc.setFont('helvetica', 'bold')
-    this.doc.text(this.branding.operator.name, this.margin, 30)
+    this.doc.text(this.branding.operator.name, textStartX, logoAdded ? 22 : 30)
     
     // Registration
     this.doc.setFontSize(9)
@@ -526,7 +594,7 @@ export async function generateOperationsPlanPDF(project, branding = {}) {
   
   await pdf.init()
   
-  pdf.addCoverPage()
+  await pdf.addCoverPage()
   pdf.addNewPage()
   
   // Project Overview
@@ -618,7 +686,7 @@ export async function generateSORAPDF(project, soraCalculations, branding = {}) 
   const sora = project.soraAssessment || {}
   const { intrinsicGRC, finalGRC, residualARC, sail } = soraCalculations
   
-  pdf.addCoverPage()
+  await pdf.addCoverPage()
   pdf.addNewPage()
   
   // Summary
@@ -675,7 +743,7 @@ export async function generateHSERiskPDF(project, branding = {}) {
   
   const hse = project.hseRiskAssessment || {}
   
-  pdf.addCoverPage()
+  await pdf.addCoverPage()
   pdf.addNewPage()
   
   // Summary
