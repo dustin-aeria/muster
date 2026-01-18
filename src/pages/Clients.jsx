@@ -3,6 +3,9 @@
  * Client management page with full CRUD functionality
  * Enhanced with logo upload for branded exports
  * 
+ * FIXES APPLIED:
+ * - Issue #6: Fixed three-button menu click not working (stopPropagation)
+ * 
  * @location src/pages/Clients.jsx
  * @action REPLACE
  */
@@ -355,6 +358,24 @@ function ClientModal({ isOpen, onClose, client, onSave }) {
 
 // Client Card Component
 function ClientCard({ client, onEdit, onDelete, menuOpen, setMenuOpen }) {
+  // FIX #6: Handle menu button click with stopPropagation
+  const handleMenuClick = (e) => {
+    e.stopPropagation() // Prevent document click handler from firing
+    setMenuOpen(menuOpen === client.id ? null : client.id)
+  }
+
+  const handleEditClick = (e) => {
+    e.stopPropagation()
+    onEdit(client)
+    setMenuOpen(null)
+  }
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation()
+    onDelete(client.id, client.name)
+    setMenuOpen(null)
+  }
+
   return (
     <div className="card hover:shadow-lg transition-shadow">
       <div className="flex items-start justify-between">
@@ -385,35 +406,39 @@ function ClientCard({ client, onEdit, onDelete, menuOpen, setMenuOpen }) {
         
         <div className="relative">
           <button
-            onClick={() => setMenuOpen(menuOpen === client.id ? null : client.id)}
+            onClick={handleMenuClick}
             className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
           >
             <MoreVertical className="w-4 h-4" />
           </button>
           
           {menuOpen === client.id && (
-            <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 min-w-[120px]">
-              <button
-                onClick={() => {
-                  onEdit(client)
+            <>
+              {/* FIX #6: Backdrop with stopPropagation */}
+              <div 
+                className="fixed inset-0 z-10"
+                onClick={(e) => {
+                  e.stopPropagation()
                   setMenuOpen(null)
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              >
-                <Edit className="w-4 h-4" />
-                Edit
-              </button>
-              <button
-                onClick={() => {
-                  onDelete(client.id, client.name)
-                  setMenuOpen(null)
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
-            </div>
+              />
+              <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[120px]">
+                <button
+                  onClick={handleEditClick}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={handleDeleteClick}
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -525,12 +550,8 @@ export default function Clients() {
     )
   })
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => setMenuOpen(null)
-    document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
-  }, [])
+  // FIX #6: Removed the problematic document-level click handler
+  // Menu closing is now handled by the backdrop overlay in ClientCard
 
   return (
     <div className="space-y-6">
