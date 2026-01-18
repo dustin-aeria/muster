@@ -1140,8 +1140,8 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
                     onChange={(e) => updateSora({ initialARC: e.target.value })}
                     className="input flex-1"
                   >
-                    {arcLevels.map(arc => (
-                      <option key={arc.value} value={arc.value}>{arc.label}</option>
+                    {Object.entries(arcLevels).map(([key, arc]) => (
+                      <option key={key} value={key}>{key} - {arc.description}</option>
                     ))}
                   </select>
                   <div className="p-2 bg-blue-50 rounded text-xs text-blue-700">
