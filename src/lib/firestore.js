@@ -1,3 +1,17 @@
+/**
+ * firestore.js
+ * Firebase Firestore data access layer with multi-site support
+ * 
+ * UPDATED: Added multi-site project structure support
+ * - Projects now support multiple operation sites
+ * - Each site has its own map data, site survey, flight plan, and emergency data
+ * - SORA assessments are calculated per-site
+ * - Backward compatibility maintained for legacy single-site projects
+ * 
+ * @location src/lib/firestore.js
+ * @action REPLACE
+ */
+
 import { 
   collection, 
   doc, 
@@ -13,6 +27,23 @@ import {
   serverTimestamp 
 } from 'firebase/firestore'
 import { db } from './firebase'
+
+// Import multi-site structures
+import {
+  createDefaultSite,
+  MAX_SITES_PER_PROJECT,
+  getDefaultSiteMapData,
+  getDefaultSiteSurveyData,
+  getDefaultSiteFlightPlanData,
+  getDefaultSiteEmergencyData,
+  getDefaultSiteSoraData
+} from './mapDataStructures'
+
+import {
+  needsMultiSiteMigration,
+  migrateToMultiSite,
+  CURRENT_PROJECT_VERSION
+} from './siteMigration'
 
 // ============================================
 // PROJECTS
@@ -49,7 +80,8 @@ export async function getProject(id) {
 /**
  * Default SORA structure with proper initialization
  * Matches JARUS SORA 2.5 methodology requirements
- * Simplified structure to work with ProjectSORA component
+ * NOTE: This is now used at project level for shared settings
+ * Site-specific SORA data is stored in each site
  */
 const getDefaultSoraStructure = () => ({
   // Step 1: ConOps (populated from Flight Plan)
@@ -118,6 +150,8 @@ const getDefaultOSOComplianceStructure = () => {
 
 /**
  * Default Site Survey structure with SORA-integrated population fields
+ * LEGACY: Kept for backward compatibility during migration period
+ * New projects use sites[].siteSurvey instead
  */
 const getDefaultSiteSurveyStructure = () => ({
   location: {
@@ -136,7 +170,7 @@ const getDefaultSiteSurveyStructure = () => ({
   population: {
     category: null,            // controlled | remote | lightly | sparsely | suburban | highdensity | assembly
     adjacentCategory: null,    // Population category of adjacent area
-    density: null,             // people/kmÂ² if known
+    density: null,             // people/km² if known
     justification: '',
     assessmentDate: null
   },
@@ -168,6 +202,8 @@ const getDefaultSiteSurveyStructure = () => ({
 
 /**
  * Default Flight Plan structure
+ * NOTE: Aircraft and weather minimums remain at project level
+ * Site-specific flight data is stored in sites[].flightPlan
  */
 const getDefaultFlightPlanStructure = () => ({
   aircraft: [],                // Array of { id, nickname, make, model, mtow, maxSpeed, isPrimary }
@@ -228,44 +264,87 @@ export const createDefaultHazard = () => ({
   verification: ''
 })
 
+/**
+ * Create a new project with multi-site support
+ */
 export async function createProject(data) {
+  // Create the first default site
+  const initialSite = createDefaultSite({
+    name: data.siteName || 'Primary Site',
+    description: '',
+    order: 0
+  })
+  
   const project = {
     ...data,
     status: 'draft',
+    projectVersion: CURRENT_PROJECT_VERSION,
+    
+    // Section toggles
     sections: {
       siteSurvey: false,
       flightPlan: false,
     },
+    
+    // Crew (project-level)
     crew: [],
     
-    // Site Survey with SORA-integrated population fields
-    siteSurvey: getDefaultSiteSurveyStructure(),
+    // ============================================
+    // MULTI-SITE STRUCTURE (NEW)
+    // ============================================
+    sites: [initialSite],
+    activeSiteId: initialSite.id,
     
-    // Flight Plan with aircraft selection
-    flightPlan: getDefaultFlightPlanStructure(),
+    // ============================================
+    // PROJECT-LEVEL DATA (Shared across all sites)
+    // ============================================
+    
+    // Flight Plan - project level (aircraft, weather, contingencies)
+    flightPlan: {
+      aircraft: [],
+      weatherMinimums: {
+        minVisibility: 3,
+        minCeiling: 500,
+        maxWind: 10,
+        maxGust: 15,
+        precipitation: false,
+        notes: ''
+      },
+      contingencies: getDefaultFlightPlanStructure().contingencies,
+      additionalProcedures: ''
+    },
     
     // HSE Risk Assessment (Per HSE1047 & HSE1048)
-    // Separate from SORA - focuses on workplace hazards & hierarchy of controls
+    // Project-level - applies to all sites
     hseRiskAssessment: getDefaultHSERiskStructure(),
     
-    // SORA 2.5 Assessment (Per JARUS)
-    // Driven by Flight Plan and Site Survey data
-    soraAssessment: getDefaultSoraStructure(),
+    // SORA 2.5 - Project level defaults
+    // Site-specific SORA data overrides these
+    soraDefaults: {
+      uaCharacteristic: '1m_25ms',
+      mitigations: {
+        M1A: { enabled: false, robustness: 'none', evidence: '' },
+        M1B: { enabled: false, robustness: 'none', evidence: '' },
+        M1C: { enabled: false, robustness: 'none', evidence: '' },
+        M2: { enabled: false, robustness: 'none', evidence: '' }
+      },
+      initialARC: 'ARC-b',
+      tmpr: { enabled: true, type: 'VLOS', robustness: 'low', evidence: '' },
+      containment: { method: '', robustness: 'none', evidence: '' },
+      osoCompliance: getDefaultOSOComplianceStructure()
+    },
     
-    // Legacy field for migration - will be deprecated
-    riskAssessment: null,
-    
+    // Emergency Plan - project level (contacts shared across sites)
     emergencyPlan: {
-      musterPoints: [],
-      evacuationRoutes: [],
       contacts: [
         { type: 'emergency', name: 'Local Emergency', phone: '911', notes: '' },
         { type: 'fic', name: 'FIC Edmonton', phone: '1-866-541-4102', notes: 'For fly-away reporting' }
       ],
-      hospital: null,
       firstAid: null,
       procedures: {}
     },
+    
+    // PPE (project-level)
     ppe: {
       required: [
         { item: 'High-Visibility Vest', specification: 'ANSI Type R Class 2', notes: '' },
@@ -276,6 +355,8 @@ export async function createProject(data) {
       siteSpecific: '',
       notes: ''
     },
+    
+    // Communications (project-level)
     communications: {
       primaryMethod: 'cell',
       backupMethod: 'radio',
@@ -285,6 +366,8 @@ export async function createProject(data) {
       emergencyStopWord: 'STOP STOP STOP',
       aeronauticalRadioRequired: false
     },
+    
+    // Approvals (project-level)
     approvals: {
       preparedBy: null,
       preparedDate: null,
@@ -294,7 +377,19 @@ export async function createProject(data) {
       approvedDate: null,
       crewAcknowledgments: []
     },
+    
+    // Tailgate
     tailgate: null,
+    
+    // ============================================
+    // LEGACY FIELDS (for backward compatibility)
+    // These are null for new projects
+    // ============================================
+    siteSurvey: null,
+    soraAssessment: null,
+    riskAssessment: null,
+    
+    // Timestamps
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   }
@@ -314,6 +409,138 @@ export async function updateProject(id, data) {
 export async function deleteProject(id) {
   const docRef = doc(db, 'projects', id)
   await deleteDoc(docRef)
+}
+
+// ============================================
+// SITE MANAGEMENT HELPERS
+// ============================================
+
+/**
+ * Add a new site to a project
+ */
+export async function addSiteToProject(projectId, siteData = {}) {
+  const project = await getProject(projectId)
+  
+  const sites = Array.isArray(project.sites) ? project.sites : []
+  
+  if (sites.length >= MAX_SITES_PER_PROJECT) {
+    throw new Error(`Maximum of ${MAX_SITES_PER_PROJECT} sites per project`)
+  }
+  
+  const newSite = createDefaultSite({
+    name: siteData.name || `Site ${sites.length + 1}`,
+    description: siteData.description || '',
+    order: sites.length,
+    createdBy: siteData.createdBy || null
+  })
+  
+  await updateProject(projectId, {
+    sites: [...sites, newSite],
+    activeSiteId: newSite.id
+  })
+  
+  return newSite
+}
+
+/**
+ * Duplicate an existing site
+ */
+export async function duplicateSiteInProject(projectId, sourceSiteId, newName) {
+  const project = await getProject(projectId)
+  
+  const sites = Array.isArray(project.sites) ? project.sites : []
+  
+  if (sites.length >= MAX_SITES_PER_PROJECT) {
+    throw new Error(`Maximum of ${MAX_SITES_PER_PROJECT} sites per project`)
+  }
+  
+  const sourceSite = sites.find(s => s.id === sourceSiteId)
+  if (!sourceSite) {
+    throw new Error('Source site not found')
+  }
+  
+  // Deep clone the site
+  const clonedSite = JSON.parse(JSON.stringify(sourceSite))
+  
+  // Generate new ID and update metadata
+  const newSite = {
+    ...clonedSite,
+    id: `site_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    name: newName || `${sourceSite.name} (Copy)`,
+    status: 'draft',
+    order: sites.length,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+  
+  await updateProject(projectId, {
+    sites: [...sites, newSite],
+    activeSiteId: newSite.id
+  })
+  
+  return newSite
+}
+
+/**
+ * Remove a site from a project
+ */
+export async function removeSiteFromProject(projectId, siteId) {
+  const project = await getProject(projectId)
+  
+  const sites = Array.isArray(project.sites) ? project.sites : []
+  
+  if (sites.length <= 1) {
+    throw new Error('Cannot remove the last site from a project')
+  }
+  
+  const filteredSites = sites.filter(s => s.id !== siteId)
+  
+  // Re-order remaining sites
+  const reorderedSites = filteredSites.map((site, index) => ({
+    ...site,
+    order: index
+  }))
+  
+  // Update active site if needed
+  let newActiveSiteId = project.activeSiteId
+  if (newActiveSiteId === siteId) {
+    newActiveSiteId = reorderedSites[0]?.id || null
+  }
+  
+  await updateProject(projectId, {
+    sites: reorderedSites,
+    activeSiteId: newActiveSiteId
+  })
+}
+
+/**
+ * Update a specific site within a project
+ */
+export async function updateSiteInProject(projectId, siteId, updates) {
+  const project = await getProject(projectId)
+  
+  const sites = Array.isArray(project.sites) ? project.sites : []
+  const siteIndex = sites.findIndex(s => s.id === siteId)
+  
+  if (siteIndex === -1) {
+    throw new Error('Site not found')
+  }
+  
+  const updatedSites = [...sites]
+  updatedSites[siteIndex] = {
+    ...updatedSites[siteIndex],
+    ...updates,
+    updatedAt: new Date().toISOString()
+  }
+  
+  await updateProject(projectId, { sites: updatedSites })
+}
+
+/**
+ * Set the active site for a project
+ */
+export async function setActiveSite(projectId, siteId) {
+  await updateProject(projectId, { activeSiteId: siteId })
 }
 
 // ============================================
@@ -515,82 +742,120 @@ export async function deleteForm(id) {
 
 /**
  * Migrate existing project to new decoupled HSE/SORA structure
+ * AND new multi-site structure
  * Call this when loading a project that has old data format
  */
 export function migrateProjectToDecoupledStructure(project) {
+  if (!project) return project
+  
+  // First, check if we need multi-site migration
+  if (needsMultiSiteMigration(project)) {
+    // Perform full migration to multi-site structure
+    const migratedProject = migrateToMultiSite(project)
+    return migratedProject
+  }
+  
+  // Check if already has new structure
+  if (Array.isArray(project.sites) && project.sites.length > 0) {
+    // Already has sites, ensure all required fields exist
+    return ensureProjectDefaults(project)
+  }
+  
+  // Legacy migration for HSE/SORA (from before multi-site)
   const hasSeparateStructures = project.hseRiskAssessment && project.soraAssessment
   
-  if (hasSeparateStructures) {
-    // Already migrated
-    return project
+  if (!hasSeparateStructures && project.riskAssessment) {
+    // Migrate from old combined riskAssessment structure
+    const oldRiskAssessment = project.riskAssessment || {}
+    const oldSora = oldRiskAssessment.sora || {}
+    const oldHazards = oldRiskAssessment.hazards || []
+    
+    // Build new HSE Risk Assessment structure
+    const hseRiskAssessment = {
+      hazards: oldHazards.map(h => ({
+        id: h.id || Date.now().toString(),
+        category: h.category || 'environmental',
+        description: h.description || '',
+        likelihood: h.likelihood || 3,
+        severity: h.severity || 3,
+        controlType: h.controlType || 'administrative',
+        controls: h.controls || '',
+        residualLikelihood: h.residualLikelihood || 2,
+        residualSeverity: h.residualSeverity || 2,
+        responsible: h.responsible || '',
+        verification: h.verification || ''
+      })),
+      overallRiskAcceptable: oldRiskAssessment.overallRiskAcceptable || null,
+      reviewNotes: oldRiskAssessment.reviewNotes || '',
+      reviewedBy: oldRiskAssessment.reviewedBy || '',
+      reviewDate: oldRiskAssessment.reviewDate || '',
+      approvedBy: '',
+      approvalDate: ''
+    }
+    
+    project.hseRiskAssessment = hseRiskAssessment
+    project.riskAssessment = null
   }
   
-  // Migrate from old combined riskAssessment structure
-  const oldRiskAssessment = project.riskAssessment || {}
-  const oldSora = oldRiskAssessment.sora || {}
-  const oldHazards = oldRiskAssessment.hazards || []
-  
-  // Build new HSE Risk Assessment structure
-  const hseRiskAssessment = {
-    hazards: oldHazards.map(h => ({
-      id: h.id || Date.now().toString(),
-      category: h.category || 'environmental',
-      description: h.description || '',
-      likelihood: h.likelihood || 3,
-      severity: h.severity || 3,
-      controlType: h.controlType || 'administrative',
-      controls: h.controls || '',
-      residualLikelihood: h.residualLikelihood || 2,
-      residualSeverity: h.residualSeverity || 2,
-      responsible: h.responsible || '',
-      verification: h.verification || ''
-    })),
-    overallRiskAcceptable: oldRiskAssessment.overallRiskAcceptable || null,
-    reviewNotes: oldRiskAssessment.reviewNotes || '',
-    reviewedBy: oldRiskAssessment.reviewedBy || '',
-    reviewDate: oldRiskAssessment.reviewDate || '',
-    approvedBy: '',
-    approvalDate: ''
+  // Ensure project has sites array (new project without legacy data)
+  if (!Array.isArray(project.sites) || project.sites.length === 0) {
+    const initialSite = createDefaultSite({
+      name: 'Primary Site',
+      order: 0
+    })
+    project.sites = [initialSite]
+    project.activeSiteId = initialSite.id
+    project.projectVersion = CURRENT_PROJECT_VERSION
   }
   
-  // Build new SORA Assessment structure
-  const soraAssessment = {
-    operationType: oldSora.tmpr?.type || project.flightPlan?.operationType || 'VLOS',
-    maxAltitudeAGL: oldSora.conops?.maxAltitudeAGL || project.flightPlan?.maxAltitudeAGL || 120,
-    populationCategory: oldSora.populationCategory || 'sparsely',
-    uaCharacteristic: oldSora.uaCharacteristic || '1m_25ms',
-    maxSpeed: oldSora.maxSpeed || 25,
-    populationSource: oldSora.populationFromSiteSurvey ? 'siteSurvey' : 'manual',
-    aircraftSource: project.flightPlan?.aircraft?.length > 0 ? 'flightPlan' : 'manual',
-    mitigations: oldSora.mitigations || {
-      M1A: { enabled: false, robustness: 'none', evidence: '' },
-      M1B: { enabled: false, robustness: 'none', evidence: '' },
-      M1C: { enabled: false, robustness: 'none', evidence: '' },
-      M2: { enabled: false, robustness: 'none', evidence: '' }
-    },
-    initialARC: oldSora.initialARC || 'ARC-b',
-    tmpr: oldSora.tmpr || { enabled: true, type: 'VLOS', robustness: 'low', evidence: '' },
-    adjacentAreaPopulation: oldSora.adjacentAreaPopulation || 'sparsely',
-    containment: oldSora.containment || { method: '', robustness: 'none', evidence: '' },
-    osoCompliance: oldSora.osoCompliance || getDefaultOSOComplianceStructure(),
-    lastUpdated: new Date().toISOString(),
-    version: '2.5'
+  return ensureProjectDefaults(project)
+}
+
+/**
+ * Ensure all required fields exist with defaults
+ */
+function ensureProjectDefaults(project) {
+  // Ensure sites array
+  if (!Array.isArray(project.sites)) {
+    project.sites = []
   }
   
-  return {
-    ...project,
-    siteSurvey: {
-      ...getDefaultSiteSurveyStructure(),
-      ...project.siteSurvey
-    },
-    flightPlan: {
-      ...getDefaultFlightPlanStructure(),
-      ...project.flightPlan
-    },
-    hseRiskAssessment,
-    soraAssessment,
-    riskAssessment: null  // Clear old structure
+  // Ensure activeSiteId
+  if (!project.activeSiteId && project.sites.length > 0) {
+    project.activeSiteId = project.sites[0].id
   }
+  
+  // Ensure each site has all required structures
+  project.sites = project.sites.map(site => ({
+    ...site,
+    mapData: site.mapData || getDefaultSiteMapData(),
+    siteSurvey: site.siteSurvey || getDefaultSiteSurveyData(),
+    flightPlan: site.flightPlan || getDefaultSiteFlightPlanData(),
+    emergency: site.emergency || getDefaultSiteEmergencyData(),
+    soraAssessment: site.soraAssessment || getDefaultSiteSoraData()
+  }))
+  
+  // Ensure project-level structures
+  if (!project.flightPlan) {
+    project.flightPlan = getDefaultFlightPlanStructure()
+  }
+  
+  if (!project.hseRiskAssessment) {
+    project.hseRiskAssessment = getDefaultHSERiskStructure()
+  }
+  
+  if (!project.emergencyPlan) {
+    project.emergencyPlan = {
+      contacts: [
+        { type: 'emergency', name: 'Local Emergency', phone: '911', notes: '' },
+        { type: 'fic', name: 'FIC Edmonton', phone: '1-866-541-4102', notes: 'For fly-away reporting' }
+      ],
+      firstAid: null,
+      procedures: {}
+    }
+  }
+  
+  return project
 }
 
 /**
@@ -599,4 +864,19 @@ export function migrateProjectToDecoupledStructure(project) {
  */
 export function migrateProjectToSORA(project) {
   return migrateProjectToDecoupledStructure(project)
+}
+
+// ============================================
+// UTILITY EXPORTS
+// ============================================
+
+export {
+  MAX_SITES_PER_PROJECT,
+  CURRENT_PROJECT_VERSION,
+  createDefaultSite,
+  getDefaultSiteMapData,
+  getDefaultSiteSurveyData,
+  getDefaultSiteFlightPlanData,
+  getDefaultSiteEmergencyData,
+  getDefaultSiteSoraData
 }
