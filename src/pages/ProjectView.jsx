@@ -1,3 +1,15 @@
+/**
+ * ProjectView.jsx
+ * Main project view component with tabbed navigation
+ * 
+ * FIXES APPLIED:
+ * - Issue #2: Fixed "No client assigned" using wrong field (project.client -> project.clientName)
+ * - Issue #3: Added client logo display in header
+ * 
+ * @location src/pages/ProjectView.jsx
+ * @action REPLACE
+ */
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { 
@@ -21,9 +33,10 @@ import {
   Circle,
   Loader2,
   Shield,
-  CheckCircle2
+  CheckCircle2,
+  Building2
 } from 'lucide-react'
-import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure } from '../lib/firestore'
+import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
 import ProjectSections from '../components/projects/ProjectSections'
 import ProjectCrew from '../components/projects/ProjectCrew'
@@ -50,7 +63,7 @@ const tabs = [
   { id: 'emergency', label: 'Emergency', icon: ShieldAlert },
   { id: 'ppe', label: 'PPE', icon: HardHat },
   { id: 'comms', label: 'Communications', icon: Radio },
-  { id: 'review', label: 'Review', icon: FileCheck },  // CHANGED: renamed from 'approvals' to 'review'
+  { id: 'review', label: 'Review', icon: FileCheck },
   { id: 'tailgate', label: 'Tailgate', icon: FileText },
   { id: 'forms', label: 'Forms', icon: ClipboardList },
   { id: 'export', label: 'Export', icon: Download },
@@ -77,6 +90,9 @@ export default function ProjectView() {
   const [hasChanges, setHasChanges] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   
+  // FIX #3: Store client data for logo display
+  const [clientData, setClientData] = useState(null)
+  
   // Refs for auto-save
   const projectRef = useRef(project)
   const hasChangesRef = useRef(hasChanges)
@@ -91,6 +107,24 @@ export default function ProjectView() {
   useEffect(() => {
     loadProject()
   }, [projectId])
+
+  // FIX #3: Load client data when project loads
+  useEffect(() => {
+    const loadClientData = async () => {
+      if (project?.clientId) {
+        try {
+          const clients = await getClients()
+          const client = clients.find(c => c.id === project.clientId)
+          setClientData(client || null)
+        } catch (err) {
+          console.error('Error loading client data:', err)
+        }
+      } else {
+        setClientData(null)
+      }
+    }
+    loadClientData()
+  }, [project?.clientId])
 
   // Auto-save function
   const performAutoSave = useCallback(async () => {
@@ -116,9 +150,6 @@ export default function ProjectView() {
   useEffect(() => {
     return () => {
       if (hasChangesRef.current && projectRef.current) {
-        // Sync save on unmount - use sendBeacon for reliability
-        const data = JSON.stringify(projectRef.current)
-        // Note: This is a backup - the beforeunload handler is more reliable
         performAutoSave()
       }
     }
@@ -128,9 +159,7 @@ export default function ProjectView() {
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hasChangesRef.current) {
-        // Try to save
         performAutoSave()
-        // Show browser warning
         e.preventDefault()
         e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
         return e.returnValue
@@ -149,7 +178,6 @@ export default function ProjectView() {
       }
     }
     
-    // Save when location changes (navigating to different page)
     return () => {
       handleNavigation()
     }
@@ -161,7 +189,7 @@ export default function ProjectView() {
       if (hasChangesRef.current && !savingRef.current) {
         performAutoSave()
       }
-    }, 30000) // 30 seconds
+    }, 30000)
 
     return () => clearInterval(interval)
   }, [performAutoSave])
@@ -276,9 +304,26 @@ export default function ProjectView() {
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
+          
+          {/* FIX #3: Client logo/icon display */}
+          {clientData?.logo ? (
+            <div className="w-10 h-10 rounded-lg border bg-white flex items-center justify-center p-1 flex-shrink-0">
+              <img 
+                src={clientData.logo} 
+                alt={clientData.name} 
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+          ) : project.clientId ? (
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-aeria-blue to-aeria-navy flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+          ) : null}
+          
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-            <p className="text-gray-600">{project.client || 'No client assigned'}</p>
+            {/* FIX #2: Use project.clientName instead of project.client */}
+            <p className="text-gray-600">{project.clientName || 'No client assigned'}</p>
           </div>
         </div>
         
