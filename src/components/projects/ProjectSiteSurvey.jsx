@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   MapPin, Plus, Trash2, AlertTriangle, Navigation, Mountain, TreePine, Building, Radio, Car, Users,
-  Camera, ChevronDown, ChevronUp, CheckCircle2, Map, Plane, Layers, ExternalLink
+  Camera, ChevronDown, ChevronUp, CheckCircle2, Map, Plane, Layers, ExternalLink, X, Loader2, Search, Target
 } from 'lucide-react'
-import { MapPreview, MapEditorModal } from './MapComponents'
 
 // ============================================
 // POPULATION CATEGORIES (SORA-aligned)
@@ -82,6 +81,632 @@ const createEmptySite = (index) => ({
 })
 
 // ============================================
+// INLINE MAP PREVIEW (Read-only)
+// ============================================
+function MapPreview({ siteLocation, boundary, launchPoint, recoveryPoint, height = 200, onOpenEditor }) {
+  const mapContainerRef = useRef(null)
+  const mapRef = useRef(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return
+
+    // Load Leaflet CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link')
+      link.id = 'leaflet-css'
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
+
+    // Add custom styles
+    if (!document.getElementById('leaflet-custom-styles')) {
+      const style = document.createElement('style')
+      style.id = 'leaflet-custom-styles'
+      style.textContent = `.custom-div-icon { background: transparent !important; border: none !important; }`
+      document.head.appendChild(style)
+    }
+
+    const loadAndInit = async () => {
+      // Load Leaflet JS
+      if (!window.L) {
+        await new Promise((resolve) => {
+          const script = document.createElement('script')
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+          script.onload = resolve
+          document.body.appendChild(script)
+        })
+      }
+
+      const L = window.L
+      
+      // Clean up existing map
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+
+      await new Promise(r => setTimeout(r, 50))
+      if (!mapContainerRef.current) return
+
+      const defaultLat = siteLocation?.lat || 54.0
+      const defaultLng = siteLocation?.lng || -125.0
+      const hasLocation = siteLocation?.lat
+      const defaultZoom = hasLocation ? 14 : 4
+
+      const map = L.map(mapContainerRef.current, {
+        center: [defaultLat, defaultLng],
+        zoom: defaultZoom,
+        zoomControl: false,
+        attributionControl: false
+      })
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(map)
+
+      mapRef.current = map
+
+      // Helper to create marker icon
+      const createIcon = (color, emoji, size = 28) => L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div style="
+          background: ${color};
+          width: ${size}px;
+          height: ${size}px;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          border: 2px solid white;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        "><span style="transform: rotate(45deg); font-size: ${size * 0.4}px;">${emoji}</span></div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size]
+      })
+
+      // Add site marker
+      if (siteLocation?.lat && siteLocation?.lng) {
+        L.marker([siteLocation.lat, siteLocation.lng], {
+          icon: createIcon('#1e40af', '📍', 28)
+        }).addTo(map)
+      }
+
+      // Add boundary polygon
+      if (Array.isArray(boundary) && boundary.length >= 3) {
+        L.polygon(boundary.map(p => [p.lat, p.lng]), {
+          color: '#9333ea',
+          fillColor: '#9333ea',
+          fillOpacity: 0.15,
+          weight: 2
+        }).addTo(map)
+      }
+
+      // Add launch point
+      if (launchPoint?.lat && launchPoint?.lng) {
+        L.marker([launchPoint.lat, launchPoint.lng], {
+          icon: createIcon('#16a34a', '🚀', 24)
+        }).addTo(map)
+      }
+
+      // Add recovery point
+      if (recoveryPoint?.lat && recoveryPoint?.lng) {
+        L.marker([recoveryPoint.lat, recoveryPoint.lng], {
+          icon: createIcon('#dc2626', '🎯', 24)
+        }).addTo(map)
+      }
+
+      // Fit bounds to show all content
+      const allPoints = []
+      if (siteLocation?.lat) allPoints.push([siteLocation.lat, siteLocation.lng])
+      if (launchPoint?.lat) allPoints.push([launchPoint.lat, launchPoint.lng])
+      if (recoveryPoint?.lat) allPoints.push([recoveryPoint.lat, recoveryPoint.lng])
+      if (Array.isArray(boundary)) {
+        boundary.forEach(p => allPoints.push([p.lat, p.lng]))
+      }
+
+      if (allPoints.length > 1) {
+        map.fitBounds(allPoints, { padding: [30, 30] })
+      }
+
+      setIsLoading(false)
+    }
+
+    loadAndInit()
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+  }, [siteLocation, boundary, launchPoint, recoveryPoint])
+
+  const hasContent = siteLocation?.lat || (Array.isArray(boundary) && boundary.length > 0)
+
+  return (
+    <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-100" style={{ height }}>
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+          <Loader2 className="w-6 h-6 animate-spin text-aeria-blue" />
+        </div>
+      )}
+      <div ref={mapContainerRef} className="w-full h-full" />
+      
+      {/* Edit button - ALWAYS SHOW */}
+      <button
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          onOpenEditor()
+        }}
+        className="absolute bottom-3 right-3 px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium rounded-lg shadow-md border border-gray-200 flex items-center gap-2 transition-colors"
+        style={{ zIndex: 1000 }}
+      >
+        <Map className="w-4 h-4" />
+        Edit Map
+      </button>
+
+      {/* Empty state */}
+      {!hasContent && !isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50/90 pointer-events-none" style={{ zIndex: 5 }}>
+          <div className="text-center">
+            <MapPin className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-500">No location set</p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// MAP EDITOR MODAL
+// ============================================
+function SiteMapEditor({ 
+  siteLocation, 
+  boundary,
+  launchPoint,
+  recoveryPoint,
+  onUpdate,
+  isOpen, 
+  onClose,
+  siteName
+}) {
+  const mapContainerRef = useRef(null)
+  const mapRef = useRef(null)
+  const markersRef = useRef({})
+  const boundaryLayerRef = useRef(null)
+  const boundaryVerticesRef = useRef([])
+
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [activeMarker, setActiveMarker] = useState('site')
+  const [isDrawingBoundary, setIsDrawingBoundary] = useState(false)
+  const [boundaryPoints, setBoundaryPoints] = useState([])
+  
+  const [coords, setCoords] = useState({
+    site: { lat: '', lng: '' }
+  })
+
+  // Refs for click handler
+  const activeMarkerRef = useRef('site')
+  const isDrawingBoundaryRef = useRef(false)
+
+  useEffect(() => { activeMarkerRef.current = activeMarker }, [activeMarker])
+  useEffect(() => { isDrawingBoundaryRef.current = isDrawingBoundary }, [isDrawingBoundary])
+
+  // Initialize state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setCoords({
+        site: { 
+          lat: siteLocation?.lat?.toString() || '', 
+          lng: siteLocation?.lng?.toString() || '' 
+        }
+      })
+      setBoundaryPoints(Array.isArray(boundary) ? [...boundary] : [])
+      setIsDrawingBoundary(false)
+      setActiveMarker('site')
+      setIsLoading(true)
+    }
+  }, [isOpen, siteLocation, boundary])
+
+  // Initialize map
+  useEffect(() => {
+    if (!isOpen || !mapContainerRef.current) return
+
+    // Load CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link')
+      link.id = 'leaflet-css'
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
+
+    if (!document.getElementById('leaflet-editor-styles')) {
+      const style = document.createElement('style')
+      style.id = 'leaflet-editor-styles'
+      style.textContent = `
+        .custom-div-icon { background: transparent !important; border: none !important; }
+        .leaflet-container { cursor: crosshair; }
+        .leaflet-dragging .leaflet-container { cursor: move; }
+      `
+      document.head.appendChild(style)
+    }
+
+    const initMap = async () => {
+      // Load Leaflet
+      if (!window.L) {
+        await new Promise((resolve) => {
+          const script = document.createElement('script')
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+          script.onload = resolve
+          document.body.appendChild(script)
+        })
+      }
+
+      const L = window.L
+
+      // Clean up
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+      markersRef.current = {}
+      boundaryLayerRef.current = null
+      boundaryVerticesRef.current = []
+
+      await new Promise(r => setTimeout(r, 100))
+      if (!mapContainerRef.current) return
+
+      const defaultLat = siteLocation?.lat || 54.0
+      const defaultLng = siteLocation?.lng || -125.0
+      const hasLocation = siteLocation?.lat
+      const defaultZoom = hasLocation ? 15 : 5
+
+      const map = L.map(mapContainerRef.current, {
+        center: [defaultLat, defaultLng],
+        zoom: defaultZoom,
+        zoomControl: true
+      })
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19
+      }).addTo(map)
+
+      mapRef.current = map
+
+      // Create icon helper
+      const createIcon = (color, emoji, size = 32) => L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div style="
+          background: ${color};
+          width: ${size}px;
+          height: ${size}px;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          border: 2px solid white;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        "><span style="transform: rotate(45deg); font-size: ${size * 0.45}px;">${emoji}</span></div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size]
+      })
+
+      // Add existing site marker (draggable)
+      if (siteLocation?.lat && siteLocation?.lng) {
+        const marker = L.marker([siteLocation.lat, siteLocation.lng], {
+          icon: createIcon('#1e40af', '📍'),
+          draggable: true
+        }).addTo(map)
+        
+        marker.on('dragend', (e) => {
+          const pos = e.target.getLatLng()
+          setCoords(prev => ({
+            ...prev,
+            site: { lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) }
+          }))
+        })
+        markersRef.current.site = marker
+      }
+
+      // Add existing boundary
+      if (Array.isArray(boundary) && boundary.length >= 3) {
+        const polygon = L.polygon(boundary.map(p => [p.lat, p.lng]), {
+          color: '#9333ea',
+          fillColor: '#9333ea',
+          fillOpacity: 0.2,
+          weight: 2
+        }).addTo(map)
+        boundaryLayerRef.current = polygon
+
+        boundary.forEach((point) => {
+          const vertex = L.circleMarker([point.lat, point.lng], {
+            radius: 7,
+            color: '#9333ea',
+            fillColor: 'white',
+            fillOpacity: 1,
+            weight: 2
+          }).addTo(map)
+          boundaryVerticesRef.current.push(vertex)
+        })
+      }
+
+      // Add launch/recovery as reference (non-draggable)
+      if (launchPoint?.lat && launchPoint?.lng) {
+        const marker = L.marker([launchPoint.lat, launchPoint.lng], {
+          icon: createIcon('#16a34a', '🚀', 24),
+          opacity: 0.7
+        }).addTo(map)
+        marker.bindTooltip('Launch Point (edit in Flight Plan)')
+      }
+
+      if (recoveryPoint?.lat && recoveryPoint?.lng) {
+        const marker = L.marker([recoveryPoint.lat, recoveryPoint.lng], {
+          icon: createIcon('#dc2626', '🎯', 24),
+          opacity: 0.7
+        }).addTo(map)
+        marker.bindTooltip('Recovery Point (edit in Flight Plan)')
+      }
+
+      // Map click handler
+      map.on('click', (e) => {
+        const lat = e.latlng.lat.toFixed(6)
+        const lng = e.latlng.lng.toFixed(6)
+
+        if (isDrawingBoundaryRef.current) {
+          // Add boundary point
+          setBoundaryPoints(prev => [...prev, { lat: parseFloat(lat), lng: parseFloat(lng) }])
+        } else {
+          // Place site marker
+          setCoords(prev => ({
+            ...prev,
+            site: { lat, lng }
+          }))
+
+          // Update or create marker
+          if (markersRef.current.site) {
+            markersRef.current.site.setLatLng([parseFloat(lat), parseFloat(lng)])
+          } else {
+            const marker = L.marker([parseFloat(lat), parseFloat(lng)], {
+              icon: createIcon('#1e40af', '📍'),
+              draggable: true
+            }).addTo(map)
+            
+            marker.on('dragend', (e) => {
+              const pos = e.target.getLatLng()
+              setCoords(prev => ({
+                ...prev,
+                site: { lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) }
+              }))
+            })
+            markersRef.current.site = marker
+          }
+        }
+      })
+
+      setTimeout(() => {
+        map.invalidateSize()
+        setIsLoading(false)
+      }, 200)
+    }
+
+    initMap()
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+  }, [isOpen])
+
+  // Update boundary display when points change
+  useEffect(() => {
+    if (!mapRef.current || !window.L || isLoading) return
+    
+    const L = window.L
+    const map = mapRef.current
+
+    // Remove old boundary
+    if (boundaryLayerRef.current) {
+      map.removeLayer(boundaryLayerRef.current)
+      boundaryLayerRef.current = null
+    }
+    boundaryVerticesRef.current.forEach(v => map.removeLayer(v))
+    boundaryVerticesRef.current = []
+
+    // Draw new boundary
+    if (boundaryPoints.length >= 3) {
+      const polygon = L.polygon(boundaryPoints.map(p => [p.lat, p.lng]), {
+        color: '#9333ea',
+        fillColor: '#9333ea',
+        fillOpacity: 0.2,
+        weight: 2
+      }).addTo(map)
+      boundaryLayerRef.current = polygon
+    }
+
+    // Add vertices
+    boundaryPoints.forEach((point) => {
+      const vertex = L.circleMarker([point.lat, point.lng], {
+        radius: 7,
+        color: '#9333ea',
+        fillColor: 'white',
+        fillOpacity: 1,
+        weight: 2
+      }).addTo(map)
+      boundaryVerticesRef.current.push(vertex)
+    })
+  }, [boundaryPoints, isLoading])
+
+  // Search handler
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || !mapRef.current) return
+    setSearching(true)
+    
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`
+      )
+      const results = await response.json()
+      
+      if (results.length > 0) {
+        const { lat, lon } = results[0]
+        mapRef.current.setView([parseFloat(lat), parseFloat(lon)], 15)
+      }
+    } catch (err) {
+      console.error('Search error:', err)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  // Save handler
+  const handleSave = () => {
+    onUpdate({
+      siteLocation: coords.site.lat && coords.site.lng 
+        ? { lat: parseFloat(coords.site.lat), lng: parseFloat(coords.site.lng) }
+        : null,
+      boundary: boundaryPoints.length >= 3 ? boundaryPoints : []
+    })
+    onClose()
+  }
+
+  // Boundary controls
+  const undoBoundaryPoint = () => setBoundaryPoints(prev => prev.slice(0, -1))
+  const clearBoundary = () => setBoundaryPoints([])
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+      <div className="bg-white rounded-xl w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-lg font-semibold">Site Map Editor - {siteName}</h2>
+            <p className="text-sm text-gray-500">Click to place site marker, drag to reposition</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="p-3 border-b bg-gray-50 flex-shrink-0">
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="Search location..."
+                className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              disabled={searching}
+              className="px-4 py-2 bg-aeria-blue text-white rounded-lg hover:bg-aeria-navy disabled:opacity-50 text-sm"
+            >
+              {searching ? '...' : 'Search'}
+            </button>
+          </div>
+        </div>
+
+        {/* Tool Controls */}
+        <div className="p-3 border-b flex flex-wrap gap-2 items-center flex-shrink-0">
+          <span className="text-xs font-medium text-gray-500 mr-2">CLICK TO SET:</span>
+          
+          <button
+            onClick={() => { setActiveMarker('site'); setIsDrawingBoundary(false) }}
+            className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 transition-colors ${
+              activeMarker === 'site' && !isDrawingBoundary ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'
+            }`}
+          >
+            📍 Site Location
+          </button>
+          
+          <button
+            onClick={() => { setIsDrawingBoundary(!isDrawingBoundary); setActiveMarker(null) }}
+            className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 transition-colors ${
+              isDrawingBoundary ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'
+            }`}
+          >
+            <Target className="w-3 h-3" /> {isDrawingBoundary ? 'Drawing Boundary...' : 'Draw Boundary'}
+          </button>
+          
+          {boundaryPoints.length > 0 && (
+            <>
+              <button onClick={undoBoundaryPoint} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Undo</button>
+              <button onClick={clearBoundary} className="px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded">Clear</button>
+              <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">{boundaryPoints.length} points</span>
+            </>
+          )}
+        </div>
+
+        {/* Map Container */}
+        <div className="flex-1 relative min-h-0" style={{ minHeight: '400px' }}>
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+              <Loader2 className="w-8 h-8 animate-spin text-aeria-blue" />
+            </div>
+          )}
+          <div ref={mapContainerRef} className="absolute inset-0" />
+        </div>
+
+        {/* Coordinate Display */}
+        <div className="p-3 border-t bg-gray-50 flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <span className="text-2xl">📍</span>
+            <div className="flex-1">
+              <div className="text-xs text-gray-500 mb-1">Site Location</div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={coords.site.lat}
+                  onChange={(e) => setCoords(prev => ({ ...prev, site: { ...prev.site, lat: e.target.value }}))}
+                  placeholder="Latitude"
+                  className="flex-1 px-3 py-1.5 border rounded text-sm"
+                />
+                <input
+                  type="text"
+                  value={coords.site.lng}
+                  onChange={(e) => setCoords(prev => ({ ...prev, site: { ...prev.site, lng: e.target.value }}))}
+                  placeholder="Longitude"
+                  className="flex-1 px-3 py-1.5 border rounded text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-4 border-t flex justify-between flex-shrink-0">
+          <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+            Cancel
+          </button>
+          <button onClick={handleSave} className="px-6 py-2 bg-aeria-blue text-white rounded-lg hover:bg-aeria-navy">
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
 // MAIN COMPONENT: Multi-Site Survey
 // ============================================
 export default function ProjectSiteSurvey({ project, onUpdate }) {
@@ -117,7 +742,6 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
         }
       }
       setSites([migratedSite])
-      // Save the migrated structure
       onUpdate({ sites: [migratedSite] })
     } else {
       // Create default site
@@ -505,31 +1129,6 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                 <span className="text-sm">Near Heliport (within 1.8km / 1nm)</span>
               </label>
             </div>
-
-            {siteSurvey.airspace?.nearAerodrome && (
-              <div>
-                <label className="label">Distance to Aerodrome (km)</label>
-                <input
-                  type="number"
-                  value={siteSurvey.airspace?.aerodromeDistance || ''}
-                  onChange={(e) => updateAirspace('aerodromeDistance', parseFloat(e.target.value))}
-                  className="input"
-                  placeholder="e.g., 3.5"
-                  step="0.1"
-                />
-              </div>
-            )}
-
-            {/* NAV Canada Link */}
-            <a
-              href="https://www.navcanada.ca/en/flight-planning/drone-flight-planning.aspx"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-aeria-blue hover:underline flex items-center gap-1"
-            >
-              <ExternalLink className="w-3 h-3" />
-              Check NAV CANADA Drone Flight Planning
-            </a>
           </div>
         )}
       </div>
@@ -650,28 +1249,6 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                 placeholder="Turn-by-turn directions from nearest landmark..."
               />
             </div>
-
-            <div>
-              <label className="label">Parking Location</label>
-              <input
-                type="text"
-                value={siteSurvey.access?.parkingLocation || ''}
-                onChange={(e) => updateAccess('parkingLocation', e.target.value)}
-                className="input"
-                placeholder="Where to park vehicles"
-              />
-            </div>
-
-            <div>
-              <label className="label">On-Site Contact</label>
-              <input
-                type="text"
-                value={siteSurvey.access?.contactOnSite || ''}
-                onChange={(e) => updateAccess('contactOnSite', e.target.value)}
-                className="input"
-                placeholder="Name and phone"
-              />
-            </div>
           </div>
         )}
       </div>
@@ -704,25 +1281,6 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                   ))}
                 </select>
               </div>
-              <label className="flex items-center gap-3 cursor-pointer mt-6">
-                <input
-                  type="checkbox"
-                  checked={siteSurvey.groundConditions?.suitableForVehicle ?? true}
-                  onChange={(e) => updateGroundConditions('suitableForVehicle', e.target.checked)}
-                  className="w-4 h-4 rounded"
-                />
-                <span className="text-sm">Suitable for vehicle access</span>
-              </label>
-            </div>
-
-            <div>
-              <label className="label">Ground Hazards</label>
-              <textarea
-                value={siteSurvey.groundConditions?.hazards || ''}
-                onChange={(e) => updateGroundConditions('hazards', e.target.value)}
-                className="input min-h-[60px]"
-                placeholder="Uneven terrain, holes, debris, water hazards..."
-              />
             </div>
           </div>
         )}
@@ -791,15 +1349,14 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
       </div>
 
       {/* Map Editor Modal */}
-      <MapEditorModal
+      <SiteMapEditor
         isOpen={mapEditorOpen}
         onClose={() => setMapEditorOpen(false)}
-        onSave={handleMapSave}
+        onUpdate={handleMapSave}
         siteLocation={siteSurvey.location?.coordinates}
         boundary={siteSurvey.boundary}
         launchPoint={activeSite?.flightPlan?.launchPoint}
         recoveryPoint={activeSite?.flightPlan?.recoveryPoint}
-        mode="site"
         siteName={activeSite?.name}
       />
     </div>
