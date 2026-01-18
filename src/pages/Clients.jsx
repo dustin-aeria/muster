@@ -1,12 +1,13 @@
 /**
  * Clients.jsx
  * Client management page with full CRUD functionality
+ * Enhanced with logo upload for branded exports
  * 
  * @location src/pages/Clients.jsx
  * @action REPLACE
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   Plus, 
   Search, 
@@ -18,9 +19,167 @@ import {
   Phone,
   MapPin,
   User,
-  X
+  X,
+  Upload,
+  Image,
+  Loader2
 } from 'lucide-react'
 import { getClients, createClient, updateClient, deleteClient } from '../lib/firestore'
+
+// Logo Upload Component
+function LogoUpload({ logo, onLogoChange }) {
+  const fileInputRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  
+  const handleFileSelect = async (file) => {
+    if (!file) return
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, GIF)')
+      return
+    }
+    
+    // Validate file size (max 500KB for Firestore)
+    if (file.size > 500 * 1024) {
+      alert('Logo must be less than 500KB. Please resize or compress the image.')
+      return
+    }
+    
+    setUploading(true)
+    
+    try {
+      // Convert to base64
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        // Create an image to resize if needed
+        const img = new window.Image()
+        img.onload = () => {
+          // Resize if larger than 200x100
+          const maxWidth = 200
+          const maxHeight = 100
+          let { width, height } = img
+          
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height)
+            width *= ratio
+            height *= ratio
+          }
+          
+          // Create canvas and resize
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0, width, height)
+          
+          // Convert to PNG base64
+          const resizedBase64 = canvas.toDataURL('image/png', 0.9)
+          onLogoChange(resizedBase64)
+          setUploading(false)
+        }
+        img.src = e.target.result
+      }
+      reader.onerror = () => {
+        alert('Error reading file')
+        setUploading(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (err) {
+      console.error('Error uploading logo:', err)
+      alert('Failed to upload logo')
+      setUploading(false)
+    }
+  }
+  
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files[0]
+    handleFileSelect(file)
+  }
+  
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    setDragOver(true)
+  }
+  
+  const handleDragLeave = () => {
+    setDragOver(false)
+  }
+  
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-700">
+        Company Logo
+        <span className="text-gray-400 font-normal ml-1">(for branded exports)</span>
+      </label>
+      
+      {logo ? (
+        <div className="flex items-center gap-4">
+          <div className="relative w-32 h-20 border rounded-lg bg-gray-50 flex items-center justify-center p-2">
+            <img 
+              src={logo} 
+              alt="Client logo" 
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-secondary text-sm"
+            >
+              Replace
+            </button>
+            <button
+              type="button"
+              onClick={() => onLogoChange(null)}
+              className="text-red-500 text-sm hover:text-red-700"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer
+            ${dragOver ? 'border-aeria-blue bg-blue-50' : 'border-gray-300 hover:border-aeria-blue'}`}
+          onClick={() => fileInputRef.current?.click()}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+        >
+          {uploading ? (
+            <div className="flex flex-col items-center gap-2 py-2">
+              <Loader2 className="w-6 h-6 text-aeria-blue animate-spin" />
+              <p className="text-sm text-gray-500">Processing...</p>
+            </div>
+          ) : (
+            <>
+              <Image className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+              <p className="text-sm text-gray-500">
+                Drop logo here or click to upload
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                PNG, JPG up to 500KB. Will be resized to fit.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+      
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => handleFileSelect(e.target.files[0])}
+      />
+    </div>
+  )
+}
 
 // Client Modal Component
 function ClientModal({ isOpen, onClose, client, onSave }) {
@@ -30,7 +189,8 @@ function ClientModal({ isOpen, onClose, client, onSave }) {
     email: '',
     phone: '',
     address: '',
-    notes: ''
+    notes: '',
+    logo: null
   })
   const [saving, setSaving] = useState(false)
 
@@ -42,7 +202,8 @@ function ClientModal({ isOpen, onClose, client, onSave }) {
         email: client.email || '',
         phone: client.phone || '',
         address: client.address || '',
-        notes: client.notes || ''
+        notes: client.notes || '',
+        logo: client.logo || null
       })
     } else {
       setFormData({
@@ -51,7 +212,8 @@ function ClientModal({ isOpen, onClose, client, onSave }) {
         email: '',
         phone: '',
         address: '',
-        notes: ''
+        notes: '',
+        logo: null
       })
     }
   }, [client, isOpen])
@@ -91,6 +253,12 @@ function ClientModal({ isOpen, onClose, client, onSave }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Logo Upload */}
+          <LogoUpload 
+            logo={formData.logo}
+            onLogoChange={(logo) => setFormData({ ...formData, logo })}
+          />
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Company Name *
@@ -185,6 +353,116 @@ function ClientModal({ isOpen, onClose, client, onSave }) {
   )
 }
 
+// Client Card Component
+function ClientCard({ client, onEdit, onDelete, menuOpen, setMenuOpen }) {
+  return (
+    <div className="card hover:shadow-lg transition-shadow">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          {client.logo ? (
+            <div className="w-12 h-12 rounded-lg border bg-white flex items-center justify-center p-1">
+              <img 
+                src={client.logo} 
+                alt={client.name} 
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-aeria-blue to-aeria-navy flex items-center justify-center">
+              <Building2 className="w-6 h-6 text-white" />
+            </div>
+          )}
+          <div>
+            <h3 className="font-semibold text-gray-900">{client.name}</h3>
+            {client.contactName && (
+              <p className="text-sm text-gray-500 flex items-center gap-1">
+                <User className="w-3 h-3" />
+                {client.contactName}
+              </p>
+            )}
+          </div>
+        </div>
+        
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen(menuOpen === client.id ? null : client.id)}
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+          
+          {menuOpen === client.id && (
+            <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 min-w-[120px]">
+              <button
+                onClick={() => {
+                  onEdit(client)
+                  setMenuOpen(null)
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Edit
+              </button>
+              <button
+                onClick={() => {
+                  onDelete(client.id, client.name)
+                  setMenuOpen(null)
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <div className="mt-4 space-y-2">
+        {client.email && (
+          <a 
+            href={`mailto:${client.email}`}
+            className="text-sm text-gray-600 hover:text-aeria-blue flex items-center gap-2"
+          >
+            <Mail className="w-4 h-4 text-gray-400" />
+            {client.email}
+          </a>
+        )}
+        {client.phone && (
+          <a 
+            href={`tel:${client.phone}`}
+            className="text-sm text-gray-600 hover:text-aeria-blue flex items-center gap-2"
+          >
+            <Phone className="w-4 h-4 text-gray-400" />
+            {client.phone}
+          </a>
+        )}
+        {client.address && (
+          <p className="text-sm text-gray-500 flex items-start gap-2">
+            <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+            <span className="line-clamp-2">{client.address}</span>
+          </p>
+        )}
+      </div>
+      
+      {client.notes && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <p className="text-xs text-gray-400 line-clamp-2">{client.notes}</p>
+        </div>
+      )}
+      
+      {client.logo && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+            <Image className="w-3 h-3" />
+            Logo on file
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Clients() {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
@@ -215,44 +493,44 @@ export default function Clients() {
     } else {
       await createClient(formData)
     }
-    loadClients()
-  }
-
-  const handleEdit = (client) => {
-    setEditingClient(client)
-    setShowModal(true)
-    setMenuOpen(null)
+    await loadClients()
+    setEditingClient(null)
   }
 
   const handleDelete = async (clientId, clientName) => {
-    if (!confirm(`Delete client "${clientName}"? This cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete "${clientName}"?`)) {
       return
     }
     
     try {
       await deleteClient(clientId)
-      setClients(prev => prev.filter(c => c.id !== clientId))
+      await loadClients()
     } catch (err) {
       console.error('Error deleting client:', err)
       alert('Failed to delete client')
     }
-    setMenuOpen(null)
   }
 
-  const handleModalClose = () => {
-    setShowModal(false)
-    setEditingClient(null)
+  const handleEdit = (client) => {
+    setEditingClient(client)
+    setShowModal(true)
   }
 
-  // Filter clients
   const filteredClients = clients.filter(client => {
-    const matchesSearch = 
-      client.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.contactName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    return matchesSearch
+    const query = searchQuery.toLowerCase()
+    return (
+      client.name?.toLowerCase().includes(query) ||
+      client.contactName?.toLowerCase().includes(query) ||
+      client.email?.toLowerCase().includes(query)
+    )
   })
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setMenuOpen(null)
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -260,154 +538,97 @@ export default function Clients() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-          <p className="text-gray-600 mt-1">Client organizations and contacts</p>
+          <p className="text-gray-600 mt-1">Manage your client companies</p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="btn-primary inline-flex items-center gap-2"
+        <button
+          onClick={() => {
+            setEditingClient(null)
+            setShowModal(true)
+          }}
+          className="btn-primary"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 mr-2" />
           Add Client
         </button>
       </div>
 
       {/* Search */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search clients..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input pl-9"
-          />
-        </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search clients..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="input pl-10"
+        />
       </div>
 
-      {/* Clients List */}
+      {/* Client Grid */}
       {loading ? (
-        <div className="card text-center py-12">
-          <div className="w-8 h-8 border-4 border-aeria-navy border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <div className="text-center py-12">
+          <div className="w-12 h-12 border-4 border-aeria-navy border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-500">Loading clients...</p>
         </div>
       ) : filteredClients.length === 0 ? (
         <div className="card text-center py-12">
-          <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-          {clients.length === 0 ? (
-            <>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">No clients yet</h3>
-              <p className="text-gray-500 mb-4">
-                Add clients to organize projects and enable branded exports.
-              </p>
-              <button 
-                onClick={() => setShowModal(true)}
-                className="btn-primary inline-flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Client
-              </button>
-            </>
-          ) : (
-            <>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">No matching clients</h3>
-              <p className="text-gray-500">Try adjusting your search.</p>
-            </>
+          <Building2 className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-1">
+            {searchQuery ? 'No clients found' : 'No clients yet'}
+          </h3>
+          <p className="text-gray-500 mb-4">
+            {searchQuery 
+              ? 'Try adjusting your search' 
+              : 'Add your first client to get started'
+            }
+          </p>
+          {!searchQuery && (
+            <button
+              onClick={() => {
+                setEditingClient(null)
+                setShowModal(true)
+              }}
+              className="btn-primary"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Client
+            </button>
           )}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredClients.map((client) => (
-            <div key={client.id} className="card hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-aeria-sky rounded-lg flex items-center justify-center">
-                    <Building2 className="w-5 h-5 text-aeria-navy" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{client.name}</h3>
-                    {client.contactName && (
-                      <p className="text-sm text-gray-500">{client.contactName}</p>
-                    )}
-                  </div>
-                </div>
-                
-                {/* More menu */}
-                <div className="relative">
-                  <button
-                    onClick={() => setMenuOpen(menuOpen === client.id ? null : client.id)}
-                    className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                  
-                  {menuOpen === client.id && (
-                    <>
-                      <div 
-                        className="fixed inset-0 z-10"
-                        onClick={() => setMenuOpen(null)}
-                      />
-                      <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                        <button
-                          onClick={() => handleEdit(client)}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(client.id, client.name)}
-                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Contact info */}
-              <div className="space-y-2 text-sm">
-                {client.email && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <a href={`mailto:${client.email}`} className="hover:text-aeria-blue">
-                      {client.email}
-                    </a>
-                  </div>
-                )}
-                {client.phone && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <a href={`tel:${client.phone}`} className="hover:text-aeria-blue">
-                      {client.phone}
-                    </a>
-                  </div>
-                )}
-                {client.address && (
-                  <div className="flex items-start gap-2 text-gray-600">
-                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                    <span>{client.address}</span>
-                  </div>
-                )}
-              </div>
-
-              {client.notes && (
-                <p className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-100 line-clamp-2">
-                  {client.notes}
-                </p>
-              )}
-            </div>
+          {filteredClients.map(client => (
+            <ClientCard
+              key={client.id}
+              client={client}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              menuOpen={menuOpen}
+              setMenuOpen={setMenuOpen}
+            />
           ))}
         </div>
       )}
 
-      {/* Client Modal */}
+      {/* Stats */}
+      {!loading && clients.length > 0 && (
+        <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-200">
+          <span>
+            Showing {filteredClients.length} of {clients.length} clients
+          </span>
+          <span>
+            {clients.filter(c => c.logo).length} with logo
+          </span>
+        </div>
+      )}
+
+      {/* Modal */}
       <ClientModal
         isOpen={showModal}
-        onClose={handleModalClose}
+        onClose={() => {
+          setShowModal(false)
+          setEditingClient(null)
+        }}
         client={editingClient}
         onSave={handleSave}
       />
