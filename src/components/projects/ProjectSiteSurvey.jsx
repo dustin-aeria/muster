@@ -126,6 +126,8 @@ const surveyMethods = [
 function SiteMapEditor({ 
   siteLocation, 
   boundary,
+  launchPoint,      // From Flight Plan
+  recoveryPoint,    // From Flight Plan
   onUpdate,
   isOpen, 
   onClose 
@@ -135,6 +137,7 @@ function SiteMapEditor({
   const markersRef = useRef({})
   const boundaryLayerRef = useRef(null)
   const boundaryVertexMarkersRef = useRef([])
+  const flightPointMarkersRef = useRef([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -324,6 +327,64 @@ function SiteMapEditor({
           }).addTo(map)
           boundaryVertexMarkersRef.current.push(vertexMarker)
         })
+      }
+
+      // Launch/Recovery points from Flight Plan (read-only display)
+      flightPointMarkersRef.current.forEach(m => m.remove())
+      flightPointMarkersRef.current = []
+      
+      if (launchPoint?.lat && launchPoint?.lng) {
+        const launchIcon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="
+            background: #16a34a;
+            width: 28px;
+            height: 28px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+          "><span style="transform: rotate(45deg); font-size: 12px;">🛫</span></div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 28]
+        })
+        const launchMarker = L.marker([parseFloat(launchPoint.lat), parseFloat(launchPoint.lng)], {
+          icon: launchIcon,
+          opacity: 0.8
+        }).addTo(map)
+        launchMarker.bindTooltip('Launch Point (from Flight Plan)')
+        flightPointMarkersRef.current.push(launchMarker)
+      }
+      
+      if (recoveryPoint?.lat && recoveryPoint?.lng) {
+        const recoveryIcon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="
+            background: #d97706;
+            width: 28px;
+            height: 28px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+          "><span style="transform: rotate(45deg); font-size: 12px;">🛬</span></div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 28]
+        })
+        const recoveryMarker = L.marker([parseFloat(recoveryPoint.lat), parseFloat(recoveryPoint.lng)], {
+          icon: recoveryIcon,
+          opacity: 0.8
+        }).addTo(map)
+        recoveryMarker.bindTooltip('Recovery Point (from Flight Plan)')
+        flightPointMarkersRef.current.push(recoveryMarker)
       }
 
       map.on('click', (e) => {
@@ -1903,6 +1964,8 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
         onClose={() => setMapEditorOpen(false)}
         siteLocation={siteSurvey.location?.coordinates}
         boundary={siteSurvey.boundary}
+        launchPoint={project.flightPlan?.launchPoint}
+        recoveryPoint={project.flightPlan?.recoveryPoint}
         onUpdate={handleMapEditorSave}
       />
     </div>
