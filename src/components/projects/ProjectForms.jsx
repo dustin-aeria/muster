@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getOperators, getAircraft } from '../../lib/firestore'
+import { getOperators, getAircraft, getClients } from '../../lib/firestore'
+import { useBranding } from '../BrandingSettings'
 import * as formDefs from '../../lib/formDefinitions'
 import { 
   ClipboardList,
@@ -930,7 +931,7 @@ function FormModal({ form, formTemplate, project, operators = [], aircraft = [],
         return (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs text-gray-500">Temperature (°C)</label>
+              <label className="text-xs text-gray-500">Temperature (Â°C)</label>
               <input
                 type="number"
                 value={weatherValue.temp || ''}
@@ -1966,28 +1967,30 @@ function FormLibrary({ onSelectForm, onClose }) {
 export default function ProjectForms({ project, onUpdate }) {
   const [operators, setOperators] = useState([])
   const [aircraft, setAircraft] = useState([])
+  const [clients, setClients] = useState([])
   const [showLibrary, setShowLibrary] = useState(false)
   const [selectedForm, setSelectedForm] = useState(null)
   const [editingForm, setEditingForm] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  
+  // FIX #8 & #9: Get branding for PDF exports
+  const { branding } = useBranding()
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const ops = await getOperators()
+        // FIX #8 & #9: Load operators, aircraft, and clients in parallel
+        const [ops, acs, cls] = await Promise.all([
+          getOperators().catch(() => []),
+          getAircraft().catch(() => []),
+          getClients().catch(() => [])
+        ])
         setOperators(ops || [])
-        
-        // Aircraft is optional - some setups might not have it
-        try {
-          const acs = await getAircraft()
-          setAircraft(acs || [])
-        } catch (e) {
-          console.log('Aircraft not available:', e)
-          setAircraft([])
-        }
+        setAircraft(acs || [])
+        setClients(cls || [])
       } catch (err) {
-        console.error('Error loading operators:', err)
+        console.error('Error loading data:', err)
         setOperators([])
         setError(err.message)
       } finally {
@@ -2050,9 +2053,25 @@ export default function ProjectForms({ project, onUpdate }) {
     }
     
     try {
+      // FIX #8 & #9: Get branding and client data for the export
+      const clientData = project?.clientId 
+        ? clients.find(c => c.id === project.clientId)
+        : null
+      
+      // Build branding object with operator branding
+      const exportBranding = branding?.operator ? { operator: branding.operator } : null
+      
+      // Build client branding object if client has a logo
+      const clientBranding = clientData?.logo ? {
+        name: clientData.name,
+        logo: clientData.logo
+      } : null
+      
       // Dynamic import to avoid loading PDF lib until needed
       const { exportFormToPDF } = await import('../../lib/pdfExportService')
-      await exportFormToPDF(form, template, project, operators)
+      
+      // FIX #8 & #9: Pass branding and clientBranding to export
+      await exportFormToPDF(form, template, project, operators, exportBranding, clientBranding)
     } catch (err) {
       console.error('Error exporting form:', err)
       alert('Error exporting form to PDF. Please try again.')
@@ -2087,7 +2106,7 @@ export default function ProjectForms({ project, onUpdate }) {
         <div>
           <h2 className="text-xl font-semibold text-gray-900">Project Forms</h2>
           <p className="text-sm text-gray-500 mt-1">
-            {projectForms.length} form{projectForms.length !== 1 ? 's' : ''} • 
+            {projectForms.length} form{projectForms.length !== 1 ? 's' : ''} â€¢ 
             {projectForms.filter(f => f.status === 'completed').length} completed
           </p>
         </div>
