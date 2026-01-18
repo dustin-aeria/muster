@@ -333,6 +333,8 @@ function LaunchRecoveryMapEditor({
   siteLocation,
   launchPoint, 
   recoveryPoint, 
+  boundary,        // From Site Survey - work area boundary
+  obstacles,       // From Site Survey - obstacles
   onUpdate,
   isOpen, 
   onClose 
@@ -340,6 +342,8 @@ function LaunchRecoveryMapEditor({
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef({})
+  const boundaryLayerRef = useRef(null)
+  const obstacleMarkersRef = useRef([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -463,6 +467,63 @@ function LaunchRecoveryMapEditor({
           icon: siteIcon,
           opacity: 0.7
         }).addTo(map).bindTooltip('Site Location (from Site Survey)')
+      }
+
+      // Work area boundary from Site Survey (read-only display)
+      if (boundary?.length >= 3) {
+        const boundaryPolygon = L.polygon(
+          boundary.map(p => [p.lat, p.lng]),
+          {
+            color: '#9333ea',
+            fillColor: '#9333ea',
+            fillOpacity: 0.15,
+            weight: 2,
+            dashArray: '5, 5'
+          }
+        ).addTo(map)
+        boundaryPolygon.bindTooltip('Work Area Boundary (from Site Survey)')
+        boundaryLayerRef.current = boundaryPolygon
+        
+        // Add vertex markers
+        boundary.forEach((point) => {
+          L.circleMarker([point.lat, point.lng], {
+            radius: 4,
+            color: '#9333ea',
+            fillColor: '#9333ea',
+            fillOpacity: 0.5,
+            weight: 1
+          }).addTo(map)
+        })
+      }
+
+      // Obstacles from Site Survey (read-only display)
+      if (obstacles?.length > 0) {
+        obstacles.forEach(obs => {
+          if (obs.location?.lat && obs.location?.lng) {
+            const obsIcon = L.divIcon({
+              className: 'custom-marker',
+              html: `<div style="
+                background: #dc2626;
+                width: 20px;
+                height: 20px;
+                border-radius: 4px;
+                border: 2px solid white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "><span style="font-size: 10px;">⚠️</span></div>`,
+              iconSize: [20, 20],
+              iconAnchor: [10, 10]
+            })
+            const marker = L.marker([parseFloat(obs.location.lat), parseFloat(obs.location.lng)], {
+              icon: obsIcon,
+              opacity: 0.8
+            }).addTo(map)
+            marker.bindTooltip(`${obs.type || 'Obstacle'}: ${obs.description || 'N/A'} (${obs.height || '?'}m)`)
+            obstacleMarkersRef.current.push(marker)
+          }
+        })
       }
 
       // Add existing markers
@@ -1613,6 +1674,8 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
         isOpen={mapEditorOpen}
         onClose={() => setMapEditorOpen(false)}
         siteLocation={siteSurvey.location?.coordinates}
+        boundary={siteSurvey.boundary}
+        obstacles={siteSurvey.obstacles}
         launchPoint={flightPlan.launchPoint}
         recoveryPoint={flightPlan.recoveryPoint}
         onUpdate={handleLaunchRecoverySave}
