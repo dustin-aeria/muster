@@ -2,7 +2,7 @@
  * SafetyDashboard.jsx
  * Main Safety KPI Dashboard for Aeria Ops
  * 
- * Handles empty data states gracefully
+ * Includes COR Program Report export functionality
  * 
  * @location src/pages/SafetyDashboard.jsx
  * @action REPLACE
@@ -22,7 +22,10 @@ import {
   Bell,
   Target,
   ChevronRight,
-  FileText
+  FileText,
+  Download,
+  Loader2,
+  FileDown
 } from 'lucide-react'
 
 // Stat card component
@@ -105,6 +108,7 @@ export default function SafetyDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lastRefresh, setLastRefresh] = useState(null)
+  const [exporting, setExporting] = useState(false)
   
   // Dashboard data with safe defaults
   const [stats, setStats] = useState({
@@ -205,6 +209,57 @@ export default function SafetyDashboard() {
     }
   }
 
+  // COR Program Report Export
+  const handleExportCORReport = async () => {
+    setExporting(true)
+    
+    try {
+      // Import all needed functions
+      const { getIncidents, getCapas } = await import('../lib/firestoreSafety')
+      const { getProjects, getOperators, getAircraft, getClients } = await import('../lib/firestore')
+      const { exportCORReport } = await import('../lib/corReportGenerator')
+      
+      // Gather all data
+      const [incidents, capas, projects, operators, aircraft, clients] = await Promise.all([
+        getIncidents({}).catch(() => []),
+        getCapas({}).catch(() => []),
+        getProjects().catch(() => []),
+        getOperators().catch(() => []),
+        getAircraft().catch(() => []),
+        getClients().catch(() => [])
+      ])
+      
+      // Gather all forms from projects
+      const forms = []
+      projects.forEach(p => {
+        if (p.forms && Array.isArray(p.forms)) {
+          forms.push(...p.forms.map(f => ({ ...f, projectId: p.id })))
+        }
+      })
+      
+      // Generate the report
+      const data = {
+        incidents,
+        capas,
+        forms,
+        operators,
+        projects,
+        aircraft,
+        clients
+      }
+      
+      await exportCORReport(data, {
+        includeAppendices: true
+      })
+      
+    } catch (err) {
+      console.error('Error exporting COR report:', err)
+      alert('Failed to generate COR Program Report. Please try again.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const formatRefreshTime = () => {
     if (!lastRefresh) return ''
     return lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -264,6 +319,24 @@ export default function SafetyDashboard() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={handleExportCORReport}
+            disabled={exporting}
+            className="btn-secondary inline-flex items-center gap-2"
+            title="Export COR Program Report"
+          >
+            {exporting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileDown className="w-4 h-4" />
+                COR Report
+              </>
+            )}
+          </button>
+          <button
             onClick={loadDashboardData}
             className="btn-secondary inline-flex items-center gap-2"
           >
@@ -274,6 +347,29 @@ export default function SafetyDashboard() {
             <Plus className="w-4 h-4" />
             Report Incident
           </Link>
+        </div>
+      </div>
+
+      {/* COR Export Info Banner */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <FileText className="w-5 h-5 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-blue-900">COR Audit Documentation</h3>
+            <p className="text-sm text-blue-700 mt-1">
+              Generate a comprehensive Health & Safety Program Report for COR audit preparation. 
+              Includes all incidents, CAPAs, training records, inspections, and KPIs.
+            </p>
+          </div>
+          <button
+            onClick={handleExportCORReport}
+            disabled={exporting}
+            className="btn-primary text-sm whitespace-nowrap"
+          >
+            {exporting ? 'Generating...' : 'Export Report'}
+          </button>
         </div>
       </div>
 
