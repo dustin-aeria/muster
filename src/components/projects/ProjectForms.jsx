@@ -1134,6 +1134,157 @@ function FormModal({ form, formTemplate, project, operators = [], aircraft = [],
           </div>
         )
       
+      // Photo capture with camera integration
+      case 'photo_capture':
+        const photos = value || []
+        return (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              {/* Camera capture button */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-aeria-blue transition-colors">
+                <Camera className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                <p className="text-xs text-gray-500 mb-2">Take Photo</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  id={`${fieldKey}-camera`}
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      const file = e.target.files[0]
+                      const reader = new FileReader()
+                      reader.onload = (event) => {
+                        const newPhoto = {
+                          id: `photo-${Date.now()}`,
+                          name: file.name,
+                          type: file.type,
+                          size: file.size,
+                          data: event.target.result,
+                          capturedAt: new Date().toISOString(),
+                          gps: null,
+                          annotation: ''
+                        }
+                        // Try to get GPS
+                        if (navigator.geolocation) {
+                          navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                              newPhoto.gps = {
+                                lat: pos.coords.latitude.toFixed(6),
+                                lng: pos.coords.longitude.toFixed(6)
+                              }
+                              updateField(sectionId, field.id, [...photos, newPhoto], repeatIndex)
+                            },
+                            () => {
+                              updateField(sectionId, field.id, [...photos, newPhoto], repeatIndex)
+                            }
+                          )
+                        } else {
+                          updateField(sectionId, field.id, [...photos, newPhoto], repeatIndex)
+                        }
+                      }
+                      reader.readAsDataURL(file)
+                    }
+                  }}
+                />
+                <label htmlFor={`${fieldKey}-camera`} className="btn-secondary text-xs cursor-pointer">
+                  <Camera className="w-3 h-3 inline mr-1" />
+                  Camera
+                </label>
+              </div>
+              
+              {/* File upload button */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-aeria-blue transition-colors">
+                <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                <p className="text-xs text-gray-500 mb-2">Upload Photo</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  id={`${fieldKey}-upload`}
+                  onChange={(e) => {
+                    Array.from(e.target.files).forEach(file => {
+                      const reader = new FileReader()
+                      reader.onload = (event) => {
+                        const newPhoto = {
+                          id: `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                          name: file.name,
+                          type: file.type,
+                          size: file.size,
+                          data: event.target.result,
+                          capturedAt: new Date().toISOString(),
+                          gps: null,
+                          annotation: ''
+                        }
+                        updateField(sectionId, field.id, [...(formData[sectionId]?.[field.id] || []), newPhoto], repeatIndex)
+                      }
+                      reader.readAsDataURL(file)
+                    })
+                  }}
+                />
+                <label htmlFor={`${fieldKey}-upload`} className="btn-secondary text-xs cursor-pointer">
+                  <Upload className="w-3 h-3 inline mr-1" />
+                  Browse
+                </label>
+              </div>
+            </div>
+            
+            {/* Photo gallery */}
+            {photos.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {photos.map((photo, idx) => (
+                  <div key={photo.id || idx} className="relative group">
+                    <img
+                      src={photo.data}
+                      alt={photo.name || `Photo ${idx + 1}`}
+                      className="w-full h-24 object-cover rounded-lg border"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => {
+                          const annotation = prompt('Add annotation:', photo.annotation || '')
+                          if (annotation !== null) {
+                            const updated = [...photos]
+                            updated[idx] = { ...photo, annotation }
+                            updateField(sectionId, field.id, updated, repeatIndex)
+                          }
+                        }}
+                        className="p-1.5 bg-white rounded-full text-gray-700 hover:bg-blue-100"
+                        title="Add annotation"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => updateField(sectionId, field.id, photos.filter((_, i) => i !== idx), repeatIndex)}
+                        className="p-1.5 bg-white rounded-full text-red-500 hover:bg-red-100"
+                        title="Delete"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                    {photo.gps && (
+                      <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/70 rounded text-white text-[10px] flex items-center gap-1">
+                        <MapPin className="w-2.5 h-2.5" />
+                        GPS
+                      </div>
+                    )}
+                    {photo.annotation && (
+                      <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-blue-600/90 rounded text-white text-[10px]">
+                        Note
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {photos.length > 0 && (
+              <p className="text-xs text-gray-500">{photos.length} photo{photos.length !== 1 ? 's' : ''} captured</p>
+            )}
+          </div>
+        )
+      
       // NEW: Repeatable text (array of strings)
       case 'repeatable_text':
         const textItems = value || []
@@ -1891,6 +2042,23 @@ export default function ProjectForms({ project, onUpdate }) {
     }
   }
 
+  const handleExportForm = async (form) => {
+    const template = (FORM_TEMPLATES || {})[form.templateId]
+    if (!template) {
+      alert('Unable to export: Form template not found')
+      return
+    }
+    
+    try {
+      // Dynamic import to avoid loading PDF lib until needed
+      const { exportFormToPDF } = await import('../../lib/pdfExportService')
+      await exportFormToPDF(form, template, project, operators)
+    } catch (err) {
+      console.error('Error exporting form:', err)
+      alert('Error exporting form to PDF. Please try again.')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1992,12 +2160,21 @@ export default function ProjectForms({ project, onUpdate }) {
                           <button
                             onClick={() => handleEditForm(form)}
                             className="p-2 text-gray-500 hover:text-aeria-blue hover:bg-blue-50 rounded"
+                            title="Edit form"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
+                            onClick={() => handleExportForm(form)}
+                            className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
+                            title="Export to PDF"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => handleDeleteForm(form.id)}
                             className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded"
+                            title="Delete form"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
