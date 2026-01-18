@@ -1,7 +1,36 @@
+// ============================================
+// PROJECT EMERGENCY COMPONENT
+// With map-based muster points and evacuation routes
+// Auto-saves on changes, clear/delete functionality
+// 
+// @location src/components/projects/ProjectEmergency.jsx
+// @action REPLACE
+// ============================================
+
 import { useState, useEffect, useRef } from 'react'
 import { 
-  ShieldAlert, Plus, Trash2, Phone, MapPin, Users, Route, Stethoscope, Flame, Plane,
-  AlertTriangle, ChevronDown, ChevronUp, Building, Clock, Navigation, Map, X, Loader2, Search, Layers
+  ShieldAlert, 
+  Plus,
+  Trash2,
+  Phone,
+  MapPin,
+  Users,
+  Route,
+  Stethoscope,
+  Flame,
+  Plane,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Building,
+  Clock,
+  Navigation,
+  Map,
+  X,
+  Loader2,
+  Search,
+  Target,
+  Edit3
 } from 'lucide-react'
 
 const contactTypes = [
@@ -16,397 +45,554 @@ const contactTypes = [
 
 const defaultContacts = [
   { type: 'emergency', name: 'Emergency Services', phone: '911', notes: 'Police, Fire, Ambulance' },
-  { type: 'fic', name: 'FIC Edmonton', phone: '1-866-541-4102', notes: 'For fly-away reporting' },
-  { type: 'company', name: 'Company Emergency', phone: '', notes: 'Company emergency contact' }
+  { type: 'fic', name: 'FIC Edmonton', phone: '1-866-541-4102', notes: 'For fly-away reporting, lost link incidents' },
+  { type: 'company', name: 'Aeria Solutions', phone: '', notes: 'Company emergency contact' }
 ]
 
+const procedureTypes = [
+  { 
+    id: 'medical', 
+    label: 'Medical Emergency', 
+    icon: Stethoscope,
+    defaultSteps: [
+      'Cease all flight operations immediately',
+      'Ensure scene safety before approaching',
+      'Call 911 if serious injury',
+      'Administer first aid within training level',
+      'Designate someone to meet emergency responders',
+      'Do not move injured person unless immediate danger',
+      'Document incident details for reporting'
+    ]
+  },
+  { 
+    id: 'fire', 
+    label: 'Fire Emergency', 
+    icon: Flame,
+    defaultSteps: [
+      'Alert all personnel - evacuate to muster point',
+      'Call 911',
+      'Only attempt to extinguish small fires if safe and trained',
+      'Do not re-enter area until cleared by fire services',
+      'Account for all personnel at muster point',
+      'Notify client/site contact'
+    ]
+  },
+  { 
+    id: 'aircraft_incident', 
+    label: 'Aircraft Incident/Crash', 
+    icon: Plane,
+    defaultSteps: [
+      'Note last known position and time',
+      'Do not approach if fire/smoke present',
+      'Secure the area - prevent unauthorized access',
+      'Do not disturb wreckage (potential TSB investigation)',
+      'Document scene with photos from safe distance',
+      'Report to FIC Edmonton if fly-away',
+      'Complete incident report within 24 hours',
+      'Notify Transport Canada if required by CARs 901.50'
+    ]
+  },
+  { 
+    id: 'weather', 
+    label: 'Severe Weather', 
+    icon: AlertTriangle,
+    defaultSteps: [
+      'Monitor weather continuously during operations',
+      'Land aircraft immediately if conditions deteriorate',
+      'Seek shelter in vehicle or substantial structure',
+      'If lightning: avoid high ground, isolated trees, water',
+      'Wait 30 minutes after last thunder before resuming',
+      'Do not resume operations until conditions improve to minimums'
+    ]
+  },
+  { 
+    id: 'wildlife', 
+    label: 'Wildlife Encounter', 
+    icon: AlertTriangle,
+    defaultSteps: [
+      'Do not approach or feed wildlife',
+      'Make noise to alert animals to your presence',
+      'If bear encounter: speak calmly, back away slowly',
+      'Do not run - back away while facing the animal',
+      'Report dangerous wildlife to site supervisor',
+      'Suspend operations if wildlife presents ongoing hazard'
+    ]
+  }
+]
+
+const defaultProcedures = {}
+procedureTypes.forEach(pt => {
+  defaultProcedures[pt.id] = { enabled: true, steps: pt.defaultSteps }
+})
+
 // ============================================
-// UNIFIED MAP PREVIEW - Shows ALL project data
+// SITE COLORS - Consistent across all views
 // ============================================
-function UnifiedMapPreview({ 
-  siteLocation, boundary, launchPoint, recoveryPoint, 
-  musterPoints, evacuationRoutes, 
-  height = 200, onEdit, editLabel = "Edit Map" 
-}) {
-  const containerRef = useRef(null)
-  const mapRef = useRef(null)
-  const [loading, setLoading] = useState(true)
+const SITE_COLORS = [
+  { primary: '#1e40af', light: '#dbeafe', name: 'Blue' },
+  { primary: '#7c3aed', light: '#ede9fe', name: 'Purple' },
+  { primary: '#059669', light: '#d1fae5', name: 'Green' },
+  { primary: '#dc2626', light: '#fee2e2', name: 'Red' },
+  { primary: '#d97706', light: '#fef3c7', name: 'Amber' },
+  { primary: '#0891b2', light: '#cffafe', name: 'Cyan' },
+]
 
-  useEffect(() => {
-    if (!containerRef.current) return
-    
-    const init = async () => {
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link')
-        link.id = 'leaflet-css'
-        link.rel = 'stylesheet'
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-        document.head.appendChild(link)
-      }
-      
-      if (!window.L) {
-        await new Promise(resolve => {
-          const script = document.createElement('script')
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-          script.onload = resolve
-          document.body.appendChild(script)
-        })
-      }
-
-      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null }
-      await new Promise(r => setTimeout(r, 50))
-      if (!containerRef.current) return
-
-      const L = window.L
-      const lat = siteLocation?.lat || 54
-      const lng = siteLocation?.lng || -125
-      const hasLoc = !!siteLocation?.lat
-
-      const map = L.map(containerRef.current, {
-        center: [lat, lng],
-        zoom: hasLoc ? 14 : 4,
-        zoomControl: false,
-        attributionControl: false
-      })
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map)
-      mapRef.current = map
-
-      const icon = (color, emoji, size = 24) => L.divIcon({
-        className: 'custom-icon',
-        html: `<div style="background:${color};width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:${size*0.4}px">${emoji}</span></div>`,
-        iconSize: [size, size],
-        iconAnchor: [size/2, size]
-      })
-
-      // All markers
-      if (siteLocation?.lat) L.marker([siteLocation.lat, siteLocation.lng], { icon: icon('#1e40af', '📍', 24) }).addTo(map)
-      if (Array.isArray(boundary) && boundary.length >= 3) {
-        L.polygon(boundary.map(p => [p.lat, p.lng]), { color: '#9333ea', fillOpacity: 0.15, weight: 2 }).addTo(map)
-      }
-      if (launchPoint?.lat) L.marker([launchPoint.lat, launchPoint.lng], { icon: icon('#16a34a', '🚀', 24) }).addTo(map)
-      if (recoveryPoint?.lat) L.marker([recoveryPoint.lat, recoveryPoint.lng], { icon: icon('#dc2626', '🎯', 24) }).addTo(map)
-      if (Array.isArray(musterPoints)) {
-        musterPoints.forEach(mp => {
-          if (mp.coordinates?.lat) L.marker([mp.coordinates.lat, mp.coordinates.lng], { icon: icon('#f59e0b', '🚨', 28) }).addTo(map)
-        })
-      }
-      if (Array.isArray(evacuationRoutes)) {
-        evacuationRoutes.forEach(route => {
-          if (Array.isArray(route.coordinates) && route.coordinates.length >= 2) {
-            L.polyline(route.coordinates.map(c => [c.lat, c.lng]), { color: '#ef4444', weight: 4, dashArray: '10,10' }).addTo(map)
-          }
-        })
-      }
-
-      const pts = []
-      if (siteLocation?.lat) pts.push([siteLocation.lat, siteLocation.lng])
-      if (Array.isArray(boundary)) boundary.forEach(p => pts.push([p.lat, p.lng]))
-      if (launchPoint?.lat) pts.push([launchPoint.lat, launchPoint.lng])
-      if (recoveryPoint?.lat) pts.push([recoveryPoint.lat, recoveryPoint.lng])
-      if (Array.isArray(musterPoints)) musterPoints.forEach(mp => { if (mp.coordinates?.lat) pts.push([mp.coordinates.lat, mp.coordinates.lng]) })
-      if (pts.length > 1) map.fitBounds(pts, { padding: [30, 30] })
-
-      setLoading(false)
-    }
-    
-    init()
-    return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null } }
-  }, [siteLocation, boundary, launchPoint, recoveryPoint, musterPoints, evacuationRoutes])
-
-  const hasContent = (Array.isArray(musterPoints) && musterPoints.length > 0) || siteLocation?.lat
-
-  return (
-    <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-100" style={{ height }}>
-      {loading && <div className="absolute inset-0 flex items-center justify-center z-10"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>}
-      <div ref={containerRef} className="w-full h-full" />
-      <button onClick={onEdit} className="absolute bottom-3 right-3 px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium rounded-lg shadow-md border flex items-center gap-2" style={{ zIndex: 1000 }}>
-        <Map className="w-4 h-4" /> {editLabel}
-      </button>
-      {!hasContent && !loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 pointer-events-none" style={{ zIndex: 5 }}>
-          <div className="text-center">
-            <ShieldAlert className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">No emergency points set</p>
-          </div>
-        </div>
-      )}
-      
-      {/* Legend */}
-      <div className="absolute top-2 left-2 bg-white/90 rounded-lg px-2 py-1.5 text-xs space-y-1 shadow" style={{ zIndex: 1000 }}>
-        {siteLocation?.lat && <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-700"></span> Site</div>}
-        {launchPoint?.lat && <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-600"></span> Launch</div>}
-        {recoveryPoint?.lat && <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-600"></span> Recovery</div>}
-        {Array.isArray(musterPoints) && musterPoints.length > 0 && <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-500"></span> Muster</div>}
-        {Array.isArray(evacuationRoutes) && evacuationRoutes.length > 0 && <div className="flex items-center gap-1"><span className="w-3 h-1 bg-red-500"></span> Routes</div>}
-      </div>
-    </div>
-  )
-}
+const getSiteColor = (index) => SITE_COLORS[index % SITE_COLORS.length]
 
 // ============================================
 // EMERGENCY MAP EDITOR
+// Shows all site locations + muster/evac features
 // ============================================
-function EmergencyMapEditor({ siteLocation, boundary, launchPoint, recoveryPoint, musterPoints, evacuationRoutes, onSave, isOpen, onClose }) {
-  const containerRef = useRef(null)
+function EmergencyMapEditor({ 
+  project, 
+  emergencyPlan,
+  onUpdateMusterPoints,
+  onUpdateEvacRoutes,
+  isOpen, 
+  onClose 
+}) {
+  const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef({})
-  const routeLayersRef = useRef([])
-
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const layersRef = useRef({})
+  
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
-  const [mode, setMode] = useState('muster')
-  const [localMusterPoints, setLocalMusterPoints] = useState([])
-  const [localRoutes, setLocalRoutes] = useState([])
-  const [isDrawingRoute, setIsDrawingRoute] = useState(false)
+  const [editMode, setEditMode] = useState(null)
   const [tempRoutePoints, setTempRoutePoints] = useState([])
+  
+  const editModeRef = useRef(editMode)
+  const tempRoutePointsRef = useRef(tempRoutePoints)
+  
+  useEffect(() => { editModeRef.current = editMode }, [editMode])
+  useEffect(() => { tempRoutePointsRef.current = tempRoutePoints }, [tempRoutePoints])
 
-  const modeRef = useRef('muster')
-  const isDrawingRouteRef = useRef(false)
-  useEffect(() => { modeRef.current = mode }, [mode])
-  useEffect(() => { isDrawingRouteRef.current = isDrawingRoute }, [isDrawingRoute])
+  const sites = project?.sites || []
+  const musterPoints = emergencyPlan?.musterPoints || []
+  const evacuationRoutes = emergencyPlan?.evacuationRoutes || []
 
   useEffect(() => {
-    if (isOpen) {
-      setLocalMusterPoints(Array.isArray(musterPoints) ? [...musterPoints] : [])
-      setLocalRoutes(Array.isArray(evacuationRoutes) ? [...evacuationRoutes] : [])
-      setMode('muster')
-      setIsDrawingRoute(false)
-      setTempRoutePoints([])
-      setLoading(true)
+    if (!isOpen) return
+
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link')
+      link.id = 'leaflet-css'
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
     }
-  }, [isOpen, musterPoints, evacuationRoutes])
 
-  useEffect(() => {
-    if (!isOpen || !containerRef.current) return
+    if (!document.getElementById('emergency-map-styles')) {
+      const style = document.createElement('style')
+      style.id = 'emergency-map-styles'
+      style.textContent = `
+        .leaflet-container { width: 100% !important; height: 100% !important; z-index: 1; }
+        .leaflet-control-container { z-index: 800; }
+      `
+      document.head.appendChild(style)
+    }
 
-    const init = async () => {
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link')
-        link.id = 'leaflet-css'
-        link.rel = 'stylesheet'
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-        document.head.appendChild(link)
-      }
-
-      if (!window.L) {
-        await new Promise(resolve => {
-          const script = document.createElement('script')
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-          script.onload = resolve
-          document.body.appendChild(script)
-        })
-      }
-
-      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null }
-      markersRef.current = {}
-      routeLayersRef.current = []
-      await new Promise(r => setTimeout(r, 100))
-      if (!containerRef.current) return
-
-      const L = window.L
-      const lat = siteLocation?.lat || 54
-      const lng = siteLocation?.lng || -125
-      const hasLoc = !!siteLocation?.lat
-
-      const map = L.map(containerRef.current, { center: [lat, lng], zoom: hasLoc ? 15 : 5 })
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map)
-      mapRef.current = map
-
-      const createIcon = (color, emoji, size = 32) => L.divIcon({
-        className: 'custom-icon',
-        html: `<div style="background:${color};width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:${size*0.45}px">${emoji}</span></div>`,
-        iconSize: [size, size],
-        iconAnchor: [size/2, size]
-      })
-
-      // Reference: site location (read-only)
-      if (siteLocation?.lat) L.marker([siteLocation.lat, siteLocation.lng], { icon: createIcon('#1e40af', '📍', 24), opacity: 0.5 }).addTo(map).bindTooltip('Site (edit in Site Survey)')
-      if (Array.isArray(boundary) && boundary.length >= 3) {
-        L.polygon(boundary.map(p => [p.lat, p.lng]), { color: '#9333ea', fillOpacity: 0.1, weight: 2, dashArray: '5,5' }).addTo(map)
-      }
-
-      // Reference: launch/recovery (read-only)
-      if (launchPoint?.lat) L.marker([launchPoint.lat, launchPoint.lng], { icon: createIcon('#16a34a', '🚀', 22), opacity: 0.5 }).addTo(map).bindTooltip('Launch (edit in Flight Plan)')
-      if (recoveryPoint?.lat) L.marker([recoveryPoint.lat, recoveryPoint.lng], { icon: createIcon('#dc2626', '🎯', 22), opacity: 0.5 }).addTo(map).bindTooltip('Recovery (edit in Flight Plan)')
-
-      // Editable: muster points (draggable)
-      if (Array.isArray(musterPoints)) {
-        musterPoints.forEach((mp, idx) => {
-          if (mp.coordinates?.lat) {
-            const m = L.marker([mp.coordinates.lat, mp.coordinates.lng], { icon: createIcon('#f59e0b', '🚨', 28), draggable: true }).addTo(map)
-            m.on('dragend', e => {
-              const p = e.target.getLatLng()
-              setLocalMusterPoints(prev => {
-                const updated = [...prev]
-                updated[idx] = { ...updated[idx], coordinates: { lat: parseFloat(p.lat.toFixed(6)), lng: parseFloat(p.lng.toFixed(6)) } }
-                return updated
-              })
-            })
-            markersRef.current[`muster_${idx}`] = m
-          }
-        })
-      }
-
-      // Existing routes
-      if (Array.isArray(evacuationRoutes)) {
-        evacuationRoutes.forEach((route, idx) => {
-          if (Array.isArray(route.coordinates) && route.coordinates.length >= 2) {
-            const line = L.polyline(route.coordinates.map(c => [c.lat, c.lng]), { color: '#ef4444', weight: 4, dashArray: '10,10' }).addTo(map)
-            routeLayersRef.current.push(line)
-          }
-        })
-      }
-
-      // Click handler
-      map.on('click', e => {
-        const lat = parseFloat(e.latlng.lat.toFixed(6))
-        const lng = parseFloat(e.latlng.lng.toFixed(6))
-
-        if (isDrawingRouteRef.current) {
-          setTempRoutePoints(prev => [...prev, { lat, lng }])
-        } else if (modeRef.current === 'muster') {
-          const newMuster = { name: `Muster ${localMusterPoints.length + 1}`, description: '', coordinates: { lat, lng } }
-          
-          setLocalMusterPoints(prev => {
-            const newList = [...prev, newMuster]
-            const idx = newList.length - 1
-            
-            const m = L.marker([lat, lng], { icon: createIcon('#f59e0b', '🚨', 28), draggable: true }).addTo(map)
-            m.on('dragend', e => {
-              const p = e.target.getLatLng()
-              setLocalMusterPoints(prev2 => {
-                const updated = [...prev2]
-                if (updated[idx]) updated[idx] = { ...updated[idx], coordinates: { lat: parseFloat(p.lat.toFixed(6)), lng: parseFloat(p.lng.toFixed(6)) } }
-                return updated
-              })
-            })
-            markersRef.current[`muster_${idx}`] = m
-            
-            return newList
-          })
+    const loadLeaflet = () => {
+      return new Promise((resolve) => {
+        if (window.L) {
+          resolve(window.L)
+          return
         }
+        const script = document.createElement('script')
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+        script.onload = () => resolve(window.L)
+        document.body.appendChild(script)
       })
-
-      setTimeout(() => { map.invalidateSize(); setLoading(false) }, 200)
     }
 
-    init()
-    return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null } }
+    const initMap = async () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+
+      const L = await loadLeaflet()
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      if (!mapContainerRef.current) return
+
+      let centerLat = 54.0
+      let centerLng = -125.0
+      let zoom = 5
+
+      const siteWithLocation = sites.find(s => s.siteSurvey?.location?.coordinates?.lat)
+      if (siteWithLocation) {
+        const coords = siteWithLocation.siteSurvey.location.coordinates
+        centerLat = parseFloat(coords.lat)
+        centerLng = parseFloat(coords.lng)
+        zoom = 13
+      }
+
+      const map = L.map(mapContainerRef.current, {
+        center: [centerLat, centerLng],
+        zoom: zoom,
+        zoomControl: true
+      })
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map)
+
+      mapRef.current = map
+      map.on('click', handleMapClick)
+      
+      renderFeatures(L)
+      setIsLoading(false)
+    }
+
+    initMap()
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
   }, [isOpen])
 
-  // Draw temp route
   useEffect(() => {
-    if (!mapRef.current || !window.L || loading) return
-    const L = window.L
+    if (!mapRef.current || !window.L || isLoading) return
+    renderFeatures(window.L)
+  }, [musterPoints, evacuationRoutes, tempRoutePoints, isLoading])
+
+  const handleMapClick = (e) => {
+    const mode = editModeRef.current
+    if (!mode) return
+
+    const { lat, lng } = e.latlng
+    const point = { lat: lat.toFixed(6), lng: lng.toFixed(6) }
+
+    if (mode === 'muster') {
+      const newMusterPoints = [...(emergencyPlan?.musterPoints || [])]
+      newMusterPoints.push({
+        id: `muster-${Date.now()}`,
+        name: `Muster Point ${newMusterPoints.length + 1}`,
+        coordinates: point,
+        location: `${point.lat}, ${point.lng}`,
+        description: ''
+      })
+      onUpdateMusterPoints(newMusterPoints)
+      setEditMode(null)
+    } else if (mode === 'evacRoute') {
+      setTempRoutePoints(prev => [...prev, point])
+    }
+  }
+
+  const renderFeatures = (L) => {
+    if (!mapRef.current) return
     const map = mapRef.current
 
-    if (markersRef.current.tempRoute) { map.removeLayer(markersRef.current.tempRoute); delete markersRef.current.tempRoute }
-    Object.keys(markersRef.current).forEach(key => {
-      if (key.startsWith('tempPt_')) { map.removeLayer(markersRef.current[key]); delete markersRef.current[key] }
-    })
+    Object.values(markersRef.current).forEach(m => map.removeLayer(m))
+    Object.values(layersRef.current).forEach(l => map.removeLayer(l))
+    markersRef.current = {}
+    layersRef.current = {}
 
-    if (tempRoutePoints.length >= 2) {
-      const line = L.polyline(tempRoutePoints.map(p => [p.lat, p.lng]), { color: '#f87171', weight: 3, dashArray: '5,5' }).addTo(map)
-      markersRef.current.tempRoute = line
+    const createMarkerIcon = (color, emoji, size = 32) => {
+      return L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="
+          background: ${color};
+          width: ${size}px;
+          height: ${size}px;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          border: 2px solid white;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        "><span style="transform: rotate(45deg); font-size: ${size * 0.5}px;">${emoji}</span></div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size]
+      })
     }
 
-    tempRoutePoints.forEach((pt, i) => {
-      const vm = L.circleMarker([pt.lat, pt.lng], { radius: 6, color: '#ef4444', fillColor: 'white', fillOpacity: 1, weight: 2 }).addTo(map)
-      markersRef.current[`tempPt_${i}`] = vm
-    })
-  }, [tempRoutePoints, loading])
+    sites.forEach((site, idx) => {
+      const color = getSiteColor(idx)
+      const coords = site.siteSurvey?.location?.coordinates
+      
+      if (coords?.lat) {
+        const marker = L.marker(
+          [parseFloat(coords.lat), parseFloat(coords.lng)],
+          { icon: createMarkerIcon(color.primary, '📍', 28), opacity: 0.7 }
+        ).addTo(map)
+        marker.bindPopup(`<b>${site.name || `Site ${idx + 1}`}</b><br/>Site Location`)
+        markersRef.current[`site-${idx}`] = marker
+      }
 
-  const doSearch = async () => {
-    if (!search.trim() || !mapRef.current) return
+      const boundary = site.siteSurvey?.boundary || []
+      if (boundary.length > 0) {
+        const boundaryCoords = boundary.map(p => [parseFloat(p.lat), parseFloat(p.lng)])
+        const polygon = L.polygon(boundaryCoords, {
+          color: color.primary,
+          fillColor: color.primary,
+          fillOpacity: 0.1,
+          weight: 2,
+          opacity: 0.5,
+          dashArray: '5, 5'
+        }).addTo(map)
+        polygon.bindPopup(`<b>${site.name}</b><br/>Work Area`)
+        layersRef.current[`boundary-${idx}`] = polygon
+      }
+    })
+
+    musterPoints.forEach((mp, idx) => {
+      if (!mp.coordinates?.lat) return
+
+      const marker = L.marker(
+        [parseFloat(mp.coordinates.lat), parseFloat(mp.coordinates.lng)],
+        { icon: createMarkerIcon('#22c55e', '🟢', 36), draggable: true }
+      ).addTo(map)
+
+      marker.bindPopup(`<b>${mp.name || `Muster Point ${idx + 1}`}</b>`)
+
+      marker.on('dragend', (e) => {
+        const pos = e.target.getLatLng()
+        const newPoints = [...musterPoints]
+        newPoints[idx] = {
+          ...newPoints[idx],
+          coordinates: { lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) },
+          location: `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`
+        }
+        onUpdateMusterPoints(newPoints)
+      })
+
+      markersRef.current[`muster-${idx}`] = marker
+    })
+
+    evacuationRoutes.forEach((route, idx) => {
+      if (!route.coordinates || route.coordinates.length < 2) return
+
+      const coords = route.coordinates.map(p => [parseFloat(p.lat), parseFloat(p.lng)])
+      
+      const polyline = L.polyline(coords, {
+        color: '#ef4444',
+        weight: 4,
+        opacity: 0.8,
+        dashArray: '10, 5'
+      }).addTo(map)
+
+      polyline.bindPopup(`<b>${route.name || `Route ${idx + 1}`}</b>`)
+      layersRef.current[`evac-${idx}`] = polyline
+
+      route.coordinates.forEach((point, pIdx) => {
+        const vertexMarker = L.circleMarker(
+          [parseFloat(point.lat), parseFloat(point.lng)],
+          {
+            radius: 6,
+            fillColor: '#ef4444',
+            color: 'white',
+            weight: 2,
+            fillOpacity: 1
+          }
+        ).addTo(map)
+        markersRef.current[`evac-vertex-${idx}-${pIdx}`] = vertexMarker
+      })
+    })
+
+    if (tempRoutePoints.length > 0) {
+      const coords = tempRoutePoints.map(p => [parseFloat(p.lat), parseFloat(p.lng)])
+      const polyline = L.polyline(coords, {
+        color: '#ef4444',
+        weight: 4,
+        opacity: 0.8
+      }).addTo(map)
+      layersRef.current['temp-route'] = polyline
+
+      tempRoutePoints.forEach((point, idx) => {
+        const marker = L.circleMarker(
+          [parseFloat(point.lat), parseFloat(point.lng)],
+          {
+            radius: 8,
+            fillColor: '#ef4444',
+            color: 'white',
+            weight: 2,
+            fillOpacity: 1
+          }
+        ).addTo(map)
+        markersRef.current[`temp-route-${idx}`] = marker
+      })
+    }
+  }
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || !mapRef.current) return
+    
     setSearching(true)
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(search)}&limit=1`)
-      const data = await res.json()
-      if (data[0]) mapRef.current.setView([parseFloat(data[0].lat), parseFloat(data[0].lon)], 15)
-    } catch (e) { console.error(e) }
-    setSearching(false)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`
+      )
+      const data = await response.json()
+      
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0]
+        mapRef.current.setView([parseFloat(lat), parseFloat(lon)], 15)
+      } else {
+        alert('Location not found')
+      }
+    } catch (err) {
+      console.error('Search failed:', err)
+    } finally {
+      setSearching(false)
+    }
   }
 
-  const startDrawingRoute = () => { setMode('route'); setIsDrawingRoute(true); setTempRoutePoints([]) }
-
-  const saveRoute = () => {
-    if (tempRoutePoints.length < 2) return
-    const newRoute = { name: `Route ${localRoutes.length + 1}`, description: '', coordinates: tempRoutePoints }
-    setLocalRoutes(prev => [...prev, newRoute])
-
-    if (mapRef.current && window.L) {
-      const line = window.L.polyline(tempRoutePoints.map(p => [p.lat, p.lng]), { color: '#ef4444', weight: 4, dashArray: '10,10' }).addTo(mapRef.current)
-      routeLayersRef.current.push(line)
+  const saveEvacRoute = () => {
+    if (tempRoutePoints.length < 2) {
+      alert('Route needs at least 2 points')
+      return
     }
 
-    if (markersRef.current.tempRoute && mapRef.current) { mapRef.current.removeLayer(markersRef.current.tempRoute); delete markersRef.current.tempRoute }
-    Object.keys(markersRef.current).forEach(key => {
-      if (key.startsWith('tempPt_') && mapRef.current) { mapRef.current.removeLayer(markersRef.current[key]); delete markersRef.current[key] }
+    const newRoutes = [...evacuationRoutes]
+    newRoutes.push({
+      id: `route-${Date.now()}`,
+      name: `Evacuation Route ${newRoutes.length + 1}`,
+      coordinates: tempRoutePoints,
+      description: ''
     })
-
+    onUpdateEvacRoutes(newRoutes)
     setTempRoutePoints([])
-    setIsDrawingRoute(false)
-    setMode('muster')
+    setEditMode(null)
   }
 
-  const cancelRoute = () => {
-    if (markersRef.current.tempRoute && mapRef.current) { mapRef.current.removeLayer(markersRef.current.tempRoute); delete markersRef.current.tempRoute }
-    Object.keys(markersRef.current).forEach(key => {
-      if (key.startsWith('tempPt_') && mapRef.current) { mapRef.current.removeLayer(markersRef.current[key]); delete markersRef.current[key] }
-    })
+  const handleClose = () => {
+    if (tempRoutePoints.length >= 2) {
+      saveEvacRoute()
+    }
     setTempRoutePoints([])
-    setIsDrawingRoute(false)
-    setMode('muster')
-  }
-
-  const handleSave = () => {
-    onSave({ musterPoints: localMusterPoints, evacuationRoutes: localRoutes })
+    setEditMode(null)
     onClose()
   }
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-      <div className="bg-white rounded-xl w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl">
-        <div className="p-4 border-b flex justify-between items-center">
-          <div>
-            <h2 className="text-lg font-semibold">Emergency Map Editor</h2>
-            <p className="text-sm text-gray-500">Set muster points and evacuation routes. Other markers shown as reference.</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-2xl w-[95vw] h-[90vh] max-w-5xl flex flex-col overflow-hidden">
+        <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Map className="w-5 h-5 text-red-600" />
+            Emergency Map - Muster Points & Evacuation Routes
+          </h2>
+          <button onClick={handleClose} className="p-2 hover:bg-gray-200 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <div className="p-3 border-b bg-gray-50 flex gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSearch()} placeholder="Search location..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" />
+        <div className="p-3 border-b bg-white">
+          <div className="flex gap-2 max-w-md">
+            <div className="flex-1 relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="Search location..."
+                className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              disabled={searching}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+            >
+              {searching ? '...' : 'Search'}
+            </button>
           </div>
-          <button onClick={doSearch} disabled={searching} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">{searching ? '...' : 'Search'}</button>
         </div>
 
-        <div className="p-3 border-b flex flex-wrap gap-2 items-center">
-          <span className="text-xs font-medium text-gray-500 mr-2">MODE:</span>
-          <button onClick={() => { setMode('muster'); setIsDrawingRoute(false) }} className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 ${mode === 'muster' && !isDrawingRoute ? 'bg-amber-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>🚨 Add Muster Point</button>
-          <button onClick={startDrawingRoute} className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 ${isDrawingRoute ? 'bg-red-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}><Route className="w-3 h-3" /> {isDrawingRoute ? 'Drawing Route...' : 'Draw Route'}</button>
-          {isDrawingRoute && (
+        <div className="p-3 border-b bg-gray-50 flex flex-wrap gap-2 items-center">
+          <span className="text-sm text-gray-600 mr-2">Add:</span>
+          <button
+            onClick={() => setEditMode(editMode === 'muster' ? null : 'muster')}
+            className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 ${
+              editMode === 'muster'
+                ? 'bg-green-100 text-green-800 ring-2 ring-green-500'
+                : 'bg-white border text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Users className="w-4 h-4" /> Muster Point
+          </button>
+          <button
+            onClick={() => {
+              if (editMode === 'evacRoute') {
+                setEditMode(null)
+                setTempRoutePoints([])
+              } else {
+                setEditMode('evacRoute')
+                setTempRoutePoints([])
+              }
+            }}
+            className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 ${
+              editMode === 'evacRoute'
+                ? 'bg-red-100 text-red-800 ring-2 ring-red-500'
+                : 'bg-white border text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Route className="w-4 h-4" />
+            {editMode === 'evacRoute' ? `Drawing (${tempRoutePoints.length})...` : 'Evacuation Route'}
+          </button>
+
+          {editMode === 'evacRoute' && tempRoutePoints.length > 0 && (
             <>
-              {tempRoutePoints.length >= 2 && <button onClick={saveRoute} className="px-2 py-1 text-xs bg-green-100 text-green-700 hover:bg-green-200 rounded">Save Route ({tempRoutePoints.length} pts)</button>}
-              <button onClick={cancelRoute} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Cancel</button>
+              <button
+                onClick={() => setTempRoutePoints(prev => prev.slice(0, -1))}
+                className="px-3 py-1.5 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                Undo Point
+              </button>
+              <button
+                onClick={saveEvacRoute}
+                disabled={tempRoutePoints.length < 2}
+                className="px-3 py-1.5 rounded-lg text-sm bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                ✓ Save Route
+              </button>
             </>
           )}
-          <span className="ml-4 text-xs text-gray-500">🚨 {localMusterPoints.length} muster • 🛣️ {localRoutes.length} routes</span>
+
+          <div className="flex-1" />
+
+          <span className="text-xs text-gray-500">
+            {musterPoints.length} muster point{musterPoints.length !== 1 ? 's' : ''} • 
+            {evacuationRoutes.length} route{evacuationRoutes.length !== 1 ? 's' : ''}
+          </span>
         </div>
 
-        <div className="flex-1 relative" style={{ minHeight: 400 }}>
-          {loading && <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>}
-          <div ref={containerRef} className="absolute inset-0" />
+        <div className="flex-1 relative">
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+          )}
+          <div ref={mapContainerRef} className="absolute inset-0" />
         </div>
 
-        <div className="p-4 border-t flex justify-between">
-          <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-          <button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
+        <div className="p-4 border-t flex justify-between items-center bg-white">
+          <div className="text-sm text-gray-500">
+            {editMode ? (
+              <span className="text-blue-600 font-medium">
+                Click on map to {editMode === 'muster' ? 'place muster point' : 'add route points'}
+              </span>
+            ) : (
+              <span>Drag muster points to reposition • Changes save automatically</span>
+            )}
+          </div>
+          <button
+            onClick={handleClose}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Done
+          </button>
         </div>
       </div>
     </div>
@@ -417,228 +603,660 @@ function EmergencyMapEditor({ siteLocation, boundary, launchPoint, recoveryPoint
 // MAIN COMPONENT
 // ============================================
 export default function ProjectEmergency({ project, onUpdate }) {
-  const [mapEditorOpen, setMapEditorOpen] = useState(false)
-  const [activeSiteIndex, setActiveSiteIndex] = useState(0)
   const [expandedSections, setExpandedSections] = useState({
-    muster: true, contacts: true, procedures: false, hospital: false
+    contacts: true,
+    medical: true,
+    muster: true,
+    procedures: false
   })
-
-  // Handle both multi-site and legacy
-  const sites = project.sites && Array.isArray(project.sites) ? project.sites : []
-  const useLegacy = sites.length === 0
-  const activeSite = !useLegacy ? sites[activeSiteIndex] : null
-  
-  const emergencyPlan = useLegacy ? (project.emergencyPlan || {}) : (activeSite?.emergency || {})
-  const siteSurvey = useLegacy ? (project.siteSurvey || {}) : (activeSite?.siteSurvey || {})
-  const flightPlan = useLegacy ? (project.flightPlan || {}) : (activeSite?.flightPlan || {})
+  const [mapEditorOpen, setMapEditorOpen] = useState(false)
 
   useEffect(() => {
-    if (useLegacy && !project.emergencyPlan) {
+    if (!project.emergencyPlan) {
       onUpdate({
         emergencyPlan: {
-          contacts: [...defaultContacts],
+          contacts: defaultContacts,
+          medicalFacility: {
+            name: '',
+            phone: '',
+            address: '',
+            distance: '',
+            driveTime: '',
+            directions: ''
+          },
+          firstAid: {
+            kitLocation: 'In project vehicle',
+            aedAvailable: false,
+            aedLocation: '',
+            designatedAttendant: ''
+          },
           musterPoints: [],
           evacuationRoutes: [],
-          hospital: { name: '', address: '', phone: '', distance: '', driveTime: '' },
-          firstAid: { kitLocation: '', aedAvailable: false }
+          procedures: defaultProcedures,
+          siteSpecificHazards: '',
+          additionalNotes: ''
         }
       })
     }
-  }, [useLegacy, project.emergencyPlan])
+  }, [project.emergencyPlan])
+
+  const emergencyPlan = project.emergencyPlan || {}
 
   const updateEmergencyPlan = (updates) => {
-    if (useLegacy) {
-      onUpdate({ emergencyPlan: { ...emergencyPlan, ...updates } })
-    } else if (activeSite) {
-      const newSites = [...project.sites]
-      const siteIdx = project.sites.findIndex(s => s.id === activeSite.id)
-      if (siteIdx >= 0) {
-        newSites[siteIdx] = { ...newSites[siteIdx], emergency: { ...newSites[siteIdx].emergency, ...updates } }
-        onUpdate({ sites: newSites })
+    onUpdate({
+      emergencyPlan: {
+        ...emergencyPlan,
+        ...updates
       }
-    }
+    })
   }
 
-  const toggleSection = (s) => setExpandedSections(prev => ({ ...prev, [s]: !prev[s] }))
-
-  // Contacts
-  const addContact = () => updateEmergencyPlan({ contacts: [...(emergencyPlan.contacts || []), { type: 'other', name: '', phone: '', notes: '' }] })
-  const updateContact = (i, f, v) => {
-    const contacts = [...(emergencyPlan.contacts || [])]
-    contacts[i] = { ...contacts[i], [f]: v }
-    updateEmergencyPlan({ contacts })
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
-  const removeContact = (i) => updateEmergencyPlan({ contacts: (emergencyPlan.contacts || []).filter((_, idx) => idx !== i) })
 
-  // Muster points (text only)
-  const updateMusterPoint = (i, f, v) => {
-    const pts = [...(emergencyPlan.musterPoints || [])]
-    pts[i] = { ...pts[i], [f]: v }
-    updateEmergencyPlan({ musterPoints: pts })
+  const addContact = () => {
+    updateEmergencyPlan({
+      contacts: [...(emergencyPlan.contacts || []), {
+        type: 'other',
+        name: '',
+        phone: '',
+        notes: ''
+      }]
+    })
   }
-  const removeMusterPoint = (i) => updateEmergencyPlan({ musterPoints: (emergencyPlan.musterPoints || []).filter((_, idx) => idx !== i) })
 
-  // Routes (text only)
-  const updateRoute = (i, f, v) => {
-    const routes = [...(emergencyPlan.evacuationRoutes || [])]
-    routes[i] = { ...routes[i], [f]: v }
-    updateEmergencyPlan({ evacuationRoutes: routes })
+  const updateContact = (index, field, value) => {
+    const newContacts = [...(emergencyPlan.contacts || [])]
+    newContacts[index] = { ...newContacts[index], [field]: value }
+    updateEmergencyPlan({ contacts: newContacts })
   }
-  const removeRoute = (i) => updateEmergencyPlan({ evacuationRoutes: (emergencyPlan.evacuationRoutes || []).filter((_, idx) => idx !== i) })
 
-  const handleMapSave = ({ musterPoints, evacuationRoutes }) => updateEmergencyPlan({ musterPoints, evacuationRoutes })
+  const removeContact = (index) => {
+    const newContacts = (emergencyPlan.contacts || []).filter((_, i) => i !== index)
+    updateEmergencyPlan({ contacts: newContacts })
+  }
+
+  const updateMedical = (field, value) => {
+    updateEmergencyPlan({
+      medicalFacility: { ...(emergencyPlan.medicalFacility || {}), [field]: value }
+    })
+  }
+
+  const updateFirstAid = (field, value) => {
+    updateEmergencyPlan({
+      firstAid: { ...(emergencyPlan.firstAid || {}), [field]: value }
+    })
+  }
+
+  const updateMusterPoint = (index, field, value) => {
+    const newPoints = [...(emergencyPlan.musterPoints || [])]
+    newPoints[index] = { ...newPoints[index], [field]: value }
+    updateEmergencyPlan({ musterPoints: newPoints })
+  }
+
+  const removeMusterPoint = (index) => {
+    const newPoints = (emergencyPlan.musterPoints || []).filter((_, i) => i !== index)
+    updateEmergencyPlan({ musterPoints: newPoints })
+  }
+
+  const updateEvacRoute = (index, field, value) => {
+    const newRoutes = [...(emergencyPlan.evacuationRoutes || [])]
+    newRoutes[index] = { ...newRoutes[index], [field]: value }
+    updateEmergencyPlan({ evacuationRoutes: newRoutes })
+  }
+
+  const removeEvacRoute = (index) => {
+    const newRoutes = (emergencyPlan.evacuationRoutes || []).filter((_, i) => i !== index)
+    updateEmergencyPlan({ evacuationRoutes: newRoutes })
+  }
+
+  const updateProcedure = (procedureId, field, value) => {
+    updateEmergencyPlan({
+      procedures: {
+        ...(emergencyPlan.procedures || {}),
+        [procedureId]: {
+          ...(emergencyPlan.procedures?.[procedureId] || {}),
+          [field]: value
+        }
+      }
+    })
+  }
+
+  const updateProcedureStep = (procedureId, stepIndex, value) => {
+    const procedure = emergencyPlan.procedures?.[procedureId] || {}
+    const steps = [...(procedure.steps || [])]
+    steps[stepIndex] = value
+    updateProcedure(procedureId, 'steps', steps)
+  }
+
+  const addProcedureStep = (procedureId) => {
+    const procedure = emergencyPlan.procedures?.[procedureId] || {}
+    const steps = [...(procedure.steps || []), '']
+    updateProcedure(procedureId, 'steps', steps)
+  }
+
+  const removeProcedureStep = (procedureId, stepIndex) => {
+    const procedure = emergencyPlan.procedures?.[procedureId] || {}
+    const steps = (procedure.steps || []).filter((_, i) => i !== stepIndex)
+    updateProcedure(procedureId, 'steps', steps)
+  }
+
+  const musterPoints = emergencyPlan.musterPoints || []
+  const evacuationRoutes = emergencyPlan.evacuationRoutes || []
 
   return (
     <div className="space-y-6">
-      {/* Site selector */}
-      {!useLegacy && sites.length > 1 && (
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4"><Layers className="w-5 h-5 text-blue-600" /> Select Site</h2>
-          <div className="flex flex-wrap gap-2">
-            {sites.map((s, i) => (
-              <button key={s.id} onClick={() => setActiveSiteIndex(i)} className={`px-4 py-2 rounded-lg border-2 ${activeSiteIndex === i ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <span className="font-medium">{s.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!useLegacy && activeSite && (
-        <div className="text-sm text-gray-500 flex items-center gap-2"><MapPin className="w-4 h-4" /> Emergency Plan for: <span className="font-medium text-gray-700">{activeSite.name}</span></div>
-      )}
-
-      {/* Muster Points & Evacuation Map */}
+      {/* Emergency Contacts */}
       <div className="card">
-        <button onClick={() => toggleSection('muster')} className="flex items-center justify-between w-full text-left">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><Navigation className="w-5 h-5 text-blue-600" /> Muster Points & Evacuation Routes</h2>
+        <button
+          onClick={() => toggleSection('contacts')}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Phone className="w-5 h-5 text-aeria-blue" />
+            Emergency Contacts
+          </h2>
+          {expandedSections.contacts ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </button>
+
+        {expandedSections.contacts && (
+          <div className="mt-4 space-y-4">
+            {(emergencyPlan.contacts || []).map((contact, index) => {
+              const contactType = contactTypes.find(t => t.value === contact.type) || contactTypes[6]
+              const ContactIcon = contactType.icon
+
+              return (
+                <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-white rounded-lg">
+                      <ContactIcon className="w-5 h-5 text-gray-500" />
+                    </div>
+                    <div className="flex-1 grid sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="label text-xs">Type</label>
+                        <select
+                          value={contact.type}
+                          onChange={(e) => updateContact(index, 'type', e.target.value)}
+                          className="input text-sm"
+                        >
+                          {contactTypes.map(t => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label text-xs">Name / Organization</label>
+                        <input
+                          type="text"
+                          value={contact.name}
+                          onChange={(e) => updateContact(index, 'name', e.target.value)}
+                          className="input text-sm"
+                          placeholder="Contact name"
+                        />
+                      </div>
+                      <div>
+                        <label className="label text-xs">Phone Number</label>
+                        <input
+                          type="tel"
+                          value={contact.phone}
+                          onChange={(e) => updateContact(index, 'phone', e.target.value)}
+                          className="input text-sm font-mono"
+                          placeholder="(555) 555-5555"
+                        />
+                      </div>
+                      <div>
+                        <label className="label text-xs">Notes</label>
+                        <input
+                          type="text"
+                          value={contact.notes}
+                          onChange={(e) => updateContact(index, 'notes', e.target.value)}
+                          className="input text-sm"
+                          placeholder="Additional info"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeContact(index)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+
+            <button
+              onClick={addContact}
+              className="flex items-center gap-2 text-aeria-blue hover:text-aeria-navy"
+            >
+              <Plus className="w-4 h-4" />
+              Add Contact
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Medical Response */}
+      <div className="card">
+        <button
+          onClick={() => toggleSection('medical')}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Stethoscope className="w-5 h-5 text-aeria-blue" />
+            Medical Response
+          </h2>
+          {expandedSections.medical ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </button>
+
+        {expandedSections.medical && (
+          <div className="mt-4 space-y-6">
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <Building className="w-4 h-4 text-gray-500" />
+                Nearest Hospital / Medical Facility
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Facility Name</label>
+                  <input
+                    type="text"
+                    value={emergencyPlan.medicalFacility?.name || ''}
+                    onChange={(e) => updateMedical('name', e.target.value)}
+                    className="input"
+                    placeholder="Hospital name"
+                  />
+                </div>
+                <div>
+                  <label className="label">Phone</label>
+                  <input
+                    type="tel"
+                    value={emergencyPlan.medicalFacility?.phone || ''}
+                    onChange={(e) => updateMedical('phone', e.target.value)}
+                    className="input font-mono"
+                    placeholder="(555) 555-5555"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="label">Address</label>
+                  <input
+                    type="text"
+                    value={emergencyPlan.medicalFacility?.address || ''}
+                    onChange={(e) => updateMedical('address', e.target.value)}
+                    className="input"
+                    placeholder="Full address"
+                  />
+                </div>
+                <div>
+                  <label className="label flex items-center gap-1">
+                    <Navigation className="w-4 h-4" />
+                    Distance
+                  </label>
+                  <input
+                    type="text"
+                    value={emergencyPlan.medicalFacility?.distance || ''}
+                    onChange={(e) => updateMedical('distance', e.target.value)}
+                    className="input"
+                    placeholder="e.g., 25 km"
+                  />
+                </div>
+                <div>
+                  <label className="label flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    Drive Time
+                  </label>
+                  <input
+                    type="text"
+                    value={emergencyPlan.medicalFacility?.driveTime || ''}
+                    onChange={(e) => updateMedical('driveTime', e.target.value)}
+                    className="input"
+                    placeholder="e.g., 30 minutes"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="label">Directions</label>
+                  <textarea
+                    value={emergencyPlan.medicalFacility?.directions || ''}
+                    onChange={(e) => updateMedical('directions', e.target.value)}
+                    className="input min-h-[60px]"
+                    placeholder="Driving directions from site to hospital..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-200">
+              <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-gray-500" />
+                First Aid Equipment
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">First Aid Kit Location</label>
+                  <input
+                    type="text"
+                    value={emergencyPlan.firstAid?.kitLocation || ''}
+                    onChange={(e) => updateFirstAid('kitLocation', e.target.value)}
+                    className="input"
+                    placeholder="e.g., In project vehicle, rear compartment"
+                  />
+                </div>
+                <div>
+                  <label className="label">Designated First Aid Attendant</label>
+                  <input
+                    type="text"
+                    value={emergencyPlan.firstAid?.designatedAttendant || ''}
+                    onChange={(e) => updateFirstAid('designatedAttendant', e.target.value)}
+                    className="input"
+                    placeholder="Name of qualified attendant"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={emergencyPlan.firstAid?.aedAvailable || false}
+                      onChange={(e) => updateFirstAid('aedAvailable', e.target.checked)}
+                      className="w-4 h-4 text-aeria-navy rounded"
+                    />
+                    <span className="text-sm text-gray-700">AED Available On Site</span>
+                  </label>
+                </div>
+                {emergencyPlan.firstAid?.aedAvailable && (
+                  <div>
+                    <label className="label">AED Location</label>
+                    <input
+                      type="text"
+                      value={emergencyPlan.firstAid?.aedLocation || ''}
+                      onChange={(e) => updateFirstAid('aedLocation', e.target.value)}
+                      className="input"
+                      placeholder="Where is the AED located?"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Muster Points & Evacuation - WITH MAP */}
+      <div className="card">
+        <button
+          onClick={() => toggleSection('muster')}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Users className="w-5 h-5 text-aeria-blue" />
+            Muster Points & Evacuation
+          </h2>
           {expandedSections.muster ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
         </button>
+
         {expandedSections.muster && (
-          <div className="mt-4 space-y-4">
-            <UnifiedMapPreview
-              siteLocation={siteSurvey.location?.coordinates}
-              boundary={siteSurvey.boundary}
-              launchPoint={flightPlan?.launchPoint}
-              recoveryPoint={flightPlan?.recoveryPoint}
-              musterPoints={emergencyPlan.musterPoints}
-              evacuationRoutes={emergencyPlan.evacuationRoutes}
-              height={280}
-              onEdit={() => setMapEditorOpen(true)}
-              editLabel="Edit Muster & Routes"
-            />
+          <div className="mt-4 space-y-6">
+            {/* Map Button */}
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                    <Map className="w-5 h-5 text-blue-600" />
+                    Emergency Map
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {musterPoints.length} muster point{musterPoints.length !== 1 ? 's' : ''} • 
+                    {evacuationRoutes.length} evacuation route{evacuationRoutes.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setMapEditorOpen(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Open Map Editor
+                </button>
+              </div>
+            </div>
 
             {/* Muster Points List */}
             <div>
-              <h3 className="font-medium text-gray-700 mb-2 flex items-center gap-2">🚨 Muster Points ({(emergencyPlan.musterPoints || []).length})</h3>
-              {(emergencyPlan.musterPoints || []).length === 0 ? (
-                <p className="text-sm text-gray-500">No muster points set. Click "Edit Map" to add.</p>
-              ) : (
-                <div className="space-y-2">
-                  {(emergencyPlan.musterPoints || []).map((mp, i) => (
-                    <div key={i} className="p-3 bg-amber-50 rounded-lg border border-amber-200 flex gap-3">
-                      <div className="flex-1 grid sm:grid-cols-2 gap-2">
-                        <input type="text" value={mp.name || ''} onChange={e => updateMusterPoint(i, 'name', e.target.value)} className="input text-sm" placeholder="Name" />
-                        <input type="text" value={mp.description || ''} onChange={e => updateMusterPoint(i, 'description', e.target.value)} className="input text-sm" placeholder="Description / landmarks" />
-                      </div>
-                      <button onClick={() => removeMusterPoint(i)} className="p-1.5 text-red-500 hover:bg-red-100 rounded"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Routes List */}
-            <div>
-              <h3 className="font-medium text-gray-700 mb-2 flex items-center gap-2">🛣️ Evacuation Routes ({(emergencyPlan.evacuationRoutes || []).length})</h3>
-              {(emergencyPlan.evacuationRoutes || []).length === 0 ? (
-                <p className="text-sm text-gray-500">No routes set. Click "Edit Map" to draw routes.</p>
-              ) : (
-                <div className="space-y-2">
-                  {(emergencyPlan.evacuationRoutes || []).map((route, i) => (
-                    <div key={i} className="p-3 bg-red-50 rounded-lg border border-red-200 flex gap-3">
-                      <div className="flex-1 grid sm:grid-cols-2 gap-2">
-                        <input type="text" value={route.name || ''} onChange={e => updateRoute(i, 'name', e.target.value)} className="input text-sm" placeholder="Route name" />
-                        <input type="text" value={route.description || ''} onChange={e => updateRoute(i, 'description', e.target.value)} className="input text-sm" placeholder="Description" />
-                      </div>
-                      <button onClick={() => removeRoute(i)} className="p-1.5 text-red-500 hover:bg-red-100 rounded"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Emergency Contacts */}
-      <div className="card">
-        <button onClick={() => toggleSection('contacts')} className="flex items-center justify-between w-full text-left">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><Phone className="w-5 h-5 text-blue-600" /> Emergency Contacts <span className="px-2 py-0.5 text-xs bg-gray-100 rounded">{(emergencyPlan.contacts || []).length}</span></h2>
-          {expandedSections.contacts ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-        </button>
-        {expandedSections.contacts && (
-          <div className="mt-4 space-y-3">
-            {(emergencyPlan.contacts || []).map((contact, i) => (
-              <div key={i} className="p-3 bg-gray-50 rounded-lg border flex gap-3">
-                <div className="flex-1 grid sm:grid-cols-4 gap-2">
-                  <select value={contact.type} onChange={e => updateContact(i, 'type', e.target.value)} className="input text-sm">
-                    {contactTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                  <input type="text" value={contact.name} onChange={e => updateContact(i, 'name', e.target.value)} className="input text-sm" placeholder="Name" />
-                  <input type="text" value={contact.phone} onChange={e => updateContact(i, 'phone', e.target.value)} className="input text-sm" placeholder="Phone" />
-                  <input type="text" value={contact.notes || ''} onChange={e => updateContact(i, 'notes', e.target.value)} className="input text-sm" placeholder="Notes" />
-                </div>
-                <button onClick={() => removeContact(i)} className="p-1.5 text-red-500 hover:bg-red-100 rounded"><Trash2 className="w-4 h-4" /></button>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  Muster Points
+                </h3>
               </div>
-            ))}
-            <button onClick={addContact} className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Add Contact</button>
+
+              {musterPoints.length === 0 ? (
+                <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+                  <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No muster points set</p>
+                  <button
+                    onClick={() => setMapEditorOpen(true)}
+                    className="text-sm text-blue-600 hover:underline mt-2"
+                  >
+                    Open map to add muster points
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {musterPoints.map((point, index) => (
+                    <div key={point.id || index} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 space-y-2">
+                          <input
+                            type="text"
+                            value={point.name || ''}
+                            onChange={(e) => updateMusterPoint(index, 'name', e.target.value)}
+                            className="input text-sm font-medium"
+                            placeholder="Point name (e.g., Primary Muster Point)"
+                          />
+                          <div className="grid sm:grid-cols-2 gap-2">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <MapPin className="w-4 h-4 text-green-600" />
+                              {point.coordinates?.lat ? (
+                                <span>{point.coordinates.lat}, {point.coordinates.lng}</span>
+                              ) : (
+                                <span className="text-gray-400">No coordinates set</span>
+                              )}
+                            </div>
+                            <input
+                              type="text"
+                              value={point.description || ''}
+                              onChange={(e) => updateMusterPoint(index, 'description', e.target.value)}
+                              className="input text-sm"
+                              placeholder="Description / landmarks"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeMusterPoint(index)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                          title="Delete muster point"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Evacuation Routes List */}
+            <div className="pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                  <Route className="w-4 h-4 text-gray-500" />
+                  Evacuation Routes
+                </h3>
+              </div>
+
+              {evacuationRoutes.length === 0 ? (
+                <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+                  <Route className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No evacuation routes defined</p>
+                  <button
+                    onClick={() => setMapEditorOpen(true)}
+                    className="text-sm text-blue-600 hover:underline mt-2"
+                  >
+                    Open map to draw routes
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {evacuationRoutes.map((route, index) => (
+                    <div key={route.id || index} className="p-3 bg-red-50 rounded-lg border border-red-200">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 space-y-2">
+                          <input
+                            type="text"
+                            value={route.name || ''}
+                            onChange={(e) => updateEvacRoute(index, 'name', e.target.value)}
+                            className="input text-sm font-medium"
+                            placeholder="Route name (e.g., Primary Route)"
+                          />
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <span className="flex items-center gap-1">
+                              <Route className="w-4 h-4 text-red-600" />
+                              {route.coordinates?.length || 0} points
+                            </span>
+                            <input
+                              type="text"
+                              value={route.description || ''}
+                              onChange={(e) => updateEvacRoute(index, 'description', e.target.value)}
+                              className="input text-sm flex-1"
+                              placeholder="Description..."
+                            />
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeEvacRoute(index)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                          title="Delete evacuation route"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Hospital */}
+      {/* Emergency Procedures */}
       <div className="card">
-        <button onClick={() => toggleSection('hospital')} className="flex items-center justify-between w-full text-left">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><Stethoscope className="w-5 h-5 text-blue-600" /> Nearest Hospital</h2>
-          {expandedSections.hospital ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        <button
+          onClick={() => toggleSection('procedures')}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-aeria-blue" />
+            Emergency Procedures
+          </h2>
+          {expandedSections.procedures ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
         </button>
-        {expandedSections.hospital && (
-          <div className="mt-4 grid sm:grid-cols-2 gap-4">
-            <div><label className="label">Hospital Name</label><input type="text" value={emergencyPlan.hospital?.name || ''} onChange={e => updateEmergencyPlan({ hospital: { ...emergencyPlan.hospital, name: e.target.value } })} className="input" placeholder="e.g., Squamish General Hospital" /></div>
-            <div><label className="label">Phone</label><input type="text" value={emergencyPlan.hospital?.phone || ''} onChange={e => updateEmergencyPlan({ hospital: { ...emergencyPlan.hospital, phone: e.target.value } })} className="input" placeholder="e.g., 604-892-5211" /></div>
-            <div className="sm:col-span-2"><label className="label">Address</label><input type="text" value={emergencyPlan.hospital?.address || ''} onChange={e => updateEmergencyPlan({ hospital: { ...emergencyPlan.hospital, address: e.target.value } })} className="input" placeholder="Full address" /></div>
-            <div><label className="label">Distance</label><input type="text" value={emergencyPlan.hospital?.distance || ''} onChange={e => updateEmergencyPlan({ hospital: { ...emergencyPlan.hospital, distance: e.target.value } })} className="input" placeholder="e.g., 15 km" /></div>
-            <div><label className="label">Drive Time</label><input type="text" value={emergencyPlan.hospital?.driveTime || ''} onChange={e => updateEmergencyPlan({ hospital: { ...emergencyPlan.hospital, driveTime: e.target.value } })} className="input" placeholder="e.g., 20 minutes" /></div>
+
+        {expandedSections.procedures && (
+          <div className="mt-4 space-y-4">
+            {procedureTypes.map((procType) => {
+              const procedure = emergencyPlan.procedures?.[procType.id] || { enabled: true, steps: procType.defaultSteps }
+              const ProcIcon = procType.icon
+
+              return (
+                <div key={procType.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="p-3 bg-gray-50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <ProcIcon className="w-5 h-5 text-gray-500" />
+                      <span className="font-medium">{procType.label}</span>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <span className="text-sm text-gray-500">Include</span>
+                      <input
+                        type="checkbox"
+                        checked={procedure.enabled !== false}
+                        onChange={(e) => updateProcedure(procType.id, 'enabled', e.target.checked)}
+                        className="w-4 h-4 text-aeria-navy rounded"
+                      />
+                    </label>
+                  </div>
+
+                  {procedure.enabled !== false && (
+                    <div className="p-3 space-y-2">
+                      {(procedure.steps || []).map((step, stepIndex) => (
+                        <div key={stepIndex} className="flex items-start gap-2">
+                          <span className="text-sm text-gray-400 font-mono w-6 pt-2">{stepIndex + 1}.</span>
+                          <input
+                            type="text"
+                            value={step}
+                            onChange={(e) => updateProcedureStep(procType.id, stepIndex, e.target.value)}
+                            className="input flex-1 text-sm"
+                          />
+                          <button
+                            onClick={() => removeProcedureStep(procType.id, stepIndex)}
+                            className="p-2 text-gray-400 hover:text-red-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => addProcedureStep(procType.id)}
+                        className="text-sm text-aeria-blue hover:text-aeria-navy flex items-center gap-1 mt-2"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add Step
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
 
-      {/* First Aid */}
+      {/* Site-Specific Hazards */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4"><Plus className="w-5 h-5 text-blue-600" /> First Aid</h2>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div><label className="label">First Aid Kit Location</label><input type="text" value={emergencyPlan.firstAid?.kitLocation || ''} onChange={e => updateEmergencyPlan({ firstAid: { ...emergencyPlan.firstAid, kitLocation: e.target.value } })} className="input" placeholder="e.g., In project vehicle" /></div>
-          <div className="flex items-center">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={emergencyPlan.firstAid?.aedAvailable || false} onChange={e => updateEmergencyPlan({ firstAid: { ...emergencyPlan.firstAid, aedAvailable: e.target.checked } })} className="w-4 h-4" />
-              <span className="text-sm">AED Available</span>
-            </label>
-          </div>
-        </div>
+        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
+          <AlertTriangle className="w-5 h-5 text-aeria-blue" />
+          Site-Specific Hazards
+        </h2>
+        <textarea
+          value={emergencyPlan.siteSpecificHazards || ''}
+          onChange={(e) => updateEmergencyPlan({ siteSpecificHazards: e.target.value })}
+          className="input min-h-[100px]"
+          placeholder="Document any site-specific hazards..."
+        />
       </div>
 
-      {/* Map Editor */}
+      {/* Additional Notes */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
+          <ShieldAlert className="w-5 h-5 text-aeria-blue" />
+          Additional Emergency Notes
+        </h2>
+        <textarea
+          value={emergencyPlan.additionalNotes || ''}
+          onChange={(e) => updateEmergencyPlan({ additionalNotes: e.target.value })}
+          className="input min-h-[100px]"
+          placeholder="Any additional emergency planning notes..."
+        />
+      </div>
+
+      {/* Map Editor Modal */}
       <EmergencyMapEditor
+        project={project}
+        emergencyPlan={emergencyPlan}
+        onUpdateMusterPoints={(points) => updateEmergencyPlan({ musterPoints: points })}
+        onUpdateEvacRoutes={(routes) => updateEmergencyPlan({ evacuationRoutes: routes })}
         isOpen={mapEditorOpen}
         onClose={() => setMapEditorOpen(false)}
-        siteLocation={siteSurvey.location?.coordinates}
-        boundary={siteSurvey.boundary}
-        launchPoint={flightPlan?.launchPoint}
-        recoveryPoint={flightPlan?.recoveryPoint}
-        musterPoints={emergencyPlan.musterPoints}
-        evacuationRoutes={emergencyPlan.evacuationRoutes}
-        onSave={handleMapSave}
       />
     </div>
   )
