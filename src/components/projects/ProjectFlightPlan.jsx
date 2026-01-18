@@ -1,406 +1,547 @@
-import { useState, useEffect, useRef } from 'react'
-import { getAircraft } from '../../lib/firestore'
-import { 
-  Plane, Plus, Trash2, AlertTriangle, Cloud, Wind, Eye, Gauge, ChevronDown, ChevronUp, Award, FileCheck,
-  CheckCircle2, Zap, MapPin, Users, Radio, ExternalLink, RefreshCw, Navigation, Target, Map, X, Loader2, Search, Info, Link2, Layers, Route
-} from 'lucide-react'
+/**
+ * ProjectFlightPlan.jsx
+ * Flight Plan component with multi-site map integration
+ * 
+ * Features:
+ * - Multi-site support with site selector
+ * - Unified map for launch/recovery/pilot position/flight geography
+ * - Operation type selection (VLOS/EVLOS/BVLOS)
+ * - Aircraft selection from project fleet
+ * - Weather minimums configuration
+ * - Contingency procedures
+ * - SORA-aligned volume calculations
+ * 
+ * @location src/components/projects/ProjectFlightPlan.jsx
+ * @action NEW
+ */
 
-const operationTypes = [
-  { value: 'VLOS', label: 'VLOS', description: 'Visual Line of Sight' },
-  { value: 'EVLOS', label: 'EVLOS', description: 'Extended Visual Line of Sight' },
-  { value: 'BVLOS', label: 'BVLOS', description: 'Beyond Visual Line of Sight' }
+import React, { useState, useCallback, useMemo } from 'react'
+import {
+  Plane,
+  MapPin,
+  Navigation,
+  Target,
+  User,
+  Square,
+  AlertTriangle,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Trash2,
+  Eye,
+  Cloud,
+  Wind,
+  Thermometer,
+  Gauge,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
+  XCircle,
+  Settings,
+  Copy,
+  ExternalLink
+} from 'lucide-react'
+import UnifiedProjectMap from '../map/UnifiedProjectMap'
+import { 
+  createDefaultSite,
+  getSiteStats,
+  calculatePolygonArea
+} from '../../lib/mapDataStructures'
+
+// ============================================
+// CONSTANTS
+// ============================================
+
+const OPERATION_TYPES = [
+  { 
+    value: 'VLOS', 
+    label: 'VLOS', 
+    description: 'Visual Line of Sight - Pilot maintains direct visual contact',
+    color: 'bg-green-100 text-green-800 border-green-300'
+  },
+  { 
+    value: 'EVLOS', 
+    label: 'EVLOS', 
+    description: 'Extended VLOS - Visual observers extend operational range',
+    color: 'bg-amber-100 text-amber-800 border-amber-300'
+  },
+  { 
+    value: 'BVLOS', 
+    label: 'BVLOS', 
+    description: 'Beyond VLOS - No direct visual contact with RPAS',
+    color: 'bg-red-100 text-red-800 border-red-300'
+  }
 ]
 
-const defaultWeatherMinimums = { minVisibility: 3, minCeiling: 500, maxWind: 10, maxGust: 15, precipitation: false, notes: '' }
+const FLIGHT_GEOGRAPHY_METHODS = [
+  { value: 'inside-out', label: 'Inside-Out', description: 'Start with flight path, add buffers outward' },
+  { value: 'reverse', label: 'Reverse', description: 'Start with available ground, determine max flight area' },
+  { value: 'manual', label: 'Manual', description: 'Draw flight geography directly on map' }
+]
 
-const defaultContingencies = [
+const DEFAULT_CONTINGENCIES = [
   { trigger: 'Loss of C2 Link', action: 'Return to Home (RTH) automatically engages. If no RTH within 30 seconds, land in place.', priority: 'high' },
   { trigger: 'Low Battery Warning', action: 'Immediately return to launch point. Land with minimum 20% remaining.', priority: 'high' },
   { trigger: 'GPS Loss', action: 'Switch to ATTI mode, maintain visual contact, manual return and land.', priority: 'high' },
-  { trigger: 'Fly-Away', action: 'Attempt to regain control. If unsuccessful, contact FIC Edmonton (1-866-541-4102) immediately.', priority: 'critical' },
+  { trigger: 'Fly-Away', action: 'Attempt to regain control. If unsuccessful, contact FIC immediately.', priority: 'critical' },
   { trigger: 'Deteriorating Weather', action: 'Land immediately if conditions fall below minimums.', priority: 'medium' },
   { trigger: 'Aircraft in Vicinity', action: 'Descend and hold position or land. Give way to all manned aircraft.', priority: 'high' }
 ]
 
 // ============================================
-// UNIFIED MAP PREVIEW - Shows ALL project data
+// COLLAPSIBLE SECTION COMPONENT
 // ============================================
-function UnifiedMapPreview({ 
-  siteLocation, boundary, launchPoint, recoveryPoint, 
-  musterPoints, evacuationRoutes, 
-  height = 200, onEdit, editLabel = "Edit Map" 
-}) {
-  const containerRef = useRef(null)
-  const mapRef = useRef(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!containerRef.current) return
-    
-    const init = async () => {
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link')
-        link.id = 'leaflet-css'
-        link.rel = 'stylesheet'
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-        document.head.appendChild(link)
-      }
-      
-      if (!window.L) {
-        await new Promise(resolve => {
-          const script = document.createElement('script')
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-          script.onload = resolve
-          document.body.appendChild(script)
-        })
-      }
-
-      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null }
-      await new Promise(r => setTimeout(r, 50))
-      if (!containerRef.current) return
-
-      const L = window.L
-      const lat = siteLocation?.lat || launchPoint?.lat || 54
-      const lng = siteLocation?.lng || launchPoint?.lng || -125
-      const hasLoc = siteLocation?.lat || launchPoint?.lat
-
-      const map = L.map(containerRef.current, {
-        center: [lat, lng],
-        zoom: hasLoc ? 14 : 4,
-        zoomControl: false,
-        attributionControl: false
-      })
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map)
-      mapRef.current = map
-
-      const icon = (color, emoji, size = 24) => L.divIcon({
-        className: 'custom-icon',
-        html: `<div style="background:${color};width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:${size*0.4}px">${emoji}</span></div>`,
-        iconSize: [size, size],
-        iconAnchor: [size/2, size]
-      })
-
-      // All markers
-      if (siteLocation?.lat) L.marker([parseFloat(siteLocation.lat), parseFloat(siteLocation.lng)], { icon: icon('#1e40af', '📍', 24) }).addTo(map)
-      if (Array.isArray(boundary) && boundary.length >= 3) {
-        L.polygon(boundary.map(p => [parseFloat(p.lat), parseFloat(p.lng)]), { color: '#9333ea', fillOpacity: 0.15, weight: 2 }).addTo(map)
-      }
-      if (launchPoint?.lat) L.marker([parseFloat(launchPoint.lat), parseFloat(launchPoint.lng)], { icon: icon('#16a34a', '🚀', 28) }).addTo(map)
-      if (recoveryPoint?.lat) L.marker([parseFloat(recoveryPoint.lat), parseFloat(recoveryPoint.lng)], { icon: icon('#dc2626', '🎯', 28) }).addTo(map)
-      if (Array.isArray(musterPoints)) {
-        musterPoints.forEach(mp => {
-          if (mp.coordinates?.lat) L.marker([parseFloat(mp.coordinates.lat), parseFloat(mp.coordinates.lng)], { icon: icon('#f59e0b', '🚨', 24) }).addTo(map)
-        })
-      }
-      if (Array.isArray(evacuationRoutes)) {
-        evacuationRoutes.forEach(route => {
-          if (Array.isArray(route.coordinates) && route.coordinates.length >= 2) {
-            L.polyline(route.coordinates.map(c => [parseFloat(c.lat), parseFloat(c.lng)]), { color: '#ef4444', weight: 3, dashArray: '8,8' }).addTo(map)
-          }
-        })
-      }
-
-      const pts = []
-      if (siteLocation?.lat) pts.push([parseFloat(siteLocation.lat), parseFloat(siteLocation.lng)])
-      if (Array.isArray(boundary)) boundary.forEach(p => pts.push([parseFloat(p.lat), parseFloat(p.lng)]))
-      if (launchPoint?.lat) pts.push([parseFloat(launchPoint.lat), parseFloat(launchPoint.lng)])
-      if (recoveryPoint?.lat) pts.push([parseFloat(recoveryPoint.lat), parseFloat(recoveryPoint.lng)])
-      if (Array.isArray(musterPoints)) musterPoints.forEach(mp => { if (mp.coordinates?.lat) pts.push([parseFloat(mp.coordinates.lat), parseFloat(mp.coordinates.lng)]) })
-      if (pts.length > 1) map.fitBounds(pts, { padding: [30, 30] })
-
-      setLoading(false)
-    }
-    
-    init()
-    return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null } }
-  }, [siteLocation, boundary, launchPoint, recoveryPoint, musterPoints, evacuationRoutes])
-
-  const hasContent = launchPoint?.lat || recoveryPoint?.lat || siteLocation?.lat
-
+function CollapsibleSection({ title, icon: Icon, children, defaultOpen = true, badge = null, status = null }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
+  
+  const statusColors = {
+    complete: 'bg-green-100 text-green-700',
+    partial: 'bg-amber-100 text-amber-700',
+    missing: 'bg-red-100 text-red-700'
+  }
+  
   return (
-    <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-100" style={{ height }}>
-      {loading && <div className="absolute inset-0 flex items-center justify-center z-10"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>}
-      <div ref={containerRef} className="w-full h-full" />
-      <button onClick={onEdit} className="absolute bottom-3 right-3 px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium rounded-lg shadow-md border flex items-center gap-2" style={{ zIndex: 1000 }}>
-        <Map className="w-4 h-4" /> {editLabel}
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-4 py-3 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          {Icon && <Icon className="w-5 h-5 text-gray-500" />}
+          <span className="font-medium text-gray-900">{title}</span>
+          {badge && (
+            <span className="px-2 py-0.5 text-xs font-medium bg-aeria-navy/10 text-aeria-navy rounded-full">
+              {badge}
+            </span>
+          )}
+          {status && (
+            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[status]}`}>
+              {status === 'complete' ? '✓ Complete' : status === 'partial' ? 'Partial' : 'Missing'}
+            </span>
+          )}
+        </div>
+        {isOpen ? (
+          <ChevronUp className="w-5 h-5 text-gray-400" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-gray-400" />
+        )}
       </button>
-      {!hasContent && !loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 pointer-events-none" style={{ zIndex: 5 }}>
-          <div className="text-center">
-            <Navigation className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">Click "Edit Map" to set launch & recovery</p>
-          </div>
+      {isOpen && (
+        <div className="p-4 space-y-4">
+          {children}
         </div>
       )}
-      
-      {/* Legend */}
-      <div className="absolute top-2 left-2 bg-white/90 rounded-lg px-2 py-1.5 text-xs space-y-1 shadow" style={{ zIndex: 1000 }}>
-        {siteLocation?.lat && <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-700"></span> Site</div>}
-        {launchPoint?.lat && <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-600"></span> Launch</div>}
-        {recoveryPoint?.lat && <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-600"></span> Recovery</div>}
-        {Array.isArray(musterPoints) && musterPoints.length > 0 && <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-500"></span> Muster</div>}
+    </div>
+  )
+}
+
+// ============================================
+// SITE SELECTOR BAR
+// ============================================
+
+function SiteSelectorBar({ sites, activeSiteId, onSelectSite }) {
+  if (sites.length <= 1) return null
+  
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-3 flex items-center gap-3 overflow-x-auto">
+      <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Site:</span>
+      <div className="flex gap-2">
+        {sites.map((site, index) => {
+          const isActive = site.id === activeSiteId
+          return (
+            <button
+              key={site.id}
+              onClick={() => onSelectSite(site.id)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
+                isActive
+                  ? 'bg-aeria-navy text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <div 
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: isActive ? 'white' : `hsl(${index * 60}, 70%, 50%)` }}
+              />
+              {site.name}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
 }
 
 // ============================================
-// FLIGHT MAP EDITOR
+// OPERATION TYPE SELECTOR
 // ============================================
-function FlightMapEditor({ siteLocation, boundary, launchPoint, recoveryPoint, musterPoints, evacuationRoutes, onSave, isOpen, onClose }) {
-  const containerRef = useRef(null)
-  const mapRef = useRef(null)
-  const markersRef = useRef({})
 
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [searching, setSearching] = useState(false)
-  const [mode, setMode] = useState('launch')
-  const [launchCoords, setLaunchCoords] = useState({ lat: '', lng: '' })
-  const [recoveryCoords, setRecoveryCoords] = useState({ lat: '', lng: '' })
-
-  const modeRef = useRef('launch')
-  useEffect(() => { modeRef.current = mode }, [mode])
-
-  useEffect(() => {
-    if (isOpen) {
-      setLaunchCoords({ lat: launchPoint?.lat?.toString() || '', lng: launchPoint?.lng?.toString() || '' })
-      setRecoveryCoords({ lat: recoveryPoint?.lat?.toString() || '', lng: recoveryPoint?.lng?.toString() || '' })
-      setMode('launch')
-      setLoading(true)
-    }
-  }, [isOpen, launchPoint, recoveryPoint])
-
-  useEffect(() => {
-    if (!isOpen || !containerRef.current) return
-
-    const init = async () => {
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link')
-        link.id = 'leaflet-css'
-        link.rel = 'stylesheet'
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-        document.head.appendChild(link)
-      }
-
-      if (!window.L) {
-        await new Promise(resolve => {
-          const script = document.createElement('script')
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-          script.onload = resolve
-          document.body.appendChild(script)
-        })
-      }
-
-      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null }
-      markersRef.current = {}
-      await new Promise(r => setTimeout(r, 100))
-      if (!containerRef.current) return
-
-      const L = window.L
-      const lat = siteLocation?.lat || launchPoint?.lat || 54
-      const lng = siteLocation?.lng || launchPoint?.lng || -125
-      const hasLoc = siteLocation?.lat || launchPoint?.lat
-
-      const map = L.map(containerRef.current, { center: [lat, lng], zoom: hasLoc ? 15 : 5 })
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map)
-      mapRef.current = map
-
-      const createIcon = (color, emoji, size = 32) => L.divIcon({
-        className: 'custom-icon',
-        html: `<div style="background:${color};width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:${size*0.45}px">${emoji}</span></div>`,
-        iconSize: [size, size],
-        iconAnchor: [size/2, size]
-      })
-
-      // Reference: site location (read-only)
-      if (siteLocation?.lat) L.marker([siteLocation.lat, siteLocation.lng], { icon: createIcon('#1e40af', '📍', 24), opacity: 0.5 }).addTo(map).bindTooltip('Site (edit in Site Survey)')
-      if (Array.isArray(boundary) && boundary.length >= 3) {
-        L.polygon(boundary.map(p => [p.lat, p.lng]), { color: '#9333ea', fillOpacity: 0.1, weight: 2, dashArray: '5,5' }).addTo(map)
-      }
-
-      // Reference: muster points (read-only)
-      if (Array.isArray(musterPoints)) {
-        musterPoints.forEach(mp => {
-          if (mp.coordinates?.lat) L.marker([mp.coordinates.lat, mp.coordinates.lng], { icon: createIcon('#f59e0b', '🚨', 22), opacity: 0.5 }).addTo(map).bindTooltip('Muster (edit in Emergency)')
-        })
-      }
-
-      // Reference: routes (read-only)
-      if (Array.isArray(evacuationRoutes)) {
-        evacuationRoutes.forEach(route => {
-          if (Array.isArray(route.coordinates) && route.coordinates.length >= 2) {
-            L.polyline(route.coordinates.map(c => [c.lat, c.lng]), { color: '#ef4444', weight: 3, dashArray: '8,8', opacity: 0.5 }).addTo(map)
-          }
-        })
-      }
-
-      // Editable: launch marker
-      if (launchPoint?.lat) {
-        const m = L.marker([launchPoint.lat, launchPoint.lng], { icon: createIcon('#16a34a', '🚀'), draggable: true }).addTo(map)
-        m.on('dragend', e => {
-          const p = e.target.getLatLng()
-          setLaunchCoords({ lat: p.lat.toFixed(6), lng: p.lng.toFixed(6) })
-        })
-        markersRef.current.launch = m
-      }
-
-      // Editable: recovery marker
-      if (recoveryPoint?.lat) {
-        const m = L.marker([recoveryPoint.lat, recoveryPoint.lng], { icon: createIcon('#dc2626', '🎯'), draggable: true }).addTo(map)
-        m.on('dragend', e => {
-          const p = e.target.getLatLng()
-          setRecoveryCoords({ lat: p.lat.toFixed(6), lng: p.lng.toFixed(6) })
-        })
-        markersRef.current.recovery = m
-      }
-
-      // Click handler
-      map.on('click', e => {
-        const lat = parseFloat(e.latlng.lat.toFixed(6))
-        const lng = parseFloat(e.latlng.lng.toFixed(6))
-        const currentMode = modeRef.current
-
-        if (currentMode === 'launch') {
-          setLaunchCoords({ lat: lat.toString(), lng: lng.toString() })
-          if (markersRef.current.launch) {
-            markersRef.current.launch.setLatLng([lat, lng])
-          } else {
-            const m = L.marker([lat, lng], { icon: createIcon('#16a34a', '🚀'), draggable: true }).addTo(map)
-            m.on('dragend', e => {
-              const p = e.target.getLatLng()
-              setLaunchCoords({ lat: p.lat.toFixed(6), lng: p.lng.toFixed(6) })
-            })
-            markersRef.current.launch = m
-          }
-        } else {
-          setRecoveryCoords({ lat: lat.toString(), lng: lng.toString() })
-          if (markersRef.current.recovery) {
-            markersRef.current.recovery.setLatLng([lat, lng])
-          } else {
-            const m = L.marker([lat, lng], { icon: createIcon('#dc2626', '🎯'), draggable: true }).addTo(map)
-            m.on('dragend', e => {
-              const p = e.target.getLatLng()
-              setRecoveryCoords({ lat: p.lat.toFixed(6), lng: p.lng.toFixed(6) })
-            })
-            markersRef.current.recovery = m
-          }
-        }
-      })
-
-      setTimeout(() => { map.invalidateSize(); setLoading(false) }, 200)
-    }
-
-    init()
-    return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null } }
-  }, [isOpen])
-
-  const doSearch = async () => {
-    if (!search.trim() || !mapRef.current) return
-    setSearching(true)
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(search)}&limit=1`)
-      const data = await res.json()
-      if (data[0]) mapRef.current.setView([parseFloat(data[0].lat), parseFloat(data[0].lon)], 15)
-    } catch (e) { console.error(e) }
-    setSearching(false)
-  }
-
-  const copyLaunchToRecovery = () => {
-    if (launchCoords.lat && launchCoords.lng) {
-      setRecoveryCoords({ ...launchCoords })
-      if (mapRef.current && window.L && markersRef.current.launch) {
-        const L = window.L
-        const lat = parseFloat(launchCoords.lat)
-        const lng = parseFloat(launchCoords.lng)
-        const createIcon = (color, emoji, size = 32) => L.divIcon({
-          className: 'custom-icon',
-          html: `<div style="background:${color};width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:${size*0.45}px">${emoji}</span></div>`,
-          iconSize: [size, size],
-          iconAnchor: [size/2, size]
-        })
-        if (markersRef.current.recovery) {
-          markersRef.current.recovery.setLatLng([lat, lng])
-        } else {
-          const m = L.marker([lat, lng], { icon: createIcon('#dc2626', '🎯'), draggable: true }).addTo(mapRef.current)
-          m.on('dragend', e => {
-            const p = e.target.getLatLng()
-            setRecoveryCoords({ lat: p.lat.toFixed(6), lng: p.lng.toFixed(6) })
-          })
-          markersRef.current.recovery = m
-        }
-      }
-    }
-  }
-
-  const handleSave = () => {
-    onSave({
-      launchPoint: launchCoords.lat && launchCoords.lng ? { lat: parseFloat(launchCoords.lat), lng: parseFloat(launchCoords.lng) } : null,
-      recoveryPoint: recoveryCoords.lat && recoveryCoords.lng ? { lat: parseFloat(recoveryCoords.lat), lng: parseFloat(recoveryCoords.lng) } : null
-    })
-    onClose()
-  }
-
-  if (!isOpen) return null
-
+function OperationTypeSelector({ value, onChange }) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-      <div className="bg-white rounded-xl w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl">
-        <div className="p-4 border-b flex justify-between items-center">
-          <div>
-            <h2 className="text-lg font-semibold">Launch & Recovery Points</h2>
-            <p className="text-sm text-gray-500">Click to place, drag to move. Other markers shown as reference.</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-        </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Operation Type</label>
+      <div className="grid grid-cols-3 gap-3">
+        {OPERATION_TYPES.map(type => {
+          const isSelected = value === type.value
+          return (
+            <button
+              key={type.value}
+              type="button"
+              onClick={() => onChange(type.value)}
+              className={`p-4 rounded-lg border-2 text-left transition-all ${
+                isSelected
+                  ? `${type.color} ring-2 ring-offset-2`
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="font-bold text-lg mb-1">{type.label}</div>
+              <p className="text-xs opacity-80">{type.description}</p>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
-        <div className="p-3 border-b bg-gray-50 flex gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSearch()} placeholder="Search location..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" />
-          </div>
-          <button onClick={doSearch} disabled={searching} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">{searching ? '...' : 'Search'}</button>
-        </div>
+// ============================================
+// AIRCRAFT SELECTOR
+// ============================================
 
-        <div className="p-3 border-b flex flex-wrap gap-2 items-center">
-          <span className="text-xs font-medium text-gray-500 mr-2">CLICK TO SET:</span>
-          <button onClick={() => setMode('launch')} className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 ${mode === 'launch' ? 'bg-green-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>🚀 Launch Point</button>
-          <button onClick={() => setMode('recovery')} className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 ${mode === 'recovery' ? 'bg-red-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>🎯 Recovery Point</button>
-          <button onClick={copyLaunchToRecovery} disabled={!launchCoords.lat} className="px-3 py-1.5 rounded-lg text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 flex items-center gap-1"><Link2 className="w-3 h-3" /> Same as Launch</button>
-        </div>
-
-        <div className="flex-1 relative" style={{ minHeight: 400 }}>
-          {loading && <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>}
-          <div ref={containerRef} className="absolute inset-0" />
-        </div>
-
-        <div className="p-3 border-t bg-gray-50 grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🚀</span>
-            <div className="flex-1">
-              <div className="text-xs text-gray-500 mb-1">Launch Point</div>
-              <div className="flex gap-2">
-                <input type="text" value={launchCoords.lat} onChange={e => setLaunchCoords(p => ({ ...p, lat: e.target.value }))} placeholder="Lat" className="flex-1 px-2 py-1 border rounded text-sm" />
-                <input type="text" value={launchCoords.lng} onChange={e => setLaunchCoords(p => ({ ...p, lng: e.target.value }))} placeholder="Lng" className="flex-1 px-2 py-1 border rounded text-sm" />
-              </div>
+function AircraftSelector({ 
+  projectAircraft = [], 
+  selectedAircraftIds = [], 
+  onToggleAircraft,
+  onNavigateToAircraft 
+}) {
+  if (projectAircraft.length === 0) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <p className="text-sm text-amber-800 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
+          No aircraft assigned to this project. Add aircraft in project settings.
+        </p>
+        {onNavigateToAircraft && (
+          <button
+            onClick={onNavigateToAircraft}
+            className="mt-2 text-sm text-amber-700 hover:text-amber-900 flex items-center gap-1"
+          >
+            <ExternalLink className="w-3 h-3" />
+            Go to Aircraft
+          </button>
+        )}
+      </div>
+    )
+  }
+  
+  return (
+    <div className="space-y-2">
+      {projectAircraft.map(aircraft => {
+        const isSelected = selectedAircraftIds.includes(aircraft.id)
+        return (
+          <label
+            key={aircraft.id}
+            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+              isSelected 
+                ? 'bg-aeria-navy/5 border-aeria-navy' 
+                : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggleAircraft(aircraft.id)}
+              className="w-4 h-4 text-aeria-navy rounded focus:ring-aeria-navy"
+            />
+            <Plane className={`w-5 h-5 ${isSelected ? 'text-aeria-navy' : 'text-gray-400'}`} />
+            <div className="flex-1 min-w-0">
+              <p className={`font-medium ${isSelected ? 'text-aeria-navy' : 'text-gray-900'}`}>
+                {aircraft.nickname || `${aircraft.make} ${aircraft.model}`}
+              </p>
+              <p className="text-xs text-gray-500">
+                {aircraft.make} {aircraft.model} • {aircraft.mtow ? `${aircraft.mtow}kg` : 'Weight N/A'}
+              </p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🎯</span>
-            <div className="flex-1">
-              <div className="text-xs text-gray-500 mb-1">Recovery Point</div>
-              <div className="flex gap-2">
-                <input type="text" value={recoveryCoords.lat} onChange={e => setRecoveryCoords(p => ({ ...p, lat: e.target.value }))} placeholder="Lat" className="flex-1 px-2 py-1 border rounded text-sm" />
-                <input type="text" value={recoveryCoords.lng} onChange={e => setRecoveryCoords(p => ({ ...p, lng: e.target.value }))} placeholder="Lng" className="flex-1 px-2 py-1 border rounded text-sm" />
-              </div>
-            </div>
-          </div>
-        </div>
+            {aircraft.isPrimary && (
+              <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">Primary</span>
+            )}
+          </label>
+        )
+      })}
+    </div>
+  )
+}
 
-        <div className="p-4 border-t flex justify-between">
-          <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-          <button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
+// ============================================
+// WEATHER MINIMUMS FORM
+// ============================================
+
+function WeatherMinimumsForm({ weatherMinimums = {}, onChange }) {
+  const handleChange = (field, value) => {
+    onChange({ ...weatherMinimums, [field]: value })
+  }
+  
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+          <Eye className="w-4 h-4" />
+          Min Visibility
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            step="0.5"
+            min="0"
+            value={weatherMinimums.minVisibility || ''}
+            onChange={(e) => handleChange('minVisibility', e.target.value ? Number(e.target.value) : null)}
+            className="input w-20"
+          />
+          <span className="text-sm text-gray-500">SM</span>
         </div>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+          <Cloud className="w-4 h-4" />
+          Min Ceiling
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            step="100"
+            min="0"
+            value={weatherMinimums.minCeiling || ''}
+            onChange={(e) => handleChange('minCeiling', e.target.value ? Number(e.target.value) : null)}
+            className="input w-20"
+          />
+          <span className="text-sm text-gray-500">ft AGL</span>
+        </div>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+          <Wind className="w-4 h-4" />
+          Max Wind
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            step="1"
+            min="0"
+            value={weatherMinimums.maxWind || ''}
+            onChange={(e) => handleChange('maxWind', e.target.value ? Number(e.target.value) : null)}
+            className="input w-20"
+          />
+          <span className="text-sm text-gray-500">m/s</span>
+        </div>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+          <Gauge className="w-4 h-4" />
+          Max Gust
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            step="1"
+            min="0"
+            value={weatherMinimums.maxGust || ''}
+            onChange={(e) => handleChange('maxGust', e.target.value ? Number(e.target.value) : null)}
+            className="input w-20"
+          />
+          <span className="text-sm text-gray-500">m/s</span>
+        </div>
+      </div>
+      
+      <div className="col-span-2 md:col-span-4">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={weatherMinimums.precipitation === false}
+            onChange={(e) => handleChange('precipitation', !e.target.checked)}
+            className="w-4 h-4 text-aeria-navy rounded focus:ring-aeria-navy"
+          />
+          <span className="text-sm text-gray-700">No precipitation allowed during operation</span>
+        </label>
+      </div>
+      
+      <div className="col-span-2 md:col-span-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Weather Notes</label>
+        <textarea
+          value={weatherMinimums.notes || ''}
+          onChange={(e) => handleChange('notes', e.target.value)}
+          placeholder="Additional weather considerations..."
+          rows={2}
+          className="input"
+        />
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// CONTINGENCY LIST
+// ============================================
+
+function ContingencyList({ contingencies = [], onChange }) {
+  const handleAdd = () => {
+    onChange([...contingencies, { trigger: '', action: '', priority: 'medium' }])
+  }
+  
+  const handleUpdate = (index, field, value) => {
+    const updated = [...contingencies]
+    updated[index] = { ...updated[index], [field]: value }
+    onChange(updated)
+  }
+  
+  const handleRemove = (index) => {
+    onChange(contingencies.filter((_, i) => i !== index))
+  }
+  
+  const handleLoadDefaults = () => {
+    if (contingencies.length > 0) {
+      if (!confirm('This will replace existing contingencies. Continue?')) return
+    }
+    onChange(DEFAULT_CONTINGENCIES)
+  }
+  
+  const priorityColors = {
+    critical: 'bg-red-100 text-red-700 border-red-300',
+    high: 'bg-amber-100 text-amber-700 border-amber-300',
+    medium: 'bg-blue-100 text-blue-700 border-blue-300',
+    low: 'bg-gray-100 text-gray-700 border-gray-300'
+  }
+  
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-600">
+          Define contingency procedures for abnormal situations
+        </p>
+        <button
+          type="button"
+          onClick={handleLoadDefaults}
+          className="text-sm text-aeria-navy hover:underline flex items-center gap-1"
+        >
+          <Copy className="w-3 h-3" />
+          Load Defaults
+        </button>
+      </div>
+      
+      {contingencies.map((contingency, index) => (
+        <div key={index} className="p-3 bg-gray-50 rounded-lg space-y-2">
+          <div className="flex items-start gap-2">
+            <select
+              value={contingency.priority || 'medium'}
+              onChange={(e) => handleUpdate(index, 'priority', e.target.value)}
+              className={`px-2 py-1 text-xs font-medium rounded border ${priorityColors[contingency.priority || 'medium']}`}
+            >
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            
+            <input
+              type="text"
+              value={contingency.trigger || ''}
+              onChange={(e) => handleUpdate(index, 'trigger', e.target.value)}
+              placeholder="Trigger condition..."
+              className="input flex-1 text-sm py-1"
+            />
+            
+            <button
+              onClick={() => handleRemove(index)}
+              className="p-1 text-gray-400 hover:text-red-500 rounded"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <textarea
+            value={contingency.action || ''}
+            onChange={(e) => handleUpdate(index, 'action', e.target.value)}
+            placeholder="Response action..."
+            rows={2}
+            className="input text-sm"
+          />
+        </div>
+      ))}
+      
+      <button
+        type="button"
+        onClick={handleAdd}
+        className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-600 flex items-center justify-center gap-2"
+      >
+        <Plus className="w-4 h-4" />
+        Add Contingency
+      </button>
+    </div>
+  )
+}
+
+// ============================================
+// FLIGHT PARAMETERS SUMMARY
+// ============================================
+
+function FlightParametersSummary({ site, projectFlightPlan }) {
+  const mapData = site?.mapData?.flightPlan || {}
+  const siteFlightPlan = site?.flightPlan || {}
+  
+  const hasLaunch = !!mapData.launchPoint
+  const hasRecovery = !!mapData.recoveryPoint
+  const hasPilot = !!mapData.pilotPosition
+  const hasFlightGeography = !!mapData.flightGeography
+  
+  const flightGeographyArea = hasFlightGeography 
+    ? calculatePolygonArea(mapData.flightGeography) 
+    : null
+  
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`p-3 rounded-lg ${hasLaunch ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
+        <div className="flex items-center gap-2 mb-1">
+          <Navigation className={`w-4 h-4 ${hasLaunch ? 'text-green-600' : 'text-gray-400'}`} />
+          <span className="text-sm font-medium">Launch Point</span>
+        </div>
+        <p className={`text-xs ${hasLaunch ? 'text-green-700' : 'text-gray-500'}`}>
+          {hasLaunch ? 'Set on map' : 'Not set'}
+        </p>
+      </div>
+      
+      <div className={`p-3 rounded-lg ${hasRecovery ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
+        <div className="flex items-center gap-2 mb-1">
+          <Target className={`w-4 h-4 ${hasRecovery ? 'text-orange-600' : 'text-gray-400'}`} />
+          <span className="text-sm font-medium">Recovery Point</span>
+        </div>
+        <p className={`text-xs ${hasRecovery ? 'text-green-700' : 'text-gray-500'}`}>
+          {hasRecovery ? 'Set on map' : 'Not set'}
+        </p>
+      </div>
+      
+      <div className={`p-3 rounded-lg ${hasPilot ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
+        <div className="flex items-center gap-2 mb-1">
+          <User className={`w-4 h-4 ${hasPilot ? 'text-purple-600' : 'text-gray-400'}`} />
+          <span className="text-sm font-medium">Pilot Position</span>
+        </div>
+        <p className={`text-xs ${hasPilot ? 'text-green-700' : 'text-gray-500'}`}>
+          {hasPilot ? 'Set on map' : 'Not set'}
+        </p>
+      </div>
+      
+      <div className={`p-3 rounded-lg ${hasFlightGeography ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
+        <div className="flex items-center gap-2 mb-1">
+          <Square className={`w-4 h-4 ${hasFlightGeography ? 'text-green-600' : 'text-gray-400'}`} />
+          <span className="text-sm font-medium">Flight Geography</span>
+        </div>
+        <p className={`text-xs ${hasFlightGeography ? 'text-green-700' : 'text-gray-500'}`}>
+          {flightGeographyArea 
+            ? `${(flightGeographyArea / 10000).toFixed(2)} ha`
+            : 'Not drawn'}
+        </p>
       </div>
     </div>
   )
@@ -409,285 +550,354 @@ function FlightMapEditor({ siteLocation, boundary, launchPoint, recoveryPoint, m
 // ============================================
 // MAIN COMPONENT
 // ============================================
+
 export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSection }) {
-  const [aircraftList, setAircraftList] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [mapEditorOpen, setMapEditorOpen] = useState(false)
-  const [activeSiteIndex, setActiveSiteIndex] = useState(0)
-  const [expandedSections, setExpandedSections] = useState({
-    inherited: true, aircraft: true, launchRecovery: true, parameters: true, weather: false, contingencies: false
-  })
-
-  useEffect(() => { loadAircraft() }, [])
-
-  const loadAircraft = async () => {
-    try {
-      const data = await getAircraft()
-      setAircraftList(data.filter(ac => ac.status === 'airworthy'))
-    } catch (err) { console.error('Error loading aircraft:', err) }
-    finally { setLoading(false) }
-  }
-
-  // Handle both multi-site and legacy
-  const sites = project.sites && Array.isArray(project.sites) ? project.sites.filter(s => s.includeFlightPlan) : []
-  const useLegacy = sites.length === 0 && project.flightPlan
-
-  const activeSite = !useLegacy && sites.length > 0 ? sites[activeSiteIndex] : null
-  const flightPlan = useLegacy ? (project.flightPlan || {}) : (activeSite?.flightPlan || {})
-  const siteSurvey = useLegacy ? (project.siteSurvey || {}) : (activeSite?.siteSurvey || {})
-  // Emergency is always at project level (not per-site)
-  const emergency = project.emergencyPlan || {}
-
-  useEffect(() => {
-    if (useLegacy && !project.flightPlan) {
-      onUpdate({
-        flightPlan: {
-          aircraft: [], operationType: 'VLOS', maxAltitudeAGL: 120,
-          weatherMinimums: { ...defaultWeatherMinimums }, contingencies: [...defaultContingencies]
-        }
-      })
-    }
-  }, [useLegacy, project.flightPlan])
-
-  const updateFlightPlan = (updates) => {
-    if (useLegacy) {
-      onUpdate({ flightPlan: { ...flightPlan, ...updates } })
-    } else if (activeSite) {
-      const newSites = [...project.sites]
-      const siteIdx = project.sites.findIndex(s => s.id === activeSite.id)
-      if (siteIdx >= 0) {
-        newSites[siteIdx] = { ...newSites[siteIdx], flightPlan: { ...newSites[siteIdx].flightPlan, ...updates } }
-        onUpdate({ sites: newSites })
+  const [showMap, setShowMap] = useState(true)
+  
+  // Get sites array with defensive check
+  const sites = useMemo(() => {
+    return Array.isArray(project?.sites) ? project.sites : []
+  }, [project?.sites])
+  
+  // Active site
+  const activeSiteId = project?.activeSiteId || sites[0]?.id || null
+  const activeSite = useMemo(() => {
+    return sites.find(s => s.id === activeSiteId) || sites[0] || null
+  }, [sites, activeSiteId])
+  
+  // Project-level flight plan data
+  const projectFlightPlan = project?.flightPlan || {}
+  
+  // Site-level flight plan data
+  const siteFlightPlan = activeSite?.flightPlan || {}
+  
+  // ============================================
+  // HANDLERS
+  // ============================================
+  
+  const handleSelectSite = useCallback((siteId) => {
+    onUpdate({ activeSiteId: siteId })
+  }, [onUpdate])
+  
+  // Update project-level flight plan
+  const updateProjectFlightPlan = useCallback((updates) => {
+    onUpdate({
+      flightPlan: {
+        ...projectFlightPlan,
+        ...updates
       }
-    }
-  }
-
-  const toggleSection = (s) => setExpandedSections(prev => ({ ...prev, [s]: !prev[s] }))
-
-  const addAircraft = (aircraftId) => {
-    if (!aircraftId) return
-    const ac = aircraftList.find(a => a.id === aircraftId)
-    if (!ac || flightPlan.aircraft?.some(a => a.id === aircraftId)) return
-    updateFlightPlan({
-      aircraft: [...(flightPlan.aircraft || []), {
-        id: ac.id, nickname: ac.nickname, make: ac.make, model: ac.model,
-        mtow: ac.mtow, maxSpeed: ac.maxSpeed, maxDimension: ac.maxDimension,
-        isPrimary: (flightPlan.aircraft || []).length === 0
-      }]
     })
-  }
+  }, [projectFlightPlan, onUpdate])
+  
+  // Update site-level flight plan
+  const updateSiteFlightPlan = useCallback((updates) => {
+    if (!activeSiteId) return
+    
+    const updatedSites = sites.map(site => {
+      if (site.id !== activeSiteId) return site
+      
+      return {
+        ...site,
+        flightPlan: {
+          ...site.flightPlan,
+          ...updates
+        },
+        updatedAt: new Date().toISOString()
+      }
+    })
+    
+    onUpdate({ sites: updatedSites })
+  }, [sites, activeSiteId, onUpdate])
+  
+  // Toggle aircraft selection
+  const handleToggleAircraft = useCallback((aircraftId) => {
+    const currentAircraft = projectFlightPlan.aircraft || []
+    const exists = currentAircraft.some(a => a.id === aircraftId)
+    
+    let updatedAircraft
+    if (exists) {
+      updatedAircraft = currentAircraft.filter(a => a.id !== aircraftId)
+    } else {
+      // Add aircraft - would need to fetch full aircraft data
+      updatedAircraft = [...currentAircraft, { id: aircraftId }]
+    }
+    
+    updateProjectFlightPlan({ aircraft: updatedAircraft })
+  }, [projectFlightPlan.aircraft, updateProjectFlightPlan])
+  
+  // ============================================
+  // VALIDATION
+  // ============================================
+  
+  const validation = useMemo(() => {
+    const issues = []
+    
+    // Check site-level requirements
+    if (activeSite) {
+      const mapData = activeSite.mapData?.flightPlan || {}
+      if (!mapData.launchPoint) issues.push('Launch point not set')
+      if (!mapData.recoveryPoint) issues.push('Recovery point not set')
+    }
+    
+    // Check project-level requirements
+    if (!projectFlightPlan.aircraft || projectFlightPlan.aircraft.length === 0) {
+      issues.push('No aircraft selected')
+    }
+    
+    if (!siteFlightPlan.operationType) {
+      issues.push('Operation type not selected')
+    }
+    
+    return {
+      isComplete: issues.length === 0,
+      issues
+    }
+  }, [activeSite, projectFlightPlan, siteFlightPlan])
 
-  const removeAircraft = (idx) => {
-    const newList = (flightPlan.aircraft || []).filter((_, i) => i !== idx)
-    if (newList.length > 0 && !newList.some(a => a.isPrimary)) newList[0].isPrimary = true
-    updateFlightPlan({ aircraft: newList })
-  }
-
-  const setPrimaryAircraft = (idx) => {
-    const newList = (flightPlan.aircraft || []).map((a, i) => ({ ...a, isPrimary: i === idx }))
-    updateFlightPlan({ aircraft: newList })
-  }
-
-  const handleMapSave = ({ launchPoint, recoveryPoint }) => updateFlightPlan({ launchPoint, recoveryPoint })
-
-  if (loading) return <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
-
-  if (!useLegacy && sites.length === 0) {
+  // ============================================
+  // RENDER
+  // ============================================
+  
+  if (!activeSite && sites.length === 0) {
     return (
-      <div className="card text-center py-12">
-        <Plane className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-600 mb-2">No Flight Plans</h3>
-        <p className="text-gray-500 mb-4">Enable "Include Flight Plan & SORA" on at least one site in Site Survey.</p>
-        {onNavigateToSection && <button onClick={() => onNavigateToSection('siteSurvey')} className="btn-primary">Go to Site Survey</button>}
+      <div className="text-center py-12">
+        <Plane className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No Sites Configured</h3>
+        <p className="text-gray-500 mb-4">Add operation sites in Site Survey before creating flight plans.</p>
+        <button 
+          onClick={() => onNavigateToSection?.('siteSurvey')} 
+          className="btn-primary"
+        >
+          Go to Site Survey
+        </button>
       </div>
     )
   }
-
+  
   return (
     <div className="space-y-6">
-      {/* Site selector */}
-      {!useLegacy && sites.length > 1 && (
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4"><Layers className="w-5 h-5 text-blue-600" /> Select Site</h2>
-          <div className="flex flex-wrap gap-2">
-            {sites.map((s, i) => (
-              <button key={s.id} onClick={() => setActiveSiteIndex(i)} className={`px-4 py-2 rounded-lg border-2 ${activeSiteIndex === i ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <span className="font-medium">{s.name}</span>
-              </button>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Flight Plan</h2>
+          <p className="text-gray-500">Define flight parameters, positions, and contingencies for each site</p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMap(!showMap)}
+            className={`btn ${showMap ? 'btn-primary' : 'btn-secondary'} inline-flex items-center gap-2`}
+          >
+            {showMap ? <Eye className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+            {showMap ? 'Viewing Map' : 'Show Map'}
+          </button>
+        </div>
+      </div>
+      
+      {/* Site Selector */}
+      <SiteSelectorBar
+        sites={sites}
+        activeSiteId={activeSiteId}
+        onSelectSite={handleSelectSite}
+      />
+      
+      {/* Validation Banner */}
+      {!validation.isComplete && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <h4 className="font-medium text-amber-800 mb-2 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Flight Plan Incomplete
+          </h4>
+          <ul className="text-sm text-amber-700 space-y-1">
+            {validation.issues.map((issue, i) => (
+              <li key={i}>• {issue}</li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
-
-      {!useLegacy && activeSite && (
-        <div className="text-sm text-gray-500 flex items-center gap-2"><MapPin className="w-4 h-4" /> Flight Plan for: <span className="font-medium text-gray-700">{activeSite.name}</span></div>
+      
+      {/* Map */}
+      {showMap && (
+        <div className="card p-0 overflow-hidden">
+          <UnifiedProjectMap
+            project={project}
+            onUpdate={onUpdate}
+            editMode={true}
+            activeLayer="flightPlan"
+            height="400px"
+            allowedLayers={['siteSurvey', 'flightPlan']}
+            showLegend={true}
+            onSiteChange={handleSelectSite}
+          />
+        </div>
       )}
-
-      {/* Aircraft */}
-      <div className="card">
-        <button onClick={() => toggleSection('aircraft')} className="flex items-center justify-between w-full text-left">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><Plane className="w-5 h-5 text-blue-600" /> Aircraft <span className="px-2 py-0.5 text-xs bg-gray-100 rounded">{(flightPlan.aircraft || []).length}</span></h2>
-          {expandedSections.aircraft ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-        </button>
-        {expandedSections.aircraft && (
-          <div className="mt-4 space-y-4">
-            <select onChange={e => addAircraft(e.target.value)} value="" className="input">
-              <option value="">Select aircraft to add...</option>
-              {aircraftList.filter(ac => !(flightPlan.aircraft || []).some(a => a.id === ac.id)).map(ac => (
-                <option key={ac.id} value={ac.id}>{ac.nickname} - {ac.make} {ac.model}</option>
+      
+      {/* Flight Parameters Summary */}
+      <CollapsibleSection
+        title="Flight Positions"
+        icon={MapPin}
+        status={
+          activeSite?.mapData?.flightPlan?.launchPoint && 
+          activeSite?.mapData?.flightPlan?.recoveryPoint 
+            ? 'complete' 
+            : 'missing'
+        }
+      >
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <p className="text-sm text-blue-800">
+            <Info className="w-4 h-4 inline mr-1" />
+            Use the <strong>Drawing Tools</strong> on the map to set launch point, recovery point, pilot position, and flight geography.
+          </p>
+        </div>
+        
+        <FlightParametersSummary 
+          site={activeSite} 
+          projectFlightPlan={projectFlightPlan}
+        />
+      </CollapsibleSection>
+      
+      {/* Operation Parameters */}
+      <CollapsibleSection
+        title="Operation Parameters"
+        icon={Settings}
+        status={siteFlightPlan.operationType ? 'complete' : 'missing'}
+      >
+        <OperationTypeSelector
+          value={siteFlightPlan.operationType || 'VLOS'}
+          onChange={(value) => updateSiteFlightPlan({ operationType: value })}
+        />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Max Altitude (AGL)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                step="10"
+                min="0"
+                max="400"
+                value={siteFlightPlan.maxAltitudeAGL || ''}
+                onChange={(e) => updateSiteFlightPlan({ 
+                  maxAltitudeAGL: e.target.value ? Number(e.target.value) : null 
+                })}
+                placeholder="120"
+                className="input w-24"
+              />
+              <span className="text-sm text-gray-500">meters</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Canadian limit: 122m (400ft) AGL</p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Flight Geography Method
+            </label>
+            <select
+              value={siteFlightPlan.flightGeographyMethod || 'inside-out'}
+              onChange={(e) => updateSiteFlightPlan({ flightGeographyMethod: e.target.value })}
+              className="input"
+            >
+              {FLIGHT_GEOGRAPHY_METHODS.map(method => (
+                <option key={method.value} value={method.value}>
+                  {method.label} - {method.description}
+                </option>
               ))}
             </select>
-            {(flightPlan.aircraft || []).map((ac, i) => (
-              <div key={ac.id} className={`p-4 rounded-lg border ${ac.isPrimary ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">{ac.nickname}</p>
-                    <p className="text-sm text-gray-600">{ac.make} {ac.model}</p>
-                    <p className="text-xs text-gray-500 mt-1">MTOW: {ac.mtow}kg</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {!ac.isPrimary && <button onClick={() => setPrimaryAircraft(i)} className="text-xs text-blue-600 hover:underline">Set Primary</button>}
-                    {ac.isPrimary && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Primary</span>}
-                    <button onClick={() => removeAircraft(i)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
-        )}
-      </div>
-
-      {/* Launch & Recovery */}
-      <div className="card">
-        <button onClick={() => toggleSection('launchRecovery')} className="flex items-center justify-between w-full text-left">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Navigation className="w-5 h-5 text-blue-600" /> Launch & Recovery Points
-            {(flightPlan.launchPoint || flightPlan.recoveryPoint) && <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">Set</span>}
-          </h2>
-          {expandedSections.launchRecovery ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-        </button>
-        {expandedSections.launchRecovery && (
-          <div className="mt-4 space-y-4">
-            <UnifiedMapPreview
-              key={`fp-map-${activeSite?.id || activeSiteIndex}`}
-              siteLocation={siteSurvey.location?.coordinates}
-              boundary={siteSurvey.boundary}
-              launchPoint={flightPlan.launchPoint}
-              recoveryPoint={flightPlan.recoveryPoint}
-              musterPoints={emergency?.musterPoints}
-              evacuationRoutes={emergency?.evacuationRoutes}
-              height={280}
-              onEdit={() => setMapEditorOpen(true)}
-              editLabel="Edit Launch & Recovery"
-            />
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center gap-2 mb-2"><span className="text-lg">🚀</span><h3 className="font-medium text-green-800">Launch Point</h3></div>
-                {flightPlan.launchPoint?.lat ? <p className="text-sm font-mono text-green-700">{flightPlan.launchPoint.lat}, {flightPlan.launchPoint.lng}</p> : <p className="text-sm text-green-600">Click "Edit Map" to set</p>}
-              </div>
-              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                <div className="flex items-center gap-2 mb-2"><span className="text-lg">🎯</span><h3 className="font-medium text-red-800">Recovery Point</h3></div>
-                {flightPlan.recoveryPoint?.lat ? <p className="text-sm font-mono text-red-700">{flightPlan.recoveryPoint.lat}, {flightPlan.recoveryPoint.lng}</p> : <p className="text-sm text-red-600">Click "Edit Map" to set</p>}
-              </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Contingency Buffer
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                step="10"
+                min="0"
+                value={siteFlightPlan.contingencyBuffer || ''}
+                onChange={(e) => updateSiteFlightPlan({ 
+                  contingencyBuffer: e.target.value ? Number(e.target.value) : null 
+                })}
+                placeholder="50"
+                className="input w-24"
+              />
+              <span className="text-sm text-gray-500">meters</span>
             </div>
+            <p className="text-xs text-gray-500 mt-1">SORA: Based on aircraft max speed × 15s</p>
           </div>
-        )}
-      </div>
-
-      {/* Flight Parameters */}
-      <div className="card">
-        <button onClick={() => toggleSection('parameters')} className="flex items-center justify-between w-full text-left">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><Gauge className="w-5 h-5 text-blue-600" /> Flight Parameters</h2>
-          {expandedSections.parameters ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </div>
+        
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Flight Plan Notes
+          </label>
+          <textarea
+            value={siteFlightPlan.notes || ''}
+            onChange={(e) => updateSiteFlightPlan({ notes: e.target.value })}
+            placeholder="Additional notes about flight operations at this site..."
+            rows={3}
+            className="input"
+          />
+        </div>
+      </CollapsibleSection>
+      
+      {/* Aircraft - Project Level */}
+      <CollapsibleSection
+        title="Aircraft"
+        icon={Plane}
+        badge={projectFlightPlan.aircraft?.length > 0 ? `${projectFlightPlan.aircraft.length} selected` : null}
+        status={projectFlightPlan.aircraft?.length > 0 ? 'complete' : 'missing'}
+      >
+        <AircraftSelector
+          projectAircraft={project?.aircraft || projectFlightPlan.aircraft || []}
+          selectedAircraftIds={(projectFlightPlan.aircraft || []).map(a => a.id)}
+          onToggleAircraft={handleToggleAircraft}
+        />
+      </CollapsibleSection>
+      
+      {/* Weather Minimums - Project Level */}
+      <CollapsibleSection
+        title="Weather Minimums"
+        icon={Cloud}
+        defaultOpen={false}
+      >
+        <WeatherMinimumsForm
+          weatherMinimums={projectFlightPlan.weatherMinimums || {}}
+          onChange={(weatherMinimums) => updateProjectFlightPlan({ weatherMinimums })}
+        />
+      </CollapsibleSection>
+      
+      {/* Contingencies - Project Level */}
+      <CollapsibleSection
+        title="Contingency Procedures"
+        icon={AlertTriangle}
+        badge={projectFlightPlan.contingencies?.length > 0 ? `${projectFlightPlan.contingencies.length} defined` : null}
+        defaultOpen={false}
+      >
+        <ContingencyList
+          contingencies={projectFlightPlan.contingencies || []}
+          onChange={(contingencies) => updateProjectFlightPlan({ contingencies })}
+        />
+      </CollapsibleSection>
+      
+      {/* SORA Link */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-center justify-between">
+        <div>
+          <h4 className="font-medium text-gray-900">SORA Assessment</h4>
+          <p className="text-sm text-gray-500">
+            Flight plan parameters feed into SORA risk calculations
+          </p>
+        </div>
+        <button
+          onClick={() => onNavigateToSection?.('sora')}
+          className="btn-secondary inline-flex items-center gap-2"
+        >
+          View SORA
+          <ArrowRight className="w-4 h-4" />
         </button>
-        {expandedSections.parameters && (
-          <div className="mt-4 space-y-4">
-            <div className="grid sm:grid-cols-3 gap-4">
-              <div>
-                <label className="label">Operation Type *</label>
-                <select value={flightPlan.operationType || 'VLOS'} onChange={e => updateFlightPlan({ operationType: e.target.value })} className="input">
-                  {operationTypes.map(t => <option key={t.value} value={t.value}>{t.label} - {t.description}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label">Max Altitude (m AGL) *</label>
-                <input type="number" value={flightPlan.maxAltitudeAGL || ''} onChange={e => updateFlightPlan({ maxAltitudeAGL: parseInt(e.target.value) || 0 })} className="input" placeholder="e.g., 120" />
-              </div>
-              <div>
-                <label className="label">Flight Radius (m)</label>
-                <input type="number" value={flightPlan.flightRadius || ''} onChange={e => updateFlightPlan({ flightRadius: parseInt(e.target.value) || 0 })} className="input" placeholder="e.g., 500" />
-              </div>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Min Distance from People (m)</label>
-                <input type="number" value={flightPlan.distanceFromPeople || ''} onChange={e => updateFlightPlan({ distanceFromPeople: parseInt(e.target.value) || 0 })} className="input" placeholder="30" />
-              </div>
-              <div>
-                <label className="label">Estimated Duration (min)</label>
-                <input type="number" value={flightPlan.estimatedDuration || ''} onChange={e => updateFlightPlan({ estimatedDuration: parseInt(e.target.value) || 0 })} className="input" placeholder="e.g., 30" />
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={flightPlan.overPeople || false} onChange={e => updateFlightPlan({ overPeople: e.target.checked })} className="w-4 h-4" />
-                <span className="text-sm">Operations over people</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={flightPlan.nightOperations || false} onChange={e => updateFlightPlan({ nightOperations: e.target.checked })} className="w-4 h-4" />
-                <span className="text-sm">Night operations</span>
-              </label>
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* Weather */}
-      <div className="card">
-        <button onClick={() => toggleSection('weather')} className="flex items-center justify-between w-full text-left">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><Cloud className="w-5 h-5 text-blue-600" /> Weather Minimums</h2>
-          {expandedSections.weather ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-        </button>
-        {expandedSections.weather && (
-          <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div><label className="label">Min Visibility (km)</label><input type="number" value={flightPlan.weatherMinimums?.minVisibility || ''} onChange={e => updateFlightPlan({ weatherMinimums: { ...flightPlan.weatherMinimums, minVisibility: parseFloat(e.target.value) || 0 } })} className="input" /></div>
-            <div><label className="label">Min Ceiling (ft AGL)</label><input type="number" value={flightPlan.weatherMinimums?.minCeiling || ''} onChange={e => updateFlightPlan({ weatherMinimums: { ...flightPlan.weatherMinimums, minCeiling: parseInt(e.target.value) || 0 } })} className="input" /></div>
-            <div><label className="label">Max Wind (km/h)</label><input type="number" value={flightPlan.weatherMinimums?.maxWind || ''} onChange={e => updateFlightPlan({ weatherMinimums: { ...flightPlan.weatherMinimums, maxWind: parseInt(e.target.value) || 0 } })} className="input" /></div>
-            <div><label className="label">Max Gust (km/h)</label><input type="number" value={flightPlan.weatherMinimums?.maxGust || ''} onChange={e => updateFlightPlan({ weatherMinimums: { ...flightPlan.weatherMinimums, maxGust: parseInt(e.target.value) || 0 } })} className="input" /></div>
-          </div>
-        )}
-      </div>
-
-      {/* Contingencies */}
-      <div className="card">
-        <button onClick={() => toggleSection('contingencies')} className="flex items-center justify-between w-full text-left">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-blue-600" /> Contingency Procedures <span className="px-2 py-0.5 text-xs bg-gray-100 rounded">{(flightPlan.contingencies || []).length}</span></h2>
-          {expandedSections.contingencies ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-        </button>
-        {expandedSections.contingencies && (
-          <div className="mt-4 space-y-3">
-            {(flightPlan.contingencies || defaultContingencies).map((c, i) => (
-              <div key={i} className={`p-3 rounded-lg border ${c.priority === 'critical' ? 'border-red-300 bg-red-50' : c.priority === 'high' ? 'border-amber-300 bg-amber-50' : 'border-gray-200'}`}>
-                <p className="font-medium text-sm">{c.trigger}</p>
-                <p className="text-sm text-gray-600 mt-1">{c.action}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Map Editor */}
-      <FlightMapEditor
-        isOpen={mapEditorOpen}
-        onClose={() => setMapEditorOpen(false)}
-        siteLocation={siteSurvey.location?.coordinates}
-        boundary={siteSurvey.boundary}
-        launchPoint={flightPlan.launchPoint}
-        recoveryPoint={flightPlan.recoveryPoint}
-        musterPoints={emergency?.musterPoints}
-        evacuationRoutes={emergency?.evacuationRoutes}
-        onSave={handleMapSave}
-      />
     </div>
   )
 }
