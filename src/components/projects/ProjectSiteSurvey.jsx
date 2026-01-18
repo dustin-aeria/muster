@@ -221,13 +221,26 @@ function SiteMapEditor({
       document.head.appendChild(style)
     }
 
+    const loadLeaflet = () => {
+      return new Promise((resolve) => {
+        if (window.L) {
+          resolve(window.L)
+          return
+        }
+        const script = document.createElement('script')
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+        script.onload = () => resolve(window.L)
+        document.body.appendChild(script)
+      })
+    }
+
     const initMap = async () => {
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
       }
 
-      const L = await import('leaflet')
+      const L = await loadLeaflet()
       
       await new Promise(resolve => setTimeout(resolve, 100))
       
@@ -607,9 +620,20 @@ function MapPreview({ siteLocation, boundary, onOpenEditor }) {
     if (!mapContainerRef.current) return
     if (mapRef.current) return
 
+    const loadLeaflet = () => {
+      return new Promise((resolve) => {
+        if (window.L) {
+          resolve(window.L)
+          return
+        }
+        const script = document.createElement('script')
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+        script.onload = () => resolve(window.L)
+        document.body.appendChild(script)
+      })
+    }
+
     const initMap = async () => {
-      const L = await import('leaflet')
-      
       if (!document.getElementById('leaflet-css')) {
         const link = document.createElement('link')
         link.id = 'leaflet-css'
@@ -619,6 +643,8 @@ function MapPreview({ siteLocation, boundary, onOpenEditor }) {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
 
+      const L = await loadLeaflet()
+      
       const defaultLat = siteLocation?.lat || 54.0
       const defaultLng = siteLocation?.lng || -125.0
       const hasLocation = siteLocation?.lat && siteLocation?.lng
