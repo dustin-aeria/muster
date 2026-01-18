@@ -597,8 +597,8 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
 
   if (sites.length === 0) return <div className="p-4">Loading...</div>
 
-  // Get all map data for unified display
-  const emergency = activeSite?.emergency || {}
+  // Emergency is always at project level (not per-site)
+  const emergency = project.emergencyPlan || {}
   const flightPlan = activeSite?.flightPlan || {}
 
   return (
