@@ -405,13 +405,28 @@ export default function ProjectView() {
           <ProjectSiteSurvey project={project} onUpdate={handleUpdate} />
         )}
         {activeTab === 'flight' && (
-          <ProjectFlightPlan project={project} onUpdate={handleUpdate} />
+          <ProjectFlightPlan 
+            project={project} 
+            onUpdate={handleUpdate} 
+            onNavigateToSection={(section) => {
+              if (section === 'siteSurvey') setActiveTab('site')
+              else if (section === 'flightPlan') setActiveTab('flight')
+              else if (section === 'sora') setActiveTab('sora')
+            }}
+          />
         )}
         {activeTab === 'hseRisk' && (
           <ProjectHSERisk project={project} onUpdate={handleUpdate} />
         )}
         {activeTab === 'sora' && (
-          <ProjectSORA project={project} onUpdate={handleUpdate} />
+          <ProjectSORA 
+            project={project} 
+            onUpdate={handleUpdate}
+            onNavigateToSection={(section) => {
+              if (section === 'siteSurvey') setActiveTab('site')
+              else if (section === 'flightPlan') setActiveTab('flight')
+            }}
+          />
         )}
         {activeTab === 'emergency' && (
           <ProjectEmergency project={project} onUpdate={handleUpdate} />
