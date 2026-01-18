@@ -1,13 +1,6 @@
 // ============================================
-// COR AUDIT REPORT GENERATOR - COMPREHENSIVE VERSION
-// Health, Safety & Environment Program Report
-// For Certificate of Recognition Audit Preparation
-// 
-// Accurately reflects Aeria Solutions' complete safety program:
-// - 32 HSE Policies (HSE1022-HSE1053)
-// - 12 RPAS Operations Policies (RPAS1001-RPAS1012)
-// - 9 CRM Policies (CRM1013-CRM1021)
-// - 4 Detailed Procedures Documents
+// COR AUDIT REPORT GENERATOR - OPTIMIZED
+// HSE Program Report for COR Audit
 // 
 // @location src/lib/corReportGenerator.js
 // @action REPLACE
@@ -15,78 +8,23 @@
 
 import { BrandedPDF } from './pdfExportService'
 
-// COR Audit Elements (aligned with provincial standards)
+// COR Audit Elements
 export const COR_ELEMENTS = {
-  management: {
-    id: 'management',
-    name: 'Management Leadership & Commitment',
-    description: 'Policies, responsibilities, and resource allocation',
-    weight: 10,
-    aeriaEvidence: ['HSE1022', 'HSE1023', 'HSE1024', 'HSE1025', 'HSE1027', 'HSE1032', 'HSE1034', 'HSE1045', 'RPAS1002', 'CRM1020']
-  },
-  hazard_assessment: {
-    id: 'hazard_assessment',
-    name: 'Hazard Assessment & Control',
-    description: 'Formal and field-level hazard identification',
-    weight: 15,
-    aeriaEvidence: ['HSE1047', 'HSE1048', 'RPAS1011', 'CRM1013']
-  },
-  safe_work: {
-    id: 'safe_work',
-    name: 'Safe Work Practices & Procedures',
-    description: 'Documented procedures and job safety analyses',
-    weight: 10,
-    aeriaEvidence: ['HSE1028', 'HSE1029', 'HSE1033', 'HSE1039', 'HSE1040', 'HSE1041', 'RPAS1004', 'RPAS1005', 'RPAS1007', 'RPAS1008', 'RPAS1009', 'CRM1014', 'CRM1015', 'CRM1016', 'CRM1017', 'CRM1018', 'CRM1019', 'CRM1021']
-  },
-  training: {
-    id: 'training',
-    name: 'Training & Competency',
-    description: 'Worker training, orientation, and certification',
-    weight: 15,
-    aeriaEvidence: ['HSE1026', 'RPAS1001']
-  },
-  inspections: {
-    id: 'inspections',
-    name: 'Inspections',
-    description: 'Workplace and equipment inspections',
-    weight: 10,
-    aeriaEvidence: ['HSE1049', 'HSE1050', 'RPAS1003', 'RPAS1012']
-  },
-  investigations: {
-    id: 'investigations',
-    name: 'Incident Investigation & Reporting',
-    description: 'Incident reports, root cause analysis, and CAPAs',
-    weight: 15,
-    aeriaEvidence: ['HSE1052', 'RPAS1010']
-  },
-  emergency: {
-    id: 'emergency',
-    name: 'Emergency Preparedness',
-    description: 'Emergency response plans, drills, and resources',
-    weight: 10,
-    aeriaEvidence: ['HSE1051', 'RPAS1006']
-  },
-  records: {
-    id: 'records',
-    name: 'Records & Statistics',
-    description: 'KPIs, trend analysis, and documentation',
-    weight: 10,
-    aeriaEvidence: ['HSE1053']
-  },
-  program_admin: {
-    id: 'program_admin',
-    name: 'Program Administration',
-    description: 'Document control, reviews, and continuous improvement',
-    weight: 5,
-    aeriaEvidence: ['HSE1036', 'HSE1038', 'HSE1042', 'HSE1046', 'HSE1053']
-  }
+  management: { id: 'management', name: 'Management Leadership & Commitment', weight: 10 },
+  hazard_assessment: { id: 'hazard_assessment', name: 'Hazard Assessment & Control', weight: 15 },
+  safe_work: { id: 'safe_work', name: 'Safe Work Practices & Procedures', weight: 10 },
+  training: { id: 'training', name: 'Training & Competency', weight: 15 },
+  inspections: { id: 'inspections', name: 'Inspections', weight: 10 },
+  investigations: { id: 'investigations', name: 'Incident Investigation & Reporting', weight: 15 },
+  emergency: { id: 'emergency', name: 'Emergency Preparedness', weight: 10 },
+  records: { id: 'records', name: 'Records & Statistics', weight: 10 },
+  program_admin: { id: 'program_admin', name: 'Program Administration', weight: 5 }
 }
 
 // Complete Program Structure
 export const PROGRAM_STRUCTURE = {
   hse: {
-    name: 'Health, Safety & Environment (HSE)',
-    totalPolicies: 32,
+    name: 'Health, Safety & Environment',
     policies: [
       { code: 'HSE1022', name: 'Health & Safety Pledge' },
       { code: 'HSE1023', name: 'Commitment Statement' },
@@ -124,8 +62,6 @@ export const PROGRAM_STRUCTURE = {
   },
   rpas: {
     name: 'RPAS Operations',
-    totalPolicies: 12,
-    transportCanadaCode: '930355',
     policies: [
       { code: 'RPAS1001', name: 'Team Competencies' },
       { code: 'RPAS1002', name: 'Roles & Responsibilities' },
@@ -141,15 +77,14 @@ export const PROGRAM_STRUCTURE = {
       { code: 'RPAS1012', name: 'Equipment Testing' }
     ],
     procedures: [
-      { id: 'RPAS-GP-001', name: 'RPAS General Procedures', version: 'V25_01' },
-      { id: 'RPAS-EP-001', name: 'RPAS Emergency Procedures', version: 'V25_01' },
-      { id: 'RPAS-AP-001', name: 'RPAS Advanced Procedures', version: 'V25_01' },
-      { id: 'RPAS-SS-001', name: 'Site Survey & Flight Plan Procedure', version: 'V25_01' }
+      { id: 'RPAS-GP-001', name: 'General Procedures', version: 'V25_01' },
+      { id: 'RPAS-EP-001', name: 'Emergency Procedures', version: 'V25_01' },
+      { id: 'RPAS-AP-001', name: 'Advanced Procedures', version: 'V25_01' },
+      { id: 'RPAS-SS-001', name: 'Site Survey & Flight Plan', version: 'V25_01' }
     ]
   },
   crm: {
-    name: 'Crew Resource Management (CRM)',
-    totalPolicies: 9,
+    name: 'Crew Resource Management',
     policies: [
       { code: 'CRM1013', name: 'Threat & Error Management' },
       { code: 'CRM1014', name: 'Communication' },
@@ -159,7 +94,7 @@ export const PROGRAM_STRUCTURE = {
       { code: 'CRM1018', name: 'Workload Management' },
       { code: 'CRM1019', name: 'Decision Making Process' },
       { code: 'CRM1020', name: 'Leadership & Team Building' },
-      { code: 'CRM1021', name: 'Automation & Technology Management' }
+      { code: 'CRM1021', name: 'Automation & Technology' }
     ]
   }
 }
@@ -170,7 +105,6 @@ export function calculateSafetyKPIs(data) {
   const now = new Date()
   const yearStart = new Date(now.getFullYear(), 0, 1)
   
-  // Filter YTD data
   const ytdIncidents = incidents.filter(i => {
     const date = i.dateOccurred?.toDate ? i.dateOccurred.toDate() : new Date(i.dateOccurred)
     return date >= yearStart
@@ -178,40 +112,28 @@ export function calculateSafetyKPIs(data) {
   
   const recordableIncidents = ytdIncidents.filter(i => i.type !== 'near_miss' && i.type !== 'observation')
   const nearMisses = ytdIncidents.filter(i => i.type === 'near_miss')
-  const safetyObservations = ytdIncidents.filter(i => i.type === 'observation' || i.type === 'safety_observation')
-  
-  // RPAS-specific incidents
   const flightIncidents = ytdIncidents.filter(i => i.category === 'flight' || i.category === 'rpas')
   
-  // Days since last recordable incident
   let daysSinceIncident = null
   if (recordableIncidents.length > 0) {
-    const sortedIncidents = [...recordableIncidents].sort((a, b) => {
+    const sorted = [...recordableIncidents].sort((a, b) => {
       const dateA = a.dateOccurred?.toDate ? a.dateOccurred.toDate() : new Date(a.dateOccurred)
       const dateB = b.dateOccurred?.toDate ? b.dateOccurred.toDate() : new Date(b.dateOccurred)
       return dateB - dateA
     })
-    const lastDate = sortedIncidents[0].dateOccurred?.toDate 
-      ? sortedIncidents[0].dateOccurred.toDate() 
-      : new Date(sortedIncidents[0].dateOccurred)
+    const lastDate = sorted[0].dateOccurred?.toDate ? sorted[0].dateOccurred.toDate() : new Date(sorted[0].dateOccurred)
     daysSinceIncident = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24))
   }
   
-  // Form counts by type
   const formCounts = {}
-  forms.forEach(f => {
-    const type = f.templateId || 'unknown'
-    formCounts[type] = (formCounts[type] || 0) + 1
-  })
+  forms.forEach(f => { formCounts[f.templateId || 'unknown'] = (formCounts[f.templateId || 'unknown'] || 0) + 1 })
   
-  // Helper to calculate form completion rate
-  const getFormRate = (templateIds) => {
-    const matchingForms = forms.filter(f => templateIds.some(t => (f.templateId || '').includes(t)))
-    const completed = matchingForms.filter(f => f.status === 'completed')
-    return matchingForms.length > 0 ? Math.round((completed.length / matchingForms.length) * 100) : 100
+  const getFormRate = (ids) => {
+    const matching = forms.filter(f => ids.some(t => (f.templateId || '').includes(t)))
+    const completed = matching.filter(f => f.status === 'completed')
+    return matching.length > 0 ? Math.round((completed.length / matching.length) * 100) : 100
   }
   
-  // CAPA stats
   const openCapas = capas.filter(c => !['closed', 'verified_effective'].includes(c.status))
   const closedCapas = capas.filter(c => ['closed', 'verified_effective'].includes(c.status))
   const overdueCapas = openCapas.filter(c => {
@@ -220,175 +142,69 @@ export function calculateSafetyKPIs(data) {
     return target < now
   })
   
-  // Training completion (from operators)
-  const operatorsWithCerts = operators.filter(o => Array.isArray(o.certifications) && o.certifications.length > 0)
-  const trainingCompletionRate = operators.length > 0 
-    ? Math.round((operatorsWithCerts.length / operators.length) * 100) 
-    : 100
+  const opsWithCerts = operators.filter(o => Array.isArray(o.certifications) && o.certifications.length > 0)
+  const trainingRate = operators.length > 0 ? Math.round((opsWithCerts.length / operators.length) * 100) : 100
   
-  // Certification currency
-  const operatorsWithValidCerts = operators.filter(o => {
-    if (!Array.isArray(o.certifications) || o.certifications.length === 0) return false
-    return o.certifications.some(cert => {
-      if (!cert.expiryDate) return true
-      const expiry = cert.expiryDate?.toDate ? cert.expiryDate.toDate() : new Date(cert.expiryDate)
-      return expiry > now
-    })
-  })
-  const certCurrencyRate = operators.length > 0 
-    ? Math.round((operatorsWithValidCerts.length / operators.length) * 100) 
-    : 100
-  
-  // Inspection/FLHA/Preflight completion rates
-  const inspectionCompletionRate = getFormRate(['inspection'])
-  const flhaCompletionRate = getFormRate(['flha', 'field_level_hazard'])
-  const preflightCompletionRate = getFormRate(['preflight', 'pre_flight'])
-  const tailgateCompletionRate = getFormRate(['tailgate'])
-  
-  // Near miss to incident ratio
-  const nearMissRatio = recordableIncidents.length > 0
-    ? (nearMisses.length / recordableIncidents.length).toFixed(1)
-    : nearMisses.length > 0 ? 'Inf' : 'N/A'
-  
-  // CAPA rates
-  const capaClosureRate = capas.length > 0
-    ? Math.round((closedCapas.length / capas.length) * 100)
-    : 100
-  const onTimeCapas = closedCapas.filter(c => c.metrics?.onTime !== false)
-  const capaOnTimeRate = closedCapas.length > 0
-    ? Math.round((onTimeCapas.length / closedCapas.length) * 100)
-    : 100
-  
-  // Equipment stats
-  const activeAircraft = aircraft.filter(a => a.status === 'active' || a.status === 'operational' || a.status === 'CLEAR')
-  const lockedOutAircraft = aircraft.filter(a => a.status === 'LOCKOUT' || a.status === 'grounded')
-  const equipmentAvailability = aircraft.length > 0 ? Math.round((activeAircraft.length / aircraft.length) * 100) : 100
+  const activeAircraft = aircraft.filter(a => ['active', 'operational', 'CLEAR', 'airworthy'].includes(a.status))
+  const lockedOut = aircraft.filter(a => ['LOCKOUT', 'grounded'].includes(a.status))
   
   return {
-    // Leading Indicators
-    trainingCompletionRate,
-    certCurrencyRate,
-    inspectionCompletionRate,
-    flhaCompletionRate,
-    preflightCompletionRate,
-    tailgateCompletionRate,
-    nearMissReportingRate: nearMisses.length,
-    safetyObservations: safetyObservations.length,
-    
-    // Lagging Indicators
+    trainingCompletionRate: trainingRate,
+    certCurrencyRate: trainingRate,
+    inspectionCompletionRate: getFormRate(['inspection']),
+    flhaCompletionRate: getFormRate(['flha', 'field_level']),
+    preflightCompletionRate: getFormRate(['preflight', 'pre_flight']),
     daysSinceIncident,
     ytdRecordableIncidents: recordableIncidents.length,
     ytdNearMisses: nearMisses.length,
     ytdFlightIncidents: flightIncidents.length,
-    nearMissRatio,
-    
-    // CAPA Metrics
     openCapas: openCapas.length,
     closedCapas: closedCapas.length,
     overdueCapas: overdueCapas.length,
-    capaClosureRate,
-    capaOnTimeRate,
-    
-    // Equipment Metrics
+    capaClosureRate: capas.length > 0 ? Math.round((closedCapas.length / capas.length) * 100) : 100,
+    capaOnTimeRate: closedCapas.length > 0 ? Math.round((closedCapas.filter(c => c.metrics?.onTime !== false).length / closedCapas.length) * 100) : 100,
     totalAircraft: aircraft.length,
     activeAircraft: activeAircraft.length,
-    lockedOutAircraft: lockedOutAircraft.length,
-    equipmentAvailability,
-    
-    // Form Statistics
+    lockedOutAircraft: lockedOut.length,
+    equipmentAvailability: aircraft.length > 0 ? Math.round((activeAircraft.length / aircraft.length) * 100) : 100,
     totalForms: forms.length,
     completedForms: forms.filter(f => f.status === 'completed').length,
     formCounts,
-    
-    // Program Stats
     totalOperators: operators.length,
     totalProjects: projects.length,
-    activeProjects: projects.filter(p => p.status === 'active' || p.status === 'in_progress').length,
-    
-    // Program Structure
-    totalPolicies: 53,
-    hsePolicies: 32,
-    rpasPolicies: 12,
-    crmPolicies: 9,
-    totalProcedures: 4
+    activeProjects: projects.filter(p => p.status === 'active' || p.status === 'in_progress').length
   }
 }
 
-// Calculate estimated audit readiness score
+// Calculate audit readiness score
 export function calculateAuditReadinessScore(kpis) {
   let score = 0
-  let maxScore = 0
-  
-  // Training (15%)
-  maxScore += 15
   score += ((kpis.trainingCompletionRate || 100) / 100) * 15
-  
-  // Inspections (10%)
-  maxScore += 10
   score += ((kpis.inspectionCompletionRate || 100) / 100) * 10
-  
-  // FLHA (15%)
-  maxScore += 15
   score += ((kpis.flhaCompletionRate || 100) / 100) * 15
-  
-  // Near miss reporting (10%)
-  maxScore += 10
-  if ((kpis.ytdNearMisses || 0) >= 5) score += 10
-  else if ((kpis.ytdNearMisses || 0) >= 3) score += 7
-  else if ((kpis.ytdNearMisses || 0) >= 1) score += 4
-  
-  // CAPA closure (15%)
-  maxScore += 15
+  score += (kpis.ytdNearMisses || 0) >= 5 ? 10 : (kpis.ytdNearMisses || 0) >= 1 ? 5 : 0
   score += ((kpis.capaClosureRate || 100) / 100) * 15
-  
-  // CAPA on-time (10%)
-  maxScore += 10
   score += ((kpis.capaOnTimeRate || 100) / 100) * 10
-  
-  // Incident-free days (15%)
-  maxScore += 15
-  if (kpis.daysSinceIncident === null || kpis.daysSinceIncident >= 365) score += 15
-  else if (kpis.daysSinceIncident >= 180) score += 12
-  else if (kpis.daysSinceIncident >= 90) score += 9
-  else if (kpis.daysSinceIncident >= 30) score += 6
-  else score += 3
-  
-  // Documentation completeness (10%)
-  maxScore += 10
-  const docScore = Math.min(((kpis.totalForms || 0) / 50) * 10, 10)
-  score += docScore
-  
-  return Math.round((score / maxScore) * 100)
+  score += kpis.daysSinceIncident === null ? 15 : kpis.daysSinceIncident >= 90 ? 12 : kpis.daysSinceIncident >= 30 ? 6 : 3
+  score += Math.min(((kpis.totalForms || 0) / 50) * 10, 10)
+  return Math.round(score)
 }
 
-// Generate comprehensive COR audit report
+// Generate COR audit report
 export async function generateCORReport(data, options = {}) {
-  const {
-    branding = null,
-    includeAppendices = true,
-    reportPeriod = String(new Date().getFullYear())
-  } = options
+  const { branding = null, includeAppendices = true } = options
+  const { operators = [], projects = [], aircraft = [] } = data
   
-  const {
-    incidents = [],
-    capas = [],
-    forms = [],
-    operators = [],
-    projects = [],
-    aircraft = [],
-    clients = []
-  } = data
-  
-  // Calculate KPIs
   const kpis = calculateSafetyKPIs(data)
   const auditScore = calculateAuditReadinessScore(kpis)
+  const year = new Date().getFullYear()
   
-  // Create PDF
+  // Shorter title to prevent truncation
   const pdf = new BrandedPDF({
-    title: 'Health, Safety & Environment Program Report',
-    subtitle: 'Certificate of Recognition (COR) Audit Documentation',
-    projectName: `Annual Safety Review - ${reportPeriod}`,
-    projectCode: `COR-${reportPeriod}`,
+    title: 'COR Safety Program Report',
+    subtitle: `Annual Audit Documentation - ${year}`,
+    projectName: `Safety Program Review`,
+    projectCode: `COR-${year}`,
     branding
   })
   
@@ -396,388 +212,347 @@ export async function generateCORReport(data, options = {}) {
   pdf.addCoverPage()
   pdf.addTableOfContents()
   
-  // ============================================
-  // SECTION 1: EXECUTIVE SUMMARY
-  // ============================================
+  // ========== SECTION 1: EXECUTIVE SUMMARY ==========
   pdf.addNewSection('Executive Summary')
   
-  pdf.addParagraph(`This Health, Safety & Environment Program Report documents Aeria Solutions Ltd.'s comprehensive safety management system for Certificate of Recognition (COR) audit purposes. The program integrates workplace safety, RPAS flight operations safety, and human factors management through 53 documented policies, 4 detailed procedures, and 3 master manuals.`)
+  pdf.addParagraph(`This report documents Aeria Solutions Ltd.'s integrated safety management system for COR audit purposes. The program encompasses 53 policies across three domains: Health, Safety & Environment (32), RPAS Operations (12), and Crew Resource Management (9), plus 4 detailed operational procedures.`)
   
-  pdf.addSpacer(5)
+  pdf.addSpacer(8)
   
-  pdf.addSubsectionTitle('Program Scope')
+  pdf.addSubsectionTitle('Program Overview')
   pdf.addTable(
-    ['Domain', 'Policies', 'Focus'],
+    ['Domain', 'Count', 'Regulatory Alignment'],
     [
-      ['Health, Safety & Environment', '32', 'BC OHS Regulation, WorkSafeBC compliance'],
-      ['RPAS Operations', '12 + 4 procedures', 'CARs Part IX, SORA methodology'],
-      ['Crew Resource Management', '9', 'Human factors, TC AC 700-042'],
-      ['Total', '53 policies', 'Integrated safety management']
+      ['HSE Policies', '32', 'BC OHS Regulation, WorkSafeBC'],
+      ['RPAS Policies', '12', 'CARs Part IX, SORA 2.5'],
+      ['CRM Policies', '9', 'TC AC 700-042'],
+      ['Procedures', '4', 'Internal SOPs']
     ]
   )
   
   pdf.addSpacer(5)
   
-  pdf.addSubsectionTitle('Key Performance Indicators')
+  pdf.addSubsectionTitle('Audit Readiness')
   pdf.addKPIRow([
-    { label: 'Audit Readiness', value: String(auditScore) + '%' },
-    { label: 'Days Incident-Free', value: kpis.daysSinceIncident !== null ? String(kpis.daysSinceIncident) : 'None' },
+    { label: 'Overall Score', value: String(auditScore) + '%' },
+    { label: 'Incident-Free Days', value: kpis.daysSinceIncident !== null ? String(kpis.daysSinceIncident) : 'N/A' },
     { label: 'YTD Incidents', value: String(kpis.ytdRecordableIncidents) },
     { label: 'Open CAPAs', value: String(kpis.openCapas) }
   ])
   
-  // ============================================
-  // SECTION 2: MANAGEMENT COMMITMENT
-  // ============================================
-  pdf.addNewSection('Management Leadership & Commitment')
-  
-  pdf.addParagraph('Aeria Solutions demonstrates management commitment through documented policies, defined responsibilities, and active safety program participation.')
+  // ========== SECTION 2: MANAGEMENT ==========
+  pdf.addNewSection('Management Leadership')
   
   pdf.addSubsectionTitle('Foundational Policies')
   pdf.addTable(
-    ['Policy ID', 'Name', 'Purpose'],
+    ['Code', 'Policy', 'Purpose'],
     [
       ['HSE1022', 'Health & Safety Pledge', 'Zero harm commitment'],
       ['HSE1023', 'Commitment Statement', 'Leadership accountability'],
-      ['HSE1024', 'Workers Rights', 'Right to know, participate, refuse'],
-      ['HSE1025', 'Safety Management System', 'ISO 45001-aligned SMS'],
-      ['HSE1027', 'Health & Safety Policy', 'Foundational H&S statement']
+      ['HSE1024', 'Workers Rights', 'Know, participate, refuse'],
+      ['HSE1025', 'Safety Management System', 'ISO 45001 aligned'],
+      ['HSE1027', 'Health & Safety Policy', 'Core H&S statement']
     ]
   )
   
-  pdf.addSubsectionTitle('Organizational Structure')
+  pdf.addSpacer(5)
+  
+  pdf.addSubsectionTitle('Organizational Roles')
   pdf.addTable(
-    ['Role', 'Responsibility'],
+    ['Role', 'Safety Responsibility'],
     [
-      ['Accountable Executive', 'Overall safety program accountability'],
-      ['Operations Manager', 'Day-to-day safety implementation'],
-      ['Maintenance Manager', 'Equipment airworthiness'],
-      ['Pilot in Command (PIC)', 'Flight operation authority'],
-      ['Visual Observer (VO)', 'Situational awareness support']
+      ['Accountable Executive', 'Overall program accountability and resource allocation'],
+      ['Operations Manager', 'Day-to-day implementation and compliance'],
+      ['Pilot in Command', 'Flight operation authority and crew safety'],
+      ['Visual Observer', 'Airspace monitoring and situational awareness']
     ]
   )
   
-  // ============================================
-  // SECTION 3: HAZARD ASSESSMENT
-  // ============================================
-  pdf.addNewSection('Hazard Assessment & Control')
+  // ========== SECTION 3: HAZARD ASSESSMENT ==========
+  pdf.addNewSection('Hazard Assessment')
   
-  pdf.addParagraph('Hazard identification and control is implemented through formal assessments, field-level hazard assessments (FLHA), SORA risk assessments, and CRM threat and error management.')
-  
-  pdf.addSubsectionTitle('Assessment Types')
+  pdf.addSubsectionTitle('Assessment Methods')
   pdf.addTable(
-    ['Assessment Type', 'Frequency', 'Policy'],
+    ['Method', 'Frequency', 'Reference'],
     [
-      ['Formal Hazard Assessment', 'Per site/major change', 'HSE1047'],
+      ['Formal Hazard Assessment', 'New sites / major changes', 'HSE1047'],
       ['Field-Level Hazard Assessment', 'Every operation', 'HSE1047'],
-      ['Site Survey', 'Per operation area', 'RPAS1011'],
-      ['SORA Risk Assessment', 'Per flight operation', 'RPAS Manual'],
-      ['Threat & Error Management', 'Every briefing', 'CRM1013']
+      ['Site Survey', 'Per operational area', 'RPAS1011'],
+      ['SORA Risk Assessment', 'Per flight operation', 'SORA 2.5'],
+      ['Threat & Error Management', 'Pre-flight briefings', 'CRM1013']
     ]
   )
   
-  pdf.addSubsectionTitle('Performance')
+  pdf.addSpacer(5)
+  
+  pdf.addSubsectionTitle('Risk Control')
+  pdf.addParagraph('Hierarchy of Controls: Elimination > Substitution > Engineering > Administrative > PPE')
+  pdf.addParagraph('Risk Matrix: 5x5 probability/severity assessment per HSE1048')
+  
+  pdf.addSpacer(5)
+  
+  pdf.addSubsectionTitle('Performance Metrics')
   pdf.addKPIRow([
-    { label: 'FLHA Completion', value: String(kpis.flhaCompletionRate) + '%' },
+    { label: 'FLHA Rate', value: String(kpis.flhaCompletionRate) + '%' },
     { label: 'Inspection Rate', value: String(kpis.inspectionCompletionRate) + '%' },
     { label: 'Pre-Flight Rate', value: String(kpis.preflightCompletionRate) + '%' }
   ])
   
-  // ============================================
-  // SECTION 4: SAFE WORK PRACTICES
-  // ============================================
-  pdf.addNewSection('Safe Work Practices & Procedures')
+  // ========== SECTION 4: SAFE WORK ==========
+  pdf.addNewSection('Safe Work Practices')
   
-  pdf.addParagraph('Comprehensive safe work procedures cover all phases of RPAS operations, supported by CRM protocols for human factors management.')
-  
-  pdf.addSubsectionTitle('RPAS General Procedures (RPAS-GP-001)')
+  pdf.addSubsectionTitle('RPAS Operational Procedures')
   pdf.addTable(
-    ['Phase', 'Procedure'],
+    ['Phase', 'Procedure', 'Key Activities'],
     [
-      ['1', 'Operation Planning Flow - Pre-departure documentation'],
-      ['2', 'Kit Preparation Flow - Equipment and battery readiness'],
-      ['3', 'Weather & NOTAM Review Flow - Conditions assessment'],
-      ['4', 'Team Briefing Flow - Objectives, roles, safety alignment'],
-      ['5', 'Site Setup Flow - Area inspection and perimeter'],
-      ['6', 'RPAS Setup Flow - Assembly, calibration, checks'],
-      ['7', 'Take-Off Checklist - Final verification'],
-      ['8', 'During Flight Flow - Active monitoring'],
-      ['9', 'Landing and Post-Flight Flow - Safe recovery'],
-      ['10', 'Team Debrief Flow - Lessons learned']
+      ['Pre-Op', 'Planning & Briefing', 'Weather, NOTAMs, TEM, crew roles'],
+      ['Setup', 'Site & Equipment', 'Area inspection, RPAS assembly, checks'],
+      ['Flight', 'Operations', 'Monitoring, communication, logging'],
+      ['Post-Op', 'Recovery & Debrief', 'Landing, data backup, lessons learned']
     ]
   )
+  
+  pdf.addSpacer(5)
   
   pdf.addSubsectionTitle('CRM Protocols')
   pdf.addTable(
-    ['Protocol', 'Policy', 'Application'],
+    ['Protocol', 'Reference', 'Application'],
     [
-      ['P.A.C.E. Escalation', 'CRM1014', 'Probe - Alert - Challenge - Emergency'],
-      ['Situational Awareness', 'CRM1015', 'Perception - Comprehension - Projection'],
+      ['P.A.C.E. Escalation', 'CRM1014', 'Probe > Alert > Challenge > Emergency'],
+      ['Situational Awareness', 'CRM1015', 'Perception > Comprehension > Projection'],
       ['Workload Management', 'CRM1018', 'Task prioritization and delegation'],
-      ['Decision Making', 'CRM1019', 'Structured decision matrices']
+      ['Decision Making', 'CRM1019', 'FOR-DEC / DODAR methodology']
     ]
   )
   
-  // ============================================
-  // SECTION 5: TRAINING & COMPETENCY
-  // ============================================
+  // ========== SECTION 5: TRAINING ==========
   pdf.addNewSection('Training & Competency')
   
-  pdf.addParagraph('All personnel receive comprehensive training covering safety procedures, RPAS operations, and crew resource management.')
-  
-  pdf.addSubsectionTitle('Required Certifications (RPAS1001)')
+  pdf.addSubsectionTitle('Required Certifications')
   pdf.addTable(
     ['Certification', 'Requirement', 'Renewal'],
     [
-      ['RPAS Pilot Certificate', 'Basic/Advanced/Complex', 'Per TC'],
-      ['ROC-A', 'Radio operations', '5 years'],
-      ['Emergency First Aid & CPR', 'All crew', '3 years'],
-      ['Wilderness First Aid', 'Remote ops', '3 years'],
-      ['CRM Training', 'All flight crew', 'Annual']
+      ['RPAS Pilot Certificate', 'Basic / Advanced / Complex', 'Per TC requirements'],
+      ['ROC-A (Radio)', 'Aeronautical radio operations', '5 years'],
+      ['Emergency First Aid', 'All operational crew', '3 years'],
+      ['CRM Training', 'All flight crew', 'Annual refresher']
     ]
   )
   
-  pdf.addSubsectionTitle('Competency Status')
+  pdf.addSpacer(5)
+  
+  pdf.addSubsectionTitle('Current Status')
   pdf.addKPIRow([
     { label: 'Cert Currency', value: String(kpis.certCurrencyRate) + '%' },
-    { label: 'Training Rate', value: String(kpis.trainingCompletionRate) + '%' },
+    { label: 'Training Complete', value: String(kpis.trainingCompletionRate) + '%' },
     { label: 'Total Operators', value: String(kpis.totalOperators) }
   ])
   
-  // ============================================
-  // SECTION 6: INSPECTIONS
-  // ============================================
+  // ========== SECTION 6: INSPECTIONS ==========
   pdf.addNewSection('Inspections & Maintenance')
   
   pdf.addSubsectionTitle('Inspection Schedule')
   pdf.addTable(
-    ['Inspection Type', 'Frequency', 'Policy'],
+    ['Type', 'Frequency', 'Reference'],
     [
       ['Workplace Inspection', 'Monthly', 'HSE1049'],
       ['Pre-Flight Inspection', 'Every operation', 'RPAS1003'],
-      ['Equipment Testing', 'New/Pre-Op/Post-Maint/Annual', 'RPAS1012'],
-      ['Vehicle Pre-Use', 'Daily', 'HSE1029'],
-      ['PPE Inspection', 'Per use', 'HSE1028']
+      ['Equipment Testing', 'New / Annual / Post-repair', 'RPAS1012'],
+      ['Vehicle Inspection', 'Daily (pre-use)', 'HSE1029'],
+      ['PPE Inspection', 'Before each use', 'HSE1028']
     ]
   )
   
-  pdf.addSubsectionTitle('Equipment Status')
+  pdf.addSpacer(5)
+  
+  pdf.addSubsectionTitle('Equipment Status (CLEAR/LOCKOUT System)')
   pdf.addKPIRow([
-    { label: 'Equipment Available', value: String(kpis.equipmentAvailability) + '%' },
-    { label: 'Active Aircraft', value: String(kpis.activeAircraft) },
+    { label: 'Availability', value: String(kpis.equipmentAvailability) + '%' },
+    { label: 'Active Units', value: String(kpis.activeAircraft) },
     { label: 'Locked Out', value: String(kpis.lockedOutAircraft) }
   ])
   
-  // ============================================
-  // SECTION 7: INCIDENT INVESTIGATION
-  // ============================================
-  pdf.addNewSection('Incident Investigation & Reporting')
+  // ========== SECTION 7: INCIDENTS ==========
+  pdf.addNewSection('Incident Management')
   
   pdf.addSubsectionTitle('Reporting Requirements')
   pdf.addTable(
-    ['Authority', 'Timeframe', 'Trigger'],
+    ['Authority', 'Timeframe', 'Trigger Events'],
     [
-      ['Internal', '24 hours', 'All incidents and near misses'],
-      ['Transport Canada', 'Per CAR 901.49(1)', 'RPAS incidents as specified'],
-      ['WorkSafeBC', 'Immediately', 'Serious injuries, fatalities'],
-      ['TSB', 'Immediately', 'Fatalities, manned aircraft collision']
+      ['Internal', '24 hours', 'All incidents, near misses, observations'],
+      ['Transport Canada', 'Per CAR 901.49', 'Reportable RPAS occurrences'],
+      ['WorkSafeBC', 'Immediately', 'Serious injury, fatality'],
+      ['TSB', 'Immediately', 'Fatality, mid-air collision risk']
     ]
   )
   
-  pdf.addSubsectionTitle('Incident Statistics')
+  pdf.addSpacer(5)
+  
+  pdf.addSubsectionTitle('YTD Statistics')
   pdf.addTable(
-    ['Metric', 'YTD', 'Target', 'Status'],
+    ['Metric', 'Actual', 'Target', 'Status'],
     [
-      ['Recordable Incidents', String(kpis.ytdRecordableIncidents), '0', kpis.ytdRecordableIncidents === 0 ? 'Met' : 'Not Met'],
-      ['Flight Incidents', String(kpis.ytdFlightIncidents), '0', kpis.ytdFlightIncidents === 0 ? 'Met' : 'Not Met'],
-      ['Near Miss Reports', String(kpis.ytdNearMisses), '5 or more', kpis.ytdNearMisses >= 5 ? 'Met' : 'Review'],
-      ['Days Since Incident', kpis.daysSinceIncident !== null ? String(kpis.daysSinceIncident) : 'None', '90 or more', (kpis.daysSinceIncident === null || kpis.daysSinceIncident >= 90) ? 'Met' : 'Not Met']
+      ['Recordable Incidents', String(kpis.ytdRecordableIncidents), '0', kpis.ytdRecordableIncidents === 0 ? 'MET' : 'NOT MET'],
+      ['Flight Incidents', String(kpis.ytdFlightIncidents), '0', kpis.ytdFlightIncidents === 0 ? 'MET' : 'NOT MET'],
+      ['Near Miss Reports', String(kpis.ytdNearMisses), '>=5', kpis.ytdNearMisses >= 5 ? 'MET' : 'REVIEW']
     ]
   )
+  
+  pdf.addSpacer(5)
   
   pdf.addSubsectionTitle('CAPA Performance')
   pdf.addKPIRow([
-    { label: 'Open CAPAs', value: String(kpis.openCapas) },
+    { label: 'Open', value: String(kpis.openCapas) },
     { label: 'Overdue', value: String(kpis.overdueCapas) },
     { label: 'Closure Rate', value: String(kpis.capaClosureRate) + '%' },
-    { label: 'On-Time Rate', value: String(kpis.capaOnTimeRate) + '%' }
+    { label: 'On-Time', value: String(kpis.capaOnTimeRate) + '%' }
   ])
   
-  // ============================================
-  // SECTION 8: EMERGENCY RESPONSE
-  // ============================================
-  pdf.addNewSection('Emergency Preparedness & Response')
+  // ========== SECTION 8: EMERGENCY ==========
+  pdf.addNewSection('Emergency Response')
   
-  pdf.addSubsectionTitle('RPAS Emergency Procedures (RPAS-EP-001)')
+  pdf.addSubsectionTitle('RPAS Emergency Procedures')
   pdf.addTable(
-    ['Scenario', 'Response'],
+    ['Scenario', 'Primary Response', 'Reference'],
     [
-      ['Control Station Failure', 'Backup procedures and RTH activation'],
-      ['RPAS Failure', 'Emergency landing or flight termination'],
-      ['Crash Event', 'Scene preservation and notification'],
-      ['Fly-Away', 'Tracking, notification, and recovery'],
-      ['C2 Link Failure', 'Automated failsafe activation'],
-      ['Inadvertent Airspace Entry', 'ATC notification protocol']
+      ['Control Station Failure', 'Activate backup / RTH', 'RPAS-EP-001'],
+      ['RPAS System Failure', 'Emergency landing / FTS', 'RPAS-EP-001'],
+      ['Fly-Away Event', 'Track, notify ATC, recover', 'RPAS-EP-001'],
+      ['C2 Link Loss', 'Automated failsafe activation', 'RPAS-EP-001'],
+      ['Crash / Collision', 'Scene preservation, notify', 'RPAS-EP-001']
     ]
   )
+  
+  pdf.addSpacer(5)
   
   pdf.addSubsectionTitle('Emergency Contacts')
   pdf.addTable(
-    ['Service', 'Contact'],
+    ['Service', 'Number'],
     [
       ['Emergency Services', '911'],
-      ['WorkSafeBC (24hr)', '1-888-621-7233'],
-      ['Transport Canada Civil Aviation', '1-888-463-0521'],
-      ['NAV CANADA', '1-866-992-7433'],
-      ['TSB Occurrence Reporting', '1-819-994-3741']
+      ['WorkSafeBC 24hr', '1-888-621-7233'],
+      ['Transport Canada', '1-888-463-0521'],
+      ['NAV CANADA', '1-866-992-7433']
     ]
   )
   
-  // ============================================
-  // SECTION 9: RECORDS & STATISTICS
-  // ============================================
+  // ========== SECTION 9: RECORDS ==========
   pdf.addNewSection('Records & Statistics')
-  
-  pdf.addParagraph('Comprehensive records are maintained for all health and safety activities.')
   
   pdf.addSubsectionTitle('Leading Indicators')
   pdf.addTable(
     ['Indicator', 'Target', 'Actual', 'Status'],
     [
-      ['Training Completion', '95%', String(kpis.trainingCompletionRate) + '%', kpis.trainingCompletionRate >= 95 ? 'Met' : 'Not Met'],
-      ['Inspection Completion', '100%', String(kpis.inspectionCompletionRate) + '%', kpis.inspectionCompletionRate >= 100 ? 'Met' : 'Not Met'],
-      ['FLHA Completion', '100%', String(kpis.flhaCompletionRate) + '%', kpis.flhaCompletionRate >= 100 ? 'Met' : 'Not Met'],
-      ['Near Miss Reports', '5 or more per year', String(kpis.ytdNearMisses), kpis.ytdNearMisses >= 5 ? 'Met' : 'Review']
+      ['Training Completion', '>=95%', String(kpis.trainingCompletionRate) + '%', kpis.trainingCompletionRate >= 95 ? 'MET' : 'NOT MET'],
+      ['Inspection Completion', '100%', String(kpis.inspectionCompletionRate) + '%', kpis.inspectionCompletionRate >= 100 ? 'MET' : 'NOT MET'],
+      ['FLHA Completion', '100%', String(kpis.flhaCompletionRate) + '%', kpis.flhaCompletionRate >= 100 ? 'MET' : 'NOT MET'],
+      ['Near Miss Reporting', '>=5/year', String(kpis.ytdNearMisses), kpis.ytdNearMisses >= 5 ? 'MET' : 'REVIEW']
     ]
   )
+  
+  pdf.addSpacer(5)
   
   pdf.addSubsectionTitle('Form Statistics')
   const formEntries = Object.entries(kpis.formCounts || {})
   if (formEntries.length > 0) {
-    const formRows = formEntries
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([type, count]) => [
-        type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        String(count)
-      ])
+    const formRows = formEntries.sort((a, b) => b[1] - a[1]).slice(0, 8)
+      .map(([type, count]) => [type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), String(count)])
     pdf.addTable(['Form Type', 'Count'], formRows)
   } else {
-    pdf.addParagraph('No forms recorded yet.')
+    pdf.addParagraph('No forms recorded in current period.')
   }
   
-  // ============================================
-  // SECTION 10: PROGRAM ADMINISTRATION
-  // ============================================
+  // ========== SECTION 10: PROGRAM ADMIN ==========
   pdf.addNewSection('Program Administration')
-  
-  pdf.addParagraph('The health and safety program is reviewed annually and updated as required.')
   
   pdf.addSubsectionTitle('Document Control')
   pdf.addTable(
-    ['Control', 'Description'],
+    ['Element', 'Practice'],
     [
-      ['Version Control', 'All policies version controlled with revision history'],
-      ['Review Cycle', 'Annual review cycle with documented amendments'],
-      ['Distribution', 'Electronic distribution through Aeria Ops platform'],
-      ['Retention', 'Records retained per regulatory requirements']
+      ['Version Control', 'All policies tracked with revision history'],
+      ['Review Cycle', 'Annual review with documented amendments'],
+      ['Distribution', 'Electronic via Aeria Ops platform'],
+      ['Retention', 'Per regulatory requirements (min 3 years)']
     ]
   )
   
-  pdf.addSubsectionTitle('Regulatory Compliance')
+  pdf.addSpacer(5)
+  
+  pdf.addSubsectionTitle('Regulatory Framework')
   pdf.addTable(
-    ['Regulation', 'Application'],
+    ['Regulation', 'Scope'],
     [
-      ['BC Workers Compensation Act', 'Workplace safety requirements'],
-      ['BC OHS Regulation', 'Specific safety standards'],
-      ['CARs Part IX', 'RPAS operations requirements'],
-      ['Transport Canada ACs', 'Advisory compliance guidance'],
-      ['JARUS SORA 2.5', 'Risk assessment methodology'],
-      ['ISO 45001:2018', 'SMS framework principles']
+      ['BC OHS Regulation', 'Workplace health and safety'],
+      ['CARs Part IX', 'RPAS operations'],
+      ['JARUS SORA 2.5', 'Operational risk assessment'],
+      ['ISO 45001:2018', 'SMS framework alignment']
     ]
   )
   
-  // ============================================
-  // APPENDICES
-  // ============================================
+  // ========== APPENDICES ==========
   if (includeAppendices) {
-    // Appendix A: Complete Policy Index
-    pdf.addNewSection('Appendix A: Policy Index')
+    pdf.addNewSection('Policy Index')
     
+    // HSE Policies - split into 2 columns via smaller table
     pdf.addSubsectionTitle('HSE Policies (32)')
-    const hsePolicies = PROGRAM_STRUCTURE.hse.policies || []
-    if (hsePolicies.length > 0) {
-      const hseRows = hsePolicies.map(p => [p.code || 'N/A', p.name || 'Unknown'])
-      pdf.addTable(['Code', 'Policy Name'], hseRows)
-    }
+    const hseRows = PROGRAM_STRUCTURE.hse.policies.map(p => [p.code, p.name])
+    pdf.addTable(['Code', 'Name'], hseRows, { fontSize: 7 })
     
-    pdf.addSubsectionTitle('RPAS Operations Policies (12)')
-    const rpasPolicies = PROGRAM_STRUCTURE.rpas.policies || []
-    if (rpasPolicies.length > 0) {
-      const rpasRows = rpasPolicies.map(p => [p.code || 'N/A', p.name || 'Unknown'])
-      pdf.addTable(['Code', 'Policy Name'], rpasRows)
-    }
+    // RPAS + CRM on same page
+    pdf.addSubsectionTitle('RPAS Policies (12)')
+    const rpasRows = PROGRAM_STRUCTURE.rpas.policies.map(p => [p.code, p.name])
+    pdf.addTable(['Code', 'Name'], rpasRows, { fontSize: 8 })
     
     pdf.addSubsectionTitle('CRM Policies (9)')
-    const crmPolicies = PROGRAM_STRUCTURE.crm.policies || []
-    if (crmPolicies.length > 0) {
-      const crmRows = crmPolicies.map(p => [p.code || 'N/A', p.name || 'Unknown'])
-      pdf.addTable(['Code', 'Policy Name'], crmRows)
-    }
+    const crmRows = PROGRAM_STRUCTURE.crm.policies.map(p => [p.code, p.name])
+    pdf.addTable(['Code', 'Name'], crmRows, { fontSize: 8 })
     
-    pdf.addSubsectionTitle('Procedures Documents (4)')
-    const procedures = PROGRAM_STRUCTURE.rpas.procedures || []
-    if (procedures.length > 0) {
-      const procRows = procedures.map(p => [p.id || 'N/A', p.name || 'Unknown', p.version || 'N/A'])
-      pdf.addTable(['Code', 'Name', 'Version'], procRows)
-    }
+    pdf.addSubsectionTitle('Procedures (4)')
+    const procRows = PROGRAM_STRUCTURE.rpas.procedures.map(p => [p.id, p.name, p.version])
+    pdf.addTable(['Code', 'Name', 'Version'], procRows, { fontSize: 8 })
     
-    // Appendix B: Operator List
-    if (Array.isArray(operators) && operators.length > 0) {
-      pdf.addNewSection('Appendix B: Operator Registry')
-      const opRows = operators.slice(0, 25).map(op => [
+    // Operators
+    if (operators.length > 0) {
+      pdf.addNewSection('Operator Registry')
+      const opRows = operators.slice(0, 20).map(op => [
         op.name || `${op.firstName || ''} ${op.lastName || ''}`.trim() || 'Unknown',
         op.role || 'Operator',
-        op.pilotCertificate || 'N/A',
-        Array.isArray(op.certifications) ? op.certifications.slice(0, 2).map(c => c.type || c.name || String(c)).join(', ') : 'None'
+        op.pilotCertificate || 'N/A'
       ])
-      pdf.addTable(['Name', 'Role', 'Pilot Cert', 'Certifications'], opRows)
+      pdf.addTable(['Name', 'Role', 'Pilot Cert'], opRows)
     }
     
-    // Appendix C: Equipment Registry
-    if (Array.isArray(aircraft) && aircraft.length > 0) {
-      pdf.addNewSection('Appendix C: Equipment Registry')
+    // Equipment
+    if (aircraft.length > 0) {
+      pdf.addNewSection('Equipment Registry')
       const acRows = aircraft.map(a => [
         a.nickname || a.name || 'Unknown',
         a.manufacturer || 'N/A',
         a.model || 'N/A',
-        a.serialNumber || a.registration || 'N/A',
         a.status || 'Active'
       ])
-      pdf.addTable(['Name', 'Manufacturer', 'Model', 'Serial', 'Status'], acRows)
+      pdf.addTable(['Name', 'Manufacturer', 'Model', 'Status'], acRows)
     }
     
-    // Appendix D: Project List
-    if (Array.isArray(projects) && projects.length > 0) {
-      pdf.addNewSection('Appendix D: Project List')
-      const projectRows = projects.slice(0, 20).map(p => [
+    // Projects
+    if (projects.length > 0) {
+      pdf.addNewSection('Project Registry')
+      const projRows = projects.slice(0, 15).map(p => [
         p.projectCode || (p.id ? p.id.substring(0, 8) : 'N/A'),
         p.name || 'Unknown',
         p.client || 'N/A',
         p.status || 'Unknown'
       ])
-      pdf.addTable(['Code', 'Project Name', 'Client', 'Status'], projectRows)
+      pdf.addTable(['Code', 'Name', 'Client', 'Status'], projRows)
     }
   }
   
-  // ============================================
-  // CERTIFICATION PAGE
-  // ============================================
-  pdf.addNewSection('Certification & Approval')
+  // ========== CERTIFICATION ==========
+  pdf.addNewSection('Certification')
   
-  pdf.addParagraph('I certify that the information contained in this report accurately represents the Health, Safety & Environment program of Aeria Solutions Ltd. as of the date indicated.')
+  pdf.addParagraph('I certify that this report accurately represents the Health, Safety & Environment program of Aeria Solutions Ltd. as of the date indicated.')
   
-  pdf.addSpacer(20)
+  pdf.addSpacer(15)
   
   pdf.addSignatureBlock([
     { role: 'Health & Safety Manager' },
@@ -787,16 +562,15 @@ export async function generateCORReport(data, options = {}) {
   
   pdf.addSpacer(10)
   
-  pdf.addParagraph(`Report Generated: ${new Date().toLocaleDateString('en-CA')}`)
-  pdf.addParagraph('Transport Canada Company File: 930355')
+  pdf.addParagraph(`Generated: ${new Date().toLocaleDateString('en-CA')} | TC Company File: 930355`)
   
   return pdf
 }
 
-// Export function for use in components
+// Export function
 export async function exportCORReport(data, options = {}) {
   const pdf = await generateCORReport(data, options)
-  const filename = `Aeria_COR_Report_${new Date().toISOString().split('T')[0]}.pdf`
+  const filename = `COR_Safety_Report_${new Date().toISOString().split('T')[0]}.pdf`
   pdf.save(filename)
   return filename
 }
