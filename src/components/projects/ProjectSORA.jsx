@@ -21,7 +21,11 @@ import {
   Calculator,
   Plane,
   MapPin,
-  Gauge
+  Gauge,
+  Link2,
+  ExternalLink,
+  Radio,
+  Zap
 } from 'lucide-react'
 
 // Import SORA configuration
@@ -167,6 +171,166 @@ const calculateSuggestedARC = (altitudeAGL, airspaceType, isAirportEnv, isUrban)
 }
 
 // ============================================
+// DATA SOURCES PANEL
+// Shows what data is inherited from Site Survey and Flight Plan
+// ============================================
+function DataSourcesPanel({ siteSurvey, flightPlan, sora, onNavigateToSection, onSync, hasMismatch }) {
+  const hasPopulation = siteSurvey?.population?.category
+  const hasAirspace = siteSurvey?.airspace?.classification
+  const hasAircraft = flightPlan?.aircraft?.length > 0
+  const hasOperationType = flightPlan?.operationType
+  const hasAltitude = flightPlan?.maxAltitudeAGL
+
+  const primaryAircraft = flightPlan?.aircraft?.find(a => a.isPrimary) || flightPlan?.aircraft?.[0]
+
+  const dataComplete = hasPopulation && hasAirspace && hasAircraft
+
+  return (
+    <div className={`card border-2 ${dataComplete ? 'border-green-200 bg-green-50/30' : 'border-amber-200 bg-amber-50/30'}`}>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Link2 className="w-5 h-5 text-blue-600" />
+          Data Sources
+          {dataComplete ? (
+            <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" /> Auto-populated
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" /> Incomplete
+            </span>
+          )}
+        </h2>
+        {hasMismatch && (
+          <button
+            onClick={onSync}
+            className="btn btn-primary text-sm flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Sync Now
+          </button>
+        )}
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* From Site Survey */}
+        <div className={`p-3 rounded-lg border ${hasPopulation ? 'bg-white border-gray-200' : 'bg-amber-50 border-amber-200'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Users className={`w-4 h-4 ${hasPopulation ? 'text-green-600' : 'text-amber-600'}`} />
+              <span className="text-sm font-medium text-gray-700">Population</span>
+            </div>
+            <span className="text-xs text-gray-500">Site Survey</span>
+          </div>
+          {hasPopulation ? (
+            <p className="text-sm font-medium text-gray-900">
+              {populationCategories[siteSurvey.population.category]?.label || siteSurvey.population.category}
+            </p>
+          ) : (
+            <p className="text-sm text-amber-700">Not set</p>
+          )}
+          {onNavigateToSection && (
+            <button
+              onClick={() => onNavigateToSection('siteSurvey')}
+              className="text-xs text-blue-600 hover:underline mt-1 flex items-center gap-1"
+            >
+              <ExternalLink className="w-3 h-3" /> Edit
+            </button>
+          )}
+        </div>
+
+        <div className={`p-3 rounded-lg border ${hasAirspace ? 'bg-white border-gray-200' : 'bg-amber-50 border-amber-200'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Radio className={`w-4 h-4 ${hasAirspace ? 'text-green-600' : 'text-amber-600'}`} />
+              <span className="text-sm font-medium text-gray-700">Airspace</span>
+            </div>
+            <span className="text-xs text-gray-500">Site Survey</span>
+          </div>
+          {hasAirspace ? (
+            <p className="text-sm font-medium text-gray-900">
+              Class {siteSurvey.airspace.classification}
+            </p>
+          ) : (
+            <p className="text-sm text-amber-700">Not set</p>
+          )}
+          {onNavigateToSection && (
+            <button
+              onClick={() => onNavigateToSection('siteSurvey')}
+              className="text-xs text-blue-600 hover:underline mt-1 flex items-center gap-1"
+            >
+              <ExternalLink className="w-3 h-3" /> Edit
+            </button>
+          )}
+        </div>
+
+        {/* From Flight Plan */}
+        <div className={`p-3 rounded-lg border ${hasAircraft ? 'bg-white border-gray-200' : 'bg-amber-50 border-amber-200'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Plane className={`w-4 h-4 ${hasAircraft ? 'text-green-600' : 'text-amber-600'}`} />
+              <span className="text-sm font-medium text-gray-700">Aircraft</span>
+            </div>
+            <span className="text-xs text-gray-500">Flight Plan</span>
+          </div>
+          {hasAircraft && primaryAircraft ? (
+            <div>
+              <p className="text-sm font-medium text-gray-900">{primaryAircraft.nickname || primaryAircraft.model}</p>
+              <p className="text-xs text-gray-500">{primaryAircraft.maxSpeed || 25} m/s • {primaryAircraft.maxDimension || 1}m</p>
+            </div>
+          ) : (
+            <p className="text-sm text-amber-700">Not selected</p>
+          )}
+          {onNavigateToSection && (
+            <button
+              onClick={() => onNavigateToSection('flightPlan')}
+              className="text-xs text-blue-600 hover:underline mt-1 flex items-center gap-1"
+            >
+              <ExternalLink className="w-3 h-3" /> Edit
+            </button>
+          )}
+        </div>
+
+        <div className={`p-3 rounded-lg border ${hasOperationType ? 'bg-white border-gray-200' : 'bg-amber-50 border-amber-200'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Gauge className={`w-4 h-4 ${hasOperationType ? 'text-green-600' : 'text-amber-600'}`} />
+              <span className="text-sm font-medium text-gray-700">Operation</span>
+            </div>
+            <span className="text-xs text-gray-500">Flight Plan</span>
+          </div>
+          {hasOperationType ? (
+            <div>
+              <p className="text-sm font-medium text-gray-900">{flightPlan.operationType}</p>
+              <p className="text-xs text-gray-500">{hasAltitude ? `${flightPlan.maxAltitudeAGL}m AGL` : ''}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-amber-700">Not set</p>
+          )}
+          {onNavigateToSection && (
+            <button
+              onClick={() => onNavigateToSection('flightPlan')}
+              className="text-xs text-blue-600 hover:underline mt-1 flex items-center gap-1"
+            >
+              <ExternalLink className="w-3 h-3" /> Edit
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!dataComplete && (
+        <div className="mt-4 p-3 bg-amber-100 border border-amber-200 rounded-lg">
+          <p className="text-sm text-amber-800">
+            <strong>Tip:</strong> Complete the Site Survey and Flight Plan for automatic SORA data population. 
+            This ensures consistent data across all assessments.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================
 // VALIDATION STATUS COMPONENT
 // ============================================
 const ValidationStatus = ({ sail, osoCompliance, containmentCompliant, outsideScope, onViewGaps }) => {
@@ -278,126 +442,89 @@ const OSORow = ({ oso, sail, osoData, onUpdate, expanded, onToggleExpand }) => {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <button 
-                onClick={onToggleExpand}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-              <span className="font-medium text-gray-900 text-sm">{oso.id}</span>
-              <span className="text-sm text-gray-700">{oso.name}</span>
+              <span className="text-xs font-bold text-gray-700">{oso.id}</span>
               <span className={`px-1.5 py-0.5 text-xs rounded ${
-                required === 'L' ? 'bg-blue-100 text-blue-700' :
+                required === 'H' ? 'bg-red-100 text-red-700' :
                 required === 'M' ? 'bg-amber-100 text-amber-700' :
-                'bg-red-100 text-red-700'
+                'bg-green-100 text-green-700'
               }`}>
-                {required}
+                Required: {required}
               </span>
-              {!compliance.compliant && (
-                <span className="px-1.5 py-0.5 text-xs rounded bg-amber-200 text-amber-800">Gap</span>
-              )}
-              {compliance.compliant && (
+              {compliance.compliant ? (
                 <CheckCircle className="w-4 h-4 text-green-500" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-amber-500" />
               )}
             </div>
+            <p className="text-sm text-gray-700 mt-1">{oso.name}</p>
           </div>
+          
           <select
             value={osoData?.robustness || 'none'}
             onChange={(e) => onUpdate('robustness', e.target.value)}
-            className={`input text-xs py-1 w-24 ${!compliance.compliant ? 'border-amber-300' : ''}`}
+            className={`input text-xs w-24 ${!compliance.compliant ? 'border-amber-300' : ''}`}
           >
             {robustnessLevels.map(r => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
         </div>
+
+        <button
+          onClick={onToggleExpand}
+          className="text-xs text-blue-600 hover:text-blue-800 mt-2"
+        >
+          {expanded ? 'Hide details' : 'Show guidance'}
+        </button>
+
+        {expanded && (
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <p className="text-xs text-gray-500 mb-2">
+              <strong>Guidance for {required} robustness:</strong> {guidance}
+            </p>
+            <textarea
+              value={osoData?.evidence || ''}
+              onChange={(e) => onUpdate('evidence', e.target.value)}
+              className="input text-xs w-full"
+              rows={2}
+              placeholder="Document evidence of compliance..."
+            />
+          </div>
+        )}
       </div>
-      
-      {expanded && (
-        <div className="px-3 pb-3 border-t border-gray-200 pt-2">
-          <p className="text-xs text-gray-500 mb-2">{oso.description}</p>
-          {guidance && (
-            <div className="p-2 bg-blue-50 rounded border border-blue-100 mb-2">
-              <p className="text-xs text-blue-800">
-                <strong>Requirement ({required}):</strong> {guidance}
-              </p>
-            </div>
-          )}
-          {(osoData?.robustness && osoData.robustness !== 'none') && (
-            <div>
-              <label className="text-xs text-gray-600">Evidence:</label>
-              <textarea
-                value={osoData?.evidence || ''}
-                onChange={(e) => onUpdate('evidence', e.target.value)}
-                className="input text-sm mt-1 min-h-[60px]"
-                placeholder="Document compliance evidence..."
-              />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }
 
 // ============================================
-// SORA EXPORT FUNCTION
+// GENERATE SORA REPORT
 // ============================================
 const generateSORAReport = (project, sora, calculations) => {
-  const { intrinsicGRC, finalGRC, residualARC, sail, adjacentDistance, osoGapCount } = calculations
-  
-  const reportDate = new Date().toLocaleDateString('en-CA')
-  const projectName = project.name || 'Unnamed Project'
+  const { intrinsicGRC, finalGRC, residualARC, sail, adjacentDistance, osoGapCount, requiredContainment } = calculations
   
   let report = `SORA 2.5 ASSESSMENT REPORT
 ================================
-Generated: ${reportDate}
-Project: ${projectName}
-Client: ${project.clientName || 'N/A'}
+Project: ${project.name || 'Unnamed'}
+Generated: ${new Date().toISOString()}
+SORA Version: 2.5 (JARUS)
 
-EXECUTIVE SUMMARY
------------------
-SAIL: ${sail}
-Final GRC: ${finalGRC}
-Residual ARC: ${residualARC}
-OSO Gaps: ${osoGapCount}
-
-STEP 1: CONOPS
---------------
+STEP 1: CONCEPT OF OPERATIONS
+-----------------------------
 Operation Type: ${sora.operationType || 'VLOS'}
-Max Altitude AGL: ${sora.maxAltitudeAGL || 120}m
-
-STEP 2: INTRINSIC GRC
----------------------
-Population: ${populationCategories[sora.populationCategory]?.label || sora.populationCategory}
-UA Characteristic: ${uaCharacteristics[sora.uaCharacteristic]?.label || sora.uaCharacteristic}
+Max Altitude: ${sora.maxAltitudeAGL || 120}m AGL
 Max Speed: ${sora.maxSpeed || 25} m/s
-iGRC: ${intrinsicGRC}
+UA Characteristic: ${uaCharacteristics[sora.uaCharacteristic]?.label || sora.uaCharacteristic}
 
-STEP 3: FINAL GRC
------------------`
-
-  const mits = sora.mitigations || {}
-  let mitigationsApplied = false
-  if (mits.M1A?.enabled && mits.M1A.robustness !== 'none') {
-    report += `\nM1(A) Sheltering: ${mits.M1A.robustness} (${mits.M1A.robustness === 'low' ? '-1' : '-2'} GRC)`
-    mitigationsApplied = true
-  }
-  if (mits.M1B?.enabled && mits.M1B.robustness !== 'none') {
-    report += `\nM1(B) Operational Restrictions: ${mits.M1B.robustness} (${mits.M1B.robustness === 'medium' ? '-1' : '-2'} GRC)`
-    mitigationsApplied = true
-  }
-  if (mits.M1C?.enabled && mits.M1C.robustness === 'low') {
-    report += `\nM1(C) Ground Observers: low (-1 GRC)`
-    mitigationsApplied = true
-  }
-  if (mits.M2?.enabled && mits.M2.robustness !== 'none') {
-    report += `\nM2 Impact Dynamics: ${mits.M2.robustness} (${mits.M2.robustness === 'medium' ? '-1' : '-2'} GRC)`
-    mitigationsApplied = true
-  }
-  if (!mitigationsApplied) {
-    report += `\nNo mitigations applied`
-  }
+STEPS 2-3: GROUND RISK
+----------------------
+Population Category: ${populationCategories[sora.populationCategory]?.label || sora.populationCategory}
+Intrinsic GRC: ${intrinsicGRC}
+Mitigations Applied:
+  M1(A) Sheltering: ${sora.mitigations?.M1A?.enabled ? sora.mitigations.M1A.robustness : 'Not applied'}
+  M1(B) Operational Restrictions: ${sora.mitigations?.M1B?.enabled ? sora.mitigations.M1B.robustness : 'Not applied'}
+  M1(C) Ground Observers: ${sora.mitigations?.M1C?.enabled ? sora.mitigations.M1C.robustness : 'Not applied'}
+  M2 Impact Dynamics: ${sora.mitigations?.M2?.enabled ? sora.mitigations.M2.robustness : 'Not applied'}
+`
   report += `\nFinal GRC: ${finalGRC}
 
 STEPS 4-6: AIR RISK
@@ -415,7 +542,7 @@ STEP 8: CONTAINMENT
 -------------------
 Adjacent Area: ${populationCategories[sora.adjacentAreaPopulation]?.label || sora.adjacentAreaPopulation}
 Adjacent Distance: ${(adjacentDistance / 1000).toFixed(1)} km
-Required Robustness: ${calculations.requiredContainment || 'low'}
+Required Robustness: ${requiredContainment || 'low'}
 Actual Robustness: ${sora.containment?.robustness || 'none'}
 
 STEP 9: OSO COMPLIANCE
@@ -436,8 +563,9 @@ STEP 9: OSO COMPLIANCE
 // ============================================
 // MAIN COMPONENT
 // ============================================
-export default function ProjectSORA({ project, onUpdate }) {
+export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) {
   const [expandedSections, setExpandedSections] = useState({
+    dataSources: true,
     conops: true,
     groundRisk: true,
     airRisk: true,
@@ -537,7 +665,7 @@ export default function ProjectSORA({ project, onUpdate }) {
           },
           
           // Steps 4-6: Air Risk
-          initialARC: 'ARC-b',
+          initialARC: suggestedARC.arc,
           tmpr: { enabled: true, type: fpOperationType, robustness: 'low', evidence: '' },
           
           // Step 8: Containment
@@ -555,7 +683,7 @@ export default function ProjectSORA({ project, onUpdate }) {
     } else {
       setInitialized(true)
     }
-  }, [initialized, project.soraAssessment, onUpdate, fpOperationType, fpMaxAltitude, derivedPopulation, derivedUACharacteristic, fpMaxSpeed, derivedAdjacentPopulation, ssPopulation, fpAircraft.length])
+  }, [initialized, project.soraAssessment, onUpdate, fpOperationType, fpMaxAltitude, derivedPopulation, derivedUACharacteristic, fpMaxSpeed, derivedAdjacentPopulation, ssPopulation, fpAircraft.length, suggestedARC.arc])
 
   const sora = project.soraAssessment || {}
 
@@ -698,6 +826,16 @@ export default function ProjectSORA({ project, onUpdate }) {
   // ============================================
   return (
     <div className="space-y-6">
+      {/* Data Sources Panel */}
+      <DataSourcesPanel
+        siteSurvey={siteSurvey}
+        flightPlan={flightPlan}
+        sora={sora}
+        onNavigateToSection={onNavigateToSection}
+        onSync={syncFromSources}
+        hasMismatch={hasMismatch}
+      />
+
       {/* Header */}
       <div className="card bg-gradient-to-r from-blue-50 to-white">
         <div className="flex items-center justify-between mb-4">
@@ -764,25 +902,6 @@ export default function ProjectSORA({ project, onUpdate }) {
           </>
         )}
       </div>
-
-      {/* Sync Warning */}
-      {hasMismatch && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Info className="w-5 h-5 text-blue-600" />
-            <span className="text-sm text-blue-800">
-              Flight Plan or Site Survey data has changed
-            </span>
-          </div>
-          <button
-            onClick={syncFromSources}
-            className="btn btn-secondary text-sm flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Sync Data
-          </button>
-        </div>
-      )}
 
       {/* ConOps (Step 1) */}
       <div className="card">
@@ -936,8 +1055,6 @@ export default function ProjectSORA({ project, onUpdate }) {
                   </div>
                 )
               })}
-              
-              {/* Note: M3 (ERP) removed in SORA 2.5 - no longer a mitigation */}
             </div>
 
             <div className="p-3 bg-blue-900 text-white rounded-lg flex items-center justify-between">
@@ -998,45 +1115,44 @@ export default function ProjectSORA({ project, onUpdate }) {
             </div>
             
             {/* Altitude Warning */}
-            {fpMaxAltitude > 152 && sora.initialARC === 'ARC-b' && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-red-800">Altitude exceeds 500ft (152m)</p>
-                  <p className="text-xs text-red-600">
-                    Operations above 500ft AGL typically require ARC-c or higher per SORA Figure 6.
-                    Current selection: {sora.initialARC}
-                  </p>
-                </div>
+            {fpMaxAltitude > 152 && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800">
+                  <strong>Note:</strong> Operating above 500ft (152m) AGL typically increases air risk.
+                </p>
               </div>
             )}
-            
-            <div>
-              <label className="label">Initial ARC (Step 4)</label>
-              <select
-                value={sora.initialARC || 'ARC-b'}
-                onChange={(e) => updateSora({ initialARC: e.target.value })}
-                className="input"
-              >
-                {Object.entries(arcLevels).map(([key, arc]) => (
-                  <option key={key} value={key}>{key} - {arc.description}</option>
-                ))}
-              </select>
-            </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="label">TMPR Type (Step 6)</label>
+                <label className="label">Initial ARC</label>
+                <select
+                  value={sora.initialARC || 'ARC-b'}
+                  onChange={(e) => updateSora({ initialARC: e.target.value })}
+                  className="input"
+                >
+                  <option value="ARC-a">ARC-a (atypical airspace)</option>
+                  <option value="ARC-b">ARC-b (low risk)</option>
+                  <option value="ARC-c">ARC-c (medium risk)</option>
+                  <option value="ARC-d">ARC-d (high risk)</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="label">TMPR Type</label>
                 <select
                   value={sora.tmpr?.type || 'VLOS'}
                   onChange={(e) => updateTmpr({ type: e.target.value })}
                   className="input"
                 >
-                  {Object.entries(tmprDefinitions).map(([key, tmpr]) => (
-                    <option key={key} value={key}>{key} - {tmpr.description}</option>
-                  ))}
+                  <option value="VLOS">VLOS (gain ≤ 2 levels)</option>
+                  <option value="EVLOS">EVLOS (gain ≤ 1 level)</option>
+                  <option value="BVLOS">BVLOS (no automatic gain)</option>
                 </select>
               </div>
+            </div>
+
+            {sora.tmpr?.type === 'VLOS' && (
               <div>
                 <label className="label">TMPR Robustness</label>
                 <select
@@ -1044,12 +1160,11 @@ export default function ProjectSORA({ project, onUpdate }) {
                   onChange={(e) => updateTmpr({ robustness: e.target.value })}
                   className="input"
                 >
-                  {robustnessLevels.filter(r => r.value !== 'none').map(r => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
+                  <option value="low">Low (1 level reduction)</option>
+                  <option value="medium">Medium (2 level reduction)</option>
                 </select>
               </div>
-            </div>
+            )}
 
             <div className="p-3 bg-purple-900 text-white rounded-lg flex items-center justify-between">
               <span className="text-sm">Residual ARC:</span>
@@ -1067,7 +1182,7 @@ export default function ProjectSORA({ project, onUpdate }) {
             className="flex items-center justify-between w-full text-left"
           >
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Box className="w-5 h-5 text-cyan-500" />
+              <Box className="w-5 h-5 text-indigo-500" />
               Step 8: Containment
               {!containmentCompliant && (
                 <span className="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded">Gap</span>
@@ -1078,6 +1193,12 @@ export default function ProjectSORA({ project, onUpdate }) {
 
           {expandedSections.containment && (
             <div className="mt-4 space-y-4">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  Adjacent area distance calculated per SORA 2.5: 3 minutes × max speed = {(adjacentDistance / 1000).toFixed(1)} km
+                </p>
+              </div>
+
               <div>
                 <label className="label">Adjacent Area Population</label>
                 <select
@@ -1091,12 +1212,11 @@ export default function ProjectSORA({ project, onUpdate }) {
                 </select>
               </div>
 
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="grid sm:grid-cols-2 gap-4 mb-4">
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 mb-3">
                   <div className="p-3 bg-white rounded border">
                     <p className="text-xs text-gray-500 mb-1">Adjacent Distance</p>
-                    <p className="text-lg font-semibold">{(adjacentDistance / 1000).toFixed(1)} km</p>
-                    <p className="text-xs text-gray-400">3 min Ã— {sora.maxSpeed || 25} m/s</p>
+                    <p className="text-lg font-semibold text-gray-900">{(adjacentDistance / 1000).toFixed(1)} km</p>
                   </div>
                   <div className="p-3 bg-white rounded border">
                     <p className="text-xs text-gray-500 mb-1">Required Robustness</p>
