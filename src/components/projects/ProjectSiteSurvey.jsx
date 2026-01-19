@@ -8,9 +8,10 @@
  * - Population assessment with SORA categories
  * - Airspace classification
  * - Access and surroundings documentation
+ * - Photo upload with categorization (Batch 4)
  * 
  * @location src/components/projects/ProjectSiteSurvey.jsx
- * @action NEW
+ * @action REPLACE
  */
 
 import React, { useState, useCallback, useMemo } from 'react'
@@ -43,6 +44,7 @@ import {
 } from 'lucide-react'
 import UnifiedProjectMap from '../map/UnifiedProjectMap'
 import { SiteSelector } from '../map/MapControls'
+import PhotoUpload, { PhotoCountBadge } from '../PhotoUpload'
 import { 
   POPULATION_CATEGORIES, 
   createDefaultSite,
@@ -65,14 +67,14 @@ const AIRSPACE_CLASSES = [
 ]
 
 const OBSTACLE_TYPES = [
-  { value: 'tower', label: 'Tower/Antenna', icon: 'ðŸ“¡' },
-  { value: 'wire', label: 'Power Lines/Wires', icon: 'âš¡' },
-  { value: 'building', label: 'Building/Structure', icon: 'ðŸ¢' },
-  { value: 'tree', label: 'Trees/Vegetation', icon: 'ðŸŒ²' },
-  { value: 'terrain', label: 'Terrain Feature', icon: 'â›°ï¸' },
-  { value: 'water', label: 'Water Tower/Tank', icon: 'ðŸ’§' },
-  { value: 'crane', label: 'Crane', icon: 'ðŸ—ï¸' },
-  { value: 'other', label: 'Other', icon: 'âš ï¸' }
+  { value: 'tower', label: 'Tower/Antenna', icon: '📡' },
+  { value: 'wire', label: 'Power Lines/Wires', icon: '⚡' },
+  { value: 'building', label: 'Building/Structure', icon: '🏢' },
+  { value: 'tree', label: 'Trees/Vegetation', icon: '🌲' },
+  { value: 'terrain', label: 'Terrain Feature', icon: '⛰️' },
+  { value: 'water', label: 'Water Tower/Tank', icon: '💧' },
+  { value: 'crane', label: 'Crane', icon: '🏗️' },
+  { value: 'other', label: 'Other', icon: '⚠️' }
 ]
 
 // ============================================
@@ -740,12 +742,12 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
               <h4 className={`font-medium mb-2 ${
                 validation.isComplete ? 'text-green-800' : 'text-amber-800'
               }`}>
-                {validation.isComplete ? 'âœ“ Survey Complete' : 'Survey Incomplete'}
+                {validation.isComplete ? '✓ Survey Complete' : 'Survey Incomplete'}
               </h4>
               {!validation.isComplete && (
                 <ul className="text-sm space-y-1">
                   {validation.issues.map((issue, i) => (
-                    <li key={i} className="text-amber-700">â€¢ {issue.message}</li>
+                    <li key={i} className="text-amber-700">• {issue.message}</li>
                   ))}
                 </ul>
               )}
@@ -1108,10 +1110,20 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
               />
             </div>
             
-            {/* Photo upload placeholder */}
-            <div className="mt-4 p-6 border-2 border-dashed border-gray-300 rounded-lg text-center">
-              <Camera className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500">Photo upload coming soon</p>
+            {/* Photo upload */}
+            <div className="mt-6">
+              <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <Camera className="w-4 h-4" />
+                Site Photos
+                <PhotoCountBadge count={surveyData.photos?.length} />
+              </h4>
+              <PhotoUpload
+                projectId={project?.id}
+                siteId={activeSiteId}
+                photos={surveyData.photos || []}
+                onPhotosChange={(photos) => updateSiteSurveyData({ photos })}
+                maxPhotos={20}
+              />
             </div>
           </CollapsibleSection>
         </div>
