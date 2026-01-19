@@ -8,6 +8,7 @@
  * - Issue #3: Added client logo display in header
  * - Issue #4: Better change detection for nested object updates
  * - Issue #5: Visual feedback for save states (saving, saved, error)
+ * - Added: ProjectNeedsAnalysis tab for CONOPS pre-planning
  * 
  * @location src/pages/ProjectView.jsx
  * @action REPLACE
@@ -40,7 +41,8 @@ import {
   Building2,
   AlertCircle,
   Cloud,
-  CloudOff
+  CloudOff,
+  Target
 } from 'lucide-react'
 import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
@@ -57,9 +59,11 @@ import ProjectApprovals from '../components/projects/ProjectApprovals'
 import ProjectTailgate from '../components/projects/ProjectTailgate'
 import ProjectForms from '../components/projects/ProjectForms'
 import ProjectExport from '../components/projects/ProjectExport'
+import ProjectNeedsAnalysis from '../components/projects/ProjectNeedsAnalysis'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FolderKanban },
+  { id: 'needs', label: 'Needs Analysis', icon: Target },
   { id: 'sections', label: 'Sections', icon: Settings2 },
   { id: 'crew', label: 'Crew', icon: Users },
   { id: 'site', label: 'Site Survey', icon: MapPin, toggleable: true, sectionKey: 'siteSurvey' },
@@ -534,6 +538,9 @@ export default function ProjectView() {
       <div>
         {activeTab === 'overview' && (
           <ProjectOverview project={project} onUpdate={handleUpdate} />
+        )}
+        {activeTab === 'needs' && (
+          <ProjectNeedsAnalysis project={project} onUpdate={handleUpdate} />
         )}
         {activeTab === 'sections' && (
           <ProjectSections project={project} onUpdate={handleUpdate} />
