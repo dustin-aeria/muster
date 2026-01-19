@@ -1,3 +1,21 @@
+/**
+ * Forms.jsx
+ * Dynamic form builder and submission system
+ * 
+ * Features:
+ * - Template-based form creation
+ * - Dynamic field visibility with safe condition evaluation
+ * - Risk assessment calculations
+ * - RPAS incident reporting triggers
+ * - Form status tracking
+ * 
+ * Security Fix (Batch 2):
+ * - Replaced eval() with safe condition parser for showIf conditions
+ * 
+ * @location src/pages/Forms.jsx
+ * @action REPLACE
+ */
+
 import { useState, useEffect } from 'react'
 import { 
   Plus, Search, ClipboardList, Filter, ChevronRight, ChevronDown,
@@ -124,17 +142,67 @@ function NotificationTriggersPanel({ triggers }) {
 function FormField({ field, value, onChange, formData }) {
   const [localValue, setLocalValue] = useState(value || '')
   
-  // Handle show/hide conditions
+  // Safe condition evaluator (replaces eval for security)
+  const evaluateCondition = (condition, data) => {
+    if (!condition || !data) return true
+    
+    // Handle simple equality: fieldName === 'value' or fieldName !== 'value'
+    const equalityMatch = condition.match(/^(\w+)\s*(===?|!==?)\s*['"]([^'"]*)['"]\s*$/)
+    if (equalityMatch) {
+      const [, fieldName, operator, expectedValue] = equalityMatch
+      const actualValue = data[fieldName]
+      if (operator === '===' || operator === '==') {
+        return actualValue === expectedValue
+      }
+      if (operator === '!==' || operator === '!=') {
+        return actualValue !== expectedValue
+      }
+    }
+    
+    // Handle boolean comparison: fieldName === true/false
+    const boolMatch = condition.match(/^(\w+)\s*(===?|!==?)\s*(true|false)\s*$/)
+    if (boolMatch) {
+      const [, fieldName, operator, boolStr] = boolMatch
+      const actualValue = data[fieldName]
+      const expectedBool = boolStr === 'true'
+      if (operator === '===' || operator === '==') {
+        return actualValue === expectedBool
+      }
+      if (operator === '!==' || operator === '!=') {
+        return actualValue !== expectedBool
+      }
+    }
+    
+    // Handle simple truthy check: fieldName
+    const truthyMatch = condition.match(/^!?(\w+)$/)
+    if (truthyMatch) {
+      const isNegated = condition.startsWith('!')
+      const fieldName = truthyMatch[1]
+      const actualValue = data[fieldName]
+      return isNegated ? !actualValue : !!actualValue
+    }
+    
+    // Handle AND conditions: fieldA && fieldB
+    if (condition.includes('&&')) {
+      const parts = condition.split('&&').map(p => p.trim())
+      return parts.every(part => evaluateCondition(part, data))
+    }
+    
+    // Handle OR conditions: fieldA || fieldB
+    if (condition.includes('||')) {
+      const parts = condition.split('||').map(p => p.trim())
+      return parts.some(part => evaluateCondition(part, data))
+    }
+    
+    // Default to showing the field if condition can't be parsed
+    console.warn('Could not parse showIf condition:', condition)
+    return true
+  }
+  
+  // Handle show/hide conditions safely
   if (field.showIf) {
-    try {
-      const condition = field.showIf.replace(/(\w+)/g, (match) => {
-        if (match === 'true' || match === 'false') return match
-        return `formData?.${match}`
-      })
-      // eslint-disable-next-line no-eval
-      if (!eval(condition)) return null
-    } catch (e) {
-      // If condition evaluation fails, show the field
+    if (!evaluateCondition(field.showIf, formData)) {
+      return null
     }
   }
 
