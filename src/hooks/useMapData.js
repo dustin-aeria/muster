@@ -8,8 +8,9 @@
  * - Drawing mode state
  * - Map element CRUD operations
  * 
- * BATCH 6 FINAL:
+ * FIXES APPLIED:
  * - Fixed obstacle/obstacles naming mismatch
+ * - Fixed musterPoint/musterPoints naming mismatch (was breaking muster point tool)
  * 
  * @location src/hooks/useMapData.js
  * @action REPLACE
@@ -474,9 +475,14 @@ export function useMapData(project, onUpdate, options = {}) {
   const setMarker = useCallback((elementType, lngLat, options = {}) => {
     if (!activeSite) return null
     
-    // BATCH 6 FIX: Handle obstacle/obstacles naming inconsistency
-    // DRAWING_MODES uses 'obstacle' but MAP_ELEMENT_STYLES uses 'obstacles'
-    const styleKey = elementType === 'obstacle' ? 'obstacles' : elementType
+    // Handle singular/plural naming inconsistencies between DRAWING_MODES and MAP_ELEMENT_STYLES
+    // DRAWING_MODES uses singular: 'obstacle', 'musterPoint'
+    // MAP_ELEMENT_STYLES uses plural: 'obstacles', 'musterPoints'
+    const styleKeyMap = {
+      'obstacle': 'obstacles',
+      'musterPoint': 'musterPoints'
+    }
+    const styleKey = styleKeyMap[elementType] || elementType
     const style = MAP_ELEMENT_STYLES[styleKey]
     if (!style) {
       console.warn(`No style found for element type: ${elementType} (tried: ${styleKey})`)
