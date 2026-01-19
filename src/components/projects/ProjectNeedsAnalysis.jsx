@@ -48,7 +48,7 @@ import {
   Clapperboard,
   ShieldCheck,
   Leaf,
-  Pickaxe,
+  Hammer,
   Route,
   Navigation,
   Clipboard,
@@ -218,7 +218,7 @@ const MISSION_PROFILES = {
   mining: {
     id: 'mining',
     name: 'Mining Operations',
-    icon: Pickaxe,
+    icon: Hammer,
     description: 'Pit surveys, stockpile measurement, haul road inspection, blast monitoring',
     typicalPayloads: ['rgb_camera', 'lidar', 'multispectral'],
     considerations: [
