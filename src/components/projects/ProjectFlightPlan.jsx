@@ -82,6 +82,19 @@ const FLIGHT_GEOGRAPHY_METHODS = [
   { value: 'manual', label: 'Manual', description: 'Draw flight geography directly on map' }
 ]
 
+const AREA_TYPES = [
+  { value: 'point', label: 'Point Operation', description: 'Stationary or near-stationary flight around a single point' },
+  { value: 'corridor', label: 'Corridor / Linear', description: 'Flight along a linear path (pipeline, road, powerline)' },
+  { value: 'area', label: 'Area Survey', description: 'Flight covering a defined area with multiple passes' }
+]
+
+const GROUND_RISK_BUFFER_METHODS = [
+  { value: 'altitude', label: 'Altitude-Based', description: '1:1 ratio - buffer equals flight altitude' },
+  { value: 'ballistic', label: 'Ballistic Calculation', description: 'Based on max speed, altitude, and glide ratio' },
+  { value: 'fixed', label: 'Fixed Distance', description: 'Manual fixed-distance buffer' },
+  { value: 'containment', label: 'With Containment', description: 'Reduced buffer with demonstrated containment' }
+]
+
 const DEFAULT_CONTINGENCIES = [
   { trigger: 'Loss of C2 Link', action: 'Return to Home (RTH) automatically engages. If no RTH within 30 seconds, land in place.', priority: 'high' },
   { trigger: 'Low Battery Warning', action: 'Immediately return to launch point. Land with minimum 20% remaining.', priority: 'high' },
@@ -857,7 +870,7 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
           onChange={(value) => updateSiteFlightPlan({ operationType: value })}
         />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Max Altitude (AGL)
@@ -875,62 +888,241 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
                 placeholder="120"
                 className="input w-24"
               />
-              <span className="text-sm text-gray-500">meters</span>
+              <span className="text-sm text-gray-500">m</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Canadian limit: 122m (400ft) AGL</p>
+            <p className="text-xs text-gray-500 mt-1">Limit: 122m (400ft)</p>
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Flight Geography Method
-            </label>
-            <select
-              value={siteFlightPlan.flightGeographyMethod || 'inside-out'}
-              onChange={(e) => updateSiteFlightPlan({ flightGeographyMethod: e.target.value })}
-              className="input"
-            >
-              {FLIGHT_GEOGRAPHY_METHODS.map(method => (
-                <option key={method.value} value={method.value}>
-                  {method.label} - {method.description}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contingency Buffer
+              Max Distance from Pilot
             </label>
             <div className="flex items-center gap-2">
               <input
                 type="number"
-                step="10"
+                step="100"
                 min="0"
-                value={siteFlightPlan.contingencyBuffer || ''}
+                value={siteFlightPlan.maxDistanceFromPilot || ''}
                 onChange={(e) => updateSiteFlightPlan({ 
-                  contingencyBuffer: e.target.value ? Number(e.target.value) : null 
+                  maxDistanceFromPilot: e.target.value ? Number(e.target.value) : null 
                 })}
-                placeholder="50"
+                placeholder="500"
                 className="input w-24"
               />
-              <span className="text-sm text-gray-500">meters</span>
+              <span className="text-sm text-gray-500">m</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">SORA: Based on aircraft max speed Ã— 15s</p>
+            <p className="text-xs text-gray-500 mt-1">VLOS typically ≤500m</p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Planned Flight Duration
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                step="5"
+                min="0"
+                value={siteFlightPlan.flightDuration || ''}
+                onChange={(e) => updateSiteFlightPlan({ 
+                  flightDuration: e.target.value ? Number(e.target.value) : null 
+                })}
+                placeholder="20"
+                className="input w-24"
+              />
+              <span className="text-sm text-gray-500">min</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Per flight / battery</p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Total Flights Planned
+            </label>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              value={siteFlightPlan.totalFlights || ''}
+              onChange={(e) => updateSiteFlightPlan({ 
+                totalFlights: e.target.value ? Number(e.target.value) : null 
+              })}
+              placeholder="1"
+              className="input w-24"
+            />
           </div>
         </div>
-        
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Flight Plan Notes
-          </label>
-          <textarea
-            value={siteFlightPlan.notes || ''}
-            onChange={(e) => updateSiteFlightPlan({ notes: e.target.value })}
-            placeholder="Additional notes about flight operations at this site..."
-            rows={3}
-            className="input"
-          />
+      </CollapsibleSection>
+      
+      {/* Flight Geography */}
+      <CollapsibleSection
+        title="Flight Geography"
+        icon={Square}
+        badge={siteFlightPlan.areaType ? AREA_TYPES.find(t => t.value === siteFlightPlan.areaType)?.label : null}
+        status={siteFlightPlan.areaType ? 'complete' : 'incomplete'}
+      >
+        <div className="space-y-4">
+          {/* Area Type Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Operation Area Type
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {AREA_TYPES.map(type => (
+                <label
+                  key={type.value}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    siteFlightPlan.areaType === type.value
+                      ? 'bg-aeria-navy/5 border-aeria-navy'
+                      : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="areaType"
+                    value={type.value}
+                    checked={siteFlightPlan.areaType === type.value}
+                    onChange={(e) => updateSiteFlightPlan({ areaType: e.target.value })}
+                    className="mt-1"
+                  />
+                  <div>
+                    <span className="font-medium text-gray-900">{type.label}</span>
+                    <p className="text-xs text-gray-500 mt-0.5">{type.description}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+          
+          {/* Geography Method & Buffers */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Flight Geography Method
+              </label>
+              <select
+                value={siteFlightPlan.flightGeographyMethod || 'manual'}
+                onChange={(e) => updateSiteFlightPlan({ flightGeographyMethod: e.target.value })}
+                className="input"
+              >
+                {FLIGHT_GEOGRAPHY_METHODS.map(method => (
+                  <option key={method.value} value={method.value}>
+                    {method.label} - {method.description}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Ground Risk Buffer Method
+              </label>
+              <select
+                value={siteFlightPlan.groundRiskBufferMethod || 'altitude'}
+                onChange={(e) => updateSiteFlightPlan({ groundRiskBufferMethod: e.target.value })}
+                className="input"
+              >
+                {GROUND_RISK_BUFFER_METHODS.map(method => (
+                  <option key={method.value} value={method.value}>
+                    {method.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {GROUND_RISK_BUFFER_METHODS.find(m => m.value === (siteFlightPlan.groundRiskBufferMethod || 'altitude'))?.description}
+              </p>
+            </div>
+          </div>
+          
+          {/* Buffer Values */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contingency Buffer
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  step="10"
+                  min="0"
+                  value={siteFlightPlan.contingencyBuffer || ''}
+                  onChange={(e) => updateSiteFlightPlan({ 
+                    contingencyBuffer: e.target.value ? Number(e.target.value) : null 
+                  })}
+                  placeholder="50"
+                  className="input w-24"
+                />
+                <span className="text-sm text-gray-500">m</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Max speed × 15 sec typical</p>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Ground Risk Buffer
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  step="10"
+                  min="0"
+                  value={siteFlightPlan.groundRiskBuffer || ''}
+                  onChange={(e) => updateSiteFlightPlan({ 
+                    groundRiskBuffer: e.target.value ? Number(e.target.value) : null 
+                  })}
+                  placeholder="120"
+                  className="input w-24"
+                />
+                <span className="text-sm text-gray-500">m</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {siteFlightPlan.groundRiskBufferMethod === 'altitude' 
+                  ? `Auto: ${siteFlightPlan.maxAltitudeAGL || 120}m (1:1)`
+                  : 'Manual entry'
+                }
+              </p>
+            </div>
+            
+            <div className="flex items-center">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={siteFlightPlan.adjacentAreaConsidered || false}
+                  onChange={(e) => updateSiteFlightPlan({ adjacentAreaConsidered: e.target.checked })}
+                  className="w-4 h-4 text-aeria-navy rounded"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Adjacent Area Assessed</span>
+                  <p className="text-xs text-gray-500">Per SORA Step 8</p>
+                </div>
+              </label>
+            </div>
+          </div>
+          
+          {/* Map reference note */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              <Info className="w-4 h-4 inline mr-1" />
+              Draw your flight geography on the map using the <strong>Drawing Tools</strong>. 
+              The flight volume, contingency volume, and ground risk buffer will be visualized.
+            </p>
+          </div>
         </div>
+      </CollapsibleSection>
+      
+      {/* Flight Plan Notes */}
+      <CollapsibleSection
+        title="Flight Plan Notes"
+        icon={Info}
+        defaultOpen={false}
+      >
+        <textarea
+          value={siteFlightPlan.notes || ''}
+          onChange={(e) => updateSiteFlightPlan({ notes: e.target.value })}
+          placeholder="Additional notes about flight operations at this site..."
+          rows={4}
+          className="input"
+        />
       </CollapsibleSection>
       
       {/* Airspace - Site Level */}
