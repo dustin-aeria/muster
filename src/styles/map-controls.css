@@ -2,63 +2,41 @@
  * map-controls.css
  * Map-specific CSS overrides for proper interactivity
  * 
- * PHASE 1 FIXES:
+ * BATCH 6 FINAL:
  * - Ensures map control panels are clickable
  * - Fixes scroll handling within controls
  * - Proper z-index stacking
  * - Prevents map events from interfering with controls
  * 
- * @location src/styles/map-controls.css (or add to index.css)
- * @action NEW (append to existing styles)
+ * @location src/styles/map-controls.css
+ * @action REPLACE
  */
 
-/* Map control panels - ensure they're clickable */
+/* ============================================
+   MAP CONTROL PANELS
+   Ensure controls are always interactive
+   ============================================ */
+
 .map-control-panel {
   pointer-events: auto !important;
   touch-action: auto !important;
   -webkit-user-select: none;
   user-select: none;
-}
-
-/* Map container - allow events to pass through to controls */
-.map-container {
   position: relative;
+  z-index: 50;
 }
 
-/* Controls container - ensure high z-index and clickability */
-.map-controls-container {
-  pointer-events: none;
-  z-index: 20;
-}
-
-.map-controls-container > * {
-  pointer-events: auto;
-}
-
-/* Scrollable areas within controls */
-.map-control-panel .overflow-y-auto {
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-}
-
-/* Prevent map zoom on control scroll */
-.map-control-panel:hover {
-  pointer-events: auto !important;
-}
-
-/* Fix for mapbox controls */
-.mapboxgl-map {
-  pointer-events: auto;
-}
-
-/* Ensure buttons in controls are clickable */
+/* Make sure all interactive elements work */
 .map-control-panel button,
 .map-control-panel input,
 .map-control-panel select,
-.map-control-panel textarea {
+.map-control-panel textarea,
+.map-control-panel [role="button"],
+.map-control-panel a {
   pointer-events: auto !important;
   cursor: pointer;
+  position: relative;
+  z-index: 51;
 }
 
 .map-control-panel input,
@@ -66,65 +44,133 @@
   cursor: text;
 }
 
-/* Fix for dropdown menus in controls */
+/* ============================================
+   SCROLL HANDLING
+   Allow scrolling within control panels
+   ============================================ */
+
+.map-control-panel .overflow-y-auto,
+.map-control-panel .overflow-x-auto,
+.map-control-panel .overflow-auto {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  touch-action: pan-y;
+}
+
+/* Custom scrollbar for control panels */
+.map-control-panel ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.map-control-panel ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.map-control-panel ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.map-control-panel ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   Z-INDEX STACKING
+   Ensure proper layering of controls
+   ============================================ */
+
+/* Dropdown menus and overlays */
 .map-control-panel [class*="absolute"] {
-  z-index: 50;
+  z-index: 60;
   pointer-events: auto;
 }
 
-/* Fix overlay backdrop */
+/* Modal backdrop */
 .map-control-panel .fixed.inset-0 {
-  z-index: 40;
+  z-index: 55;
 }
 
-/* Drawing mode indicator at bottom */
-.drawing-mode-indicator {
-  pointer-events: none;
-}
+/* ============================================
+   MAPBOX OVERRIDES
+   Prevent mapbox from interfering
+   ============================================ */
 
-/* Mapbox attribution and navigation controls */
+/* Mapbox navigation controls - lower z-index */
 .mapboxgl-ctrl-attrib,
-.mapboxgl-ctrl-nav {
-  z-index: 10;
+.mapboxgl-ctrl-nav,
+.mapboxgl-ctrl-group {
+  z-index: 10 !important;
 }
 
-/* Site selector improvements */
-.site-selector-list {
-  max-height: 240px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+/* Ensure our controls are above mapbox controls */
+.mapboxgl-map .map-control-panel {
+  z-index: 50 !important;
 }
 
-/* Layer toggles improvements */
-.layer-toggle-item {
-  cursor: pointer;
-  transition: background-color 0.15s ease;
+/* ============================================
+   TOUCH DEVICE IMPROVEMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .map-control-panel {
+    touch-action: manipulation;
+  }
+  
+  /* Larger touch targets on mobile */
+  .map-control-panel button {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
-.layer-toggle-item:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+/* ============================================
+   FULLSCREEN MODE
+   ============================================ */
+
+.map-fullscreen-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  height: 100vh !important;
+  width: 100vw !important;
 }
 
-/* Drawing tools improvements */
-.drawing-tool-button {
-  transition: all 0.15s ease;
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .map-control-panel {
+    border-width: 2px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  }
 }
 
-.drawing-tool-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .map-control-panel,
+  .map-control-panel * {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
-.drawing-tool-button.active {
-  transform: scale(0.98);
+/* Focus visible for keyboard navigation */
+.map-control-panel button:focus-visible,
+.map-control-panel input:focus-visible,
+.map-control-panel select:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
 }
 
-/* Basemap switcher popup */
-.basemap-popup {
-  min-width: 140px;
-}
+/* ============================================
+   PREVENT TEXT SELECTION DURING MAP USE
+   ============================================ */
 
-/* Prevent text selection during map interactions */
 .map-container * {
   -webkit-user-select: none;
   user-select: none;
@@ -134,33 +180,4 @@
 .map-container textarea {
   -webkit-user-select: text;
   user-select: text;
-}
-
-/* Mobile touch improvements */
-@media (max-width: 768px) {
-  .map-control-panel {
-    touch-action: manipulation;
-  }
-  
-  .map-control-panel button {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
-
-/* High contrast for visibility */
-@media (prefers-contrast: high) {
-  .map-control-panel {
-    border-width: 2px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  }
-}
-
-/* Reduced motion preference */
-@media (prefers-reduced-motion: reduce) {
-  .map-control-panel,
-  .map-control-panel * {
-    transition: none !important;
-    animation: none !important;
-  }
 }
