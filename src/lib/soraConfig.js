@@ -338,6 +338,91 @@ export const containmentRobustness = {
 }
 
 // ============================================
+// CONTAINMENT METHODS (Step #8)
+// Methods to ensure UAS stays within operational volume
+// ============================================
+export const containmentMethods = {
+  none: {
+    label: 'None',
+    description: 'No specific containment measures',
+    robustnessAchievable: 'none',
+    evidenceRequired: []
+  },
+  procedural: {
+    label: 'Procedural',
+    description: 'Operational procedures and flight planning to stay within boundaries',
+    robustnessAchievable: 'low',
+    evidenceRequired: [
+      'Flight planning procedures',
+      'Boundary awareness training',
+      'Visual reference points identified'
+    ]
+  },
+  sw_geofence: {
+    label: 'Software Geofencing',
+    description: 'Software-based geofencing that alerts pilot when approaching boundaries',
+    robustnessAchievable: 'medium',
+    evidenceRequired: [
+      'Geofence configuration documented',
+      'Alert/warning system tested',
+      'Pilot response procedures',
+      'Geofence accuracy specifications'
+    ]
+  },
+  hw_geofence: {
+    label: 'Hardware Geofencing',
+    description: 'Hardware-enforced geofencing with automatic position limiting',
+    robustnessAchievable: 'medium',
+    evidenceRequired: [
+      'Hardware geofence specifications',
+      'Independent position source',
+      'Automatic boundary enforcement tested',
+      'Failure mode analysis'
+    ]
+  },
+  flight_termination: {
+    label: 'Flight Termination System',
+    description: 'Independent system to terminate flight if boundaries exceeded',
+    robustnessAchievable: 'high',
+    evidenceRequired: [
+      'FTS specifications and design',
+      'Independent trigger mechanism',
+      'Demonstrated reliability data',
+      'Testing and verification records',
+      'Activation criteria defined'
+    ]
+  },
+  parachute_fts: {
+    label: 'Parachute + Flight Termination',
+    description: 'Flight termination with parachute recovery system',
+    robustnessAchievable: 'high',
+    evidenceRequired: [
+      'Parachute specifications',
+      'Combined FTS + parachute testing',
+      'Descent rate and footprint analysis',
+      'Reliability demonstration',
+      'Activation altitude requirements'
+    ]
+  }
+}
+
+// ============================================
+// ADJACENT AREA ASSESSMENT GUIDANCE
+// ============================================
+export const adjacentAreaGuidance = {
+  sameOrLower: {
+    label: 'Same or Lower Population',
+    description: 'Adjacent area has same or lower population density than operational area',
+    action: 'No additional containment required beyond operational requirements'
+  },
+  higher: {
+    label: 'Higher Population',
+    description: 'Adjacent area has higher population density than operational area',
+    action: 'Must demonstrate containment OR use higher population category for GRC'
+  }
+}
+
+// ============================================
 // OSO CATEGORIES (SORA 2.5 Table 14)
 // ============================================
 export const osoCategories = {
@@ -886,6 +971,8 @@ export default {
   sailDescriptions,
   robustnessLevels,
   containmentRobustness,
+  containmentMethods,
+  adjacentAreaGuidance,
   osoCategories,
   osoDefinitions,
   getIntrinsicGRC,
