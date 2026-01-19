@@ -2,15 +2,18 @@
  * ProjectView.jsx
  * Main project view component with tabbed navigation
  * 
- * FIXES APPLIED:
- * - Issue #2: Fixed "No client assigned" using wrong field (project.client -> project.clientName)
- * - Issue #3: Added client logo display in header
+ * PHASE 1 FIXES:
+ * - Fixed auto-save with debounced saving (2 second delay)
+ * - Added visible save status indicator
+ * - Fixed hasChanges state tracking
+ * - Added toast-style notifications for save status
+ * - Improved save button responsiveness
  * 
  * @location src/pages/ProjectView.jsx
  * @action REPLACE
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { 
   ArrowLeft, 
@@ -34,7 +37,9 @@ import {
   Loader2,
   Shield,
   CheckCircle2,
-  Building2
+  Building2,
+  CloudOff,
+  Cloud
 } from 'lucide-react'
 import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
@@ -77,26 +82,36 @@ const statusColors = {
   archived: 'bg-gray-100 text-gray-500 border-gray-300'
 }
 
+// Save status types
+const SAVE_STATUS = {
+  IDLE: 'idle',
+  PENDING: 'pending',
+  SAVING: 'saving',
+  SAVED: 'saved',
+  ERROR: 'error'
+}
+
 export default function ProjectView() {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [autoSaved, setAutoSaved] = useState(false)
+  const [saveStatus, setSaveStatus] = useState(SAVE_STATUS.IDLE)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('overview')
   const [hasChanges, setHasChanges] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [saveError, setSaveError] = useState(null)
   
-  // FIX #3: Store client data for logo display
+  // Store client data for logo display
   const [clientData, setClientData] = useState(null)
   
-  // Refs for auto-save
+  // Refs for debounced auto-save
   const projectRef = useRef(project)
   const hasChangesRef = useRef(hasChanges)
-  const savingRef = useRef(false)
+  const saveTimerRef = useRef(null)
+  const isSavingRef = useRef(false)
   
   // Keep refs in sync
   useEffect(() => {
@@ -104,11 +119,18 @@ export default function ProjectView() {
     hasChangesRef.current = hasChanges
   }, [project, hasChanges])
 
+  // Load project
   useEffect(() => {
     loadProject()
+    return () => {
+      // Cleanup save timer on unmount
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
+    }
   }, [projectId])
 
-  // FIX #3: Load client data when project loads
+  // Load client data when project loads
   useEffect(() => {
     const loadClientData = async () => {
       if (project?.clientId) {
@@ -126,40 +148,77 @@ export default function ProjectView() {
     loadClientData()
   }, [project?.clientId])
 
-  // Auto-save function
-  const performAutoSave = useCallback(async () => {
-    if (!projectRef.current || !hasChangesRef.current || savingRef.current) return false
+  // ============================================
+  // AUTO-SAVE LOGIC (Debounced)
+  // ============================================
+  
+  const performSave = useCallback(async () => {
+    if (!projectRef.current || isSavingRef.current) return false
     
-    savingRef.current = true
+    isSavingRef.current = true
+    setSaveStatus(SAVE_STATUS.SAVING)
+    setSaveError(null)
+    
     try {
       await updateProject(projectId, projectRef.current)
       setHasChanges(false)
       hasChangesRef.current = false
-      setAutoSaved(true)
-      setTimeout(() => setAutoSaved(false), 2000)
+      setSaveStatus(SAVE_STATUS.SAVED)
+      
+      // Reset to idle after 3 seconds
+      setTimeout(() => {
+        setSaveStatus(prev => prev === SAVE_STATUS.SAVED ? SAVE_STATUS.IDLE : prev)
+      }, 3000)
+      
       return true
     } catch (err) {
-      console.error('Auto-save failed:', err)
+      console.error('Save failed:', err)
+      setSaveStatus(SAVE_STATUS.ERROR)
+      setSaveError(err.message || 'Failed to save')
       return false
     } finally {
-      savingRef.current = false
+      isSavingRef.current = false
     }
   }, [projectId])
 
-  // Auto-save on component unmount (leaving page)
+  // Debounced auto-save: triggers 2 seconds after last change
+  const scheduleAutoSave = useCallback(() => {
+    // Clear existing timer
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+    }
+    
+    // Set pending status
+    setSaveStatus(SAVE_STATUS.PENDING)
+    
+    // Schedule new save
+    saveTimerRef.current = setTimeout(() => {
+      if (hasChangesRef.current && !isSavingRef.current) {
+        performSave()
+      }
+    }, 2000) // 2 second debounce
+  }, [performSave])
+
+  // Save on unmount if there are changes
   useEffect(() => {
     return () => {
-      if (hasChangesRef.current && projectRef.current) {
-        performAutoSave()
+      if (hasChangesRef.current && projectRef.current && !isSavingRef.current) {
+        // Synchronous save attempt on unmount
+        updateProject(projectId, projectRef.current).catch(err => {
+          console.error('Save on unmount failed:', err)
+        })
       }
     }
-  }, [performAutoSave])
+  }, [projectId])
 
   // Warn before browser close/refresh if unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hasChangesRef.current) {
-        performAutoSave()
+        // Try to save
+        if (projectRef.current && !isSavingRef.current) {
+          updateProject(projectId, projectRef.current).catch(console.error)
+        }
         e.preventDefault()
         e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
         return e.returnValue
@@ -168,31 +227,22 @@ export default function ProjectView() {
 
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [performAutoSave])
+  }, [projectId])
 
-  // Auto-save when navigating away within the app
-  useEffect(() => {
-    const handleNavigation = async () => {
-      if (hasChangesRef.current) {
-        await performAutoSave()
-      }
-    }
-    
-    return () => {
-      handleNavigation()
-    }
-  }, [location.pathname, performAutoSave])
-
-  // Periodic auto-save every 30 seconds if there are changes
+  // Periodic auto-save fallback (every 30 seconds) for long editing sessions
   useEffect(() => {
     const interval = setInterval(() => {
-      if (hasChangesRef.current && !savingRef.current) {
-        performAutoSave()
+      if (hasChangesRef.current && !isSavingRef.current) {
+        performSave()
       }
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [performAutoSave])
+  }, [performSave])
+
+  // ============================================
+  // DATA LOADING
+  // ============================================
 
   const loadProject = async () => {
     setLoading(true)
@@ -201,6 +251,8 @@ export default function ProjectView() {
       let data = await getProject(projectId)
       data = migrateProjectToDecoupledStructure(data)
       setProject(data)
+      setHasChanges(false)
+      setSaveStatus(SAVE_STATUS.IDLE)
     } catch (err) {
       console.error('Error loading project:', err)
       setError('Project not found')
@@ -209,25 +261,29 @@ export default function ProjectView() {
     }
   }
 
+  // ============================================
+  // HANDLERS
+  // ============================================
+
   const handleSave = async () => {
-    if (!project || !hasChanges) return
+    if (!project) return
     
-    setSaving(true)
-    try {
-      await updateProject(projectId, project)
-      setHasChanges(false)
-    } catch (err) {
-      console.error('Error saving project:', err)
-      alert('Failed to save project')
-    } finally {
-      setSaving(false)
+    // Clear any pending auto-save
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
     }
+    
+    await performSave()
   }
 
-  const handleUpdate = (updates) => {
-    setProject(prev => ({ ...prev, ...updates }))
+  const handleUpdate = useCallback((updates) => {
+    setProject(prev => {
+      if (!prev) return prev
+      return { ...prev, ...updates }
+    })
     setHasChanges(true)
-  }
+    scheduleAutoSave()
+  }, [scheduleAutoSave])
 
   const handleDelete = async () => {
     if (!confirm(`Are you sure you want to delete "${project.name}"? This cannot be undone.`)) {
@@ -248,10 +304,16 @@ export default function ProjectView() {
   }
 
   // Filter visible tabs based on enabled sections
-  const visibleTabs = tabs.filter(tab => {
-    if (!tab.toggleable) return true
-    return project?.sections?.[tab.sectionKey]
-  })
+  const visibleTabs = useMemo(() => {
+    return tabs.filter(tab => {
+      if (!tab.toggleable) return true
+      return project?.sections?.[tab.sectionKey]
+    })
+  }, [project?.sections])
+
+  // ============================================
+  // RENDER: Loading State
+  // ============================================
 
   if (loading) {
     return (
@@ -263,6 +325,10 @@ export default function ProjectView() {
       </div>
     )
   }
+
+  // ============================================
+  // RENDER: Error State
+  // ============================================
 
   if (error || !project) {
     return (
@@ -286,6 +352,62 @@ export default function ProjectView() {
     )
   }
 
+  // ============================================
+  // RENDER: Save Status Indicator
+  // ============================================
+
+  const renderSaveStatus = () => {
+    switch (saveStatus) {
+      case SAVE_STATUS.PENDING:
+        return (
+          <span className="text-sm text-gray-500 flex items-center gap-1">
+            <Circle className="w-2 h-2 fill-current text-amber-500" />
+            Unsaved
+          </span>
+        )
+      case SAVE_STATUS.SAVING:
+        return (
+          <span className="text-sm text-blue-600 flex items-center gap-1">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Saving...
+          </span>
+        )
+      case SAVE_STATUS.SAVED:
+        return (
+          <span className="text-sm text-green-600 flex items-center gap-1">
+            <CheckCircle2 className="w-4 h-4" />
+            Saved
+          </span>
+        )
+      case SAVE_STATUS.ERROR:
+        return (
+          <span className="text-sm text-red-600 flex items-center gap-1" title={saveError}>
+            <CloudOff className="w-4 h-4" />
+            Save failed
+          </span>
+        )
+      default:
+        if (hasChanges) {
+          return (
+            <span className="text-sm text-amber-600 flex items-center gap-1">
+              <Circle className="w-2 h-2 fill-current" />
+              Unsaved changes
+            </span>
+          )
+        }
+        return (
+          <span className="text-sm text-gray-400 flex items-center gap-1">
+            <Cloud className="w-4 h-4" />
+            Saved
+          </span>
+        )
+    }
+  }
+
+  // ============================================
+  // RENDER: Main Content
+  // ============================================
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -296,7 +418,7 @@ export default function ProjectView() {
             onClick={async (e) => {
               if (hasChanges) {
                 e.preventDefault()
-                await performAutoSave()
+                await performSave()
                 navigate('/projects')
               }
             }}
@@ -305,7 +427,7 @@ export default function ProjectView() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           
-          {/* FIX #3: Client logo/icon display */}
+          {/* Client logo/icon display */}
           {clientData?.logo ? (
             <div className="w-10 h-10 rounded-lg border bg-white flex items-center justify-center p-1 flex-shrink-0">
               <img 
@@ -322,37 +444,25 @@ export default function ProjectView() {
           
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-            {/* FIX #2: Use project.clientName instead of project.client */}
             <p className="text-gray-600">{project.clientName || 'No client assigned'}</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          {/* Auto-saved indicator */}
-          {autoSaved && (
-            <span className="text-sm text-green-600 flex items-center gap-1">
-              <CheckCircle2 className="w-4 h-4" />
-              Auto-saved
-            </span>
-          )}
-          
-          {/* Unsaved changes indicator */}
-          {hasChanges && !autoSaved && (
-            <span className="text-sm text-amber-600 flex items-center gap-1">
-              <Circle className="w-2 h-2 fill-current" />
-              Unsaved changes
-            </span>
-          )}
+        <div className="flex items-center gap-3">
+          {/* Save status indicator */}
+          <div className="hidden sm:block">
+            {renderSaveStatus()}
+          </div>
           
           {/* Save button */}
           <button
             onClick={handleSave}
-            disabled={!hasChanges || saving}
+            disabled={saveStatus === SAVE_STATUS.SAVING}
             className={`btn-primary inline-flex items-center gap-2 ${
-              !hasChanges ? 'opacity-50 cursor-not-allowed' : ''
+              !hasChanges && saveStatus !== SAVE_STATUS.ERROR ? 'opacity-50' : ''
             }`}
           >
-            {saving ? (
+            {saveStatus === SAVE_STATUS.SAVING ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Saving...
@@ -411,6 +521,11 @@ export default function ProjectView() {
         </div>
       </div>
 
+      {/* Mobile save status */}
+      <div className="sm:hidden flex justify-end">
+        {renderSaveStatus()}
+      </div>
+
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="flex gap-1 overflow-x-auto pb-px">
@@ -438,7 +553,16 @@ export default function ProjectView() {
       {/* Tab Content */}
       <div>
         {activeTab === 'overview' && (
-          <ProjectOverview project={project} onUpdate={handleUpdate} />
+          <ProjectOverview 
+            project={project} 
+            onUpdate={handleUpdate}
+            onNavigateToSection={(section) => {
+              if (section === 'siteSurvey') setActiveTab('site')
+              else if (section === 'flightPlan') setActiveTab('flight')
+              else if (section === 'emergency') setActiveTab('emergency')
+              else if (section === 'sora') setActiveTab('sora')
+            }}
+          />
         )}
         {activeTab === 'sections' && (
           <ProjectSections project={project} onUpdate={handleUpdate} />
