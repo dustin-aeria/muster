@@ -657,24 +657,23 @@ export function UnifiedProjectMap({
   
   const handleToggleFullscreen = useCallback(() => {
     setIsFullscreen(prev => !prev)
-    // Trigger map resize after state change
-    setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.resize()
-      }
-    }, 100)
   }, [])
+  
+  // Resize map when fullscreen changes
+  useEffect(() => {
+    if (mapRef.current) {
+      // Small delay to let the DOM update
+      setTimeout(() => {
+        mapRef.current?.resize()
+      }, 50)
+    }
+  }, [isFullscreen])
   
   // Handle Escape key to exit fullscreen
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isFullscreen) {
         setIsFullscreen(false)
-        setTimeout(() => {
-          if (mapRef.current) {
-            mapRef.current.resize()
-          }
-        }, 100)
       }
     }
     
@@ -704,8 +703,8 @@ export function UnifiedProjectMap({
   
   return (
     <div 
-      className={`relative bg-gray-100 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999] rounded-none' : 'rounded-lg'} ${className}`}
-      style={isFullscreen ? undefined : { height }}
+      className={`relative bg-gray-100 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'rounded-lg'} ${className}`}
+      style={{ height: isFullscreen ? '100vh' : height }}
     >
       {/* Map container */}
       <div ref={mapContainerRef} className="absolute inset-0" />
