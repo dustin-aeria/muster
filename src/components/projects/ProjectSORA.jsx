@@ -843,8 +843,33 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
     return activeSite?.soraAssessment || {}
   }, [activeSite?.soraAssessment])
   
-  // Project aircraft
-  const projectAircraft = project?.flightPlan?.aircraft || []
+  // Project aircraft pool
+  const projectAircraftPool = project?.aircraft || []
+  
+  // Site-specific aircraft (IDs only)
+  const siteAircraftIds = activeSite?.flightPlan?.aircraft || []
+  const sitePrimaryAircraftId = activeSite?.flightPlan?.primaryAircraftId
+  
+  // Get full aircraft objects for site assignment
+  const siteAircraft = useMemo(() => {
+    if (siteAircraftIds.length > 0) {
+      return projectAircraftPool.filter(a => siteAircraftIds.includes(a.id))
+    }
+    // Fall back to project-level aircraft if no site assignment
+    return project?.flightPlan?.aircraft || []
+  }, [siteAircraftIds, projectAircraftPool, project?.flightPlan?.aircraft])
+  
+  // Get primary aircraft for this site
+  const primaryAircraft = useMemo(() => {
+    if (sitePrimaryAircraftId) {
+      return projectAircraftPool.find(a => a.id === sitePrimaryAircraftId)
+    }
+    // Fall back to first site aircraft or project primary
+    if (siteAircraft.length > 0) {
+      return siteAircraft.find(a => a.isPrimary) || siteAircraft[0]
+    }
+    return null
+  }, [sitePrimaryAircraftId, siteAircraft, projectAircraftPool])
   
   // ============================================
   // CALCULATIONS
@@ -948,17 +973,13 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
     }
   }, [activeSite?.siteSurvey?.population?.adjacentCategory, activeSiteId])
   
-  // Auto-sync UA characteristics from aircraft when available
+  // Auto-sync UA characteristics from site's primary aircraft
   useEffect(() => {
-    if (!projectAircraft || projectAircraft.length === 0) return
+    if (!primaryAircraft) return
     if (siteSORA?.uaCharacteristics) return // Already set
     
-    // Find primary aircraft or use first one
-    const primary = projectAircraft.find(a => a.isPrimary) || projectAircraft[0]
-    if (!primary) return
-    
-    const maxDim = primary?.maxDimension || primary?.wingspan || 1
-    const maxSpeed = primary?.maxSpeed || 25
+    const maxDim = primaryAircraft?.maxDimension || primaryAircraft?.wingspan || 1
+    const maxSpeed = primaryAircraft?.maxSpeed || 25
     
     // Find matching UA characteristic category
     let suggestedUA = '1m_25ms'
@@ -970,7 +991,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
     }
     
     updateSiteSORA({ uaCharacteristics: suggestedUA })
-  }, [projectAircraft, activeSiteId])
+  }, [primaryAircraft, activeSiteId])
   
   // ============================================
   // RENDER
@@ -1064,7 +1085,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
           <UACharacteristicsSelector
             value={siteSORA.uaCharacteristics || activeCalc.uaChar}
             onChange={(v) => updateSiteSORA({ uaCharacteristics: v })}
-            aircraft={projectAircraft}
+            aircraft={siteAircraft}
           />
         </div>
         
