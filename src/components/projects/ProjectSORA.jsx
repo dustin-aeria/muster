@@ -2,18 +2,16 @@
  * ProjectSORA.jsx
  * SORA 2.5 Assessment component with multi-site integration
  * 
- * Features:
- * - Multi-site support with site selector
- * - Auto-populate from site survey population data
- * - Per-site iGRC/fGRC calculations
- * - Ground risk mitigations (M1A, M1B, M1C, M2)
- * - Air risk assessment (ARC, TMPR)
- * - SAIL determination
- * - OSO compliance tracking
- * - Aggregate risk summary across all sites
+ * PHASE 1 FIXES:
+ * - Fixed OSO button click handling with proper event management
+ * - Added auto-population from Site Survey population on site change
+ * - Added auto-population of UA characteristics from assigned aircraft
+ * - Made first OSO category expanded by default
+ * - Added stopPropagation to prevent event bubbling issues
+ * - Improved state update patterns for nested objects
  * 
  * @location src/components/projects/ProjectSORA.jsx
- * @action NEW
+ * @action REPLACE
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
@@ -38,7 +36,8 @@ import {
   BarChart3,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Zap
 } from 'lucide-react'
 import {
   populationCategories,
@@ -101,7 +100,12 @@ function CollapsibleSection({
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          setIsOpen(!isOpen)
+        }}
         className="w-full px-4 py-3 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
       >
         <div className="flex items-center gap-3">
@@ -137,23 +141,31 @@ function CollapsibleSection({
 // SITE SELECTOR BAR
 // ============================================
 
-function SiteSelectorBar({ sites, activeSiteId, onSelectSite, calculations }) {
-  if (sites.length <= 1) return null
+function SiteSelectorBar({ sites = [], activeSiteId, onSelectSite, calculations = {} }) {
+  // Defensive: ensure sites is an array
+  const safeSites = Array.isArray(sites) ? sites : []
+  
+  if (safeSites.length <= 1) return null
   
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3 flex items-center gap-3 overflow-x-auto">
       <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Site:</span>
       <div className="flex gap-2">
-        {sites.map((site, index) => {
+        {safeSites.map((site, index) => {
           const isActive = site.id === activeSiteId
-          const siteCalc = calculations?.[site.id]
+          const siteCalc = calculations[site.id]
           const sail = siteCalc?.sail
           const sailColor = sail ? sailColors[sail] : null
           
           return (
             <button
               key={site.id}
-              onClick={() => onSelectSite(site.id)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onSelectSite(site.id)
+              }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
                 isActive
                   ? 'bg-aeria-navy text-white'
@@ -246,7 +258,12 @@ function PopulationSelector({ value, onChange, fromSiteSurvey, onSyncFromSurvey 
         </label>
         {fromSiteSurvey && fromSiteSurvey !== value && (
           <button
-            onClick={onSyncFromSurvey}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onSyncFromSurvey()
+            }}
             className="text-xs text-aeria-navy hover:underline flex items-center gap-1"
           >
             <RefreshCw className="w-3 h-3" />
@@ -264,7 +281,11 @@ function PopulationSelector({ value, onChange, fromSiteSurvey, onSyncFromSurvey 
             <button
               key={key}
               type="button"
-              onClick={() => onChange(key)}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onChange(key)
+              }}
               className={`p-3 rounded-lg border text-left transition-all ${
                 isSelected
                   ? 'border-aeria-navy bg-aeria-navy/5 ring-2 ring-aeria-navy/20'
@@ -292,14 +313,21 @@ function PopulationSelector({ value, onChange, fromSiteSurvey, onSyncFromSurvey 
 // UA CHARACTERISTICS SELECTOR
 // ============================================
 
-function UACharacteristicsSelector({ value, onChange, aircraft }) {
+function UACharacteristicsSelector({ value, onChange, aircraft = [], siteAircraft }) {
   // Try to auto-detect from aircraft specs
   const suggestedUA = useMemo(() => {
-    if (!aircraft || aircraft.length === 0) return null
+    // First check site-specific aircraft
+    let targetAircraft = siteAircraft
     
-    const primary = aircraft.find(a => a.isPrimary) || aircraft[0]
-    const maxDim = primary?.maxDimension || primary?.wingspan || 1
-    const maxSpeed = primary?.maxSpeed || 25
+    // If no site aircraft, use project aircraft
+    if (!targetAircraft && Array.isArray(aircraft) && aircraft.length > 0) {
+      targetAircraft = aircraft.find(a => a.isPrimary) || aircraft[0]
+    }
+    
+    if (!targetAircraft) return null
+    
+    const maxDim = targetAircraft.maxDimension || targetAircraft.wingspan || 1
+    const maxSpeed = targetAircraft.maxSpeed || 25
     
     // Find matching category
     for (const [key, char] of Object.entries(uaCharacteristics)) {
@@ -308,7 +336,7 @@ function UACharacteristicsSelector({ value, onChange, aircraft }) {
       }
     }
     return '1m_25ms'
-  }, [aircraft])
+  }, [aircraft, siteAircraft])
   
   return (
     <div>
@@ -318,11 +346,16 @@ function UACharacteristicsSelector({ value, onChange, aircraft }) {
         </label>
         {suggestedUA && suggestedUA !== value && (
           <button
-            onClick={() => onChange(suggestedUA)}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onChange(suggestedUA)
+            }}
             className="text-xs text-aeria-navy hover:underline flex items-center gap-1"
           >
-            <RefreshCw className="w-3 h-3" />
-            Use suggested ({uaCharacteristics[suggestedUA]?.label})
+            <Zap className="w-3 h-3" />
+            Auto-detect ({uaCharacteristics[suggestedUA]?.label})
           </button>
         )}
       </div>
@@ -336,7 +369,11 @@ function UACharacteristicsSelector({ value, onChange, aircraft }) {
             <button
               key={key}
               type="button"
-              onClick={() => onChange(key)}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onChange(key)
+              }}
               className={`p-3 rounded-lg border text-center transition-all ${
                 isSelected
                   ? 'border-aeria-navy bg-aeria-navy/5 ring-2 ring-aeria-navy/20'
@@ -348,7 +385,7 @@ function UACharacteristicsSelector({ value, onChange, aircraft }) {
               </span>
               <p className="text-xs text-gray-500 mt-1">{char.description}</p>
               {isSuggested && !isSelected && (
-                <span className="text-xs text-blue-600 mt-1 block">Suggested</span>
+                <span className="text-xs text-blue-600 mt-1 block">From aircraft</span>
               )}
             </button>
           )
@@ -362,12 +399,12 @@ function UACharacteristicsSelector({ value, onChange, aircraft }) {
 // MITIGATION SELECTOR
 // ============================================
 
-function MitigationSelector({ mitigationId, mitigation, config, onChange }) {
+function MitigationSelector({ mitigationId, mitigation, config = {}, onChange }) {
   const isEnabled = config?.enabled || false
   const robustness = config?.robustness || 'none'
   
   // Get available robustness levels for this mitigation
-  const availableLevels = Object.keys(mitigation.reductions).filter(r => r !== 'none')
+  const availableLevels = Object.keys(mitigation.reductions || {}).filter(r => r !== 'none')
   
   return (
     <div className={`p-4 rounded-lg border ${isEnabled ? 'border-aeria-navy bg-aeria-navy/5' : 'border-gray-200'}`}>
@@ -377,7 +414,10 @@ function MitigationSelector({ mitigationId, mitigation, config, onChange }) {
             <input
               type="checkbox"
               checked={isEnabled}
-              onChange={(e) => onChange({ ...config, enabled: e.target.checked })}
+              onChange={(e) => {
+                e.stopPropagation()
+                onChange({ ...config, enabled: e.target.checked })
+              }}
               className="w-4 h-4 text-aeria-navy rounded focus:ring-aeria-navy"
             />
             <span className="font-medium text-gray-900">{mitigation.name}</span>
@@ -386,7 +426,7 @@ function MitigationSelector({ mitigationId, mitigation, config, onChange }) {
         </div>
         {isEnabled && (
           <span className="text-sm font-medium text-green-600">
-            {mitigation.reductions[robustness] || 0} GRC
+            {mitigation.reductions?.[robustness] || 0} GRC
           </span>
         )}
       </div>
@@ -395,16 +435,20 @@ function MitigationSelector({ mitigationId, mitigation, config, onChange }) {
         <div className="ml-6 space-y-3">
           <div>
             <label className="block text-sm text-gray-600 mb-1">Robustness Level</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {availableLevels.map(level => {
-                const reduction = mitigation.reductions[level]
+                const reduction = mitigation.reductions?.[level]
                 const isSelected = robustness === level
                 
                 return (
                   <button
                     key={level}
                     type="button"
-                    onClick={() => onChange({ ...config, robustness: level })}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      onChange({ ...config, robustness: level })
+                    }}
                     className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                       isSelected
                         ? 'bg-aeria-navy text-white'
@@ -422,7 +466,10 @@ function MitigationSelector({ mitigationId, mitigation, config, onChange }) {
             <label className="block text-sm text-gray-600 mb-1">Evidence / Justification</label>
             <textarea
               value={config?.evidence || ''}
-              onChange={(e) => onChange({ ...config, evidence: e.target.value })}
+              onChange={(e) => {
+                e.stopPropagation()
+                onChange({ ...config, evidence: e.target.value })
+              }}
               placeholder="Describe the evidence supporting this mitigation claim..."
               rows={2}
               className="input text-sm"
@@ -461,7 +508,11 @@ function ARCSelector({ value, onChange }) {
           <button
             key={key}
             type="button"
-            onClick={() => onChange(key)}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onChange(key)
+            }}
             className={`p-3 rounded-lg border-2 text-left transition-all ${
               isSelected ? colors[key] : 'border-gray-200 hover:border-gray-300'
             }`}
@@ -479,7 +530,7 @@ function ARCSelector({ value, onChange }) {
 // TMPR SELECTOR
 // ============================================
 
-function TMPRSelector({ value, onChange }) {
+function TMPRSelector({ value = {}, onChange }) {
   const isEnabled = value?.enabled || false
   const type = value?.type || 'VLOS'
   const robustness = value?.robustness || 'low'
@@ -490,7 +541,10 @@ function TMPRSelector({ value, onChange }) {
         <input
           type="checkbox"
           checked={isEnabled}
-          onChange={(e) => onChange({ ...value, enabled: e.target.checked })}
+          onChange={(e) => {
+            e.stopPropagation()
+            onChange({ ...value, enabled: e.target.checked })
+          }}
           className="w-4 h-4 text-aeria-navy rounded focus:ring-aeria-navy"
         />
         <span className="font-medium text-gray-900">Apply Tactical Mitigation (TMPR)</span>
@@ -506,7 +560,11 @@ function TMPRSelector({ value, onChange }) {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => onChange({ ...value, type: key })}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onChange({ ...value, type: key })
+                  }}
                   className={`p-3 rounded-lg border text-left transition-all ${
                     isSelected
                       ? 'border-aeria-navy bg-aeria-navy/5 ring-2 ring-aeria-navy/20'
@@ -528,7 +586,11 @@ function TMPRSelector({ value, onChange }) {
                 <button
                   key={level}
                   type="button"
-                  onClick={() => onChange({ ...value, robustness: level })}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onChange({ ...value, robustness: level })
+                  }}
                   className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                     robustness === level
                       ? 'bg-aeria-navy text-white'
@@ -545,7 +607,10 @@ function TMPRSelector({ value, onChange }) {
             <label className="block text-sm text-gray-600 mb-1">Evidence</label>
             <textarea
               value={value?.evidence || ''}
-              onChange={(e) => onChange({ ...value, evidence: e.target.value })}
+              onChange={(e) => {
+                e.stopPropagation()
+                onChange({ ...value, evidence: e.target.value })
+              }}
               placeholder="Describe how TMPR is achieved..."
               rows={2}
               className="input text-sm"
@@ -558,66 +623,81 @@ function TMPRSelector({ value, onChange }) {
 }
 
 // ============================================
-// OSO COMPLIANCE TABLE
+// OSO COMPLIANCE TABLE - FIXED
 // ============================================
 
 function OSOComplianceSection({ sail, osoCompliance = {}, onChange }) {
-  const [expandedCategory, setExpandedCategory] = useState(null)
+  // Default to first category expanded
+  const [expandedCategory, setExpandedCategory] = useState(() => {
+    const categories = Object.keys(osoCategories || {})
+    return categories[0] || null
+  })
   
   const compliance = useMemo(() => {
     return checkAllOSOCompliance(sail, osoCompliance)
   }, [sail, osoCompliance])
   
-  const handleOSOChange = (osoId, updates) => {
-    onChange({
+  // Handler for OSO changes with proper state update
+  const handleOSOChange = useCallback((osoId, updates) => {
+    const newCompliance = {
       ...osoCompliance,
       [osoId]: {
         ...(osoCompliance[osoId] || {}),
         ...updates
       }
-    })
-  }
+    }
+    onChange(newCompliance)
+  }, [osoCompliance, onChange])
+  
+  // Safe access to compliance results
+  const safeResults = Array.isArray(compliance?.results) ? compliance.results : []
+  const safeSummary = compliance?.summary || { compliant: 0, total: 0, optional: 0, nonCompliant: 0, overallCompliant: false }
   
   return (
     <div className="space-y-4">
       {/* Summary */}
       <div className={`p-4 rounded-lg ${
-        compliance.summary.overallCompliant 
+        safeSummary.overallCompliant 
           ? 'bg-green-50 border border-green-200' 
           : 'bg-amber-50 border border-amber-200'
       }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {compliance.summary.overallCompliant ? (
+            {safeSummary.overallCompliant ? (
               <CheckCircle2 className="w-5 h-5 text-green-600" />
             ) : (
               <AlertCircle className="w-5 h-5 text-amber-600" />
             )}
             <span className="font-medium">
-              {compliance.summary.compliant} of {compliance.summary.total - compliance.summary.optional} required OSOs compliant
+              {safeSummary.compliant} of {safeSummary.total - safeSummary.optional} required OSOs compliant
             </span>
           </div>
           <span className="text-sm text-gray-600">
-            {compliance.summary.nonCompliant} gaps remaining
+            {safeSummary.nonCompliant} gaps remaining
           </span>
         </div>
       </div>
       
       {/* OSO Categories */}
-      {Object.entries(osoCategories).map(([catKey, catLabel]) => {
-        const catOSOs = compliance.results.filter(o => o.category === catKey)
+      {Object.entries(osoCategories || {}).map(([catKey, catLabel]) => {
+        const catOSOs = safeResults.filter(o => o.category === catKey)
         const isExpanded = expandedCategory === catKey
         const catCompliant = catOSOs.filter(o => o.compliant || o.required === 'O').length
         
         return (
           <div key={catKey} className="border border-gray-200 rounded-lg overflow-hidden">
             <button
-              onClick={() => setExpandedCategory(isExpanded ? null : catKey)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setExpandedCategory(isExpanded ? null : catKey)
+              }}
               className="w-full px-4 py-3 bg-gray-50 flex items-center justify-between hover:bg-gray-100"
             >
               <span className="font-medium text-gray-900">{catLabel}</span>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">
+                <span className={`text-sm ${catCompliant === catOSOs.length ? 'text-green-600' : 'text-gray-600'}`}>
                   {catCompliant}/{catOSOs.length}
                 </span>
                 {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -626,65 +706,85 @@ function OSOComplianceSection({ sail, osoCompliance = {}, onChange }) {
             
             {isExpanded && (
               <div className="divide-y divide-gray-100">
-                {catOSOs.map(oso => (
-                  <div key={oso.id} className="p-4">
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">{oso.id}</span>
-                          {oso.compliant ? (
-                            <Check className="w-4 h-4 text-green-500" />
-                          ) : oso.required === 'O' ? (
-                            <span className="text-xs text-gray-500">Optional</span>
-                          ) : (
-                            <X className="w-4 h-4 text-red-500" />
-                          )}
+                {catOSOs.map(oso => {
+                  const currentRobustness = osoCompliance[oso.id]?.robustness || 'none'
+                  const currentEvidence = osoCompliance[oso.id]?.evidence || ''
+                  
+                  return (
+                    <div key={oso.id} className="p-4">
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-gray-900">{oso.id}</span>
+                            {oso.compliant ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            ) : oso.required === 'O' ? (
+                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Optional</span>
+                            ) : (
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600">{oso.name}</p>
                         </div>
-                        <p className="text-sm text-gray-600">{oso.name}</p>
+                        <div className="text-right">
+                          <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                            oso.required === 'O' ? 'bg-gray-100 text-gray-600' :
+                            oso.required === 'L' ? 'bg-green-100 text-green-700' :
+                            oso.required === 'M' ? 'bg-amber-100 text-amber-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            Required: {oso.requiredLabel}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className={`text-xs px-2 py-0.5 rounded ${
-                          oso.required === 'O' ? 'bg-gray-100 text-gray-600' :
-                          oso.required === 'L' ? 'bg-green-100 text-green-700' :
-                          oso.required === 'M' ? 'bg-amber-100 text-amber-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          Required: {oso.requiredLabel}
-                        </span>
+                      
+                      {/* Robustness Level Buttons */}
+                      <div className="mb-3">
+                        <label className="block text-xs text-gray-500 mb-1">Achieved Robustness</label>
+                        <div className="flex gap-2 flex-wrap">
+                          {['none', 'low', 'medium', 'high'].map(level => {
+                            const isSelected = currentRobustness === level
+                            
+                            return (
+                              <button
+                                key={level}
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleOSOChange(oso.id, { robustness: level })
+                                }}
+                                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+                                  isSelected
+                                    ? 'bg-aeria-navy text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                              >
+                                {level === 'none' ? 'None' : level.charAt(0).toUpperCase() + level.slice(1)}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      
+                      {/* Evidence Input */}
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Evidence / Reference</label>
+                        <input
+                          type="text"
+                          value={currentEvidence}
+                          onChange={(e) => {
+                            e.stopPropagation()
+                            handleOSOChange(oso.id, { evidence: e.target.value })
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="Document reference, procedure number, etc..."
+                          className="input text-sm py-1.5"
+                        />
                       </div>
                     </div>
-                    
-                    <div className="flex gap-2 mb-2">
-                      {['none', 'low', 'medium', 'high'].map(level => {
-                        const current = osoCompliance[oso.id]?.robustness || 'none'
-                        const isSelected = current === level
-                        
-                        return (
-                          <button
-                            key={level}
-                            type="button"
-                            onClick={() => handleOSOChange(oso.id, { robustness: level })}
-                            className={`px-2 py-1 text-xs rounded transition-colors ${
-                              isSelected
-                                ? 'bg-aeria-navy text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                          >
-                            {level === 'none' ? 'None' : level.charAt(0).toUpperCase() + level.slice(1)}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    
-                    <input
-                      type="text"
-                      value={osoCompliance[oso.id]?.evidence || ''}
-                      onChange={(e) => handleOSOChange(oso.id, { evidence: e.target.value })}
-                      placeholder="Evidence / reference..."
-                      className="input text-sm py-1"
-                    />
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -698,9 +798,11 @@ function OSOComplianceSection({ sail, osoCompliance = {}, onChange }) {
 // MULTI-SITE SUMMARY
 // ============================================
 
-function MultiSiteSummary({ sites, calculations }) {
+function MultiSiteSummary({ sites = [], calculations = {} }) {
+  const safeSites = Array.isArray(sites) ? sites : []
+  
   const summary = useMemo(() => {
-    const siteSummaries = sites.map(site => {
+    const siteSummaries = safeSites.map(site => {
       const calc = calculations[site.id] || {}
       return {
         id: site.id,
@@ -727,11 +829,11 @@ function MultiSiteSummary({ sites, calculations }) {
       sites: siteSummaries,
       maxSAIL,
       allWithinScope,
-      siteCount: sites.length
+      siteCount: safeSites.length
     }
-  }, [sites, calculations])
+  }, [safeSites, calculations])
   
-  if (sites.length <= 1) return null
+  if (safeSites.length <= 1) return null
   
   return (
     <div className="bg-gradient-to-r from-aeria-navy to-aeria-navy/80 text-white rounded-lg p-6">
@@ -800,7 +902,7 @@ function MultiSiteSummary({ sites, calculations }) {
 // ============================================
 
 export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) {
-  // Get sites array
+  // Get sites array with defensive coding
   const sites = useMemo(() => {
     return Array.isArray(project?.sites) ? project.sites : []
   }, [project?.sites])
@@ -815,7 +917,44 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
   const siteSORA = activeSite?.soraAssessment || {}
   
   // Project aircraft
-  const projectAircraft = project?.flightPlan?.aircraft || []
+  const projectAircraft = useMemo(() => {
+    return Array.isArray(project?.flightPlan?.aircraft) ? project.flightPlan.aircraft : []
+  }, [project?.flightPlan?.aircraft])
+  
+  // Site-assigned aircraft
+  const siteAircraft = useMemo(() => {
+    const assignedId = activeSite?.flightPlan?.assignedAircraftId
+    if (!assignedId) return null
+    return projectAircraft.find(a => a.id === assignedId) || null
+  }, [activeSite?.flightPlan?.assignedAircraftId, projectAircraft])
+  
+  // ============================================
+  // AUTO-POPULATION EFFECTS
+  // ============================================
+  
+  // Auto-populate population from Site Survey when site changes (if not already set)
+  useEffect(() => {
+    if (!activeSite || !onUpdate) return
+    
+    const surveyPopulation = activeSite.siteSurvey?.population?.category
+    const soraPopulation = activeSite.soraAssessment?.populationCategory
+    
+    // If site survey has population but SORA doesn't, auto-sync
+    if (surveyPopulation && !soraPopulation) {
+      const updatedSites = sites.map(site => {
+        if (site.id !== activeSiteId) return site
+        return {
+          ...site,
+          soraAssessment: {
+            ...site.soraAssessment,
+            populationCategory: surveyPopulation,
+            lastUpdated: new Date().toISOString()
+          }
+        }
+      })
+      onUpdate({ sites: updatedSites })
+    }
+  }, [activeSiteId]) // Only run when site changes
   
   // ============================================
   // CALCULATIONS
@@ -857,11 +996,11 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
   // ============================================
   
   const handleSelectSite = useCallback((siteId) => {
-    onUpdate({ activeSiteId: siteId })
+    onUpdate?.({ activeSiteId: siteId })
   }, [onUpdate])
   
   const updateSiteSORA = useCallback((updates) => {
-    if (!activeSiteId) return
+    if (!activeSiteId || !onUpdate) return
     
     const updatedSites = sites.map(site => {
       if (site.id !== activeSiteId) return site
@@ -869,7 +1008,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
       return {
         ...site,
         soraAssessment: {
-          ...site.soraAssessment,
+          ...(site.soraAssessment || {}),
           ...updates,
           lastUpdated: new Date().toISOString()
         },
@@ -898,6 +1037,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
         <h3 className="text-lg font-medium text-gray-900 mb-2">No Sites to Assess</h3>
         <p className="text-gray-500 mb-4">Add operation sites in Site Survey before performing SORA assessment.</p>
         <button 
+          type="button"
           onClick={() => onNavigateToSection?.('siteSurvey')} 
           className="btn-primary"
         >
@@ -979,6 +1119,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
             value={siteSORA.uaCharacteristics || activeCalc.uaChar}
             onChange={(v) => updateSiteSORA({ uaCharacteristics: v })}
             aircraft={projectAircraft}
+            siteAircraft={siteAircraft}
           />
         </div>
         
@@ -1006,7 +1147,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
         </div>
         
         <div className="space-y-4">
-          {Object.entries(groundMitigations).map(([key, mitigation]) => (
+          {Object.entries(groundMitigations || {}).map(([key, mitigation]) => (
             <MitigationSelector
               key={key}
               mitigationId={key}
@@ -1014,7 +1155,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
               config={siteSORA.mitigations?.[key] || {}}
               onChange={(config) => updateSiteSORA({
                 mitigations: {
-                  ...siteSORA.mitigations,
+                  ...(siteSORA.mitigations || {}),
                   [key]: config
                 }
               })}
@@ -1096,7 +1237,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
             </div>
           </div>
           
-          {activeCalc.sail && sailDescriptions[activeCalc.sail] && (
+          {activeCalc.sail && sailDescriptions?.[activeCalc.sail] && (
             <p className="text-sm text-gray-600 max-w-md mx-auto">
               {sailDescriptions[activeCalc.sail]}
             </p>
@@ -1122,6 +1263,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
       {/* Navigation Links */}
       <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
         <button
+          type="button"
           onClick={() => onNavigateToSection?.('siteSurvey')}
           className="text-aeria-navy hover:underline flex items-center gap-1"
         >
@@ -1130,6 +1272,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
         </button>
         
         <button
+          type="button"
           onClick={() => onNavigateToSection?.('flightPlan')}
           className="text-aeria-navy hover:underline flex items-center gap-1"
         >
