@@ -1,5 +1,17 @@
+/**
+ * App.jsx
+ * Main application component with routing
+ * 
+ * Batch 3 Fix:
+ * - Added ErrorBoundary for graceful error handling (M-07)
+ * 
+ * @location src/App.jsx
+ * @action REPLACE
+ */
+
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
+import ErrorBoundary from './components/ErrorBoundary'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -64,51 +76,53 @@ function PublicRoute({ children }) {
 
 function App() {
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route 
-        path="/login" 
-        element={
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        } 
-      />
-      
-      {/* Protected routes */}
-      <Route 
-        path="/" 
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="projects" element={<Projects />} />
-        <Route path="projects/:projectId" element={<ProjectView />} />
-        <Route path="forms" element={<Forms />} />
-        <Route path="policies" element={<PolicyLibrary />} />
-        <Route path="operators" element={<Operators />} />
-        <Route path="aircraft" element={<Aircraft />} />
-        <Route path="clients" element={<Clients />} />
-        <Route path="settings" element={<Settings />} />
+    <ErrorBoundary>
+      <Routes>
+        {/* Public routes */}
+        <Route 
+          path="/login" 
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } 
+        />
         
-        {/* Safety Module Routes */}
-        <Route path="safety" element={<SafetyDashboard />} />
-        <Route path="incidents" element={<Incidents />} />
-        <Route path="incidents/new" element={<IncidentReport />} />
-        <Route path="incidents/:id" element={<IncidentDetail />} />
-        <Route path="incidents/:id/edit" element={<IncidentReport />} />
-        <Route path="capas" element={<Capas />} />
-        <Route path="capas/new" element={<CapaNew />} />
-        <Route path="capas/:id" element={<CapaDetail />} />
-        <Route path="capas/:id/edit" element={<CapaNew />} />
-      </Route>
-      
-      {/* Catch all - redirect to dashboard */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Protected routes */}
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="projects" element={<Projects />} />
+          <Route path="projects/:projectId" element={<ProjectView />} />
+          <Route path="forms" element={<Forms />} />
+          <Route path="policies" element={<PolicyLibrary />} />
+          <Route path="operators" element={<Operators />} />
+          <Route path="aircraft" element={<Aircraft />} />
+          <Route path="clients" element={<Clients />} />
+          <Route path="settings" element={<Settings />} />
+          
+          {/* Safety Module Routes */}
+          <Route path="safety" element={<SafetyDashboard />} />
+          <Route path="incidents" element={<Incidents />} />
+          <Route path="incidents/new" element={<IncidentReport />} />
+          <Route path="incidents/:id" element={<IncidentDetail />} />
+          <Route path="incidents/:id/edit" element={<IncidentReport />} />
+          <Route path="capas" element={<Capas />} />
+          <Route path="capas/new" element={<CapaNew />} />
+          <Route path="capas/:id" element={<CapaDetail />} />
+          <Route path="capas/:id/edit" element={<CapaNew />} />
+        </Route>
+        
+        {/* Catch all - redirect to dashboard */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   )
 }
 
