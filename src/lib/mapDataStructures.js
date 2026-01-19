@@ -190,35 +190,35 @@ export const POPULATION_CATEGORIES = {
     id: 'remote',
     label: 'Remote/Uninhabited',
     description: 'Wilderness, no permanent structures',
-    density: '< 1/km²',
+    density: '< 1/kmÂ²',
     color: '#86EFAC'
   },
   lightly: {
     id: 'lightly',
     label: 'Lightly Populated',
     description: 'Rural areas, scattered buildings',
-    density: '1-50/km²',
+    density: '1-50/kmÂ²',
     color: '#FEF08A'
   },
   sparsely: {
     id: 'sparsely',
     label: 'Sparsely Populated',
     description: 'Small towns, light residential',
-    density: '50-500/km²',
+    density: '50-500/kmÂ²',
     color: '#FDE047'
   },
   suburban: {
     id: 'suburban',
     label: 'Suburban',
     description: 'Residential neighborhoods',
-    density: '500-5000/km²',
+    density: '500-5000/kmÂ²',
     color: '#FDBA74'
   },
   highdensity: {
     id: 'highdensity',
     label: 'High Density Urban',
     description: 'Urban centers, high-rise areas',
-    density: '> 5000/km²',
+    density: '> 5000/kmÂ²',
     color: '#FCA5A5'
   },
   assembly: {
@@ -297,7 +297,7 @@ export const createMapPolygon = (coordinates, options = {}) => ({
     fillOpacity: options.fillOpacity || 0.1,
     strokeWidth: options.strokeWidth || 2,
     strokeStyle: options.strokeStyle || 'solid',
-    area: options.area || null, // km²
+    area: options.area || null, // kmÂ²
     ...options.properties
   },
   createdAt: new Date().toISOString(),
@@ -468,6 +468,10 @@ export const getDefaultSiteSurveyData = () => ({
  * Default site-specific flight plan data
  */
 export const getDefaultSiteFlightPlanData = () => ({
+  // Site-specific aircraft assignment
+  aircraft: [],              // Array of aircraft IDs assigned to this site
+  primaryAircraftId: null,   // ID of primary aircraft for this site (for SORA)
+  
   // Operation parameters (SORA-relevant)
   operationType: 'VLOS',
   maxAltitudeAGL: 120,
