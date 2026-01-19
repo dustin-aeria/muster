@@ -1,0 +1,166 @@
+/**
+ * map-controls.css
+ * Map-specific CSS overrides for proper interactivity
+ * 
+ * PHASE 1 FIXES:
+ * - Ensures map control panels are clickable
+ * - Fixes scroll handling within controls
+ * - Proper z-index stacking
+ * - Prevents map events from interfering with controls
+ * 
+ * @location src/styles/map-controls.css (or add to index.css)
+ * @action NEW (append to existing styles)
+ */
+
+/* Map control panels - ensure they're clickable */
+.map-control-panel {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Map container - allow events to pass through to controls */
+.map-container {
+  position: relative;
+}
+
+/* Controls container - ensure high z-index and clickability */
+.map-controls-container {
+  pointer-events: none;
+  z-index: 20;
+}
+
+.map-controls-container > * {
+  pointer-events: auto;
+}
+
+/* Scrollable areas within controls */
+.map-control-panel .overflow-y-auto {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Prevent map zoom on control scroll */
+.map-control-panel:hover {
+  pointer-events: auto !important;
+}
+
+/* Fix for mapbox controls */
+.mapboxgl-map {
+  pointer-events: auto;
+}
+
+/* Ensure buttons in controls are clickable */
+.map-control-panel button,
+.map-control-panel input,
+.map-control-panel select,
+.map-control-panel textarea {
+  pointer-events: auto !important;
+  cursor: pointer;
+}
+
+.map-control-panel input,
+.map-control-panel textarea {
+  cursor: text;
+}
+
+/* Fix for dropdown menus in controls */
+.map-control-panel [class*="absolute"] {
+  z-index: 50;
+  pointer-events: auto;
+}
+
+/* Fix overlay backdrop */
+.map-control-panel .fixed.inset-0 {
+  z-index: 40;
+}
+
+/* Drawing mode indicator at bottom */
+.drawing-mode-indicator {
+  pointer-events: none;
+}
+
+/* Mapbox attribution and navigation controls */
+.mapboxgl-ctrl-attrib,
+.mapboxgl-ctrl-nav {
+  z-index: 10;
+}
+
+/* Site selector improvements */
+.site-selector-list {
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Layer toggles improvements */
+.layer-toggle-item {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.layer-toggle-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Drawing tools improvements */
+.drawing-tool-button {
+  transition: all 0.15s ease;
+}
+
+.drawing-tool-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.drawing-tool-button.active {
+  transform: scale(0.98);
+}
+
+/* Basemap switcher popup */
+.basemap-popup {
+  min-width: 140px;
+}
+
+/* Prevent text selection during map interactions */
+.map-container * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.map-container input,
+.map-container textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Mobile touch improvements */
+@media (max-width: 768px) {
+  .map-control-panel {
+    touch-action: manipulation;
+  }
+  
+  .map-control-panel button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* High contrast for visibility */
+@media (prefers-contrast: high) {
+  .map-control-panel {
+    border-width: 2px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .map-control-panel,
+  .map-control-panel * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
