@@ -25,6 +25,9 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 
+// PHASE 1 FIX: Import map controls CSS for pointer-events and z-index fixes
+import '../../styles/map-controls.css'
+
 import { useMapData, DRAWING_MODES } from '../../hooks/useMapData'
 import { MapControlsPanel } from './MapControls'
 import { MapLegend, SiteColorLegend } from './MapLegend'
