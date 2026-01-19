@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { 
   Plus, 
   Search, 
@@ -44,6 +44,7 @@ const statusLabels = {
 }
 
 export default function Projects() {
+  const navigate = useNavigate()
   const [projects, setProjects] = useState([])
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
@@ -217,7 +218,8 @@ export default function Projects() {
             return (
               <div 
                 key={project.id} 
-                className="card hover:shadow-md transition-shadow group"
+                className="card hover:shadow-md transition-shadow group cursor-pointer"
+                onClick={() => navigate(`/projects/${project.id}`)}
               >
                 <div className="flex items-center gap-4">
                   {/* FIX #3 & #10: Client logo or fallback icon */}
@@ -300,7 +302,8 @@ export default function Projects() {
                           />
                           <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation()
                                 alert('Duplicate feature coming soon')
                                 setMenuOpen(null)
                               }}
@@ -310,7 +313,10 @@ export default function Projects() {
                               Duplicate
                             </button>
                             <button
-                              onClick={() => handleDelete(project.id, project.name)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDelete(project.id, project.name)
+                              }}
                               className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                             >
                               <Trash2 className="w-4 h-4" />
