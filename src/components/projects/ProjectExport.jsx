@@ -1,9 +1,10 @@
 // ============================================
 // PROJECT EXPORT COMPONENT
 // Export project data in multiple formats including PDF
+// UPDATED: Added multi-site support
 // ============================================
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { 
   Download,
   FileText,
@@ -25,7 +26,10 @@ import {
   MapPin,
   Plane,
   AlertCircle as AlertIcon,
-  Users
+  Users,
+  ChevronDown,
+  ChevronUp,
+  Layers
 } from 'lucide-react'
 import { useBranding } from '../BrandingSettings'
 import { 
@@ -34,6 +38,14 @@ import {
   generateSORAPDF, 
   generateHSERiskPDF 
 } from '../../lib/pdfExportService'
+import { 
+  exportMultiSitePDF,
+  generateMultiSiteOperationsPlanPDF,
+  generateMultiSiteSORA_PDF,
+  calculateSiteSORA,
+  calculateMaxSAIL
+} from '../../lib/pdfExportServiceMultiSite'
+import { sailColors } from '../../lib/soraConfig'
 
 // ============================================
 // EXPORT SECTIONS CONFIGURATION
@@ -60,7 +72,8 @@ const pdfExportTypes = [
     label: 'Full Operations Plan',
     description: 'Complete project documentation including all sections',
     icon: FileText,
-    color: 'blue'
+    color: 'blue',
+    supportsMultiSite: true
   },
   {
     id: 'sora',
@@ -68,7 +81,8 @@ const pdfExportTypes = [
     description: 'Specific Operations Risk Assessment (SORA 2.5)',
     icon: Shield,
     color: 'purple',
-    conditional: 'soraAssessment'
+    conditional: 'soraAssessment',
+    supportsMultiSite: true
   },
   {
     id: 'hse-risk',
@@ -76,7 +90,8 @@ const pdfExportTypes = [
     description: 'Health, Safety & Environment hazard assessment',
     icon: AlertIcon,
     color: 'orange',
-    conditional: 'hseRiskAssessment'
+    conditional: 'hseRiskAssessment',
+    supportsMultiSite: false
   },
   {
     id: 'site-survey',
@@ -84,7 +99,8 @@ const pdfExportTypes = [
     description: 'Site survey documentation and findings',
     icon: MapPin,
     color: 'green',
-    conditional: 'siteSurvey'
+    conditional: 'siteSurvey',
+    supportsMultiSite: false
   },
   {
     id: 'flight-plan',
@@ -92,14 +108,16 @@ const pdfExportTypes = [
     description: 'Flight operations plan and aircraft details',
     icon: Plane,
     color: 'cyan',
-    conditional: 'flightPlan'
+    conditional: 'flightPlan',
+    supportsMultiSite: false
   },
   {
     id: 'tailgate',
     label: 'Tailgate Meeting',
     description: 'Pre-deployment safety briefing form',
     icon: Users,
-    color: 'amber'
+    color: 'amber',
+    supportsMultiSite: false
   }
 ]
 
@@ -118,6 +136,94 @@ const downloadBlob = (blob, filename) => {
 }
 
 // ============================================
+// MULTI-SITE SELECTOR COMPONENT
+// ============================================
+function MultiSiteSelector({ sites, selectedSite, onSelect, calculations }) {
+  if (!sites || sites.length <= 1) return null
+  
+  return (
+    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+      <div className="flex items-center gap-2 mb-3">
+        <Layers className="w-5 h-5 text-blue-600" />
+        <span className="font-medium text-blue-900">Multi-Site Project</span>
+        <span className="text-sm text-blue-700">({sites.length} sites)</span>
+      </div>
+      
+      <p className="text-sm text-blue-700 mb-3">
+        Select which sites to include in the export:
+      </p>
+      
+      <div className="space-y-2">
+        {/* All Sites Option */}
+        <label className="flex items-center gap-3 p-2 bg-white rounded-lg border border-blue-200 cursor-pointer hover:bg-blue-50">
+          <input
+            type="radio"
+            name="siteSelection"
+            checked={selectedSite === null}
+            onChange={() => onSelect(null)}
+            className="w-4 h-4 text-aeria-navy"
+          />
+          <div className="flex-1">
+            <span className="font-medium text-gray-900">All Sites</span>
+            <span className="text-sm text-gray-500 ml-2">
+              Export complete multi-site document
+            </span>
+          </div>
+          {calculations && (
+            <span className="text-xs text-gray-500">
+              Max SAIL: {calculateMaxSAIL(sites) || 'N/A'}
+            </span>
+          )}
+        </label>
+        
+        {/* Individual Sites */}
+        {sites.map((site, index) => {
+          const calc = calculations?.[site.id] || {}
+          
+          return (
+            <label 
+              key={site.id}
+              className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50"
+            >
+              <input
+                type="radio"
+                name="siteSelection"
+                checked={selectedSite === site.id}
+                onChange={() => onSelect(site.id)}
+                className="w-4 h-4 text-aeria-navy"
+              />
+              <div 
+                className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium"
+                style={{ backgroundColor: `hsl(${index * 60}, 70%, 50%)` }}
+              >
+                {index + 1}
+              </div>
+              <div className="flex-1">
+                <span className="font-medium text-gray-900">{site.name || `Site ${index + 1}`}</span>
+                <span className="text-sm text-gray-500 ml-2">
+                  {site.siteSurvey?.location || 'No location'}
+                </span>
+              </div>
+              {calc.sail && (
+                <span 
+                  className="px-2 py-0.5 rounded text-xs font-medium"
+                  style={{ 
+                    backgroundColor: sailColors[calc.sail],
+                    color: calc.sail === 'I' || calc.sail === 'II' ? '#1F2937' : '#FFFFFF'
+                  }}
+                >
+                  SAIL {calc.sail}
+                </span>
+              )}
+            </label>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 export default function ProjectExport({ project, onUpdate }) {
@@ -131,9 +237,28 @@ export default function ProjectExport({ project, onUpdate }) {
   const [includeCoverPage, setIncludeCoverPage] = useState(true)
   const [showPDFOptions, setShowPDFOptions] = useState(false)
   const [pdfExportProgress, setPdfExportProgress] = useState(null)
+  const [selectedSite, setSelectedSite] = useState(null) // null = all sites
+  const [showSiteSelector, setShowSiteSelector] = useState(false)
   
   // Get branding settings
   const { branding, loading: brandingLoading } = useBranding()
+  
+  // Get sites array for multi-site projects
+  const sites = useMemo(() => {
+    return Array.isArray(project?.sites) ? project.sites : []
+  }, [project?.sites])
+  
+  const isMultiSite = sites.length > 1
+  
+  // Calculate SORA for all sites
+  const siteCalculations = useMemo(() => {
+    if (!isMultiSite) return {}
+    const results = {}
+    sites.forEach(site => {
+      results[site.id] = calculateSiteSORA(site)
+    })
+    return results
+  }, [sites, isMultiSite])
 
   const toggleSection = (sectionId) => {
     setSelectedSections(prev => ({
@@ -158,6 +283,17 @@ export default function ProjectExport({ project, onUpdate }) {
     lines.push(`Client: ${project.clientName || 'N/A'}`)
     lines.push(`Date: ${project.startDate || 'TBD'}`)
     lines.push(`Status: ${project.status?.toUpperCase() || 'DRAFT'}`)
+    
+    // Multi-site info
+    if (isMultiSite) {
+      lines.push(`Sites: ${sites.length}`)
+      lines.push('')
+      lines.push('Operation Sites:')
+      sites.forEach((site, idx) => {
+        const calc = siteCalculations[site.id] || {}
+        lines.push(`  ${idx + 1}. ${site.name || 'Unnamed'} - SAIL: ${calc.sail || 'N/A'}`)
+      })
+    }
     lines.push('')
 
     // Crew
@@ -270,7 +406,7 @@ export default function ProjectExport({ project, onUpdate }) {
     // Footer
     lines.push('='.repeat(60))
     lines.push(`Generated: ${new Date().toLocaleString()}`)
-    lines.push(`${branding.operator.name} - ${branding.operator.registration}`)
+    lines.push(`${branding?.operator?.name || 'Operator'} - ${branding?.operator?.registration || ''}`)
     lines.push('='.repeat(60))
 
     return lines.join('\n')
@@ -280,14 +416,14 @@ export default function ProjectExport({ project, onUpdate }) {
   // HTML EXPORT
   // ============================================
   const generateHTMLReport = () => {
-    const colors = branding.operator.colors
+    const colors = branding?.operator?.colors || { primary: '#1e3a5f', secondary: '#3b82f6' }
     
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${project.name || 'Operations Plan'} - ${branding.operator.name}</title>
+  <title>${project.name || 'Operations Plan'} - ${branding?.operator?.name || 'Operator'}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; }
@@ -306,13 +442,15 @@ export default function ProjectExport({ project, onUpdate }) {
     td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; }
     tr:nth-child(even) { background: #f9fafb; }
     .footer { text-align: center; padding: 2rem; color: #6b7280; font-size: 0.875rem; border-top: 1px solid #e5e7eb; margin-top: 2rem; }
+    .site-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    .site-card h3 { font-size: 1rem; margin-bottom: 0.5rem; }
     @media print { .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>${project.name || 'RPAS Operations Plan'}</h1>
-    <p>${project.projectCode || ''} | ${project.clientName || 'No Client'} | ${project.startDate || 'TBD'}</p>
+    <p>${project.projectCode || ''} | ${project.clientName || 'No Client'} | ${project.startDate || 'TBD'}${isMultiSite ? ` | ${sites.length} Sites` : ''}</p>
   </div>
   
   <div class="container">
@@ -327,6 +465,26 @@ export default function ProjectExport({ project, onUpdate }) {
         <div class="field"><div class="field-label">Start Date</div><div class="field-value">${project.startDate || 'TBD'}</div></div>
         <div class="field"><div class="field-label">End Date</div><div class="field-value">${project.endDate || 'TBD'}</div></div>
       </div>
+    </div>
+    ` : ''}
+    
+    ${isMultiSite ? `
+    <div class="section">
+      <div class="section-title">Operation Sites (${sites.length})</div>
+      ${sites.map((site, idx) => {
+        const calc = siteCalculations[site.id] || {}
+        return `
+        <div class="site-card">
+          <h3>${idx + 1}. ${site.name || 'Unnamed Site'}</h3>
+          <div class="grid">
+            <div class="field"><div class="field-label">Location</div><div class="field-value">${site.siteSurvey?.location || 'N/A'}</div></div>
+            <div class="field"><div class="field-label">Operation Type</div><div class="field-value">${site.flightPlan?.operationType || 'VLOS'}</div></div>
+            <div class="field"><div class="field-label">SAIL Level</div><div class="field-value">${calc.sail || 'N/A'}</div></div>
+            <div class="field"><div class="field-label">Final GRC</div><div class="field-value">${calc.fGRC || 'N/A'}</div></div>
+          </div>
+        </div>
+        `
+      }).join('')}
     </div>
     ` : ''}
     
@@ -369,14 +527,14 @@ export default function ProjectExport({ project, onUpdate }) {
   
   <div class="footer">
     <p>Generated ${new Date().toLocaleString()}</p>
-    <p>${branding.operator.name} | ${branding.operator.registration}</p>
+    <p>${branding?.operator?.name || 'Operator'} | ${branding?.operator?.registration || ''}</p>
   </div>
 </body>
 </html>`
   }
 
   // ============================================
-  // PDF EXPORT HANDLER
+  // PDF EXPORT HANDLER (UPDATED FOR MULTI-SITE)
   // ============================================
   const handlePDFExport = async (pdfType) => {
     setExporting(true)
@@ -386,40 +544,58 @@ export default function ProjectExport({ project, onUpdate }) {
     try {
       // Get client branding if applicable
       const clientBranding = project.clientId 
-        ? branding.clients.find(c => c.id === project.clientId)
+        ? branding?.clients?.find(c => c.id === project.clientId)
         : null
 
       const exportBranding = {
-        operator: branding.operator,
+        operator: branding?.operator,
         client: clientBranding
       }
 
       let pdf
-      const filename = `${pdfType}_${project.projectCode || project.name || 'export'}_${new Date().toISOString().split('T')[0]}.pdf`
+      const siteSuffix = isMultiSite ? (selectedSite ? `_site-${selectedSite}` : '_all-sites') : ''
+      const filename = `${pdfType}${siteSuffix}_${project.projectCode || project.name || 'export'}_${new Date().toISOString().split('T')[0]}.pdf`
 
-      switch (pdfType) {
-        case 'operations-plan':
-          pdf = await generateOperationsPlanPDF(project, exportBranding)
-          break
+      // Use multi-site export for supported types when project has multiple sites
+      if (isMultiSite && (pdfType === 'operations-plan' || pdfType === 'sora')) {
+        setPdfExportProgress('Generating multi-site PDF...')
         
-        case 'sora':
-          // Need to calculate SORA values
-          const soraCalcs = {
-            intrinsicGRC: project.soraAssessment?.intrinsicGRC || 3,
-            finalGRC: project.soraAssessment?.finalGRC || 3,
-            residualARC: project.soraAssessment?.residualARC || project.soraAssessment?.initialARC || 'ARC-b',
-            sail: project.soraAssessment?.sail || 'II'
-          }
-          pdf = await generateSORAPDF(project, soraCalcs, exportBranding)
-          break
-        
-        case 'hse-risk':
-          pdf = await generateHSERiskPDF(project, exportBranding)
-          break
-        
-        default:
-          // For other types, use operations plan as base
-          pdf = await generateOperationsPlanPDF(project, exportBranding)
+        if (pdfType === 'operations-plan') {
+          pdf = await generateMultiSiteOperationsPlanPDF(
+            selectedSite ? { ...project, sites: sites.filter(s => s.id === selectedSite) } : project,
+            exportBranding,
+            clientBranding
+          )
+        } else if (pdfType === 'sora') {
+          pdf = await generateMultiSiteSORA_PDF(
+            selectedSite ? { ...project, sites: sites.filter(s => s.id === selectedSite) } : project,
+            exportBranding
+          )
+        }
+      } else {
+        // Use original single-site export functions
+        switch (pdfType) {
+          case 'operations-plan':
+            pdf = await generateOperationsPlanPDF(project, exportBranding)
+            break
+          
+          case 'sora':
+            const soraCalcs = {
+              intrinsicGRC: project.soraAssessment?.intrinsicGRC || 3,
+              finalGRC: project.soraAssessment?.finalGRC || 3,
+              residualARC: project.soraAssessment?.residualARC || project.soraAssessment?.initialARC || 'ARC-b',
+              sail: project.soraAssessment?.sail || 'II'
+            }
+            pdf = await generateSORAPDF(project, soraCalcs, exportBranding)
+            break
+          
+          case 'hse-risk':
+            pdf = await generateHSERiskPDF(project, exportBranding)
+            break
+          
+          default:
+            pdf = await generateOperationsPlanPDF(project, exportBranding)
+        }
       }
 
       setPdfExportProgress('Saving...')
@@ -486,16 +662,36 @@ export default function ProjectExport({ project, onUpdate }) {
   }
 
   // ============================================
-  // COMPLETENESS CHECK
+  // COMPLETENESS CHECK (UPDATED FOR MULTI-SITE)
   // ============================================
-  const completenessChecks = [
-    { label: 'Project overview complete', ok: !!project.name && !!project.startDate },
-    { label: 'Crew assigned', ok: project.crew?.length > 0 },
-    { label: 'Flight plan configured', ok: !!project.flightPlan?.operationType },
-    { label: 'Risk assessment complete', ok: !!project.soraAssessment?.sail || !!project.hseRiskAssessment },
-    { label: 'Emergency contacts set', ok: !!project.emergencyPlan?.primaryEmergencyContact?.name },
-    { label: 'Project approved', ok: project.status === 'approved' }
-  ]
+  const completenessChecks = useMemo(() => {
+    const checks = [
+      { label: 'Project overview complete', ok: !!project.name && !!project.startDate },
+      { label: 'Crew assigned', ok: project.crew?.length > 0 },
+      { label: 'Flight plan configured', ok: !!project.flightPlan?.operationType || sites.some(s => s.flightPlan?.operationType) },
+      { label: 'Risk assessment complete', ok: !!project.soraAssessment?.sail || sites.some(s => s.soraAssessment?.populationCategory) },
+      { label: 'Emergency contacts set', ok: !!project.emergencyPlan?.primaryEmergencyContact?.name || !!project.emergencyPlan?.contacts?.length },
+      { label: 'Project approved', ok: project.status === 'approved' }
+    ]
+    
+    // Add multi-site specific checks
+    if (isMultiSite) {
+      const sitesWithBoundary = sites.filter(s => s.mapData?.siteSurvey?.operationsBoundary).length
+      const sitesWithLaunch = sites.filter(s => s.mapData?.flightPlan?.launchPoint).length
+      const sitesWithSORA = sites.filter(s => siteCalculations[s.id]?.sail).length
+      
+      checks.push({ 
+        label: `Sites with boundaries (${sitesWithBoundary}/${sites.length})`, 
+        ok: sitesWithBoundary === sites.length 
+      })
+      checks.push({ 
+        label: `Sites with SORA (${sitesWithSORA}/${sites.length})`, 
+        ok: sitesWithSORA === sites.length 
+      })
+    }
+    
+    return checks
+  }, [project, sites, isMultiSite, siteCalculations])
 
   // ============================================
   // RENDER
@@ -507,6 +703,11 @@ export default function ProjectExport({ project, onUpdate }) {
         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <FileCheck className="w-5 h-5 text-aeria-blue" />
           Export Readiness
+          {isMultiSite && (
+            <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+              {sites.length} Sites
+            </span>
+          )}
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {completenessChecks.map((check, i) => (
@@ -542,11 +743,22 @@ export default function ProjectExport({ project, onUpdate }) {
         <p className="text-sm text-gray-500 mb-4">
           Generate branded PDF reports for clients and regulatory submissions.
         </p>
+        
+        {/* Multi-Site Selector */}
+        {isMultiSite && (
+          <MultiSiteSelector
+            sites={sites}
+            selectedSite={selectedSite}
+            onSelect={setSelectedSite}
+            calculations={siteCalculations}
+          />
+        )}
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {pdfExportTypes.map((pdfType) => {
             const Icon = pdfType.icon
-            const isDisabled = pdfType.conditional && !project[pdfType.conditional]
+            const isDisabled = pdfType.conditional && !project[pdfType.conditional] && !sites.some(s => s[pdfType.conditional])
+            const supportsMultiSite = pdfType.supportsMultiSite
             const colorClasses = {
               blue: 'bg-blue-100 text-blue-600',
               purple: 'bg-purple-100 text-purple-600',
@@ -571,7 +783,12 @@ export default function ProjectExport({ project, onUpdate }) {
                   <div className={`p-2 rounded-lg ${colorClasses[pdfType.color]}`}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  <span className="font-medium text-gray-900">{pdfType.label}</span>
+                  <div className="flex-1">
+                    <span className="font-medium text-gray-900">{pdfType.label}</span>
+                    {isMultiSite && supportsMultiSite && (
+                      <span className="ml-2 text-xs text-blue-600">Multi-site</span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm text-gray-500">{pdfType.description}</p>
                 {isDisabled && (
@@ -590,13 +807,13 @@ export default function ProjectExport({ project, onUpdate }) {
         
         {/* Branding indicator */}
         <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center gap-3">
-          {branding.operator.logo ? (
+          {branding?.operator?.logo ? (
             <img src={branding.operator.logo} alt="Logo" className="h-8 w-auto" />
           ) : (
             <div className="h-8 w-8 bg-gray-300 rounded flex items-center justify-center text-xs text-gray-500">Logo</div>
           )}
           <div className="flex-1">
-            <p className="text-sm font-medium text-gray-700">{branding.operator.name}</p>
+            <p className="text-sm font-medium text-gray-700">{branding?.operator?.name || 'Your Company'}</p>
             <p className="text-xs text-gray-500">PDFs will be branded with your company identity</p>
           </div>
           <a href="/settings" className="text-xs text-aeria-blue hover:underline">Edit branding</a>
@@ -791,6 +1008,11 @@ export default function ProjectExport({ project, onUpdate }) {
             <p className="text-sm text-blue-700 mt-1">
               PDF exports include professional branding and are suitable for client delivery and regulatory submissions.
               Configure your company branding in Settings to customize the appearance of all exported documents.
+              {isMultiSite && (
+                <span className="block mt-1">
+                  <strong>Multi-Site:</strong> Select "All Sites" to generate a comprehensive document, or choose a specific site for a focused report.
+                </span>
+              )}
             </p>
           </div>
         </div>
