@@ -10,12 +10,17 @@
  * - Sort by number/title/date
  * - Policy detail modal
  * - Review status badges (active/due/overdue)
+ * - Loading skeleton UI (Batch 4 - M-05)
+ * 
+ * Exports:
+ * - POLICIES: Array of all policy objects
+ * - getStatusInfo: Function to calculate policy review status
  * 
  * @location src/components/PolicyLibrary.jsx
  * @action REPLACE
  */
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Search,
   Filter,
@@ -48,6 +53,7 @@ import {
   Cloud,
   Bell,
   Wrench,
+  Loader2,
   Award,
   ClipboardList,
   MessageSquare,
@@ -1503,17 +1509,77 @@ function EmptyState({ searchQuery, categoryFilter }) {
   )
 }
 
+// Loading skeleton component
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Header skeleton */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="h-8 w-64 bg-gray-200 rounded mb-2"></div>
+            <div className="h-4 w-48 bg-gray-100 rounded"></div>
+          </div>
+          <div className="flex items-center gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="text-center px-4">
+                <div className="h-8 w-12 bg-gray-200 rounded mx-auto mb-1"></div>
+                <div className="h-3 w-10 bg-gray-100 rounded mx-auto"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      {/* Search skeleton */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+        <div className="h-10 bg-gray-100 rounded-lg"></div>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-8 w-24 bg-gray-100 rounded-full"></div>
+          ))}
+        </div>
+      </div>
+      
+      {/* List skeleton */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} className="p-4 border-b border-gray-100">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 bg-gray-200 rounded-lg"></div>
+              <div className="flex-1">
+                <div className="h-5 w-48 bg-gray-200 rounded mb-2"></div>
+                <div className="h-4 w-96 bg-gray-100 rounded"></div>
+              </div>
+              <div className="h-6 w-20 bg-gray-100 rounded-full"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
 
 export default function PolicyLibrary() {
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState(null)
   const [viewMode, setViewMode] = useState('list') // 'list' or 'grid'
   const [sortBy, setSortBy] = useState('number') // 'number', 'title', 'date'
   const [sortOrder, setSortOrder] = useState('asc')
   const [selectedPolicy, setSelectedPolicy] = useState(null)
+  
+  // Simulate loading delay for smooth UX transition
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false)
+    }, 300) // Brief delay for loading state
+    return () => clearTimeout(timer)
+  }, [])
   
   // Filter and sort policies
   const filteredPolicies = useMemo(() => {
@@ -1574,6 +1640,11 @@ export default function PolicyLibrary() {
       setSortBy(field)
       setSortOrder('asc')
     }
+  }
+  
+  // Show loading skeleton
+  if (loading) {
+    return <LoadingSkeleton />
   }
   
   return (
