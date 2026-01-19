@@ -418,15 +418,7 @@ export const getDefaultSiteSurveyData = () => ({
   address: '',
   accessInstructions: '',
   
-  // Airspace
-  airspace: {
-    classification: 'G',
-    restrictions: [],
-    nearestAerodrome: '',
-    aerodromeDistance: null,
-    aerodromeDirection: '',
-    notams: []
-  },
+  // NOTE: Airspace moved to flightPlan as it's flight-relevant, not ground condition
   
   // Population (SORA-aligned)
   population: {
@@ -476,6 +468,20 @@ export const getDefaultSiteFlightPlanData = () => ({
   operationType: 'VLOS',
   maxAltitudeAGL: 120,
   maxDistanceFromPilot: null,
+  
+  // Airspace (moved from siteSurvey - flight-relevant)
+  airspace: {
+    classification: 'G',        // Class A, B, C, D, E, F, G
+    controlled: false,          // Is this controlled airspace?
+    restrictions: [],           // Any airspace restrictions
+    nearestAerodrome: '',
+    aerodromeDistance: null,    // km
+    aerodromeDirection: '',     // e.g., 'NE', 'SW'
+    notamRequired: false,
+    atcCoordinationRequired: false,
+    notams: [],                 // Active NOTAMs
+    notes: ''
+  },
   
   // Flight geography parameters (for auto-calculation)
   flightGeographyMethod: 'manual', // manual | auto
