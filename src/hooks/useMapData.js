@@ -8,8 +8,11 @@
  * - Drawing mode state
  * - Map element CRUD operations
  * 
+ * BATCH 6 FINAL:
+ * - Fixed obstacle/obstacles naming mismatch
+ * 
  * @location src/hooks/useMapData.js
- * @action NEW
+ * @action REPLACE
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
@@ -471,14 +474,21 @@ export function useMapData(project, onUpdate, options = {}) {
   const setMarker = useCallback((elementType, lngLat, options = {}) => {
     if (!activeSite) return null
     
-    const style = MAP_ELEMENT_STYLES[elementType]
-    if (!style) return null
+    // BATCH 6 FIX: Handle obstacle/obstacles naming inconsistency
+    // DRAWING_MODES uses 'obstacle' but MAP_ELEMENT_STYLES uses 'obstacles'
+    const styleKey = elementType === 'obstacle' ? 'obstacles' : elementType
+    const style = MAP_ELEMENT_STYLES[styleKey]
+    if (!style) {
+      console.warn(`No style found for element type: ${elementType} (tried: ${styleKey})`)
+      return null
+    }
     
     let marker
     
     // Create appropriate marker type
     switch (elementType) {
       case 'obstacle':
+      case 'obstacles':
         marker = createObstacle(lngLat.lng, lngLat.lat, {
           ...options,
           ...style
