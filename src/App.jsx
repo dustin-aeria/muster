@@ -10,6 +10,7 @@ import Operators from './pages/Operators'
 import Aircraft from './pages/Aircraft'
 import Clients from './pages/Clients'
 import Settings from './pages/Settings'
+import PolicyLibrary from './components/PolicyLibrary'
 
 // Safety Module Pages
 import SafetyDashboard from './pages/SafetyDashboard'
@@ -87,6 +88,7 @@ function App() {
         <Route path="projects" element={<Projects />} />
         <Route path="projects/:projectId" element={<ProjectView />} />
         <Route path="forms" element={<Forms />} />
+        <Route path="policies" element={<PolicyLibrary />} />
         <Route path="operators" element={<Operators />} />
         <Route path="aircraft" element={<Aircraft />} />
         <Route path="clients" element={<Clients />} />
