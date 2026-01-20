@@ -975,7 +975,7 @@ export default function ProjectEmergency({ project, onUpdate }) {
       {showMap && (
         <div className="space-y-3">
           {/* Controls row - outside the map for better interaction */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 items-center">
             <LayerToggles
               visibleLayers={mapControls.visibleLayers}
               onToggleLayer={mapControls.toggleLayer}
@@ -993,6 +993,19 @@ export default function ProjectEmergency({ project, onUpdate }) {
               activeLayer="emergency"
               editMode={true}
             />
+            {/* View All Sites Toggle */}
+            {sites.length > 1 && (
+              <label className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={mapControls.showAllSites}
+                  onChange={(e) => mapControls.setShowAllSites(e.target.checked)}
+                  className="w-4 h-4 text-aeria-navy rounded focus:ring-aeria-navy"
+                />
+                <Eye className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-700">All Sites</span>
+              </label>
+            )}
           </div>
 
           {/* Map */}

@@ -769,6 +769,32 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
             />
           )}
 
+          {/* View All Sites Toggle */}
+          {showMap && sites.length > 1 && (
+            <div className="bg-white rounded-lg border border-gray-200 p-3">
+              <label className="flex items-center justify-between cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">View All Sites</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={mapControls.showAllSites}
+                    onChange={(e) => mapControls.setShowAllSites(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-aeria-navy/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-aeria-navy"></div>
+                </div>
+              </label>
+              {mapControls.showAllSites && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Showing data from all {sites.length} sites. Each site has a unique color.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Drawing Tools - in sidebar instead of floating over map */}
           {showMap && (
             <DrawingTools
