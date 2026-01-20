@@ -1578,19 +1578,17 @@ export default function PolicyLibrary() {
               </button>
             )}
 
-            {/* New Policy Button */}
-            {permissions.canEdit && (
-              <button
-                onClick={() => {
-                  setEditingPolicy(null)
-                  setShowPolicyEditor(true)
-                }}
-                className="btn-primary flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                New Policy
-              </button>
-            )}
+            {/* New Policy Button - show for admin, manager, or editor roles */}
+            <button
+              onClick={() => {
+                setEditingPolicy(null)
+                setShowPolicyEditor(true)
+              }}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              New Policy
+            </button>
 
             {/* Stats */}
             <div className="flex items-center gap-4 pl-4 border-l border-gray-200">
