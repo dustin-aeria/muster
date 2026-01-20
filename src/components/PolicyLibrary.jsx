@@ -1,88 +1,56 @@
 /**
  * PolicyLibrary.jsx
- * Searchable Policy & Procedure Library
- * 
+ * Searchable Policy & Procedure Library with full CRUD support
+ *
  * Features:
- * - 45 policies across 3 categories (RPAS, CRM, HSE)
+ * - Firestore-backed policy management
+ * - Create, edit, delete policies
+ * - File attachments via Firebase Storage
  * - Search functionality
  * - Category filter chips
  * - List/grid toggle view
  * - Sort by number/title/date
- * - Policy detail modal
+ * - Policy detail modal with edit/delete
  * - Review status badges (active/due/overdue)
- * - Loading skeleton UI (Batch 4 - M-05)
- * 
+ * - Loading skeleton UI
+ *
  * Exports:
- * - POLICIES: Array of all policy objects
+ * - POLICIES: Array of seed policy objects (for migration)
  * - getStatusInfo: Function to calculate policy review status
- * 
+ *
  * @location src/components/PolicyLibrary.jsx
- * @action REPLACE
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   Search,
-  Filter,
   Grid,
   List,
-  SortAsc,
-  SortDesc,
   FileText,
   Book,
-  Shield,
   HardHat,
   Users,
   ChevronRight,
   X,
   Calendar,
   User,
-  Tag,
   Link,
-  ExternalLink,
   AlertCircle,
   CheckCircle2,
   Clock,
-  AlertTriangle,
   Download,
   Printer,
-  Bookmark,
   BookOpen,
   Plane,
-  Radio,
-  Cloud,
-  Bell,
-  Wrench,
   Loader2,
-  Award,
-  ClipboardList,
-  MessageSquare,
-  Eye,
-  Brain,
-  Gauge,
-  Coffee,
-  Heart,
-  Phone,
-  ShieldAlert,
-  Flame,
-  Car,
-  ArrowUp,
-  Skull,
-  Leaf,
-  Volume2,
-  Thermometer,
-  Sun,
-  Zap,
-  MapPin,
-  Bug,
-  AlertOctagon,
-  Microscope,
-  FileCheck,
-  GraduationCap,
   FolderOpen,
-  Building,
-  Scale
+  Scale,
+  Plus,
+  Pencil,
+  Trash2
 } from 'lucide-react'
+import PolicyModal from './PolicyModal'
+import { getPolicies, deletePolicy } from '../lib/firestore'
 
 // ============================================
 // POLICY DATA
@@ -1311,24 +1279,24 @@ function PolicyCard({ policy, view, onClick }) {
   )
 }
 
-function PolicyDetailModal({ policy, onClose }) {
+function PolicyDetailModal({ policy, onClose, onEdit, onDelete, allPolicies }) {
   if (!policy) return null
-  
+
   const category = CATEGORIES[policy.category]
   const statusInfo = getStatusInfo(policy)
-  
+
   const categoryColors = {
     blue: 'bg-blue-100 text-blue-700 border-blue-200',
     purple: 'bg-purple-100 text-purple-700 border-purple-200',
     green: 'bg-green-100 text-green-700 border-green-200'
   }
-  
+
   const categoryBgColors = {
     blue: 'bg-blue-50 border-blue-200',
     purple: 'bg-purple-50 border-purple-200',
     green: 'bg-green-50 border-green-200'
   }
-  
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -1350,28 +1318,44 @@ function PolicyDetailModal({ policy, onClose }) {
                 <p className="text-sm text-gray-500 mt-1">{category.name}</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-white/50 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onEdit(policy)}
+                className="p-2 hover:bg-white/50 rounded-lg transition-colors text-gray-600 hover:text-aeria-navy"
+                title="Edit policy"
+              >
+                <Pencil className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => onDelete(policy)}
+                className="p-2 hover:bg-white/50 rounded-lg transition-colors text-gray-600 hover:text-red-600"
+                title="Delete policy"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/50 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
           </div>
         </div>
-        
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Description */}
           <div>
             <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
-            <p className="text-gray-700">{policy.description}</p>
+            <p className="text-gray-700">{policy.description || 'No description provided.'}</p>
           </div>
-          
+
           {/* Metadata Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">Version</p>
-              <p className="font-medium text-gray-900">{policy.version}</p>
+              <p className="font-medium text-gray-900">{policy.version || '1.0'}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">Effective Date</p>
@@ -1388,27 +1372,51 @@ function PolicyDetailModal({ policy, onClose }) {
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">Owner</p>
-              <p className="font-medium text-gray-900">{policy.owner}</p>
+              <p className="font-medium text-gray-900">{policy.owner || 'Not assigned'}</p>
             </div>
           </div>
-          
+
           {/* Sections */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-3">Sections</h3>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <ol className="space-y-2">
-                {policy.sections.map((section, index) => (
-                  <li key={index} className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-medium text-gray-500">
-                      {index + 1}
-                    </span>
-                    <span className="text-gray-700">{section}</span>
-                  </li>
-                ))}
-              </ol>
+          {policy.sections?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 mb-3">Sections</h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <ol className="space-y-2">
+                  {policy.sections.map((section, index) => (
+                    <li key={index} className="flex items-center gap-3">
+                      <span className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-medium text-gray-500">
+                        {index + 1}
+                      </span>
+                      <span className="text-gray-700">{section}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
-          </div>
-          
+          )}
+
+          {/* Attachments */}
+          {policy.attachments?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 mb-3">Attachments</h3>
+              <div className="space-y-2">
+                {policy.attachments.map((attachment, index) => (
+                  <a
+                    key={index}
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <FileText className="w-5 h-5 text-gray-400" />
+                    <span className="flex-1 text-sm text-aeria-navy hover:underline">{attachment.name}</span>
+                    <Download className="w-4 h-4 text-gray-400" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Regulatory References */}
           {policy.regulatoryRefs?.length > 0 && (
             <div>
@@ -1426,29 +1434,28 @@ function PolicyDetailModal({ policy, onClose }) {
               </div>
             </div>
           )}
-          
+
           {/* Related Policies */}
           {policy.relatedPolicies?.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-3">Related Policies</h3>
               <div className="flex flex-wrap gap-2">
                 {policy.relatedPolicies.map((num) => {
-                  const related = POLICIES.find(p => p.number === num)
-                  if (!related) return null
+                  const related = allPolicies.find(p => p.number === num)
                   return (
                     <span
                       key={num}
                       className="inline-flex items-center gap-1 px-3 py-1 bg-aeria-navy/10 text-aeria-navy rounded-full text-sm"
                     >
                       <Link className="w-3 h-3" />
-                      {num} - {related.title}
+                      {num}{related ? ` - ${related.title}` : ''}
                     </span>
                   )
                 })}
               </div>
             </div>
           )}
-          
+
           {/* Keywords */}
           {policy.keywords?.length > 0 && (
             <div>
@@ -1466,7 +1473,7 @@ function PolicyDetailModal({ policy, onClose }) {
             </div>
           )}
         </div>
-        
+
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
           <div className="text-sm text-gray-500">
@@ -1477,13 +1484,12 @@ function PolicyDetailModal({ policy, onClose }) {
               <Printer className="w-4 h-4" />
               Print
             </button>
-            <button className="btn-secondary flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              Download
-            </button>
-            <button className="btn-primary flex items-center gap-2">
-              <BookOpen className="w-4 h-4" />
-              View Full Policy
+            <button
+              onClick={() => onEdit(policy)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit Policy
             </button>
           </div>
         </div>
@@ -1561,78 +1567,175 @@ function LoadingSkeleton() {
 }
 
 // ============================================
+// DELETE CONFIRMATION MODAL
+// ============================================
+
+function DeleteConfirmModal({ policy, onConfirm, onCancel, deleting }) {
+  if (!policy) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-red-100 rounded-full">
+            <AlertCircle className="w-6 h-6 text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900">Delete Policy</h3>
+        </div>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete <strong>{policy.number} - {policy.title}</strong>?
+          This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            className="btn-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            className="btn-primary bg-red-600 hover:bg-red-700"
+          >
+            {deleting ? 'Deleting...' : 'Delete Policy'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 
 export default function PolicyLibrary() {
+  const [policies, setPolicies] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState(null)
-  const [viewMode, setViewMode] = useState('list') // 'list' or 'grid'
-  const [sortBy, setSortBy] = useState('number') // 'number', 'title', 'date'
+  const [viewMode, setViewMode] = useState('list')
+  const [sortBy, setSortBy] = useState('number')
   const [sortOrder, setSortOrder] = useState('asc')
   const [selectedPolicy, setSelectedPolicy] = useState(null)
-  
-  // Simulate loading delay for smooth UX transition
-  useEffect(() => {
-    const timer = setTimeout(() => {
+
+  // Modal states
+  const [showPolicyModal, setShowPolicyModal] = useState(false)
+  const [editingPolicy, setEditingPolicy] = useState(null)
+  const [deletingPolicy, setDeletingPolicy] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Load policies from Firestore
+  const loadPolicies = async () => {
+    try {
+      setError('')
+      const data = await getPolicies()
+      setPolicies(data)
+    } catch (err) {
+      setError('Failed to load policies. Please try again.')
+      console.error('Error loading policies:', err)
+    } finally {
       setLoading(false)
-    }, 300) // Brief delay for loading state
-    return () => clearTimeout(timer)
+    }
+  }
+
+  useEffect(() => {
+    loadPolicies()
   }, [])
-  
+
+  // Handle policy saved (create/update)
+  const handlePolicySaved = () => {
+    loadPolicies()
+    setEditingPolicy(null)
+    setShowPolicyModal(false)
+    setSelectedPolicy(null)
+  }
+
+  // Handle edit policy
+  const handleEditPolicy = (policy) => {
+    setEditingPolicy(policy)
+    setShowPolicyModal(true)
+    setSelectedPolicy(null)
+  }
+
+  // Handle delete policy
+  const handleDeletePolicy = (policy) => {
+    setDeletingPolicy(policy)
+    setSelectedPolicy(null)
+  }
+
+  // Confirm delete
+  const confirmDelete = async () => {
+    if (!deletingPolicy) return
+
+    setIsDeleting(true)
+    try {
+      await deletePolicy(deletingPolicy.id)
+      await loadPolicies()
+      setDeletingPolicy(null)
+    } catch (err) {
+      setError('Failed to delete policy. Please try again.')
+      console.error('Error deleting policy:', err)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   // Filter and sort policies
   const filteredPolicies = useMemo(() => {
-    let result = [...POLICIES]
-    
+    let result = [...policies]
+
     // Category filter
     if (categoryFilter) {
       result = result.filter(p => p.category === categoryFilter)
     }
-    
+
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      result = result.filter(p => 
-        p.number.includes(query) ||
-        p.title.toLowerCase().includes(query) ||
-        p.description.toLowerCase().includes(query) ||
+      result = result.filter(p =>
+        p.number?.includes(query) ||
+        p.title?.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query) ||
         p.keywords?.some(k => k.toLowerCase().includes(query))
       )
     }
-    
+
     // Sort
     result.sort((a, b) => {
       let comparison = 0
       switch (sortBy) {
         case 'number':
-          comparison = a.number.localeCompare(b.number, undefined, { numeric: true })
+          comparison = (a.number || '').localeCompare(b.number || '', undefined, { numeric: true })
           break
         case 'title':
-          comparison = a.title.localeCompare(b.title)
+          comparison = (a.title || '').localeCompare(b.title || '')
           break
         case 'date':
-          comparison = new Date(a.effectiveDate) - new Date(b.effectiveDate)
+          comparison = new Date(a.effectiveDate || 0) - new Date(b.effectiveDate || 0)
           break
         default:
           comparison = 0
       }
       return sortOrder === 'asc' ? comparison : -comparison
     })
-    
+
     return result
-  }, [searchQuery, categoryFilter, sortBy, sortOrder])
-  
+  }, [policies, searchQuery, categoryFilter, sortBy, sortOrder])
+
   // Stats
   const stats = useMemo(() => {
-    const all = POLICIES.length
-    const active = POLICIES.filter(p => getStatusInfo(p).status === 'active').length
-    const due = POLICIES.filter(p => getStatusInfo(p).status === 'due').length
-    const overdue = POLICIES.filter(p => getStatusInfo(p).status === 'overdue').length
-    
+    const all = policies.length
+    const active = policies.filter(p => getStatusInfo(p).status === 'active').length
+    const due = policies.filter(p => getStatusInfo(p).status === 'due').length
+    const overdue = policies.filter(p => getStatusInfo(p).status === 'overdue').length
+
     return { all, active, due, overdue }
-  }, [])
-  
+  }, [policies])
+
   const toggleSort = (field) => {
     if (sortBy === field) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
@@ -1641,14 +1744,25 @@ export default function PolicyLibrary() {
       setSortOrder('asc')
     }
   }
-  
+
   // Show loading skeleton
   if (loading) {
     return <LoadingSkeleton />
   }
-  
+
   return (
     <div className="space-y-6">
+      {/* Error message */}
+      {error && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="ml-auto p-1 hover:bg-red-100 rounded">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-start justify-between">
@@ -1661,29 +1775,43 @@ export default function PolicyLibrary() {
               Access and manage organizational policies and procedures
             </p>
           </div>
-          
-          {/* Stats */}
+
           <div className="flex items-center gap-4">
-            <div className="text-center px-4">
-              <p className="text-2xl font-bold text-gray-900">{stats.all}</p>
-              <p className="text-xs text-gray-500">Total</p>
-            </div>
-            <div className="text-center px-4 border-l border-gray-200">
-              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-              <p className="text-xs text-gray-500">Active</p>
-            </div>
-            <div className="text-center px-4 border-l border-gray-200">
-              <p className="text-2xl font-bold text-amber-600">{stats.due}</p>
-              <p className="text-xs text-gray-500">Due</p>
-            </div>
-            <div className="text-center px-4 border-l border-gray-200">
-              <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
-              <p className="text-xs text-gray-500">Overdue</p>
+            {/* New Policy Button */}
+            <button
+              onClick={() => {
+                setEditingPolicy(null)
+                setShowPolicyModal(true)
+              }}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              New Policy
+            </button>
+
+            {/* Stats */}
+            <div className="flex items-center gap-4 pl-4 border-l border-gray-200">
+              <div className="text-center px-4">
+                <p className="text-2xl font-bold text-gray-900">{stats.all}</p>
+                <p className="text-xs text-gray-500">Total</p>
+              </div>
+              <div className="text-center px-4 border-l border-gray-200">
+                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                <p className="text-xs text-gray-500">Active</p>
+              </div>
+              <div className="text-center px-4 border-l border-gray-200">
+                <p className="text-2xl font-bold text-amber-600">{stats.due}</p>
+                <p className="text-xs text-gray-500">Due</p>
+              </div>
+              <div className="text-center px-4 border-l border-gray-200">
+                <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
+                <p className="text-xs text-gray-500">Overdue</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Search and Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
         {/* Search Bar */}
@@ -1706,7 +1834,7 @@ export default function PolicyLibrary() {
               </button>
             )}
           </div>
-          
+
           {/* View Toggle */}
           <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
             <button
@@ -1722,7 +1850,7 @@ export default function PolicyLibrary() {
               <Grid className="w-5 h-5" />
             </button>
           </div>
-          
+
           {/* Sort Dropdown */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Sort:</span>
@@ -1752,15 +1880,15 @@ export default function PolicyLibrary() {
             </button>
           </div>
         </div>
-        
+
         {/* Category Filters */}
         <CategoryFilters selected={categoryFilter} onChange={setCategoryFilter} />
       </div>
-      
+
       {/* Results Count */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
-          Showing {filteredPolicies.length} of {POLICIES.length} policies
+          Showing {filteredPolicies.length} of {policies.length} policies
         </p>
         {(searchQuery || categoryFilter) && (
           <button
@@ -1774,7 +1902,7 @@ export default function PolicyLibrary() {
           </button>
         )}
       </div>
-      
+
       {/* Policy List/Grid */}
       {filteredPolicies.length === 0 ? (
         <EmptyState searchQuery={searchQuery} categoryFilter={categoryFilter} />
@@ -1801,14 +1929,36 @@ export default function PolicyLibrary() {
           ))}
         </div>
       )}
-      
+
       {/* Policy Detail Modal */}
       {selectedPolicy && (
         <PolicyDetailModal
           policy={selectedPolicy}
+          allPolicies={policies}
           onClose={() => setSelectedPolicy(null)}
+          onEdit={handleEditPolicy}
+          onDelete={handleDeletePolicy}
         />
       )}
+
+      {/* Policy Create/Edit Modal */}
+      <PolicyModal
+        isOpen={showPolicyModal}
+        onClose={() => {
+          setShowPolicyModal(false)
+          setEditingPolicy(null)
+        }}
+        policy={editingPolicy}
+        onSaved={handlePolicySaved}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        policy={deletingPolicy}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeletingPolicy(null)}
+        deleting={isDeleting}
+      />
     </div>
   )
 }

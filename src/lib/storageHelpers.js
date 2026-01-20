@@ -88,19 +88,96 @@ export async function deleteSitePhoto(storagePath) {
 export async function uploadMultipleSitePhotos(files, projectId, siteId, category = 'general', onProgress) {
   const results = []
   const fileArray = Array.from(files)
-  
+
   for (let i = 0; i < fileArray.length; i++) {
     const file = fileArray[i]
     if (onProgress) onProgress(i + 1, fileArray.length)
-    
+
     try {
       const result = await uploadSitePhoto(file, projectId, siteId, category)
       results.push(result)
     } catch (error) {
-      console.error(`Error uploading ${file.name}:`, error)
       results.push({ error: error.message, name: file.name })
     }
   }
-  
+
   return results
+}
+
+// ============================================
+// POLICY ATTACHMENTS
+// ============================================
+
+/**
+ * Upload a policy attachment (PDF, Word doc, etc.)
+ * @param {File} file - The file to upload
+ * @param {string} policyId - Policy ID for organizing files
+ * @returns {Promise<{url: string, path: string, name: string, size: number, type: string}>}
+ */
+export async function uploadPolicyAttachment(file, policyId) {
+  if (!file) throw new Error('No file provided')
+  if (!policyId) throw new Error('Policy ID required')
+
+  // Validate file type
+  const validTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'image/jpeg',
+    'image/png'
+  ]
+
+  if (!validTypes.includes(file.type)) {
+    throw new Error('Invalid file type. Please upload PDF, Word, Excel, text, or image files.')
+  }
+
+  // Validate file size (max 25MB for documents)
+  const maxSize = 25 * 1024 * 1024
+  if (file.size > maxSize) {
+    throw new Error('File too large. Maximum size is 25MB.')
+  }
+
+  // Generate unique filename
+  const timestamp = Date.now()
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filename = `${timestamp}_${safeName}`
+
+  // Create storage path: policies/{policyId}/attachments/{filename}
+  const storagePath = `policies/${policyId}/attachments/${filename}`
+  const storageRef = ref(storage, storagePath)
+
+  // Upload file
+  const snapshot = await uploadBytes(storageRef, file, {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name,
+      uploadedAt: new Date().toISOString()
+    }
+  })
+
+  // Get download URL
+  const url = await getDownloadURL(snapshot.ref)
+
+  return {
+    url,
+    path: storagePath,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    uploadedAt: new Date().toISOString()
+  }
+}
+
+/**
+ * Delete a policy attachment from Firebase Storage
+ * @param {string} storagePath - The storage path of the file to delete
+ */
+export async function deletePolicyAttachment(storagePath) {
+  if (!storagePath) throw new Error('Storage path required')
+
+  const storageRef = ref(storage, storagePath)
+  await deleteObject(storageRef)
 }

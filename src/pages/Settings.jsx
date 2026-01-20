@@ -8,13 +8,14 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { User, Building, Shield, Bell, Palette, Check, Loader2 } from 'lucide-react'
+import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { updateOperator } from '../lib/firestore'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import BrandingSettings from '../components/BrandingSettings'
+import { seedPolicies, isPoliciesSeeded } from '../lib/seedPolicies'
 
 export default function Settings() {
   const { userProfile, user } = useAuth()
@@ -61,6 +62,12 @@ export default function Settings() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordSuccess, setPasswordSuccess] = useState(false)
 
+  // Data migration state
+  const [policiesSeeded, setPoliciesSeeded] = useState(null)
+  const [seedingPolicies, setSeedingPolicies] = useState(false)
+  const [seedProgress, setSeedProgress] = useState({ current: 0, total: 0 })
+  const [seedResult, setSeedResult] = useState(null)
+
   // Load profile data
   useEffect(() => {
     if (userProfile) {
@@ -106,6 +113,33 @@ export default function Settings() {
       }
     } catch {
       // Notification prefs may not exist yet - use defaults
+    }
+  }
+
+  // Check if policies are seeded
+  useEffect(() => {
+    checkPoliciesSeeded()
+  }, [])
+
+  const checkPoliciesSeeded = async () => {
+    const seeded = await isPoliciesSeeded()
+    setPoliciesSeeded(seeded)
+  }
+
+  const handleSeedPolicies = async () => {
+    setSeedingPolicies(true)
+    setSeedResult(null)
+
+    try {
+      const result = await seedPolicies((current, total) => {
+        setSeedProgress({ current, total })
+      })
+      setSeedResult(result)
+      setPoliciesSeeded(true)
+    } catch (err) {
+      setSeedResult({ success: 0, failed: 1, errors: [err.message] })
+    } finally {
+      setSeedingPolicies(false)
     }
   }
 
@@ -200,7 +234,8 @@ export default function Settings() {
     { id: 'company', label: 'Company', icon: Building, description: 'Organization settings' },
     { id: 'branding', label: 'Branding', icon: Palette, description: 'PDF export branding' },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alert preferences' },
-    { id: 'security', label: 'Security', icon: Shield, description: 'Password & authentication' }
+    { id: 'security', label: 'Security', icon: Shield, description: 'Password & authentication' },
+    { id: 'data', label: 'Data', icon: Database, description: 'Data management' }
   ]
 
   const SaveButton = ({ saving, saved, onClick, label = 'Save Changes' }) => (
@@ -507,9 +542,9 @@ export default function Settings() {
               )}
               <div>
                 <label className="label">Current Password</label>
-                <input 
-                  type="password" 
-                  className="input" 
+                <input
+                  type="password"
+                  className="input"
                   placeholder="Enter current password"
                   value={passwordData.current}
                   onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
@@ -517,9 +552,9 @@ export default function Settings() {
               </div>
               <div>
                 <label className="label">New Password</label>
-                <input 
-                  type="password" 
-                  className="input" 
+                <input
+                  type="password"
+                  className="input"
                   placeholder="Enter new password"
                   value={passwordData.new}
                   onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
@@ -527,16 +562,16 @@ export default function Settings() {
               </div>
               <div>
                 <label className="label">Confirm New Password</label>
-                <input 
-                  type="password" 
-                  className="input" 
+                <input
+                  type="password"
+                  className="input"
                   placeholder="Confirm new password"
                   value={passwordData.confirm}
                   onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
                 />
               </div>
               <div className="pt-4">
-                <button 
+                <button
                   onClick={handleUpdatePassword}
                   disabled={passwordSaving || !passwordData.current || !passwordData.new || !passwordData.confirm}
                   className="btn-primary inline-flex items-center gap-2"
@@ -551,13 +586,110 @@ export default function Settings() {
                   )}
                 </button>
               </div>
-              
+
               <div className="border-t border-gray-200 pt-4 mt-6">
                 <h3 className="font-medium text-gray-900 mb-3">Two-Factor Authentication</h3>
                 <p className="text-sm text-gray-500 mb-3">
                   Add an extra layer of security to your account
                 </p>
                 <button className="btn-secondary">Enable 2FA</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Data Tab */}
+        {activeTab === 'data' && (
+          <div className="card">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-aeria-sky rounded-lg">
+                <Database className="w-5 h-5 text-aeria-navy" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Data Management</h2>
+                <p className="text-sm text-gray-500">Database and migration tools</p>
+              </div>
+            </div>
+            <div className="space-y-6">
+              {/* Policy Migration Section */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h3 className="font-medium text-gray-900 mb-2">Policy Library Migration</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Migrate the default 45 policies from the template into your Firestore database.
+                  This allows you to customize and manage these policies.
+                </p>
+
+                {policiesSeeded === null ? (
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Checking migration status...</span>
+                  </div>
+                ) : policiesSeeded ? (
+                  <div className="flex items-center gap-2 text-green-600">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="text-sm font-medium">Policies have been migrated</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-amber-600">
+                      <AlertCircle className="w-5 h-5" />
+                      <span className="text-sm font-medium">Policies not yet migrated</span>
+                    </div>
+                    <button
+                      onClick={handleSeedPolicies}
+                      disabled={seedingPolicies}
+                      className="btn-primary inline-flex items-center gap-2"
+                    >
+                      {seedingPolicies ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Migrating... ({seedProgress.current}/{seedProgress.total})
+                        </>
+                      ) : (
+                        <>
+                          <Database className="w-4 h-4" />
+                          Migrate Policies
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {seedResult && (
+                  <div className={`mt-4 p-3 rounded-lg ${
+                    seedResult.failed > 0
+                      ? 'bg-amber-50 border border-amber-200'
+                      : 'bg-green-50 border border-green-200'
+                  }`}>
+                    <p className={`text-sm font-medium ${
+                      seedResult.failed > 0 ? 'text-amber-800' : 'text-green-800'
+                    }`}>
+                      Migration Complete
+                    </p>
+                    <p className={`text-sm mt-1 ${
+                      seedResult.failed > 0 ? 'text-amber-700' : 'text-green-700'
+                    }`}>
+                      {seedResult.success} policies migrated successfully
+                      {seedResult.failed > 0 && `, ${seedResult.failed} failed`}
+                    </p>
+                    {seedResult.errors?.length > 0 && (
+                      <ul className="mt-2 text-xs text-amber-600">
+                        {seedResult.errors.map((err, i) => (
+                          <li key={i}>• {err}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Data Info Section */}
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <h3 className="font-medium text-blue-900 mb-2">Data Storage</h3>
+                <p className="text-sm text-blue-700">
+                  Your data is securely stored in Google Firebase Firestore with automatic backups.
+                  All file attachments are stored in Firebase Cloud Storage.
+                </p>
               </div>
             </div>
           </div>

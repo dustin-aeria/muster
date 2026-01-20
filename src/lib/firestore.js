@@ -875,6 +875,126 @@ export async function deleteForm(id) {
 }
 
 // ============================================
+// POLICIES
+// ============================================
+
+const policiesRef = collection(db, 'policies')
+
+/**
+ * Get all policies
+ * @param {Object} filters - Optional filters (category, status)
+ * @returns {Promise<Array>}
+ */
+export async function getPolicies(filters = {}) {
+  let q = query(policiesRef, orderBy('number', 'asc'))
+
+  if (filters.category) {
+    q = query(policiesRef, where('category', '==', filters.category), orderBy('number', 'asc'))
+  }
+
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+}
+
+/**
+ * Get a single policy by ID
+ * @param {string} id - Policy ID
+ * @returns {Promise<Object>}
+ */
+export async function getPolicy(id) {
+  const docRef = doc(db, 'policies', id)
+  const snapshot = await getDoc(docRef)
+
+  if (!snapshot.exists()) {
+    throw new Error('Policy not found')
+  }
+
+  return { id: snapshot.id, ...snapshot.data() }
+}
+
+/**
+ * Create a new policy
+ * @param {Object} data - Policy data
+ * @returns {Promise<Object>}
+ */
+export async function createPolicy(data) {
+  const policy = {
+    number: data.number || '',
+    title: data.title || '',
+    category: data.category || 'rpas',
+    description: data.description || '',
+    version: data.version || '1.0',
+    effectiveDate: data.effectiveDate || new Date().toISOString().split('T')[0],
+    reviewDate: data.reviewDate || '',
+    owner: data.owner || '',
+    status: data.status || 'draft',
+    keywords: data.keywords || [],
+    relatedPolicies: data.relatedPolicies || [],
+    regulatoryRefs: data.regulatoryRefs || [],
+    sections: data.sections || [],
+    attachments: data.attachments || [],
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    createdBy: data.createdBy || null
+  }
+
+  const docRef = await addDoc(policiesRef, policy)
+  return { id: docRef.id, ...policy }
+}
+
+/**
+ * Update an existing policy
+ * @param {string} id - Policy ID
+ * @param {Object} data - Updated policy data
+ */
+export async function updatePolicy(id, data) {
+  const docRef = doc(db, 'policies', id)
+  await updateDoc(docRef, {
+    ...data,
+    updatedAt: serverTimestamp()
+  })
+}
+
+/**
+ * Delete a policy
+ * @param {string} id - Policy ID
+ */
+export async function deletePolicy(id) {
+  const docRef = doc(db, 'policies', id)
+  await deleteDoc(docRef)
+}
+
+/**
+ * Generate next policy number for a category
+ * @param {string} category - Category ID (rpas, crm, hse)
+ * @returns {Promise<string>}
+ */
+export async function getNextPolicyNumber(category) {
+  const categoryRanges = {
+    rpas: { start: 1001, end: 1999 },
+    crm: { start: 2001, end: 2999 },
+    hse: { start: 3001, end: 3999 }
+  }
+
+  const range = categoryRanges[category] || categoryRanges.rpas
+
+  // Get all policies in category
+  const q = query(policiesRef, where('category', '==', category))
+  const snapshot = await getDocs(q)
+
+  // Find highest number in range
+  let maxNumber = range.start - 1
+  snapshot.docs.forEach(doc => {
+    const num = parseInt(doc.data().number, 10)
+    if (!isNaN(num) && num >= range.start && num <= range.end && num > maxNumber) {
+      maxNumber = num
+    }
+  })
+
+  return String(maxNumber + 1)
+}
+
+// ============================================
 // HELPER: Migration for Existing Projects
 // ============================================
 

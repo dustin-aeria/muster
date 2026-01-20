@@ -37,7 +37,7 @@ import {
   Layers
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { getProjects, getClients, getForms, getOperators } from '../lib/firestore'
+import { getProjects, getClients, getForms, getOperators, getPolicies } from '../lib/firestore'
 import { format, isThisWeek, isToday, addDays, isBefore, differenceInDays } from 'date-fns'
 import {
   getIntrinsicGRC,
@@ -46,7 +46,7 @@ import {
   getSAIL,
   sailColors
 } from '../lib/soraConfig'
-import { POLICIES, getStatusInfo } from '../components/PolicyLibrary'
+import { getStatusInfo } from '../components/PolicyLibrary'
 
 // ============================================
 // SAIL CALCULATION HELPER
@@ -65,16 +65,6 @@ function calculateSiteSORA(site) {
   return { sail, fGRC, residualARC }
 }
 
-// ============================================
-// POLICY DATA (calculated from PolicyLibrary)
-// ============================================
-const getPolicyReviewStats = () => {
-  const total = POLICIES.length
-  const due = POLICIES.filter(p => getStatusInfo(p).status === 'due').length
-  const overdue = POLICIES.filter(p => getStatusInfo(p).status === 'overdue').length
-  return { totalPolicies: total, reviewDue: due, reviewOverdue: overdue }
-}
-
 export default function Dashboard() {
   const { userProfile } = useAuth()
   const [loading, setLoading] = useState(true)
@@ -91,9 +81,11 @@ export default function Dashboard() {
   const [expiringOperators, setExpiringOperators] = useState([])
   const [sailDistribution, setSailDistribution] = useState({})
   const [allProjects, setAllProjects] = useState([])
-
-  // Calculate policy review stats from actual POLICIES data
-  const policyStats = useMemo(() => getPolicyReviewStats(), [])
+  const [policyStats, setPolicyStats] = useState({
+    totalPolicies: 0,
+    reviewDue: 0,
+    reviewOverdue: 0
+  })
 
   useEffect(() => {
     loadDashboardData()
@@ -104,11 +96,18 @@ export default function Dashboard() {
     setLoadError(null)
     try {
       // Load all data in parallel
-      const [projects, forms, operators] = await Promise.all([
+      const [projects, forms, operators, policies] = await Promise.all([
         getProjects(),
         getForms(),
-        getOperators()
+        getOperators(),
+        getPolicies()
       ])
+
+      // Calculate policy stats
+      const totalPolicies = policies.length
+      const reviewDue = policies.filter(p => getStatusInfo(p).status === 'due').length
+      const reviewOverdue = policies.filter(p => getStatusInfo(p).status === 'overdue').length
+      setPolicyStats({ totalPolicies, reviewDue, reviewOverdue })
 
       setAllProjects(projects)
 
