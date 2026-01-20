@@ -44,8 +44,8 @@ export default function NewProjectModal({ isOpen, onClose }) {
     try {
       const data = await getClients()
       setClients(data)
-    } catch (err) {
-      console.error('Error loading clients:', err)
+    } catch {
+      // Client loading failed - empty dropdown will be shown
     } finally {
       setLoadingClients(false)
     }

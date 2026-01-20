@@ -6,24 +6,46 @@
  * @version 1.0.0
  */
 
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
   deleteDoc,
-  query, 
-  where, 
-  orderBy, 
+  query,
+  where,
+  orderBy,
   limit,
   serverTimestamp,
   Timestamp,
   getCountFromServer,
-  writeBatch
+  writeBatch,
+  runTransaction
 } from 'firebase/firestore'
 import { db } from './firebase'
+
+// ============================================
+// ERROR HANDLING HELPER
+// ============================================
+
+/**
+ * Wrap async operations with consistent error handling
+ * @param {Function} operation - Async function to execute
+ * @param {string} operationName - Name of operation for error context
+ * @returns {Promise} - Result of operation or throws with context
+ */
+async function withErrorHandling(operation, operationName) {
+  try {
+    return await operation()
+  } catch (error) {
+    const enhancedError = new Error(`${operationName} failed: ${error.message}`)
+    enhancedError.originalError = error
+    enhancedError.operationName = operationName
+    throw enhancedError
+  }
+}
 
 // ============================================
 // COLLECTION REFERENCES
@@ -426,32 +448,44 @@ export async function updateIncident(id, data) {
 
 /**
  * Close an incident
+ * Uses transaction to safely update timeline array
  */
 export async function closeIncident(id, closedBy, notes = '') {
-  const incident = await getIncident(id)
-  
-  const timeline = [
-    ...(incident.timeline || []),
-    {
-      date: new Date().toISOString(),
-      action: 'Incident Closed',
-      by: closedBy,
-      notes,
-    }
-  ]
-  
-  // Calculate metrics
-  const createdAt = incident.createdAt?.toDate ? incident.createdAt.toDate() : new Date(incident.createdAt)
-  const totalResolutionTime = Math.ceil((new Date() - createdAt) / (1000 * 60 * 60 * 24))
-  
-  await updateDoc(doc(db, 'incidents', id), {
-    status: 'closed',
-    closedAt: serverTimestamp(),
-    closedBy,
-    timeline,
-    'metrics.totalResolutionTime': totalResolutionTime,
-    updatedAt: serverTimestamp(),
-  })
+  return withErrorHandling(async () => {
+    await runTransaction(db, async (transaction) => {
+      const incidentRef = doc(db, 'incidents', id)
+      const incidentSnap = await transaction.get(incidentRef)
+
+      if (!incidentSnap.exists()) {
+        throw new Error('Incident not found')
+      }
+
+      const incident = incidentSnap.data()
+
+      const timeline = [
+        ...(incident.timeline || []),
+        {
+          date: new Date().toISOString(),
+          action: 'Incident Closed',
+          by: closedBy,
+          notes,
+        }
+      ]
+
+      // Calculate metrics
+      const createdAt = incident.createdAt?.toDate ? incident.createdAt.toDate() : new Date(incident.createdAt)
+      const totalResolutionTime = Math.ceil((new Date() - createdAt) / (1000 * 60 * 60 * 24))
+
+      transaction.update(incidentRef, {
+        status: 'closed',
+        closedAt: serverTimestamp(),
+        closedBy,
+        timeline,
+        'metrics.totalResolutionTime': totalResolutionTime,
+        updatedAt: serverTimestamp(),
+      })
+    })
+  }, 'closeIncident')
 }
 
 /**
@@ -628,39 +662,65 @@ export async function getCapa(id) {
 
 /**
  * Create a new CAPA
+ * Uses transaction when linking to incident to prevent race conditions
  */
 export async function createCapa(data) {
-  const capaNumber = await generateCapaNumber()
-  
-  const capa = {
-    ...getDefaultCapaStructure(),
-    ...data,
-    capaNumber,
-    assignedDate: data.assignedTo ? serverTimestamp() : null,
-    statusHistory: [
-      {
-        date: new Date().toISOString(),
-        from: null,
-        to: 'open',
-        by: data.assignedBy || 'System',
-        reason: 'CAPA created',
-      }
-    ],
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  }
-  
-  const docRef = await addDoc(capasRef, capa)
-  
-  // If linked to an incident, update the incident
-  if (data.relatedIncidentId) {
-    const incident = await getIncident(data.relatedIncidentId)
-    await updateIncident(data.relatedIncidentId, {
-      linkedCapas: [...(incident.linkedCapas || []), docRef.id],
-    })
-  }
-  
-  return { id: docRef.id, ...capa, capaNumber }
+  return withErrorHandling(async () => {
+    const capaNumber = await generateCapaNumber()
+
+    const capa = {
+      ...getDefaultCapaStructure(),
+      ...data,
+      capaNumber,
+      assignedDate: data.assignedTo ? serverTimestamp() : null,
+      statusHistory: [
+        {
+          date: new Date().toISOString(),
+          from: null,
+          to: 'open',
+          by: data.assignedBy || 'System',
+          reason: 'CAPA created',
+        }
+      ],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+
+    // If linked to an incident, use transaction to ensure atomicity
+    if (data.relatedIncidentId) {
+      const result = await runTransaction(db, async (transaction) => {
+        // Read the incident first (within transaction)
+        const incidentRef = doc(db, 'incidents', data.relatedIncidentId)
+        const incidentSnap = await transaction.get(incidentRef)
+
+        if (!incidentSnap.exists()) {
+          throw new Error('Related incident not found')
+        }
+
+        const incidentData = incidentSnap.data()
+
+        // Create the CAPA document reference
+        const capaDocRef = doc(capasRef)
+
+        // Write the CAPA
+        transaction.set(capaDocRef, capa)
+
+        // Update the incident with the new CAPA link
+        transaction.update(incidentRef, {
+          linkedCapas: [...(incidentData.linkedCapas || []), capaDocRef.id],
+          updatedAt: serverTimestamp(),
+        })
+
+        return { id: capaDocRef.id, ...capa, capaNumber }
+      })
+
+      return result
+    }
+
+    // No incident link, simple add
+    const docRef = await addDoc(capasRef, capa)
+    return { id: docRef.id, ...capa, capaNumber }
+  }, 'createCapa')
 }
 
 /**
@@ -696,121 +756,169 @@ export async function updateCapa(id, data) {
 
 /**
  * Complete CAPA implementation
+ * Uses transaction to safely update statusHistory array
  */
 export async function completeCapa(id, completionData) {
-  const capa = await getCapa(id)
-  
-  const wasOnTime = capa.targetDate?.toDate 
-    ? new Date() <= capa.targetDate.toDate() 
-    : true
-  
-  await updateDoc(doc(db, 'capas', id), {
-    status: 'pending_verification',
-    completedDate: serverTimestamp(),
-    'implementation.status': 'complete',
-    'implementation.actionsTaken': completionData.actionsTaken,
-    'implementation.evidenceProvided': completionData.evidence || [],
-    'implementation.completionNotes': completionData.notes || '',
-    'metrics.onTime': wasOnTime,
-    statusHistory: [
-      ...(capa.statusHistory || []),
-      {
-        date: new Date().toISOString(),
-        from: capa.status,
-        to: 'pending_verification',
-        by: completionData.completedBy || 'System',
-        reason: 'Implementation completed',
+  return withErrorHandling(async () => {
+    await runTransaction(db, async (transaction) => {
+      const capaRef = doc(db, 'capas', id)
+      const capaSnap = await transaction.get(capaRef)
+
+      if (!capaSnap.exists()) {
+        throw new Error('CAPA not found')
       }
-    ],
-    updatedAt: serverTimestamp(),
-  })
+
+      const capa = capaSnap.data()
+
+      const wasOnTime = capa.targetDate?.toDate
+        ? new Date() <= capa.targetDate.toDate()
+        : true
+
+      transaction.update(capaRef, {
+        status: 'pending_verification',
+        completedDate: serverTimestamp(),
+        'implementation.status': 'complete',
+        'implementation.actionsTaken': completionData.actionsTaken,
+        'implementation.evidenceProvided': completionData.evidence || [],
+        'implementation.completionNotes': completionData.notes || '',
+        'metrics.onTime': wasOnTime,
+        statusHistory: [
+          ...(capa.statusHistory || []),
+          {
+            date: new Date().toISOString(),
+            from: capa.status,
+            to: 'pending_verification',
+            by: completionData.completedBy || 'System',
+            reason: 'Implementation completed',
+          }
+        ],
+        updatedAt: serverTimestamp(),
+      })
+    })
+  }, 'completeCapa')
 }
 
 /**
  * Verify CAPA effectiveness
+ * Uses transaction to safely update statusHistory array
  */
 export async function verifyCapa(id, verificationData) {
-  const capa = await getCapa(id)
-  
-  const newStatus = verificationData.effective ? 'verified_effective' : 'verified_ineffective'
-  
-  await updateDoc(doc(db, 'capas', id), {
-    status: newStatus,
-    'verification.verifiedBy': verificationData.verifiedBy,
-    'verification.verifiedDate': serverTimestamp(),
-    'verification.effective': verificationData.effective,
-    'verification.evidence': verificationData.evidence || '',
-    'verification.findings': verificationData.findings || '',
-    'metrics.effectivenessScore': verificationData.effective ? 100 : 0,
-    statusHistory: [
-      ...(capa.statusHistory || []),
-      {
-        date: new Date().toISOString(),
-        from: capa.status,
-        to: newStatus,
-        by: verificationData.verifiedBy,
-        reason: verificationData.effective ? 'Verified effective' : 'Verified ineffective',
+  return withErrorHandling(async () => {
+    const newStatus = verificationData.effective ? 'verified_effective' : 'verified_ineffective'
+
+    await runTransaction(db, async (transaction) => {
+      const capaRef = doc(db, 'capas', id)
+      const capaSnap = await transaction.get(capaRef)
+
+      if (!capaSnap.exists()) {
+        throw new Error('CAPA not found')
       }
-    ],
-    updatedAt: serverTimestamp(),
-  })
-  
-  // If ineffective, may need to create follow-up CAPA
-  return { effective: verificationData.effective, status: newStatus }
+
+      const capa = capaSnap.data()
+
+      transaction.update(capaRef, {
+        status: newStatus,
+        'verification.verifiedBy': verificationData.verifiedBy,
+        'verification.verifiedDate': serverTimestamp(),
+        'verification.effective': verificationData.effective,
+        'verification.evidence': verificationData.evidence || '',
+        'verification.findings': verificationData.findings || '',
+        'metrics.effectivenessScore': verificationData.effective ? 100 : 0,
+        statusHistory: [
+          ...(capa.statusHistory || []),
+          {
+            date: new Date().toISOString(),
+            from: capa.status,
+            to: newStatus,
+            by: verificationData.verifiedBy,
+            reason: verificationData.effective ? 'Verified effective' : 'Verified ineffective',
+          }
+        ],
+        updatedAt: serverTimestamp(),
+      })
+    })
+
+    // If ineffective, may need to create follow-up CAPA
+    return { effective: verificationData.effective, status: newStatus }
+  }, 'verifyCapa')
 }
 
 /**
  * Record recurrence check for CAPA
+ * Uses transaction to safely update statusHistory array
  */
 export async function recordRecurrenceCheck(id, checkData) {
-  const capa = await getCapa(id)
-  
-  await updateDoc(doc(db, 'capas', id), {
-    'verification.recurrenceCheck.checkDate': serverTimestamp(),
-    'verification.recurrenceCheck.checkedBy': checkData.checkedBy,
-    'verification.recurrenceCheck.recurred': checkData.recurred,
-    'verification.recurrenceCheck.notes': checkData.notes || '',
-    status: checkData.recurred ? 'verified_ineffective' : 'closed',
-    closedAt: checkData.recurred ? null : serverTimestamp(),
-    statusHistory: [
-      ...(capa.statusHistory || []),
-      {
-        date: new Date().toISOString(),
-        from: capa.status,
-        to: checkData.recurred ? 'verified_ineffective' : 'closed',
-        by: checkData.checkedBy,
-        reason: checkData.recurred 
-          ? 'Issue recurred - CAPA ineffective' 
-          : 'No recurrence - CAPA closed',
+  return withErrorHandling(async () => {
+    await runTransaction(db, async (transaction) => {
+      const capaRef = doc(db, 'capas', id)
+      const capaSnap = await transaction.get(capaRef)
+
+      if (!capaSnap.exists()) {
+        throw new Error('CAPA not found')
       }
-    ],
-    updatedAt: serverTimestamp(),
-  })
-  
-  return { recurred: checkData.recurred }
+
+      const capa = capaSnap.data()
+
+      transaction.update(capaRef, {
+        'verification.recurrenceCheck.checkDate': serverTimestamp(),
+        'verification.recurrenceCheck.checkedBy': checkData.checkedBy,
+        'verification.recurrenceCheck.recurred': checkData.recurred,
+        'verification.recurrenceCheck.notes': checkData.notes || '',
+        status: checkData.recurred ? 'verified_ineffective' : 'closed',
+        closedAt: checkData.recurred ? null : serverTimestamp(),
+        statusHistory: [
+          ...(capa.statusHistory || []),
+          {
+            date: new Date().toISOString(),
+            from: capa.status,
+            to: checkData.recurred ? 'verified_ineffective' : 'closed',
+            by: checkData.checkedBy,
+            reason: checkData.recurred
+              ? 'Issue recurred - CAPA ineffective'
+              : 'No recurrence - CAPA closed',
+          }
+        ],
+        updatedAt: serverTimestamp(),
+      })
+    })
+
+    return { recurred: checkData.recurred }
+  }, 'recordRecurrenceCheck')
 }
 
 /**
  * Close a CAPA
+ * Uses transaction to safely update statusHistory array
  */
 export async function closeCapa(id, closedBy, notes = '') {
-  const capa = await getCapa(id)
-  
-  await updateDoc(doc(db, 'capas', id), {
-    status: 'closed',
-    closedAt: serverTimestamp(),
-    statusHistory: [
-      ...(capa.statusHistory || []),
-      {
-        date: new Date().toISOString(),
-        from: capa.status,
-        to: 'closed',
-        by: closedBy,
-        reason: notes || 'CAPA closed',
+  return withErrorHandling(async () => {
+    await runTransaction(db, async (transaction) => {
+      const capaRef = doc(db, 'capas', id)
+      const capaSnap = await transaction.get(capaRef)
+
+      if (!capaSnap.exists()) {
+        throw new Error('CAPA not found')
       }
-    ],
-    updatedAt: serverTimestamp(),
-  })
+
+      const capa = capaSnap.data()
+
+      transaction.update(capaRef, {
+        status: 'closed',
+        closedAt: serverTimestamp(),
+        statusHistory: [
+          ...(capa.statusHistory || []),
+          {
+            date: new Date().toISOString(),
+            from: capa.status,
+            to: 'closed',
+            by: closedBy,
+            reason: notes || 'CAPA closed',
+          }
+        ],
+        updatedAt: serverTimestamp(),
+      })
+    })
+  }, 'closeCapa')
 }
 
 /**
@@ -823,22 +931,34 @@ export async function deleteCapa(id) {
 
 /**
  * Add comment to CAPA
+ * Uses transaction to prevent comment loss from concurrent updates
  */
 export async function addCapaComment(id, commentData) {
-  const capa = await getCapa(id)
-  
-  const comment = {
-    date: new Date().toISOString(),
-    by: commentData.by,
-    text: commentData.text,
-  }
-  
-  await updateDoc(doc(db, 'capas', id), {
-    comments: [...(capa.comments || []), comment],
-    updatedAt: serverTimestamp(),
-  })
-  
-  return comment
+  return withErrorHandling(async () => {
+    const comment = {
+      date: new Date().toISOString(),
+      by: commentData.by,
+      text: commentData.text,
+    }
+
+    await runTransaction(db, async (transaction) => {
+      const capaRef = doc(db, 'capas', id)
+      const capaSnap = await transaction.get(capaRef)
+
+      if (!capaSnap.exists()) {
+        throw new Error('CAPA not found')
+      }
+
+      const capaData = capaSnap.data()
+
+      transaction.update(capaRef, {
+        comments: [...(capaData.comments || []), comment],
+        updatedAt: serverTimestamp(),
+      })
+    })
+
+    return comment
+  }, 'addCapaComment')
 }
 
 // ============================================

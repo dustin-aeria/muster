@@ -41,6 +41,19 @@ const issuingBodies = [
   'Other'
 ]
 
+// Validation helpers
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+const isValidPhone = (phone) => {
+  // Accept various formats: (555) 555-5555, 555-555-5555, +1 555 555 5555, etc.
+  const phoneRegex = /^[\d\s\-+().]{10,}$/
+  const digitsOnly = phone.replace(/\D/g, '')
+  return phoneRegex.test(phone) && digitsOnly.length >= 10 && digitsOnly.length <= 15
+}
+
 export default function OperatorModal({ isOpen, onClose, operator }) {
   const isEditing = !!operator
 
@@ -157,13 +170,27 @@ export default function OperatorModal({ isOpen, onClose, operator }) {
     setLoading(true)
 
     try {
-      // Validate
+      // Validate required fields
       if (!formData.firstName.trim()) throw new Error('First name is required')
       if (!formData.lastName.trim()) throw new Error('Last name is required')
       if (!formData.email.trim()) throw new Error('Email is required')
       if (!formData.phone.trim()) throw new Error('Phone is required')
       if (!formData.emergencyContact.name.trim()) throw new Error('Emergency contact name is required')
       if (!formData.emergencyContact.phone.trim()) throw new Error('Emergency contact phone is required')
+
+      // Validate email format
+      if (!isValidEmail(formData.email)) throw new Error('Please enter a valid email address')
+
+      // Validate phone format
+      if (!isValidPhone(formData.phone)) throw new Error('Please enter a valid phone number (at least 10 digits)')
+
+      // Validate emergency contact phone
+      if (!isValidPhone(formData.emergencyContact.phone)) throw new Error('Please enter a valid emergency contact phone number')
+
+      // Validate emergency contact email if provided
+      if (formData.emergencyContact.email && !isValidEmail(formData.emergencyContact.email)) {
+        throw new Error('Please enter a valid emergency contact email address')
+      }
 
       // Process certifications - use custom values if "Other" selected
       const processedCerts = certifications

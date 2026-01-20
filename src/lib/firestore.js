@@ -14,19 +14,20 @@
  * @action REPLACE
  */
 
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
   deleteDoc,
-  query, 
-  where, 
-  orderBy, 
+  query,
+  where,
+  orderBy,
   limit,
-  serverTimestamp 
+  serverTimestamp,
+  runTransaction
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -98,8 +99,8 @@ function deserializeFromFirestore(obj) {
   if (typeof obj === 'string' && obj.startsWith(COORDINATE_MARKER)) {
     try {
       return JSON.parse(obj.slice(COORDINATE_MARKER.length))
-    } catch (e) {
-      console.warn('Failed to parse coordinates:', obj)
+    } catch {
+      // Return original string if parsing fails - coordinates may be malformed
       return obj
     }
   }
@@ -500,123 +501,177 @@ export async function deleteProject(id) {
 
 /**
  * Add a new site to a project
+ * Uses transaction to prevent race conditions when multiple users add sites
  */
 export async function addSiteToProject(projectId, siteData = {}) {
-  const project = await getProject(projectId)
-  
-  const sites = Array.isArray(project.sites) ? project.sites : []
-  
-  if (sites.length >= MAX_SITES_PER_PROJECT) {
-    throw new Error(`Maximum of ${MAX_SITES_PER_PROJECT} sites per project`)
-  }
-  
-  const newSite = createDefaultSite({
-    name: siteData.name || `Site ${sites.length + 1}`,
-    description: siteData.description || '',
-    order: sites.length,
-    createdBy: siteData.createdBy || null
+  const newSite = await runTransaction(db, async (transaction) => {
+    const projectRef = doc(db, 'projects', projectId)
+    const projectSnap = await transaction.get(projectRef)
+
+    if (!projectSnap.exists()) {
+      throw new Error('Project not found')
+    }
+
+    const projectData = deserializeFromFirestore(projectSnap.data())
+    const sites = Array.isArray(projectData.sites) ? projectData.sites : []
+
+    if (sites.length >= MAX_SITES_PER_PROJECT) {
+      throw new Error(`Maximum of ${MAX_SITES_PER_PROJECT} sites per project`)
+    }
+
+    const site = createDefaultSite({
+      name: siteData.name || `Site ${sites.length + 1}`,
+      description: siteData.description || '',
+      order: sites.length,
+      createdBy: siteData.createdBy || null
+    })
+
+    const serializedData = serializeForFirestore({
+      sites: [...sites, site],
+      activeSiteId: site.id,
+      updatedAt: serverTimestamp()
+    })
+
+    transaction.update(projectRef, serializedData)
+
+    return site
   })
-  
-  await updateProject(projectId, {
-    sites: [...sites, newSite],
-    activeSiteId: newSite.id
-  })
-  
+
   return newSite
 }
 
 /**
  * Duplicate an existing site
+ * Uses transaction to prevent race conditions
  */
 export async function duplicateSiteInProject(projectId, sourceSiteId, newName) {
-  const project = await getProject(projectId)
-  
-  const sites = Array.isArray(project.sites) ? project.sites : []
-  
-  if (sites.length >= MAX_SITES_PER_PROJECT) {
-    throw new Error(`Maximum of ${MAX_SITES_PER_PROJECT} sites per project`)
-  }
-  
-  const sourceSite = sites.find(s => s.id === sourceSiteId)
-  if (!sourceSite) {
-    throw new Error('Source site not found')
-  }
-  
-  // Deep clone the site
-  const clonedSite = JSON.parse(JSON.stringify(sourceSite))
-  
-  // Generate new ID and update metadata
-  const newSite = {
-    ...clonedSite,
-    id: `site_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    name: newName || `${sourceSite.name} (Copy)`,
-    status: 'draft',
-    order: sites.length,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-  
-  await updateProject(projectId, {
-    sites: [...sites, newSite],
-    activeSiteId: newSite.id
+  const newSite = await runTransaction(db, async (transaction) => {
+    const projectRef = doc(db, 'projects', projectId)
+    const projectSnap = await transaction.get(projectRef)
+
+    if (!projectSnap.exists()) {
+      throw new Error('Project not found')
+    }
+
+    const projectData = deserializeFromFirestore(projectSnap.data())
+    const sites = Array.isArray(projectData.sites) ? projectData.sites : []
+
+    if (sites.length >= MAX_SITES_PER_PROJECT) {
+      throw new Error(`Maximum of ${MAX_SITES_PER_PROJECT} sites per project`)
+    }
+
+    const sourceSite = sites.find(s => s.id === sourceSiteId)
+    if (!sourceSite) {
+      throw new Error('Source site not found')
+    }
+
+    // Deep clone the site
+    const clonedSite = JSON.parse(JSON.stringify(sourceSite))
+
+    // Generate new ID and update metadata
+    const site = {
+      ...clonedSite,
+      id: `site_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newName || `${sourceSite.name} (Copy)`,
+      status: 'draft',
+      order: sites.length,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    const serializedData = serializeForFirestore({
+      sites: [...sites, site],
+      activeSiteId: site.id,
+      updatedAt: serverTimestamp()
+    })
+
+    transaction.update(projectRef, serializedData)
+
+    return site
   })
-  
+
   return newSite
 }
 
 /**
  * Remove a site from a project
+ * Uses transaction to prevent race conditions
  */
 export async function removeSiteFromProject(projectId, siteId) {
-  const project = await getProject(projectId)
-  
-  const sites = Array.isArray(project.sites) ? project.sites : []
-  
-  if (sites.length <= 1) {
-    throw new Error('Cannot remove the last site from a project')
-  }
-  
-  const filteredSites = sites.filter(s => s.id !== siteId)
-  
-  // Re-order remaining sites
-  const reorderedSites = filteredSites.map((site, index) => ({
-    ...site,
-    order: index
-  }))
-  
-  // Update active site if needed
-  let newActiveSiteId = project.activeSiteId
-  if (newActiveSiteId === siteId) {
-    newActiveSiteId = reorderedSites[0]?.id || null
-  }
-  
-  await updateProject(projectId, {
-    sites: reorderedSites,
-    activeSiteId: newActiveSiteId
+  await runTransaction(db, async (transaction) => {
+    const projectRef = doc(db, 'projects', projectId)
+    const projectSnap = await transaction.get(projectRef)
+
+    if (!projectSnap.exists()) {
+      throw new Error('Project not found')
+    }
+
+    const projectData = deserializeFromFirestore(projectSnap.data())
+    const sites = Array.isArray(projectData.sites) ? projectData.sites : []
+
+    if (sites.length <= 1) {
+      throw new Error('Cannot remove the last site from a project')
+    }
+
+    const filteredSites = sites.filter(s => s.id !== siteId)
+
+    // Re-order remaining sites
+    const reorderedSites = filteredSites.map((site, index) => ({
+      ...site,
+      order: index
+    }))
+
+    // Update active site if needed
+    let newActiveSiteId = projectData.activeSiteId
+    if (newActiveSiteId === siteId) {
+      newActiveSiteId = reorderedSites[0]?.id || null
+    }
+
+    const serializedData = serializeForFirestore({
+      sites: reorderedSites,
+      activeSiteId: newActiveSiteId,
+      updatedAt: serverTimestamp()
+    })
+
+    transaction.update(projectRef, serializedData)
   })
 }
 
 /**
  * Update a specific site within a project
+ * Uses transaction to prevent race conditions
  */
 export async function updateSiteInProject(projectId, siteId, updates) {
-  const project = await getProject(projectId)
-  
-  const sites = Array.isArray(project.sites) ? project.sites : []
-  const siteIndex = sites.findIndex(s => s.id === siteId)
-  
-  if (siteIndex === -1) {
-    throw new Error('Site not found')
-  }
-  
-  const updatedSites = [...sites]
-  updatedSites[siteIndex] = {
-    ...updatedSites[siteIndex],
-    ...updates,
-    updatedAt: new Date().toISOString()
-  }
-  
-  await updateProject(projectId, { sites: updatedSites })
+  await runTransaction(db, async (transaction) => {
+    const projectRef = doc(db, 'projects', projectId)
+    const projectSnap = await transaction.get(projectRef)
+
+    if (!projectSnap.exists()) {
+      throw new Error('Project not found')
+    }
+
+    const projectData = deserializeFromFirestore(projectSnap.data())
+    const sites = Array.isArray(projectData.sites) ? projectData.sites : []
+    const siteIndex = sites.findIndex(s => s.id === siteId)
+
+    if (siteIndex === -1) {
+      throw new Error('Site not found')
+    }
+
+    const updatedSites = [...sites]
+    updatedSites[siteIndex] = {
+      ...updatedSites[siteIndex],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    }
+
+    const serializedData = serializeForFirestore({
+      sites: updatedSites,
+      updatedAt: serverTimestamp()
+    })
+
+    transaction.update(projectRef, serializedData)
+  })
 }
 
 /**

@@ -11,17 +11,18 @@
 
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { 
-  Plus, 
-  Search, 
-  FolderKanban, 
+import {
+  Plus,
+  Search,
+  FolderKanban,
   Filter,
   Calendar,
   Building2,
   ChevronRight,
   MoreVertical,
   Trash2,
-  Copy
+  Copy,
+  AlertTriangle
 } from 'lucide-react'
 import { getProjects, deleteProject, getClients } from '../lib/firestore'
 import NewProjectModal from '../components/NewProjectModal'
@@ -48,6 +49,7 @@ export default function Projects() {
   const [projects, setProjects] = useState([])
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showNewModal, setShowNewModal] = useState(false)
@@ -59,6 +61,7 @@ export default function Projects() {
 
   const loadData = async () => {
     setLoading(true)
+    setLoadError(null)
     try {
       // Load projects and clients in parallel
       const [projectsData, clientsData] = await Promise.all([
@@ -67,8 +70,8 @@ export default function Projects() {
       ])
       setProjects(projectsData)
       setClients(clientsData)
-    } catch (err) {
-      console.error('Error loading data:', err)
+    } catch {
+      setLoadError('Failed to load projects. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -79,8 +82,8 @@ export default function Projects() {
     try {
       const data = await getProjects()
       setProjects(data)
-    } catch (err) {
-      console.error('Error loading projects:', err)
+    } catch {
+      // Project loading failed - empty state will be shown
     } finally {
       setLoading(false)
     }
@@ -100,9 +103,8 @@ export default function Projects() {
     try {
       await deleteProject(projectId)
       setProjects(prev => prev.filter(p => p.id !== projectId))
-    } catch (err) {
-      console.error('Error deleting project:', err)
-      alert('Failed to delete project')
+    } catch {
+      alert('Failed to delete project. Please try again.')
     }
     setMenuOpen(null)
   }
@@ -176,6 +178,23 @@ export default function Projects() {
           <option value="archived">Archived</option>
         </select>
       </div>
+
+      {/* Error display */}
+      {loadError && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-red-800 font-medium">Unable to load projects</p>
+            <p className="text-red-600 text-sm">{loadError}</p>
+          </div>
+          <button
+            onClick={loadData}
+            className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Projects list */}
       {loading ? (

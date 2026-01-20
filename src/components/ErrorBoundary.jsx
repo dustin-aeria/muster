@@ -27,12 +27,14 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log error to console (could also send to error reporting service)
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
     this.setState({ errorInfo })
-    
-    // Optional: Send to error reporting service
-    // logErrorToService(error, errorInfo)
+
+    // In production, send to error reporting service
+    // In development, errors are already shown in the React error overlay
+    if (process.env.NODE_ENV === 'production') {
+      // TODO: Send to error reporting service (e.g., Sentry, LogRocket)
+      // logErrorToService(error, errorInfo)
+    }
   }
 
   handleReload = () => {

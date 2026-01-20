@@ -31,6 +31,9 @@ import {
 } from 'lucide-react'
 import { uploadSitePhoto, deleteSitePhoto } from '../lib/storageHelpers'
 
+// Maximum file size in bytes (10MB)
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+
 // Photo categories for site surveys
 const PHOTO_CATEGORIES = [
   { id: 'site_overview', label: 'Site Overview', icon: FolderOpen },
@@ -89,6 +92,14 @@ export default function PhotoUpload({
       return
     }
 
+    // Validate file sizes
+    const oversizedFiles = fileArray.filter(f => f.size > MAX_FILE_SIZE)
+    if (oversizedFiles.length > 0) {
+      const fileNames = oversizedFiles.map(f => f.name).join(', ')
+      setError(`The following files exceed the 10MB limit: ${fileNames}`)
+      return
+    }
+
     setError(null)
     setUploading(true)
     setUploadProgress({ current: 0, total: fileArray.length })
@@ -112,8 +123,7 @@ export default function PhotoUpload({
           caption: ''
         })
       } catch (err) {
-        console.error('Upload error:', err)
-        setError(`Failed to upload ${fileArray[i].name}: ${err.message}`)
+        setError(`Failed to upload ${fileArray[i].name}: ${err.message || 'Unknown error'}`)
       }
     }
 
@@ -153,8 +163,7 @@ export default function PhotoUpload({
       const newPhotos = photos.filter((_, i) => i !== photoIndex)
       onPhotosChange(newPhotos)
     } catch (err) {
-      console.error('Delete error:', err)
-      setError(`Failed to delete photo: ${err.message}`)
+      setError(`Failed to delete photo: ${err.message || 'Unknown error'}`)
     }
   }, [photos, onPhotosChange])
 

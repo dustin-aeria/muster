@@ -55,8 +55,8 @@ export function AuthProvider({ children }) {
             })
           }
         } catch (err) {
-          console.error('Error fetching user profile:', err)
-          setError(err.message)
+          // User profile fetch failed - basic auth info still available
+          setError(err.message || 'Failed to load user profile')
         }
       } else {
         setUser(null)

@@ -151,8 +151,9 @@ export default function ProjectView() {
           const clients = await getClients()
           const client = clients.find(c => c.id === project.clientId)
           setClientData(client || null)
-        } catch (err) {
-          console.error('Error loading client data:', err)
+        } catch {
+          // Client data failed to load - continue without logo
+          setClientData(null)
         }
       } else {
         setClientData(null)
@@ -191,9 +192,8 @@ export default function ProjectView() {
       data = migrateProjectToDecoupledStructure(data)
       setProject(data)
       setLastSaved(new Date())
-    } catch (err) {
-      console.error('Error loading project:', err)
-      setError('Project not found')
+    } catch {
+      setError('Project not found or failed to load')
     } finally {
       setLoading(false)
     }
@@ -217,8 +217,7 @@ export default function ProjectView() {
       }, 2000)
       
       return true
-    } catch (err) {
-      console.error('Save failed:', err)
+    } catch {
       setSaveStatus(SAVE_STATUS.ERROR)
       
       // Reset to pending after showing error
@@ -285,9 +284,8 @@ export default function ProjectView() {
     try {
       await deleteProject(projectId)
       navigate('/projects')
-    } catch (err) {
-      console.error('Error deleting project:', err)
-      alert('Failed to delete project')
+    } catch {
+      alert('Failed to delete project. Please try again.')
     }
   }
 

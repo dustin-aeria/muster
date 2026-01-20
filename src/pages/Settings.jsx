@@ -85,8 +85,8 @@ export default function Settings() {
       if (snapshot.exists()) {
         setCompanyData(prev => ({ ...prev, ...snapshot.data() }))
       }
-    } catch (err) {
-      console.error('Error loading company settings:', err)
+    } catch {
+      // Company settings may not exist yet - use defaults
     }
   }
 
@@ -104,8 +104,8 @@ export default function Settings() {
       if (snapshot.exists() && snapshot.data().notifications) {
         setNotificationData(prev => ({ ...prev, ...snapshot.data().notifications }))
       }
-    } catch (err) {
-      console.error('Error loading notification prefs:', err)
+    } catch {
+      // Notification prefs may not exist yet - use defaults
     }
   }
 
@@ -117,9 +117,8 @@ export default function Settings() {
       await updateOperator(userProfile.id, profileData)
       setProfileSaved(true)
       setTimeout(() => setProfileSaved(false), 3000)
-    } catch (err) {
-      console.error('Error saving profile:', err)
-      alert('Failed to save profile')
+    } catch {
+      alert('Failed to save profile. Please try again.')
     } finally {
       setProfileSaving(false)
     }
@@ -133,9 +132,8 @@ export default function Settings() {
       await setDoc(docRef, companyData, { merge: true })
       setCompanySaved(true)
       setTimeout(() => setCompanySaved(false), 3000)
-    } catch (err) {
-      console.error('Error saving company settings:', err)
-      alert('Failed to save company settings')
+    } catch {
+      alert('Failed to save company settings. Please try again.')
     } finally {
       setCompanySaving(false)
     }
@@ -149,9 +147,8 @@ export default function Settings() {
       await setDoc(docRef, { notifications: notificationData }, { merge: true })
       setNotificationSaved(true)
       setTimeout(() => setNotificationSaved(false), 3000)
-    } catch (err) {
-      console.error('Error saving notification prefs:', err)
-      alert('Failed to save notification preferences')
+    } catch {
+      alert('Failed to save notification preferences. Please try again.')
     } finally {
       setNotificationSaving(false)
     }
@@ -184,11 +181,14 @@ export default function Settings() {
       setPasswordData({ current: '', new: '', confirm: '' })
       setTimeout(() => setPasswordSuccess(false), 3000)
     } catch (err) {
-      console.error('Error updating password:', err)
       if (err.code === 'auth/wrong-password') {
         setPasswordError('Current password is incorrect')
+      } else if (err.code === 'auth/weak-password') {
+        setPasswordError('Password is too weak. Please use a stronger password.')
+      } else if (err.code === 'auth/requires-recent-login') {
+        setPasswordError('Please log out and log back in before changing your password.')
       } else {
-        setPasswordError(err.message)
+        setPasswordError('Failed to update password. Please try again.')
       }
     } finally {
       setPasswordSaving(false)

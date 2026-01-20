@@ -78,6 +78,7 @@ const getPolicyReviewStats = () => {
 export default function Dashboard() {
   const { userProfile } = useAuth()
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [stats, setStats] = useState({
     activeProjects: 0,
     formsThisWeek: 0,
@@ -100,6 +101,7 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     setLoading(true)
+    setLoadError(null)
     try {
       // Load all data in parallel
       const [projects, forms, operators] = await Promise.all([
@@ -195,8 +197,8 @@ export default function Dashboard() {
       // Store operators with expiring certs for alerts
       setExpiringOperators(operatorsWithExpiring)
 
-    } catch (err) {
-      console.error('Error loading dashboard data:', err)
+    } catch {
+      setLoadError('Failed to load dashboard data. Please refresh the page.')
     } finally {
       setLoading(false)
     }
@@ -302,6 +304,23 @@ export default function Dashboard() {
           View Policies
         </Link>
       </div>
+
+      {/* Error display */}
+      {loadError && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-red-800 font-medium">Unable to load data</p>
+            <p className="text-red-600 text-sm">{loadError}</p>
+          </div>
+          <button
+            onClick={loadDashboardData}
+            className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Stats grid */}
       {loading ? (
