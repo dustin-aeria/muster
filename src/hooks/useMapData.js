@@ -477,10 +477,11 @@ export function useMapData(project, onUpdate, options = {}) {
     if (!activeSite) return null
     
     // FIX: Handle singular/plural naming mismatch
-    // DRAWING_MODES uses 'obstacle'/'musterPoint' but MAP_ELEMENT_STYLES uses 'obstacles'/'musterPoints'
+    // DRAWING_MODES uses singular but MAP_ELEMENT_STYLES uses plural
     let styleKey = elementType
     if (elementType === 'obstacle') styleKey = 'obstacles'
     if (elementType === 'musterPoint') styleKey = 'musterPoints'
+    if (elementType === 'evacuationRoute') styleKey = 'evacuationRoutes'
     
     const style = MAP_ELEMENT_STYLES[styleKey]
     if (!style) {
@@ -632,8 +633,14 @@ export function useMapData(project, onUpdate, options = {}) {
    */
   const removeElement = useCallback((elementId, elementType) => {
     if (!activeSite) return
-    
-    const style = MAP_ELEMENT_STYLES[elementType]
+
+    // FIX: Handle singular/plural naming mismatch
+    let styleKey = elementType
+    if (elementType === 'obstacle') styleKey = 'obstacles'
+    if (elementType === 'musterPoint') styleKey = 'musterPoints'
+    if (elementType === 'evacuationRoute') styleKey = 'evacuationRoutes'
+
+    const style = MAP_ELEMENT_STYLES[styleKey]
     if (!style) return
     
     updateSiteMapData(mapData => {
@@ -687,8 +694,14 @@ export function useMapData(project, onUpdate, options = {}) {
    */
   const updateElement = useCallback((elementId, elementType, updates) => {
     if (!activeSite) return
-    
-    const style = MAP_ELEMENT_STYLES[elementType]
+
+    // FIX: Handle singular/plural naming mismatch
+    let styleKey = elementType
+    if (elementType === 'obstacle') styleKey = 'obstacles'
+    if (elementType === 'musterPoint') styleKey = 'musterPoints'
+    if (elementType === 'evacuationRoute') styleKey = 'evacuationRoutes'
+
+    const style = MAP_ELEMENT_STYLES[styleKey]
     if (!style) return
     
     updateSiteMapData(mapData => {
