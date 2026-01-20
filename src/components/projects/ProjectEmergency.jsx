@@ -43,6 +43,8 @@ import {
   Siren
 } from 'lucide-react'
 import UnifiedProjectMap from '../map/UnifiedProjectMap'
+import { LayerToggles, DrawingTools } from '../map/MapControls'
+import { useMapData } from '../../hooks/useMapData'
 
 // ============================================
 // CONSTANTS
@@ -718,7 +720,14 @@ function EmergencyProceduresList({ procedures = [], onChange }) {
 
 export default function ProjectEmergency({ project, onUpdate }) {
   const [showMap, setShowMap] = useState(true)
-  
+
+  // Map controls - lifted to page level so we can render controls outside the map
+  const mapControls = useMapData(project, onUpdate, {
+    editMode: true,
+    allowedLayers: ['siteSurvey', 'flightPlan', 'emergency'],
+    initialBasemap: 'streets'
+  })
+
   // Get sites array
   const sites = useMemo(() => {
     return Array.isArray(project?.sites) ? project.sites : []
@@ -962,19 +971,45 @@ export default function ProjectEmergency({ project, onUpdate }) {
         </div>
       </div>
       
-      {/* Map */}
+      {/* Map Controls and Map */}
       {showMap && (
-        <div className="card p-0 overflow-hidden">
-          <UnifiedProjectMap
-            project={project}
-            onUpdate={onUpdate}
-            editMode={true}
-            activeLayer="emergency"
-            height="400px"
-            allowedLayers={['siteSurvey', 'flightPlan', 'emergency']}
-            showLegend={true}
-            onSiteChange={handleSelectSite}
-          />
+        <div className="space-y-3">
+          {/* Controls row - outside the map for better interaction */}
+          <div className="flex flex-wrap gap-3">
+            <LayerToggles
+              visibleLayers={mapControls.visibleLayers}
+              onToggleLayer={mapControls.toggleLayer}
+              allowedLayers={['siteSurvey', 'flightPlan', 'emergency']}
+              compact={true}
+            />
+            <DrawingTools
+              drawingMode={mapControls.drawingMode}
+              isDrawing={mapControls.isDrawing}
+              drawingPoints={mapControls.drawingPoints}
+              onStartDrawing={mapControls.startDrawing}
+              onCancelDrawing={mapControls.cancelDrawing}
+              onCompleteDrawing={mapControls.completeDrawing}
+              onRemoveLastPoint={mapControls.removeLastDrawingPoint}
+              activeLayer="emergency"
+              editMode={true}
+            />
+          </div>
+
+          {/* Map */}
+          <div className="card p-0 overflow-hidden">
+            <UnifiedProjectMap
+              project={project}
+              onUpdate={onUpdate}
+              editMode={true}
+              activeLayer="emergency"
+              height="400px"
+              allowedLayers={['siteSurvey', 'flightPlan', 'emergency']}
+              showLegend={true}
+              showControls={false}
+              externalMapData={mapControls}
+              onSiteChange={handleSelectSite}
+            />
+          </div>
         </div>
       )}
       

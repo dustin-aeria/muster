@@ -43,7 +43,8 @@ import {
   ArrowRight
 } from 'lucide-react'
 import UnifiedProjectMap from '../map/UnifiedProjectMap'
-import { SiteSelector } from '../map/MapControls'
+import { LayerToggles, DrawingTools } from '../map/MapControls'
+import { useMapData } from '../../hooks/useMapData'
 import PhotoUpload, { PhotoCountBadge } from '../PhotoUpload'
 import { 
   POPULATION_CATEGORIES, 
@@ -459,7 +460,14 @@ function ObstaclesList({ obstacles = [], onUpdate, onRemove, onAdd }) {
 
 export default function ProjectSiteSurvey({ project, onUpdate }) {
   const [showMap, setShowMap] = useState(true)
-  
+
+  // Map controls - lifted to page level so we can render controls in sidebar
+  const mapControls = useMapData(project, onUpdate, {
+    editMode: true,
+    allowedLayers: ['siteSurvey'],
+    initialBasemap: 'streets'
+  })
+
   // Get sites array with defensive check
   const sites = useMemo(() => {
     return Array.isArray(project?.sites) ? project.sites : []
@@ -732,11 +740,35 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
             onRenameSite={handleRenameSite}
           />
           
+          {/* Layer Controls - in sidebar instead of floating over map */}
+          {showMap && (
+            <LayerToggles
+              visibleLayers={mapControls.visibleLayers}
+              onToggleLayer={mapControls.toggleLayer}
+              allowedLayers={['siteSurvey']}
+            />
+          )}
+
+          {/* Drawing Tools - in sidebar instead of floating over map */}
+          {showMap && (
+            <DrawingTools
+              drawingMode={mapControls.drawingMode}
+              isDrawing={mapControls.isDrawing}
+              drawingPoints={mapControls.drawingPoints}
+              onStartDrawing={mapControls.startDrawing}
+              onCancelDrawing={mapControls.cancelDrawing}
+              onCompleteDrawing={mapControls.completeDrawing}
+              onRemoveLastPoint={mapControls.removeLastDrawingPoint}
+              activeLayer="siteSurvey"
+              editMode={true}
+            />
+          )}
+
           {/* Validation Status */}
           {validation && (
             <div className={`p-4 rounded-lg border ${
-              validation.isComplete 
-                ? 'bg-green-50 border-green-200' 
+              validation.isComplete
+                ? 'bg-green-50 border-green-200'
                 : 'bg-amber-50 border-amber-200'
             }`}>
               <h4 className={`font-medium mb-2 ${
@@ -768,6 +800,8 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                 height="400px"
                 allowedLayers={['siteSurvey']}
                 showLegend={true}
+                showControls={false}
+                externalMapData={mapControls}
                 onSiteChange={handleSelectSite}
               />
             </div>

@@ -106,7 +106,9 @@ export function UnifiedProjectMap({
   allowedLayers = ['siteSurvey', 'flightPlan', 'emergency'],
   onSiteChange,
   onElementSelect,
-  className = ''
+  className = '',
+  // Optional external map data - if provided, use it instead of internal useMapData
+  externalMapData = null
 }) {
   // Refs
   const mapContainerRef = useRef(null)
@@ -135,12 +137,15 @@ export function UnifiedProjectMap({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [styleVersion, setStyleVersion] = useState(0) // Increments when style changes to force layer re-render
   
-  // Map data hook
-  const mapData = useMapData(project, onUpdate, {
+  // Map data hook - use external if provided, otherwise create internal
+  const internalMapData = useMapData(project, onUpdate, {
     editMode,
     allowedLayers,
     initialBasemap: 'streets'
   })
+
+  // Use external map data if provided (for sidebar controls), otherwise use internal
+  const mapData = externalMapData || internalMapData
   
   const {
     sites,
