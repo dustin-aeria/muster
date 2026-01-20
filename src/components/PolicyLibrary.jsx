@@ -1213,7 +1213,7 @@ function PolicyStatusBadge({ policy }) {
 }
 
 function PolicyCard({ policy, view, onClick }) {
-  const category = CATEGORIES[policy.category]
+  const category = CATEGORIES[policy.category] || CATEGORIES.rpas
   const statusInfo = getStatusInfo(policy)
   
   const categoryColors = {
