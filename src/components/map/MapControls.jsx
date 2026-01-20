@@ -713,9 +713,10 @@ export function MapControlsPanel({
   return (
     <>
       {/* Left/Right side controls */}
-      <div 
-        className={`absolute top-4 ${positionClasses} z-50 flex flex-col gap-3 max-h-[calc(100%-8rem)]`}
+      <div
+        className={`absolute top-4 ${positionClasses} z-50 flex flex-col gap-3 max-h-[calc(100%-8rem)] overflow-y-auto pointer-events-auto`}
         style={{ overscrollBehavior: 'contain' }}
+        onWheel={handleWheel}
       >
         <SiteSelector
           sites={sites}
