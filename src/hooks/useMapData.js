@@ -460,20 +460,24 @@ export function useMapData(project, onUpdate, options = {}) {
   
   /**
    * Update the active site's map data
-   * Uses project.activeSiteId as the source of truth to avoid race conditions
-   * when the user rapidly switches sites
+   * IMPORTANT: Reads directly from project prop to avoid stale closure issues.
+   * When user switches sites and immediately adds a marker, the memoized `sites`
+   * array might be stale, causing data to be overwritten.
    */
   const updateSiteMapData = useCallback((updater) => {
-    if (!onUpdate) return
+    if (!onUpdate || !project) return
 
-    // Use project.activeSiteId as source of truth, fall back to internal state
-    const targetSiteId = project?.activeSiteId || activeSiteId
-    if (!targetSiteId) return
+    // Read directly from project prop - NOT from memoized values
+    // This ensures we always have the most current data
+    const currentSites = project.sites || []
+    const targetSiteId = project.activeSiteId || activeSiteId
 
-    const targetSite = sites.find(s => s.id === targetSiteId)
+    if (!targetSiteId || currentSites.length === 0) return
+
+    const targetSite = currentSites.find(s => s.id === targetSiteId)
     if (!targetSite) return
 
-    const updatedSites = sites.map(site => {
+    const updatedSites = currentSites.map(site => {
       if (site.id !== targetSiteId) return site
 
       const newMapData = typeof updater === 'function'
@@ -488,7 +492,7 @@ export function useMapData(project, onUpdate, options = {}) {
     })
 
     onUpdate({ sites: updatedSites })
-  }, [project?.activeSiteId, activeSiteId, sites, onUpdate])
+  }, [project, activeSiteId, onUpdate])
   
   /**
    * Add or update a marker element

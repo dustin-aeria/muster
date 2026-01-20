@@ -795,7 +795,7 @@ export function UnifiedProjectMap({
 
       {/* Fullscreen button - shown even when controls are hidden */}
       {!showControls && mapLoaded && (
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-4 right-4 z-20">
           <FullscreenButton
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}

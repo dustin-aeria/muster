@@ -59,22 +59,37 @@ const handleWheel = (e) => {
 // SITE SELECTOR COMPONENT
 // ============================================
 
-export function SiteSelector({ 
-  sites, 
-  activeSiteId, 
-  onSelectSite, 
+export function SiteSelector({
+  sites,
+  activeSiteId,
+  onSelectSite,
   onAddSite,
   onDuplicateSite,
   onDeleteSite,
   editMode = false,
-  compact = false 
+  compact = false
 }) {
   const [menuOpenId, setMenuOpenId] = useState(null)
-  
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
+
   const handleSiteClick = useCallback((e, siteId) => {
     e.stopPropagation()
     onSelectSite(siteId)
   }, [onSelectSite])
+
+  const handleMenuToggle = useCallback((e, siteId) => {
+    e.stopPropagation()
+    if (menuOpenId === siteId) {
+      setMenuOpenId(null)
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect()
+      setMenuPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 144
+      })
+      setMenuOpenId(siteId)
+    }
+  }, [menuOpenId])
   
   if (compact) {
     return (
@@ -158,63 +173,62 @@ export function SiteSelector({
               </div>
               
               {editMode && (
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setMenuOpenId(menuOpenId === site.id ? null : site.id)
-                    }}
-                    className="p-1 text-gray-400 hover:text-gray-600 rounded"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                  
-                  {menuOpenId === site.id && (
-                    <>
-                      <div 
-                        className="fixed inset-0 z-30"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setMenuOpenId(null)
-                        }}
-                      />
-                      <div className="absolute right-0 top-full mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-40">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onDuplicateSite?.(site.id)
-                            setMenuOpenId(null)
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Duplicate
-                        </button>
-                        {sites.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onDeleteSite?.(site.id)
-                              setMenuOpenId(null)
-                            }}
-                            className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={(e) => handleMenuToggle(e, site.id)}
+                  className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
               )}
             </div>
           )
         })}
       </div>
+
+      {/* Fixed position dropdown menu - renders outside overflow container */}
+      {menuOpenId && (
+        <>
+          <div
+            className="fixed inset-0 z-50"
+            onClick={(e) => {
+              e.stopPropagation()
+              setMenuOpenId(null)
+            }}
+          />
+          <div
+            className="fixed w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+            style={{ top: menuPosition.top, left: menuPosition.left }}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDuplicateSite?.(menuOpenId)
+                setMenuOpenId(null)
+              }}
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Copy className="w-4 h-4" />
+              Duplicate
+            </button>
+            {sites.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDeleteSite?.(menuOpenId)
+                  setMenuOpenId(null)
+                }}
+                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
