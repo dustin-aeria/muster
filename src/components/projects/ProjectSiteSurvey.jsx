@@ -248,12 +248,12 @@ function SiteManagementPanel({
       {menuOpenId && (
         <>
           <div
-            className="fixed inset-0 z-50"
+            className="fixed inset-0 z-[9998]"
             onClick={() => setMenuOpenId(null)}
           />
           <div
-            className="fixed w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
-            style={{ top: menuPosition.top, left: menuPosition.left }}
+            className="fixed w-36 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[9999]"
+            style={{ top: menuPosition.top, left: Math.max(8, menuPosition.left) }}
           >
             <button
               onClick={() => handleStartEdit(sites.find(s => s.id === menuOpenId))}

@@ -15,7 +15,7 @@
  * @action REPLACE
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import {
   MAP_LAYERS,
   MAP_ELEMENT_STYLES,
@@ -173,6 +173,20 @@ export function useMapData(project, onUpdate, options = {}) {
   
   // UI state
   const [showAllSites, setShowAllSites] = useState(false)
+
+  // ============================================
+  // REF FOR LATEST PROJECT DATA
+  // Following Mapbox React best practice: use refs for data that
+  // needs to be accessed in callbacks without stale closure issues.
+  // This ref ALWAYS holds the current project, even if the callback
+  // was created before the latest render.
+  // ============================================
+  const projectRef = useRef(project)
+
+  // Keep projectRef in sync with latest project prop
+  useEffect(() => {
+    projectRef.current = project
+  }, [project])
 
   // ============================================
   // SYNC activeSiteId with project.activeSiteId
@@ -460,22 +474,36 @@ export function useMapData(project, onUpdate, options = {}) {
   
   /**
    * Update the active site's map data
-   * IMPORTANT: Reads directly from project prop to avoid stale closure issues.
-   * When user switches sites and immediately adds a marker, the memoized `sites`
-   * array might be stale, causing data to be overwritten.
+   *
+   * CRITICAL FIX: Uses projectRef.current to ALWAYS get the latest project data.
+   *
+   * Problem: When user rapidly switches sites and adds markers, the `project`
+   * in the callback closure may be stale (from a previous render), causing
+   * data to be overwritten or saved to the wrong site.
+   *
+   * Solution: Following Mapbox React best practices, we use a ref that is
+   * always kept in sync with the latest project. Reading from projectRef.current
+   * gives us the absolute latest data, regardless of when this callback was created.
    */
   const updateSiteMapData = useCallback((updater) => {
-    if (!onUpdate || !project) return
+    if (!onUpdate) return
 
-    // Read directly from project prop - NOT from memoized values
-    // This ensures we always have the most current data
-    const currentSites = project.sites || []
-    const targetSiteId = project.activeSiteId || activeSiteId
+    // CRITICAL: Read from ref, not from closure!
+    // projectRef.current is ALWAYS the latest project, even if this
+    // callback was created during a previous render cycle.
+    const currentProject = projectRef.current
+    if (!currentProject) return
+
+    const currentSites = currentProject.sites || []
+    const targetSiteId = currentProject.activeSiteId || activeSiteId
 
     if (!targetSiteId || currentSites.length === 0) return
 
     const targetSite = currentSites.find(s => s.id === targetSiteId)
-    if (!targetSite) return
+    if (!targetSite) {
+      console.warn(`[useMapData] Target site ${targetSiteId} not found in sites array`)
+      return
+    }
 
     const updatedSites = currentSites.map(site => {
       if (site.id !== targetSiteId) return site
@@ -492,7 +520,7 @@ export function useMapData(project, onUpdate, options = {}) {
     })
 
     onUpdate({ sites: updatedSites })
-  }, [project, activeSiteId, onUpdate])
+  }, [activeSiteId, onUpdate])
   
   /**
    * Add or update a marker element

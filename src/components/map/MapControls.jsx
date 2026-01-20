@@ -190,15 +190,15 @@ export function SiteSelector({
       {menuOpenId && (
         <>
           <div
-            className="fixed inset-0 z-50"
+            className="fixed inset-0 z-[9998]"
             onClick={(e) => {
               e.stopPropagation()
               setMenuOpenId(null)
             }}
           />
           <div
-            className="fixed w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
-            style={{ top: menuPosition.top, left: menuPosition.left }}
+            className="fixed w-36 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[9999]"
+            style={{ top: menuPosition.top, left: Math.max(8, menuPosition.left) }}
           >
             <button
               type="button"
@@ -688,10 +688,10 @@ export function FullscreenButton({ isFullscreen, onToggleFullscreen }) {
         e.stopPropagation()
         onToggleFullscreen()
       }}
-      className={`p-2 bg-white rounded-lg shadow border border-gray-200 transition-colors pointer-events-auto ${
+      className={`p-2.5 bg-white rounded-lg shadow-lg border border-gray-300 transition-all pointer-events-auto hover:shadow-xl ${
         isFullscreen
-          ? 'text-aeria-navy bg-aeria-navy/10'
-          : 'text-gray-700 hover:bg-gray-100'
+          ? 'text-aeria-navy bg-aeria-navy/10 ring-2 ring-aeria-navy'
+          : 'text-gray-700 hover:bg-gray-50 hover:border-gray-400'
       }`}
       title={isFullscreen ? "Exit fullscreen (Esc)" : "Expand map"}
     >
