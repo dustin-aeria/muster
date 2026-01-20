@@ -418,32 +418,39 @@ export function UnifiedProjectMap({
     const map = mapRef.current
     
     // Remove existing layers and sources
-    const layerIds = ['polygons-fill', 'polygons-outline', 'lines']
+    const layerIds = [
+      'polygons-fill', 'polygons-outline', 'lines',
+      'hatched-polygons-fill', 'hatched-polygons-outline', 'hatched-polygons-inner'
+    ]
     layerIds.forEach(id => {
       if (map.getLayer(id)) map.removeLayer(id)
     })
-    const sourceIds = ['polygons-source', 'lines-source']
+    const sourceIds = ['polygons-source', 'lines-source', 'hatched-polygons-source']
     sourceIds.forEach(id => {
       if (map.getSource(id)) map.removeSource(id)
     })
     
-    // Collect all polygons
-    const polygons = [
+    // Separate solid polygons from hatched polygons (flight geography)
+    const allPolygons = [
       ...visibleMapElements.siteSurvey.polygons,
       ...visibleMapElements.flightPlan.polygons
     ].filter(p => p?.geometry?.coordinates?.[0]?.length > 0)
-    
+
+    // Flight geography uses hatched/lined style, others use solid fill
+    const solidPolygons = allPolygons.filter(p => p.elementType !== 'flightGeography')
+    const hatchedPolygons = allPolygons.filter(p => p.elementType === 'flightGeography')
+
     // Collect all lines
     const lines = [
       ...(visibleMapElements.emergency.lines || [])
     ].filter(l => l?.geometry?.coordinates?.length > 0)
-    
-    // Add polygons source and layers
-    if (polygons.length > 0) {
-      const polygonFeatures = polygons.map(polygon => {
+
+    // Add SOLID polygons source and layers (boundaries, etc.)
+    if (solidPolygons.length > 0) {
+      const polygonFeatures = solidPolygons.map(polygon => {
         const style = MAP_ELEMENT_STYLES[polygon.elementType] || {}
         const color = polygon._siteColor || style.color || '#3B82F6'
-        
+
         return {
           type: 'Feature',
           properties: {
@@ -456,7 +463,7 @@ export function UnifiedProjectMap({
           geometry: polygon.geometry
         }
       })
-      
+
       map.addSource('polygons-source', {
         type: 'geojson',
         data: {
@@ -464,7 +471,7 @@ export function UnifiedProjectMap({
           features: polygonFeatures
         }
       })
-      
+
       // Fill layer
       map.addLayer({
         id: 'polygons-fill',
@@ -475,7 +482,7 @@ export function UnifiedProjectMap({
           'fill-opacity': ['get', 'fillOpacity']
         }
       })
-      
+
       // Outline layer
       map.addLayer({
         id: 'polygons-outline',
@@ -485,6 +492,70 @@ export function UnifiedProjectMap({
           'line-color': ['get', 'color'],
           'line-width': ['get', 'strokeWidth'],
           'line-opacity': ['case', ['get', 'isActive'], 1, 0.6]
+        }
+      })
+    }
+
+    // Add HATCHED polygons (flight geography) - lined/graphed style
+    if (hatchedPolygons.length > 0) {
+      const hatchedFeatures = hatchedPolygons.map(polygon => {
+        const style = MAP_ELEMENT_STYLES[polygon.elementType] || {}
+        const color = polygon._siteColor || style.color || '#10B981' // Green for flight area
+
+        return {
+          type: 'Feature',
+          properties: {
+            id: polygon.id,
+            color: color,
+            isActive: polygon.isActive
+          },
+          geometry: polygon.geometry
+        }
+      })
+
+      map.addSource('hatched-polygons-source', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: hatchedFeatures
+        }
+      })
+
+      // Very light fill for hatched polygons
+      map.addLayer({
+        id: 'hatched-polygons-fill',
+        type: 'fill',
+        source: 'hatched-polygons-source',
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.05
+        }
+      })
+
+      // Primary dashed outline
+      map.addLayer({
+        id: 'hatched-polygons-outline',
+        type: 'line',
+        source: 'hatched-polygons-source',
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 2.5,
+          'line-opacity': ['case', ['get', 'isActive'], 1, 0.7],
+          'line-dasharray': [4, 3]
+        }
+      })
+
+      // Inner offset line for "graphed" appearance
+      map.addLayer({
+        id: 'hatched-polygons-inner',
+        type: 'line',
+        source: 'hatched-polygons-source',
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 1,
+          'line-opacity': ['case', ['get', 'isActive'], 0.5, 0.3],
+          'line-dasharray': [2, 4],
+          'line-offset': -8
         }
       })
     }

@@ -38,6 +38,7 @@ import {
   Plane,
   AlertTriangle,
   Copy,
+  User,
   MoreVertical,
   Expand
 } from 'lucide-react'
@@ -369,7 +370,8 @@ export function DrawingTools({
     flightPlan: [
       { mode: 'launchPoint', icon: Plane, label: 'Launch' },
       { mode: 'recoveryPoint', icon: Target, label: 'Recovery' },
-      { mode: 'flightArea', icon: Square, label: 'Flight Area' }
+      { mode: 'pilotPosition', icon: User, label: 'Pilot' },
+      { mode: 'flightGeography', icon: Square, label: 'Flight Area' }
     ],
     emergency: [
       { mode: 'musterPoint', icon: Flag, label: 'Muster' },
