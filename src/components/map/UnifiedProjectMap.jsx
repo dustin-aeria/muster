@@ -568,21 +568,29 @@ export function UnifiedProjectMap({
   
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return
-    
+
     const map = mapRef.current
-    
+
+    // Safety check: ensure map is still valid (not destroyed)
+    if (!map.getStyle) return
+
     // Remove existing layers and sources
     const layerIds = [
       'polygons-fill', 'polygons-outline', 'lines',
       'hatched-polygons-fill', 'hatched-polygons-outline', 'hatched-polygons-inner'
     ]
-    layerIds.forEach(id => {
-      if (map.getLayer(id)) map.removeLayer(id)
-    })
-    const sourceIds = ['polygons-source', 'lines-source', 'hatched-polygons-source']
-    sourceIds.forEach(id => {
-      if (map.getSource(id)) map.removeSource(id)
-    })
+    try {
+      layerIds.forEach(id => {
+        if (map.getLayer(id)) map.removeLayer(id)
+      })
+      const sourceIds = ['polygons-source', 'lines-source', 'hatched-polygons-source']
+      sourceIds.forEach(id => {
+        if (map.getSource(id)) map.removeSource(id)
+      })
+    } catch (e) {
+      // Map might be in an invalid state during unmount
+      return
+    }
     
     // Separate solid polygons from hatched polygons (flight geography)
     const allPolygons = [
@@ -782,12 +790,18 @@ export function UnifiedProjectMap({
 
     // Cleanup hover handlers
     return () => {
-      interactiveLayers.forEach(layerId => {
-        if (map.getLayer(layerId)) {
-          map.off('mouseenter', layerId, handleMouseEnter)
-          map.off('mouseleave', layerId, handleMouseLeave)
-        }
-      })
+      // Safety check: map might be destroyed when switching tabs
+      if (!map || !map.getStyle) return
+      try {
+        interactiveLayers.forEach(layerId => {
+          if (map.getLayer(layerId)) {
+            map.off('mouseenter', layerId, handleMouseEnter)
+            map.off('mouseleave', layerId, handleMouseLeave)
+          }
+        })
+      } catch (e) {
+        // Map was likely destroyed, ignore cleanup errors
+      }
     }
 
   }, [visibleMapElements, mapLoaded, styleVersion]) // styleVersion forces re-render after basemap change
@@ -798,17 +812,26 @@ export function UnifiedProjectMap({
   
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return
-    
+
     const map = mapRef.current
+
+    // Safety check: ensure map is still valid (not destroyed)
+    if (!map.getStyle) return
+
     const sourceId = 'drawing-preview'
     const layerId = 'drawing-preview-line'
     const pointsLayerId = 'drawing-preview-points'
-    
+
     // Remove existing preview
-    if (map.getLayer(layerId)) map.removeLayer(layerId)
-    if (map.getLayer(pointsLayerId)) map.removeLayer(pointsLayerId)
-    if (map.getSource(sourceId)) map.removeSource(sourceId)
-    
+    try {
+      if (map.getLayer(layerId)) map.removeLayer(layerId)
+      if (map.getLayer(pointsLayerId)) map.removeLayer(pointsLayerId)
+      if (map.getSource(sourceId)) map.removeSource(sourceId)
+    } catch (e) {
+      // Map might be in an invalid state during unmount
+      return
+    }
+
     if (!isDrawing || drawingPoints.length === 0) return
     
     const style = MAP_ELEMENT_STYLES[drawingMode.id] || {}
