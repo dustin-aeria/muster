@@ -163,8 +163,9 @@ export function UnifiedProjectMap({
   const completeDrawingRef = useRef(null)
   const addDrawingPointRef = useRef(null)
   // Refs for edit mode and selection (for polygon/line clicks)
+  // Initialize with null - will be updated in useEffect after mapData is available
   const editModeRef = useRef(editMode)
-  const setSelectedElementRef = useRef(setSelectedElement)
+  const setSelectedElementRef = useRef(null)
 
   // Track initial basemap to prevent unnecessary setStyle on first load
   // Initialize with 'streets' (the default) since basemap isn't available yet
