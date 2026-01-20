@@ -15,7 +15,7 @@
  * @action NEW
  */
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import {
   Camera,
   Upload,
@@ -27,7 +27,9 @@ import {
   Download,
   AlertCircle,
   CheckCircle2,
-  FolderOpen
+  FolderOpen,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { uploadSitePhoto, deleteSitePhoto } from '../lib/storageHelpers'
 
@@ -67,6 +69,55 @@ export default function PhotoUpload({
   const [lightboxPhoto, setLightboxPhoto] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef(null)
+  const lightboxRef = useRef(null)
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (!lightboxPhoto) return
+
+    const handleKeyDown = (e) => {
+      switch (e.key) {
+        case 'Escape':
+          setLightboxPhoto(null)
+          break
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          e.preventDefault()
+          navigateLightbox(-1)
+          break
+        case 'ArrowRight':
+        case 'ArrowDown':
+          e.preventDefault()
+          navigateLightbox(1)
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = 'hidden'
+
+    // Focus the lightbox for keyboard navigation
+    lightboxRef.current?.focus()
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'unset'
+    }
+  }, [lightboxPhoto, photos])
+
+  // Navigate between photos in lightbox
+  const navigateLightbox = useCallback((direction) => {
+    if (!lightboxPhoto || photos.length <= 1) return
+
+    const currentIndex = lightboxPhoto.index
+    let newIndex = currentIndex + direction
+
+    // Wrap around
+    if (newIndex < 0) newIndex = photos.length - 1
+    if (newIndex >= photos.length) newIndex = 0
+
+    setLightboxPhoto({ ...photos[newIndex], index: newIndex })
+  }, [lightboxPhoto, photos])
 
   // Handle file selection
   const handleFileSelect = useCallback(async (files) => {
@@ -335,31 +386,77 @@ export default function PhotoUpload({
 
       {/* Lightbox */}
       {lightboxPhoto && (
-        <div 
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+        <div
+          ref={lightboxRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Photo viewer: ${lightboxPhoto.caption || lightboxPhoto.name || 'Photo'}`}
+          tabIndex={-1}
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 outline-none"
           onClick={() => setLightboxPhoto(null)}
         >
+          {/* Close button */}
           <button
             type="button"
             onClick={() => setLightboxPhoto(null)}
-            className="absolute top-4 right-4 p-2 text-white hover:text-gray-300"
+            className="absolute top-4 right-4 p-2 text-white hover:text-gray-300 z-10"
+            aria-label="Close photo viewer"
           >
-            <X className="w-8 h-8" />
+            <X className="w-8 h-8" aria-hidden="true" />
           </button>
-          
+
+          {/* Previous button */}
+          {photos.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                navigateLightbox(-1)
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white hover:text-gray-300 bg-black/30 rounded-full hover:bg-black/50 z-10"
+              aria-label="Previous photo"
+            >
+              <ChevronLeft className="w-8 h-8" aria-hidden="true" />
+            </button>
+          )}
+
+          {/* Next button */}
+          {photos.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                navigateLightbox(1)
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white hover:text-gray-300 bg-black/30 rounded-full hover:bg-black/50 z-10"
+              aria-label="Next photo"
+            >
+              <ChevronRight className="w-8 h-8" aria-hidden="true" />
+            </button>
+          )}
+
+          {/* Photo counter */}
+          {photos.length > 1 && (
+            <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-3 py-1 rounded-full">
+              {lightboxPhoto.index + 1} / {photos.length}
+            </div>
+          )}
+
           <img
             src={lightboxPhoto.url}
             alt={lightboxPhoto.caption || lightboxPhoto.name}
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-          
+
           {/* Caption input in lightbox */}
-          <div 
+          <div
             className="absolute bottom-4 left-4 right-4 max-w-lg mx-auto"
             onClick={(e) => e.stopPropagation()}
           >
+            <label htmlFor="lightbox-caption" className="sr-only">Photo caption</label>
             <input
+              id="lightbox-caption"
               type="text"
               value={lightboxPhoto.caption || ''}
               onChange={(e) => handleCaptionChange(lightboxPhoto.index, e.target.value)}

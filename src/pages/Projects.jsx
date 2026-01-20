@@ -154,21 +154,27 @@ export default function Projects() {
       </div>
 
       {/* Filters and search */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3" role="search">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+          <label htmlFor="project-search" className="sr-only">Search projects</label>
           <input
-            type="text"
+            id="project-search"
+            type="search"
             placeholder="Search projects..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input pl-9"
+            aria-describedby="search-results-count"
           />
         </div>
+        <label htmlFor="status-filter" className="sr-only">Filter by status</label>
         <select
+          id="status-filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="input w-full sm:w-40"
+          aria-label="Filter projects by status"
         >
           <option value="all">All Status</option>
           <option value="draft">Draft</option>
@@ -178,6 +184,9 @@ export default function Projects() {
           <option value="archived">Archived</option>
         </select>
       </div>
+      <span id="search-results-count" className="sr-only">
+        {filteredProjects.length} projects found
+      </span>
 
       {/* Error display */}
       {loadError && (

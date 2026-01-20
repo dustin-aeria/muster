@@ -87,25 +87,28 @@ class ErrorBoundary extends React.Component {
             
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
+                type="button"
                 onClick={this.handleReload}
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-aeria-navy text-white rounded-lg hover:bg-aeria-navy/90 transition-colors"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-4 h-4" aria-hidden="true" />
                 Refresh Page
               </button>
-              
+
               <button
+                type="button"
                 onClick={this.handleGoHome}
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                <Home className="w-4 h-4" />
+                <Home className="w-4 h-4" aria-hidden="true" />
                 Go to Dashboard
               </button>
             </div>
-            
+
             {/* Retry option for non-chunk errors */}
             {!isChunkError && (
               <button
+                type="button"
                 onClick={this.handleRetry}
                 className="mt-4 text-sm text-aeria-navy hover:underline"
               >
