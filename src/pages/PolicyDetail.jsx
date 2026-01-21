@@ -55,6 +55,7 @@ import PolicyVersionHistory from '../components/policies/PolicyVersionHistory'
 import PolicyAcknowledgment from '../components/policies/PolicyAcknowledgment'
 import PolicyEditor from '../components/policies/PolicyEditor'
 import AcknowledgmentDashboard from '../components/policies/AcknowledgmentDashboard'
+import { getPolicyContent } from '../data/policyContent'
 
 const CATEGORY_CONFIG = {
   rpas: { name: 'RPAS Operations', icon: Plane, color: 'blue' },
@@ -470,10 +471,15 @@ export default function PolicyDetail() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    {policy.sections.map((section, index) => {
-                      const sectionTitle = typeof section === 'string' ? section : section.title
-                      const sectionContent = typeof section === 'string' ? null : section.content
-                      const isExpanded = expandedSections[index]
+                    {(() => {
+                      // Get content from policyContent.js as primary source
+                      const contentData = getPolicyContent(policy.number)
+                      const sectionsToRender = contentData?.sections || policy.sections || []
+
+                      return sectionsToRender.map((section, index) => {
+                        const sectionTitle = typeof section === 'string' ? section : section.title
+                        const sectionContent = typeof section === 'string' ? null : section.content
+                        const isExpanded = expandedSections[index]
 
                       return (
                         <div key={section.id || index} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -508,7 +514,8 @@ export default function PolicyDetail() {
                           )}
                         </div>
                       )
-                    })}
+                      })
+                    })()}
                   </div>
                 </div>
               )}
