@@ -439,6 +439,35 @@ function QuestionModal({
                   </div>
                 )}
 
+                {/* AI-Generated Draft Response */}
+                {suggestions.comprehensive?.compositeResponse?.draft && (
+                  <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded border border-purple-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-medium text-purple-700 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        AI Draft Suggestion
+                      </p>
+                      <span className="text-xs text-gray-500">
+                        {suggestions.comprehensive.compositeResponse.confidence}% confidence
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-700 whitespace-pre-line line-clamp-6">
+                      {suggestions.comprehensive.compositeResponse.draft}
+                    </p>
+                    {suggestions.comprehensive.compositeResponse.sources?.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Sources: {suggestions.comprehensive.compositeResponse.sources.join(', ')}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => useSuggestion(suggestions.comprehensive.compositeResponse.draft)}
+                      className="mt-2 w-full py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700"
+                    >
+                      Use this draft
+                    </button>
+                  </div>
+                )}
+
                 {/* KB Matches */}
                 {suggestions.comprehensive?.fromKnowledgeBase?.directMatches?.length > 0 && (
                   <div>

@@ -286,6 +286,240 @@ Certificate copies are attached.`,
       { key: 'TOTAL_HOURS', hint: 'Total flight hours' },
       { key: 'TYPE_HOURS', hint: 'Hours on specific aircraft type' }
     ]
+  },
+
+  // ============================================
+  // GENERAL COMPLIANCE TEMPLATES
+  // For client prequalification and general questionnaires
+  // ============================================
+
+  // Company Overview Template
+  companyOverview: {
+    id: 'companyOverview',
+    name: 'Company Overview',
+    category: 'general',
+    regulatoryRefs: [],
+    template: `[COMPANY_NAME] is a [COMPANY_TYPE] established in [YEAR_ESTABLISHED], specializing in [SPECIALIZATION].
+
+Corporate Information:
+- Legal Name: [LEGAL_NAME]
+- Business Number: [BUSINESS_NUMBER]
+- Head Office: [HEAD_OFFICE_ADDRESS]
+
+Our organization has [YEARS_EXPERIENCE] years of experience providing [SERVICES_DESCRIPTION].
+
+We employ [EMPLOYEE_COUNT] personnel including [KEY_POSITIONS].
+
+For more information, please visit [WEBSITE] or contact [CONTACT_INFO].`,
+    placeholders: [
+      { key: 'COMPANY_NAME', hint: 'Company name' },
+      { key: 'COMPANY_TYPE', hint: 'e.g., privately held company' },
+      { key: 'YEAR_ESTABLISHED', hint: 'Year founded' },
+      { key: 'SPECIALIZATION', hint: 'Core services/expertise' },
+      { key: 'LEGAL_NAME', hint: 'Full legal registered name' },
+      { key: 'BUSINESS_NUMBER', hint: 'Business registration number' },
+      { key: 'HEAD_OFFICE_ADDRESS', hint: 'Head office address' },
+      { key: 'YEARS_EXPERIENCE', hint: 'Years in business' },
+      { key: 'SERVICES_DESCRIPTION', hint: 'Description of services' },
+      { key: 'EMPLOYEE_COUNT', hint: 'Number of employees' },
+      { key: 'KEY_POSITIONS', hint: 'Key staff roles' },
+      { key: 'WEBSITE', hint: 'Company website' },
+      { key: 'CONTACT_INFO', hint: 'Contact email/phone' }
+    ]
+  },
+
+  // Safety Program Template
+  safetyProgram: {
+    id: 'safetyProgram',
+    name: 'Safety Management System',
+    category: 'safety',
+    regulatoryRefs: ['OH&S Act', 'COR'],
+    template: `Our Safety Management System includes:
+
+Safety Policy:
+Our organization maintains a documented safety policy signed by senior management, communicated to all employees, and reviewed annually.
+
+Hazard Identification & Risk Assessment:
+- Formal hazard identification process before each project
+- Risk assessment using [RISK_METHOD] methodology
+- Documented safe work procedures for all high-risk tasks
+
+Incident Reporting & Investigation:
+- All incidents reported within [REPORTING_TIMELINE]
+- Root cause analysis conducted for all incidents
+- Corrective actions tracked to completion
+
+Training Program:
+- Safety orientation for all new employees
+- Role-specific training for [SPECIFIC_ROLES]
+- Annual refresher training for all personnel
+
+Safety Performance:
+- TRIR: [TRIR_VALUE] (past 3 years average)
+- Lost Time Incidents: [LTI_COUNT] (past 12 months)
+- Days Since Last Recordable: [DAYS_SAFE]
+
+[CERTIFICATIONS_LIST]`,
+    placeholders: [
+      { key: 'RISK_METHOD', hint: 'e.g., SORA 2.5, Job Hazard Analysis' },
+      { key: 'REPORTING_TIMELINE', hint: 'e.g., 24 hours' },
+      { key: 'SPECIFIC_ROLES', hint: 'e.g., pilots, ground crew, supervisors' },
+      { key: 'TRIR_VALUE', hint: 'Total Recordable Incident Rate' },
+      { key: 'LTI_COUNT', hint: 'Number of lost time incidents' },
+      { key: 'DAYS_SAFE', hint: 'Days since last recordable incident' },
+      { key: 'CERTIFICATIONS_LIST', hint: 'e.g., COR certified, ISO 45001' }
+    ]
+  },
+
+  // Quality Management Template
+  qualityManagement: {
+    id: 'qualityManagement',
+    name: 'Quality Management',
+    category: 'general',
+    regulatoryRefs: ['ISO 9001'],
+    template: `Quality Management System Overview:
+
+Our quality management practices include:
+
+Documentation:
+- Operations Manual with controlled revision process
+- Standard Operating Procedures for all key activities
+- Quality records maintained for [RETENTION_PERIOD]
+
+Quality Control:
+- Pre-work inspections and checklists
+- In-process quality verification
+- Final deliverable review and approval
+
+Continuous Improvement:
+- Regular internal audits
+- Management review meetings [REVIEW_FREQUENCY]
+- Non-conformance tracking and corrective action
+
+[QUALITY_CERTIFICATIONS]
+
+Customer feedback is actively solicited and used to improve our services.`,
+    placeholders: [
+      { key: 'RETENTION_PERIOD', hint: 'e.g., 5 years' },
+      { key: 'REVIEW_FREQUENCY', hint: 'e.g., quarterly' },
+      { key: 'QUALITY_CERTIFICATIONS', hint: 'e.g., ISO 9001:2015 certified' }
+    ]
+  },
+
+  // Service Capabilities Template
+  serviceCapabilities: {
+    id: 'serviceCapabilities',
+    name: 'Service Capabilities',
+    category: 'operations',
+    regulatoryRefs: [],
+    template: `Service Capabilities:
+
+Core Services:
+[CORE_SERVICES_LIST]
+
+Geographic Coverage:
+[GEOGRAPHIC_COVERAGE]
+
+Equipment & Resources:
+- Fleet: [FLEET_DESCRIPTION]
+- Sensors/Payloads: [SENSOR_CAPABILITIES]
+- Data Processing: [DATA_CAPABILITIES]
+
+Operational Capabilities:
+- [OPERATIONAL_CAPABILITIES]
+
+Typical Deliverables:
+[DELIVERABLES_LIST]
+
+We have successfully completed [PROJECT_COUNT] similar projects for clients including [NOTABLE_CLIENTS].`,
+    placeholders: [
+      { key: 'CORE_SERVICES_LIST', hint: 'List of primary services offered' },
+      { key: 'GEOGRAPHIC_COVERAGE', hint: 'Areas/regions served' },
+      { key: 'FLEET_DESCRIPTION', hint: 'Aircraft types and quantities' },
+      { key: 'SENSOR_CAPABILITIES', hint: 'Camera, LiDAR, thermal, etc.' },
+      { key: 'DATA_CAPABILITIES', hint: 'Processing and analysis capabilities' },
+      { key: 'OPERATIONAL_CAPABILITIES', hint: 'e.g., BVLOS, night operations' },
+      { key: 'DELIVERABLES_LIST', hint: 'Typical project outputs' },
+      { key: 'PROJECT_COUNT', hint: 'Number of similar projects' },
+      { key: 'NOTABLE_CLIENTS', hint: 'Reference clients (if permitted)' }
+    ]
+  },
+
+  // Training Program Template
+  trainingProgram: {
+    id: 'trainingProgram',
+    name: 'Training Program',
+    category: 'crew',
+    regulatoryRefs: ['CAR 901.54', 'CAR 901.55'],
+    template: `Training Program Overview:
+
+Initial Training:
+All personnel complete comprehensive initial training including:
+- [INITIAL_TRAINING_COMPONENTS]
+
+Recurrent Training:
+- Frequency: [RECURRENT_FREQUENCY]
+- Topics covered: [RECURRENT_TOPICS]
+
+Competency Assessment:
+- Knowledge testing: [KNOWLEDGE_TESTING]
+- Practical evaluation: [PRACTICAL_EVAL]
+- Proficiency standards: [PROFICIENCY_STANDARDS]
+
+Training Records:
+- All training documented in [TRAINING_SYSTEM]
+- Records maintained for [RECORD_RETENTION]
+- Certificates issued for completed training
+
+Training is delivered by [TRAINING_PROVIDERS].`,
+    placeholders: [
+      { key: 'INITIAL_TRAINING_COMPONENTS', hint: 'Ground school, flight training, etc.' },
+      { key: 'RECURRENT_FREQUENCY', hint: 'e.g., annually, every 24 months' },
+      { key: 'RECURRENT_TOPICS', hint: 'Topics covered in recurrent training' },
+      { key: 'KNOWLEDGE_TESTING', hint: 'Written exams, oral tests' },
+      { key: 'PRACTICAL_EVAL', hint: 'Flight check, skills demonstration' },
+      { key: 'PROFICIENCY_STANDARDS', hint: 'Minimum standards required' },
+      { key: 'TRAINING_SYSTEM', hint: 'e.g., Learning Management System' },
+      { key: 'RECORD_RETENTION', hint: 'e.g., duration of employment plus 2 years' },
+      { key: 'TRAINING_PROVIDERS', hint: 'Internal trainers, third-party providers' }
+    ]
+  },
+
+  // References Template
+  references: {
+    id: 'references',
+    name: 'Project References',
+    category: 'general',
+    regulatoryRefs: [],
+    template: `Reference Project 1:
+- Client: [CLIENT_1_NAME]
+- Project: [PROJECT_1_DESC]
+- Date: [PROJECT_1_DATE]
+- Scope: [PROJECT_1_SCOPE]
+- Contact: [CLIENT_1_CONTACT]
+
+Reference Project 2:
+- Client: [CLIENT_2_NAME]
+- Project: [PROJECT_2_DESC]
+- Date: [PROJECT_2_DATE]
+- Scope: [PROJECT_2_SCOPE]
+- Contact: [CLIENT_2_CONTACT]
+
+Reference Project 3:
+- Client: [CLIENT_3_NAME]
+- Project: [PROJECT_3_DESC]
+- Date: [PROJECT_3_DATE]
+- Scope: [PROJECT_3_SCOPE]
+- Contact: [CLIENT_3_CONTACT]
+
+Additional references available upon request.`,
+    placeholders: [
+      { key: 'CLIENT_1_NAME', hint: 'Client company name' },
+      { key: 'PROJECT_1_DESC', hint: 'Project description' },
+      { key: 'PROJECT_1_DATE', hint: 'Project date/duration' },
+      { key: 'PROJECT_1_SCOPE', hint: 'Scope of work' },
+      { key: 'CLIENT_1_CONTACT', hint: 'Contact name, email, phone' }
+    ]
   }
 }
 
@@ -555,29 +789,112 @@ export function findMatchingTemplates(requirement) {
 
 /**
  * Build a composite response from multiple suggestion sources
+ * Intelligently combines KB results, templates, and pattern analysis
  */
 function buildCompositeResponse(suggestions, requirement) {
   const parts = []
+  const sources = []
 
-  // Add project data if available
+  // 1. Start with project data if available (most reliable source)
   if (suggestions.fromProject.length > 0) {
     const projectParts = suggestions.fromProject.map(s => s.value)
     parts.push(...projectParts)
+    sources.push('project data')
   }
 
-  // Add top KB match content if no project data
-  if (parts.length === 0 && suggestions.fromKnowledgeBase?.directMatches?.length > 0) {
-    const topMatch = suggestions.fromKnowledgeBase.directMatches[0]
-    if (topMatch.sourceNumber) {
-      parts.push(`Per Policy ${topMatch.sourceNumber} (${topMatch.sectionTitle || 'See full policy'}):`)
+  // 2. If we have a strong template match and no project data, use template structure
+  if (parts.length === 0 && suggestions.templates?.length > 0) {
+    const topTemplate = suggestions.templates[0]
+    if (topTemplate.matchScore >= 40) {
+      // High confidence match - provide template as starting point
+      parts.push(`[Suggested structure from ${topTemplate.name} template]\n\n${topTemplate.template}`)
+      sources.push('template')
     }
-    // Don't include full content, just reference
+  }
+
+  // 3. Add relevant content from Knowledge Base
+  if (suggestions.fromKnowledgeBase?.directMatches?.length > 0) {
+    const kbMatches = suggestions.fromKnowledgeBase.directMatches.slice(0, 3)
+
+    for (const match of kbMatches) {
+      // Build a useful reference
+      const ref = match.sourceNumber
+        ? `[From ${match.sourceType === 'policy' ? 'Policy' : match.sourceType} ${match.sourceNumber}${match.sectionTitle ? ` - ${match.sectionTitle}` : ''}]`
+        : `[From ${match.sourceType || 'Knowledge Base'}]`
+
+      // Include relevant content snippet if available
+      if (match.content && match.relevanceScore > 0.6) {
+        // Truncate to ~200 chars for the draft
+        const snippet = match.content.length > 200
+          ? match.content.substring(0, 200) + '...'
+          : match.content
+        parts.push(`${ref}\n${snippet}`)
+        sources.push('knowledge base')
+        break // Only include top match content to keep response focused
+      } else if (parts.length === 0) {
+        // At minimum, reference where to look
+        parts.push(ref)
+        sources.push('knowledge base reference')
+      }
+    }
+  }
+
+  // 4. Add pattern-based guidance if no other content
+  if (parts.length === 0 && suggestions.patternAnalysis) {
+    const pattern = suggestions.patternAnalysis
+
+    if (pattern.responseHints?.length > 0) {
+      parts.push(`[Guidance: This question typically requires addressing:]\n- ${pattern.responseHints.join('\n- ')}`)
+      sources.push('pattern analysis')
+    }
+
+    if (pattern.suggestedEvidence?.length > 0) {
+      parts.push(`\n[Consider attaching: ${pattern.suggestedEvidence.join(', ')}]`)
+    }
+  }
+
+  // 5. Add regulatory context if available
+  if (suggestions.patternAnalysis?.relatedRegs?.length > 0 && parts.length > 0) {
+    const regs = suggestions.patternAnalysis.relatedRegs.slice(0, 3)
+    parts.push(`\n[Related regulations: ${regs.join(', ')}]`)
   }
 
   // Return null if we couldn't build anything meaningful
   if (parts.length === 0) return null
 
-  return parts.join('\n\n')
+  return {
+    draft: parts.join('\n\n'),
+    sources: [...new Set(sources)], // Deduplicate sources
+    confidence: calculateConfidence(suggestions)
+  }
+}
+
+/**
+ * Calculate confidence score for composite response
+ */
+function calculateConfidence(suggestions) {
+  let score = 0
+
+  // Project data is highly reliable
+  if (suggestions.fromProject?.length > 0) score += 40
+
+  // KB matches add confidence
+  if (suggestions.fromKnowledgeBase?.directMatches?.length > 0) {
+    const topMatch = suggestions.fromKnowledgeBase.directMatches[0]
+    score += Math.min(30, (topMatch.relevanceScore || 0.5) * 30)
+  }
+
+  // Template matches add some confidence
+  if (suggestions.templates?.length > 0) {
+    score += Math.min(20, suggestions.templates[0].matchScore / 2)
+  }
+
+  // Pattern analysis adds base confidence
+  if (suggestions.patternAnalysis?.confidence) {
+    score += Math.min(10, suggestions.patternAnalysis.confidence * 10)
+  }
+
+  return Math.min(100, Math.round(score))
 }
 
 /**
