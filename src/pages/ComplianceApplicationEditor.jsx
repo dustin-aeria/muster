@@ -59,6 +59,7 @@ import {
 import DocumentLinker from '../components/compliance/DocumentLinker'
 import { AutoPopulateButton, GapAnalysisPanel, ProjectLinkBanner, analyzeGaps } from '../components/compliance/SmartPopulate'
 import { getProject } from '../lib/firestore'
+import { openPrintExport, downloadCsvExport, downloadTextExport } from '../lib/complianceExport'
 
 // ============================================
 // HELPER FUNCTIONS
@@ -413,6 +414,7 @@ function RequirementCard({ requirement, response, onUpdate, onFlag, onLinkDocume
 function ApplicationHeader({ application, template, onStatusChange, onExport, showGapAnalysis, onToggleGapAnalysis, gapCount }) {
   const statusConfig = APPLICATION_STATUSES[application.status] || {}
   const progress = application.progress || { percentComplete: 0, complete: 0, total: 0 }
+  const [showExportMenu, setShowExportMenu] = useState(false)
 
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
@@ -485,14 +487,57 @@ function ApplicationHeader({ application, template, onStatusChange, onExport, sh
             ))}
           </select>
 
-          {/* Actions */}
-          <button
-            onClick={onExport}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Export
-          </button>
+          {/* Export Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {showExportMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowExportMenu(false)}
+                />
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[160px]">
+                  <button
+                    onClick={() => {
+                      onExport('pdf')
+                      setShowExportMenu(false)
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Print / PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      onExport('csv')
+                      setShowExportMenu(false)
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    CSV Spreadsheet
+                  </button>
+                  <button
+                    onClick={() => {
+                      onExport('markdown')
+                      setShowExportMenu(false)
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Markdown
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -615,10 +660,23 @@ export default function ComplianceApplicationEditor() {
   }, [application, user])
 
   // Handle export
-  const handleExport = useCallback(() => {
-    // TODO: Implement export functionality
-    alert('Export functionality coming in Phase 5')
-  }, [])
+  const handleExport = useCallback((format) => {
+    if (!application || !template) return
+
+    switch (format) {
+      case 'pdf':
+        openPrintExport(application, template)
+        break
+      case 'csv':
+        downloadCsvExport(application, template)
+        break
+      case 'markdown':
+        downloadTextExport(application, template)
+        break
+      default:
+        openPrintExport(application, template)
+    }
+  }, [application, template])
 
   // Handle document linking
   const handleLinkDocuments = useCallback((requirement) => {
