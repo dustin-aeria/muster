@@ -57,6 +57,8 @@ import {
   runGapAnalysis
 } from '../lib/firestoreCompliance'
 import DocumentLinker from '../components/compliance/DocumentLinker'
+import { AutoPopulateButton, GapAnalysisPanel, ProjectLinkBanner, analyzeGaps } from '../components/compliance/SmartPopulate'
+import { getProject } from '../lib/firestore'
 
 // ============================================
 // HELPER FUNCTIONS
@@ -408,7 +410,7 @@ function RequirementCard({ requirement, response, onUpdate, onFlag, onLinkDocume
   )
 }
 
-function ApplicationHeader({ application, template, onStatusChange, onExport }) {
+function ApplicationHeader({ application, template, onStatusChange, onExport, showGapAnalysis, onToggleGapAnalysis, gapCount }) {
   const statusConfig = APPLICATION_STATUSES[application.status] || {}
   const progress = application.progress || { percentComplete: 0, complete: 0, total: 0 }
 
@@ -446,6 +448,24 @@ function ApplicationHeader({ application, template, onStatusChange, onExport }) 
               />
             </div>
           </div>
+
+          {/* Gap Analysis Toggle */}
+          <button
+            onClick={onToggleGapAnalysis}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+              showGapAnalysis
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <AlertCircle className="w-4 h-4" />
+            Gaps
+            {gapCount > 0 && (
+              <span className="bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                {gapCount}
+              </span>
+            )}
+          </button>
 
           {/* Status Badge */}
           <select
@@ -498,6 +518,8 @@ export default function ComplianceApplicationEditor() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState(null)
   const [linkingRequirement, setLinkingRequirement] = useState(null) // For DocumentLinker modal
+  const [showGapAnalysis, setShowGapAnalysis] = useState(false)
+  const [linkedProject, setLinkedProject] = useState(null)
 
   // Load application and template
   useEffect(() => {
@@ -518,6 +540,16 @@ export default function ComplianceApplicationEditor() {
         // Set initial active category
         if (templateData.categories?.length > 0) {
           setActiveCategory(templateData.categories[0].id)
+        }
+
+        // Load linked project if exists
+        if (appData.projectId) {
+          try {
+            const projectData = await getProject(appData.projectId)
+            setLinkedProject(projectData)
+          } catch (err) {
+            console.warn('Could not load linked project:', err)
+          }
         }
       } catch (err) {
         console.error('Error loading application:', err)
@@ -666,6 +698,28 @@ export default function ComplianceApplicationEditor() {
 
   const activeTemplateCategory = template.categories?.find(c => c.id === activeCategory)
 
+  // Calculate gap count
+  const gapAnalysisData = useMemo(() => {
+    if (!template || !application) return { total: 0 }
+    const gaps = analyzeGaps(template, application.responses || {})
+    return {
+      gaps,
+      total: gaps.missingRequired.length + gaps.incompleteResponses.length +
+             gaps.missingDocuments.length + gaps.flagged.length
+    }
+  }, [template, application])
+
+  // Navigate to requirement from gap analysis
+  const handleNavigateToRequirement = useCallback((requirementId) => {
+    // Find the category for this requirement
+    const requirement = template.requirements.find(r => r.id === requirementId)
+    if (requirement) {
+      setActiveCategory(requirement.category)
+      setExpandedRequirement(requirementId)
+      setShowGapAnalysis(false)
+    }
+  }, [template])
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] -m-4 lg:-m-8">
       {/* Header */}
@@ -674,7 +728,30 @@ export default function ComplianceApplicationEditor() {
         template={template}
         onStatusChange={handleStatusChange}
         onExport={handleExport}
+        showGapAnalysis={showGapAnalysis}
+        onToggleGapAnalysis={() => setShowGapAnalysis(!showGapAnalysis)}
+        gapCount={gapAnalysisData.total}
       />
+
+      {/* Gap Analysis Panel (collapsible) */}
+      {showGapAnalysis && (
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-900">Gap Analysis</h3>
+            <button
+              onClick={() => setShowGapAnalysis(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <GapAnalysisPanel
+            template={template}
+            responses={application.responses || {}}
+            onNavigateToRequirement={handleNavigateToRequirement}
+          />
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
