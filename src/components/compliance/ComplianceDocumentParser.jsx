@@ -34,6 +34,7 @@ import {
 } from 'lucide-react'
 import { parseComplianceText, generateTemplate } from '../../lib/complianceMatrixParser'
 import { PatternBadge } from './PatternInsightsPanel'
+import { logger } from '../../lib/logger'
 
 // ============================================
 // SUB-COMPONENTS
@@ -195,7 +196,7 @@ export default function ComplianceDocumentParser({
       const text = await navigator.clipboard.readText()
       setInputText(text)
     } catch (err) {
-      console.error('Failed to read clipboard:', err)
+      logger.error('Failed to read clipboard:', err)
     }
   }, [])
 
@@ -216,7 +217,7 @@ export default function ComplianceDocumentParser({
         setRequirements(result.requirements)
         setStep('review')
       } catch (err) {
-        console.error('Parse error:', err)
+        logger.error('Parse error:', err)
         alert('Failed to parse document. Please try a different format.')
       } finally {
         setParsing(false)

@@ -39,6 +39,7 @@ import {
   fullReindex
 } from '../../lib/knowledgeBaseIndexer'
 import { refreshIndexStats } from '../../lib/firestoreKnowledgeBase'
+import { logger } from '../../lib/logger'
 
 // ============================================
 // SOURCE CONFIG
@@ -200,7 +201,7 @@ export default function BatchIndexPanel({ compact = false }) {
       try {
         projects = await getProjects()
       } catch (e) {
-        console.warn('Could not load projects:', e)
+        logger.warn('Could not load projects:', e)
       }
 
       setCounts({
@@ -210,7 +211,7 @@ export default function BatchIndexPanel({ compact = false }) {
         crew: 0 // Would load from crew collection
       })
     } catch (err) {
-      console.error('Error loading counts:', err)
+      logger.error('Error loading counts:', err)
     } finally {
       setLoadingCounts(false)
     }
@@ -272,7 +273,7 @@ export default function BatchIndexPanel({ compact = false }) {
 
     } catch (err) {
       setError(err.message)
-      console.error('Indexing error:', err)
+      logger.error('Indexing error:', err)
     } finally {
       setIndexing(null)
       setProgress({ current: 0, total: 0 })
@@ -298,7 +299,7 @@ export default function BatchIndexPanel({ compact = false }) {
         try {
           await indexProject(user.uid, project)
         } catch (err) {
-          console.warn('Error indexing project:', err)
+          logger.warn('Error indexing project:', err)
         }
       }
       setProgress({ current: 2, total: 2 })

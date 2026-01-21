@@ -55,6 +55,7 @@ import { getPoliciesEnhanced, deletePolicyEnhanced, seedSamplePolicies, seedMiss
 import { usePolicyPermissions, usePendingAcknowledgments } from '../hooks/usePolicyPermissions'
 import { useAuth } from '../contexts/AuthContext'
 import { UpdateBadge, PolicyUpdatesPanel, usePolicyUpdates } from './policies/PolicyUpdateNotification'
+import { logger } from '../lib/logger'
 
 // ============================================
 // POLICY DATA
@@ -1407,7 +1408,7 @@ function InlineStatusEditor({ policy, onUpdate, disabled }) {
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 1500)
     } catch (error) {
-      console.error('Failed to update status:', error)
+      logger.error('Failed to update status:', error)
     } finally {
       setSaving(false)
       setIsOpen(false)
@@ -1498,7 +1499,7 @@ function InlineReviewDateEditor({ policy, onUpdate, disabled }) {
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 1500)
     } catch (error) {
-      console.error('Failed to update review date:', error)
+      logger.error('Failed to update review date:', error)
     } finally {
       setSaving(false)
       setIsEditing(false)
@@ -1869,7 +1870,7 @@ export default function PolicyLibrary() {
       setPolicies(data)
     } catch (err) {
       setError('Failed to load policies. Please try again.')
-      console.error('Error loading policies:', err)
+      logger.error('Error loading policies:', err)
     } finally {
       setLoading(false)
     }
@@ -1923,7 +1924,7 @@ export default function PolicyLibrary() {
       }
     } catch (err) {
       setError('Failed to seed policies. Please try again.')
-      console.error('Error seeding policies:', err)
+      logger.error('Error seeding policies:', err)
     } finally {
       setSeeding(false)
     }
@@ -1952,7 +1953,7 @@ export default function PolicyLibrary() {
       }
     } catch (err) {
       setError('Failed to add missing policies. Please try again.')
-      console.error('Error seeding missing policies:', err)
+      logger.error('Error seeding missing policies:', err)
     } finally {
       setSeeding(false)
     }

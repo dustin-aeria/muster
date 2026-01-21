@@ -31,6 +31,7 @@ import {
   Building2
 } from 'lucide-react'
 import { getPoliciesEnhanced } from '../../lib/firestorePolicies'
+import { logger } from '../../lib/logger'
 
 // ============================================
 // DOCUMENT SOURCE TYPES
@@ -271,7 +272,7 @@ export default function DocumentLinker({
         const data = await getPoliciesEnhanced()
         setPolicies(data)
       } catch (err) {
-        console.error('Error loading policies:', err)
+        logger.error('Error loading policies:', err)
       } finally {
         setLoading(false)
       }

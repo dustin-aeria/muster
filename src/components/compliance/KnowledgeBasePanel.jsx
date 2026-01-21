@@ -42,6 +42,7 @@ import {
   SOURCE_TYPES
 } from '../../lib/firestoreKnowledgeBase'
 import { indexAllPolicies, fullReindex } from '../../lib/knowledgeBaseIndexer'
+import { logger } from '../../lib/logger'
 
 // ============================================
 // SOURCE TYPE ICONS
@@ -315,7 +316,7 @@ export default function KnowledgeBasePanel({
       const status = await getIndexStatus(user.uid)
       setIndexStatus(status)
     } catch (err) {
-      console.error('Error loading index status:', err)
+      logger.error('Error loading index status:', err)
     } finally {
       setLoadingStatus(false)
     }
@@ -339,7 +340,7 @@ export default function KnowledgeBasePanel({
       setSearchResults(results)
     } catch (err) {
       setError('Search failed. Please try again.')
-      console.error('Search error:', err)
+      logger.error('Search error:', err)
     } finally {
       setSearching(false)
     }
@@ -364,7 +365,7 @@ export default function KnowledgeBasePanel({
       }
     } catch (err) {
       setError('Indexing failed. Please try again.')
-      console.error('Reindex error:', err)
+      logger.error('Reindex error:', err)
     } finally {
       setReindexing(false)
     }

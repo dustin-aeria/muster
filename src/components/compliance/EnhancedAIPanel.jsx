@@ -48,6 +48,7 @@ import {
 } from '../../lib/complianceAssistant'
 import { useKnowledgeBase } from '../../hooks/useKnowledgeBase'
 import { PatternBadge } from './PatternInsightsPanel'
+import { logger } from '../../lib/logger'
 
 // ============================================
 // SOURCE ICONS
@@ -393,7 +394,7 @@ export default function EnhancedAIPanel({
       setSuggestions(result)
     } catch (err) {
       setError('Failed to load suggestions')
-      console.error('Error loading suggestions:', err)
+      logger.error('Error loading suggestions:', err)
     } finally {
       setLoading(false)
     }

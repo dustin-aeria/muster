@@ -37,6 +37,7 @@ import {
   findRelevantDocs,
   getIndexStatus
 } from '../../lib/firestoreKnowledgeBase'
+import { logger } from '../../lib/logger'
 
 // ============================================
 // SOURCE TYPE ICONS
@@ -83,7 +84,7 @@ function SuggestionCard({ suggestion, onUseContent, onLinkDocument }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      console.error('Failed to copy:', err)
+      logger.error('Failed to copy:', err)
     }
   }
 
@@ -272,7 +273,7 @@ export default function DocumentSuggestionPanel({
       const status = await getIndexStatus(user.uid)
       setIndexStatus(status)
     } catch (err) {
-      console.error('Error checking index status:', err)
+      logger.error('Error checking index status:', err)
     }
   }
 
@@ -287,7 +288,7 @@ export default function DocumentSuggestionPanel({
       setSuggestions(results)
     } catch (err) {
       setError('Failed to find suggestions. Please try again.')
-      console.error('Error finding suggestions:', err)
+      logger.error('Error finding suggestions:', err)
     } finally {
       setLoading(false)
     }

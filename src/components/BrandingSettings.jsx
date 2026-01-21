@@ -22,6 +22,7 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { logger } from '../lib/logger'
 
 // ============================================
 // DEFAULT BRANDING CONFIGURATION
@@ -197,7 +198,7 @@ export default function BrandingSettings() {
           }
         }
       } catch (err) {
-        console.error('Failed to load branding:', err)
+        logger.error('Failed to load branding:', err)
       } finally {
         setLoading(false)
       }
@@ -225,7 +226,7 @@ export default function BrandingSettings() {
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err) {
-      console.error('Failed to save branding:', err)
+      logger.error('Failed to save branding:', err)
       alert('Failed to save branding settings')
     } finally {
       setSaving(false)
@@ -618,7 +619,7 @@ export function useBranding() {
           })
         }
       } catch (err) {
-        console.error('Failed to load branding:', err)
+        logger.error('Failed to load branding:', err)
       } finally {
         setLoading(false)
       }

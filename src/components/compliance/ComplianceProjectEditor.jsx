@@ -45,6 +45,7 @@ import {
 } from '../../lib/firestoreCompliance'
 import { getComprehensiveSuggestions, getPatternBasedSuggestions } from '../../lib/complianceAssistant'
 import { mapRequirementToPatterns, COMPLIANCE_CATEGORIES } from '../../lib/regulatoryPatterns'
+import { logger } from '../../lib/logger'
 
 // ============================================
 // CATEGORY COLORS
@@ -265,7 +266,7 @@ function QuestionModal({
         comprehensive: comprehensiveSuggestions
       })
     } catch (err) {
-      console.error('Error getting suggestions:', err)
+      logger.error('Error getting suggestions:', err)
     } finally {
       setLoadingSuggestions(false)
     }
@@ -293,7 +294,7 @@ function QuestionModal({
       })
       onClose()
     } catch (err) {
-      console.error('Error saving question:', err)
+      logger.error('Error saving question:', err)
     } finally {
       setSaving(false)
     }
