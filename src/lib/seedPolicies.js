@@ -13,6 +13,7 @@
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore'
 import { db } from './firebase'
 import { POLICIES } from '../components/PolicyLibrary'
+import { logger } from './logger'
 
 /**
  * Check if policies have already been seeded
@@ -24,7 +25,7 @@ export async function isPoliciesSeeded() {
     const snapshot = await getDocs(policiesRef)
     return snapshot.size > 0
   } catch (error) {
-    console.error('Error checking if policies are seeded:', error)
+    logger.error('Error checking if policies are seeded:', error)
     return false
   }
 }
@@ -57,7 +58,7 @@ export async function seedPolicies(onProgress) {
       const existingSnapshot = await getDocs(existingQuery)
 
       if (existingSnapshot.size > 0) {
-        console.log(`Policy ${policy.number} already exists, skipping...`)
+        logger.debug(`Policy ${policy.number} already exists, skipping...`)
         results.success++
         continue
       }
@@ -84,15 +85,15 @@ export async function seedPolicies(onProgress) {
       })
 
       results.success++
-      console.log(`Seeded policy ${policy.number}: ${policy.title}`)
+      logger.debug(`Seeded policy ${policy.number}: ${policy.title}`)
     } catch (error) {
       results.failed++
       results.errors.push(`${policy.number}: ${error.message}`)
-      console.error(`Failed to seed policy ${policy.number}:`, error)
+      logger.error(`Failed to seed policy ${policy.number}:`, error)
     }
   }
 
-  console.log(`Seed complete: ${results.success} success, ${results.failed} failed`)
+  logger.info(`Seed complete: ${results.success} success, ${results.failed} failed`)
   return results
 }
 
@@ -110,6 +111,6 @@ export async function clearAllPolicies() {
     deleted++
   }
 
-  console.log(`Deleted ${deleted} policies`)
+  logger.info(`Deleted ${deleted} policies`)
   return deleted
 }

@@ -19,6 +19,7 @@ import {
   refreshIndexStats
 } from './firestoreKnowledgeBase'
 import { getPoliciesEnhanced } from './firestorePolicies'
+import { logger } from './logger'
 
 // ============================================
 // REGULATORY REFERENCE PATTERNS
@@ -220,14 +221,14 @@ export async function indexAllPolicies(operatorId, options = {}) {
     if (clearExisting) {
       // Get all policy chunks and delete them
       const existingChunks = await deleteAllPolicyChunks(operatorId)
-      console.log(`Cleared ${existingChunks.deleted} existing policy chunks`)
+      logger.debug(`Cleared ${existingChunks.deleted} existing policy chunks`)
     }
 
     // Get policies from Firestore
     const policies = await getPoliciesEnhanced()
 
     if (policies.length === 0) {
-      console.log('No policies found in Firestore')
+      logger.debug('No policies found in Firestore')
       return results
     }
 

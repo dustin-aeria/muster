@@ -9,6 +9,7 @@
 
 import { doc, updateDoc, getDoc } from 'firebase/firestore'
 import { db } from './firebase'
+import { logger } from './logger'
 
 /**
  * Make a user a platform admin
@@ -29,10 +30,10 @@ export async function makePlatformAdmin(userId) {
       role: 'admin' // Also ensure they have admin role
     })
 
-    console.log(`User ${userId} is now a platform admin`)
+    logger.info(`User ${userId} is now a platform admin`)
     return { success: true }
   } catch (error) {
-    console.error('Error making user platform admin:', error)
+    logger.error('Error making user platform admin:', error)
     return { success: false, error: error.message }
   }
 }
@@ -49,10 +50,10 @@ export async function removePlatformAdmin(userId) {
       isPlatformAdmin: false
     })
 
-    console.log(`User ${userId} is no longer a platform admin`)
+    logger.info(`User ${userId} is no longer a platform admin`)
     return { success: true }
   } catch (error) {
-    console.error('Error removing platform admin:', error)
+    logger.error('Error removing platform admin:', error)
     return { success: false, error: error.message }
   }
 }
@@ -71,11 +72,6 @@ export async function makeCurrentUserPlatformAdmin(auth) {
   return makePlatformAdmin(user.uid)
 }
 
-// Expose to window for easy console access
-if (typeof window !== 'undefined') {
-  window.adminUtils = {
-    makePlatformAdmin,
-    removePlatformAdmin,
-    makeCurrentUserPlatformAdmin
-  }
-}
+// SECURITY: Admin functions should only be called through authenticated admin UI
+// Do NOT expose to window object in production
+// Use the MasterPolicyAdmin page or Settings page for admin operations

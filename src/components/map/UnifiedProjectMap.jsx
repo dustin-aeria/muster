@@ -113,14 +113,13 @@ const CACHE_NAME = 'aeria-map-tiles-v1'
 
 async function cacheMapTiles(bounds, zoom = 14) {
   if (!('caches' in window)) return false
-  
+
   try {
     // This is a simplified cache implementation
     // A full implementation would iterate over tile coordinates
-    console.log('Caching tiles for offline use...')
     return true
   } catch (err) {
-    console.error('Failed to cache tiles:', err)
+    // Tile caching failed - gracefully continue without offline support
     return false
   }
 }
@@ -945,16 +944,16 @@ export function UnifiedProjectMap({
   
   const handleAddSite = useCallback(() => {
     // This will be handled by parent component
-    console.log('Add site requested')
+    // No-op: parent component should handle site addition
   }, [])
   
   const handleDuplicateSite = useCallback((siteId) => {
-    console.log('Duplicate site:', siteId)
+    // No-op: parent component should handle site duplication
   }, [])
   
   const handleDeleteSite = useCallback((siteId) => {
     if (confirm('Are you sure you want to delete this site?')) {
-      console.log('Delete site:', siteId)
+      // No-op: parent component should handle site deletion
     }
   }, [])
   

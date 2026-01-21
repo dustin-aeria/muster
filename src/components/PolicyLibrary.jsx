@@ -1881,12 +1881,10 @@ export default function PolicyLibrary() {
 
   // Handle policy click - navigate to detail page
   const handlePolicyClick = (policy) => {
-    console.log('Policy clicked:', policy?.id, policy?.title)
     if (policy?.id) {
       navigate(`/policies/${policy.id}`)
-    } else {
-      console.error('Policy missing ID:', policy)
     }
+    // Silent no-op if policy ID is missing - UI shouldn't show policies without IDs
   }
 
   // Handle policy saved (create/update)
