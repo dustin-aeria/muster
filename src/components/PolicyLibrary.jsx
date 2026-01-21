@@ -22,7 +22,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   Search,
   Grid,
@@ -1227,15 +1227,8 @@ function PolicyStatusBadge({ policy }) {
   )
 }
 
-function PolicyCard({ policy, view, onClick }) {
+function PolicyCard({ policy, view }) {
   const category = CATEGORIES[policy?.category] || CATEGORIES.rpas
-  const statusInfo = getStatusInfo(policy)
-
-  const handleClick = (e) => {
-    e.stopPropagation()
-    alert('Clicked: ' + (policy?.title || 'unknown'))
-    if (onClick) onClick()
-  }
 
   const categoryColors = {
     blue: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -1247,12 +1240,9 @@ function PolicyCard({ policy, view, onClick }) {
 
   if (view === 'list') {
     return (
-      <div
-        onClick={handleClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && handleClick(e)}
-        className="w-full p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all text-left flex items-center gap-4 cursor-pointer"
+      <Link
+        to={`/policies/${policy?.id}`}
+        className="block w-full p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all text-left flex items-center gap-4"
       >
         <div className="w-16 text-center flex-shrink-0">
           <span className={`inline-block px-3 py-1 rounded-lg text-sm font-bold ${colorClass}`}>
@@ -1272,18 +1262,15 @@ function PolicyCard({ policy, view, onClick }) {
           <PolicyStatusBadge policy={policy} />
           <ChevronRight className="w-5 h-5 text-gray-400" />
         </div>
-      </div>
+      </Link>
     )
   }
 
   // Grid view
   return (
-    <div
-      onClick={handleClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && handleClick(e)}
-      className="p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-md transition-all text-left h-full flex flex-col cursor-pointer"
+    <Link
+      to={`/policies/${policy?.id}`}
+      className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-md transition-all text-left h-full flex flex-col"
     >
       <div className="flex items-start justify-between mb-3">
         <span className={`px-3 py-1 rounded-lg text-sm font-bold ${colorClass}`}>
@@ -1305,7 +1292,7 @@ function PolicyCard({ policy, view, onClick }) {
           {policy?.owner || 'Unassigned'}
         </span>
       </div>
-    </div>
+    </Link>
   )
 }
 
@@ -1618,6 +1605,11 @@ export default function PolicyLibrary() {
 
   return (
     <div className="space-y-6">
+      {/* DEBUG BANNER - REMOVE AFTER TESTING */}
+      <div className="bg-red-500 text-white p-4 rounded-lg text-center font-bold">
+        DEBUG: Click test active - clicking a policy should show an alert
+      </div>
+
       {/* Error message */}
       {error && (
         <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
@@ -1795,7 +1787,6 @@ export default function PolicyLibrary() {
               key={policy.id}
               policy={policy}
               view="list"
-              onClick={() => handlePolicyClick(policy)}
             />
           ))}
         </div>
@@ -1806,7 +1797,6 @@ export default function PolicyLibrary() {
               key={policy.id}
               policy={policy}
               view="grid"
-              onClick={() => handlePolicyClick(policy)}
             />
           ))}
         </div>
