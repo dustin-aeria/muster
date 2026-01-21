@@ -16,6 +16,7 @@ import {
   getDoc,
   getDocs,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -1030,14 +1031,10 @@ export async function seedComplianceTemplate(templateData) {
   }
 
   if (id) {
-    // Use specific ID
+    // Use specific ID - setDoc with merge creates if doesn't exist, updates if does
+    // This is atomic and avoids race conditions with the previous catch pattern
     const docRef = doc(db, 'complianceTemplates', id)
-    await updateDoc(docRef, template).catch(async () => {
-      // Document doesn't exist, create it
-      const batch = writeBatch(db)
-      batch.set(docRef, template)
-      await batch.commit()
-    })
+    await setDoc(docRef, template, { merge: true })
     return { id, ...template }
   } else {
     // Auto-generate ID

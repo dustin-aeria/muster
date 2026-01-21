@@ -28,6 +28,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { getClients, createClient, updateClient, deleteClient } from '../lib/firestore'
+import { logger } from '../lib/logger'
 
 // Logo Upload Component
 function LogoUpload({ logo, onLogoChange }) {
@@ -90,7 +91,7 @@ function LogoUpload({ logo, onLogoChange }) {
       }
       reader.readAsDataURL(file)
     } catch (err) {
-      console.error('Error uploading logo:', err)
+      logger.error('Error uploading logo:', err)
       alert('Failed to upload logo')
       setUploading(false)
     }
@@ -234,7 +235,7 @@ function ClientModal({ isOpen, onClose, client, onSave }) {
       await onSave(formData)
       onClose()
     } catch (err) {
-      console.error('Error saving client:', err)
+      logger.error('Error saving client:', err)
       alert('Failed to save client')
     } finally {
       setSaving(false)
@@ -506,7 +507,7 @@ export default function Clients() {
       const data = await getClients()
       setClients(data)
     } catch (err) {
-      console.error('Error loading clients:', err)
+      logger.error('Error loading clients:', err)
     } finally {
       setLoading(false)
     }
@@ -531,7 +532,7 @@ export default function Clients() {
       await deleteClient(clientId)
       await loadClients()
     } catch (err) {
-      console.error('Error deleting client:', err)
+      logger.error('Error deleting client:', err)
       alert('Failed to delete client')
     }
   }

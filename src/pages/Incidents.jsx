@@ -40,6 +40,7 @@ import {
   INCIDENT_STATUS,
   RPAS_INCIDENT_TYPES
 } from '../lib/firestoreSafety'
+import { logger } from '../lib/logger'
 
 export default function Incidents() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -70,7 +71,7 @@ export default function Incidents() {
       const data = await getIncidents()
       setIncidents(data)
     } catch (err) {
-      console.error('Error loading incidents:', err)
+      logger.error('Error loading incidents:', err)
     } finally {
       setLoading(false)
     }
@@ -85,7 +86,7 @@ export default function Incidents() {
       await deleteIncident(incidentId)
       setIncidents(prev => prev.filter(i => i.id !== incidentId))
     } catch (err) {
-      console.error('Error deleting incident:', err)
+      logger.error('Error deleting incident:', err)
       alert('Failed to delete incident')
     }
     setMenuOpen(null)

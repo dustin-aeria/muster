@@ -28,6 +28,7 @@ import { getAircraft, deleteAircraft } from '../lib/firestore'
 import AircraftModal from '../components/AircraftModal'
 import AircraftSpecSheet, { generateAircraftSpecPDF } from '../components/AircraftSpecSheet'
 import { useBranding } from '../components/BrandingSettings'
+import { logger } from '../lib/logger'
 
 // ============================================
 // STATUS CONFIGURATION
@@ -88,7 +89,7 @@ export default function Aircraft() {
       const data = await getAircraft()
       setAircraft(data)
     } catch (err) {
-      console.error('Error loading aircraft:', err)
+      logger.error('Error loading aircraft:', err)
     } finally {
       setLoading(false)
     }
@@ -103,7 +104,7 @@ export default function Aircraft() {
       await deleteAircraft(aircraftId)
       setAircraft(prev => prev.filter(a => a.id !== aircraftId))
     } catch (err) {
-      console.error('Error deleting aircraft:', err)
+      logger.error('Error deleting aircraft:', err)
       alert('Failed to delete aircraft')
     }
     setMenuOpen(null)
@@ -125,7 +126,7 @@ export default function Aircraft() {
       const pdf = generateAircraftSpecPDF(ac, branding)
       pdf.save(`spec-sheet_${ac.nickname || ac.serialNumber || 'aircraft'}_${new Date().toISOString().split('T')[0]}.pdf`)
     } catch (err) {
-      console.error('Failed to export spec:', err)
+      logger.error('Failed to export spec:', err)
     }
     setMenuOpen(null)
   }
