@@ -1605,11 +1605,6 @@ export default function PolicyLibrary() {
 
   return (
     <div className="space-y-6">
-      {/* DEBUG BANNER - REMOVE AFTER TESTING */}
-      <div className="bg-red-500 text-white p-4 rounded-lg text-center font-bold">
-        DEBUG: Click test active - clicking a policy should show an alert
-      </div>
-
       {/* Error message */}
       {error && (
         <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">

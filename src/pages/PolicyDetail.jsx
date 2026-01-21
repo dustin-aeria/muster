@@ -12,7 +12,7 @@
  * @location src/pages/PolicyDetail.jsx
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -36,7 +36,9 @@ import {
   X,
   Plane,
   Users,
-  HardHat
+  HardHat,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react'
 import { getPolicy, deletePolicy } from '../lib/firestore'
 import {
@@ -112,8 +114,28 @@ export default function PolicyDetail() {
   const [deleting, setDeleting] = useState(false)
   const [userAcknowledgment, setUserAcknowledgment] = useState(null)
   const [acknowledgmentCount, setAcknowledgmentCount] = useState(0)
+  const [expandedSections, setExpandedSections] = useState({})
 
   const permissions = usePolicyPermissions(policy)
+
+  const toggleSection = (index) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }))
+  }
+
+  const expandAllSections = () => {
+    const all = {}
+    policy?.sections?.forEach((_, index) => {
+      all[index] = true
+    })
+    setExpandedSections(all)
+  }
+
+  const collapseAllSections = () => {
+    setExpandedSections({})
+  }
 
   useEffect(() => {
     if (id) {
@@ -429,25 +451,64 @@ export default function PolicyDetail() {
               {/* Sections */}
               {policy.sections?.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-3">Policy Sections</h3>
-                  <div className="space-y-4">
-                    {policy.sections.map((section, index) => (
-                      <div key={section.id || index} className="border border-gray-200 rounded-lg overflow-hidden">
-                        <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center gap-3">
-                          <span className="w-6 h-6 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center justify-center font-medium">
-                            {index + 1}
-                          </span>
-                          <h4 className="font-medium text-gray-900">
-                            {typeof section === 'string' ? section : section.title}
-                          </h4>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-500">Policy Sections</h3>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={expandAllSections}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Expand All
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button
+                        onClick={collapseAllSections}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Collapse All
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {policy.sections.map((section, index) => {
+                      const sectionTitle = typeof section === 'string' ? section : section.title
+                      const sectionContent = typeof section === 'string' ? null : section.content
+                      const isExpanded = expandedSections[index]
+
+                      return (
+                        <div key={section.id || index} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <button
+                            onClick={() => toggleSection(index)}
+                            className="w-full bg-gray-50 px-4 py-3 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left"
+                          >
+                            <span className="w-6 h-6 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center justify-center font-medium flex-shrink-0">
+                              {index + 1}
+                            </span>
+                            <h4 className="font-medium text-gray-900 flex-1">
+                              {sectionTitle}
+                            </h4>
+                            {isExpanded ? (
+                              <ChevronDown className="w-5 h-5 text-gray-400" />
+                            ) : (
+                              <ChevronRight className="w-5 h-5 text-gray-400" />
+                            )}
+                          </button>
+                          {isExpanded && (
+                            <div className="p-4 border-t border-gray-200 bg-white">
+                              {sectionContent ? (
+                                <div className="text-gray-600 whitespace-pre-wrap">
+                                  {sectionContent}
+                                </div>
+                              ) : (
+                                <p className="text-gray-400 italic">
+                                  No content available for this section. Edit the policy to add content.
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        {section.content && (
-                          <div className="p-4 text-gray-600">
-                            {section.content}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}
