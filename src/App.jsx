@@ -37,6 +37,9 @@ import Capas from './pages/Capas'
 import CapaNew from './pages/CapaNew'
 import CapaDetail from './pages/CapaDetail'
 
+// Compliance Module Pages
+import ComplianceHub from './pages/ComplianceHub'
+
 // Protected route wrapper
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth()
@@ -113,6 +116,11 @@ function App() {
           <Route path="capas/new" element={<CapaNew />} />
           <Route path="capas/:id" element={<CapaDetail />} />
           <Route path="capas/:id/edit" element={<CapaNew />} />
+
+          {/* Compliance Module Routes */}
+          <Route path="compliance" element={<ComplianceHub />} />
+          <Route path="compliance/templates" element={<ComplianceHub />} />
+          <Route path="compliance/application/:id" element={<ComplianceHub />} />
         </Route>
         
         {/* Catch all - redirect to dashboard */}

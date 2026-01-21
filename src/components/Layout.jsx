@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { 
-  LayoutDashboard, 
-  FolderKanban, 
-  ClipboardList, 
-  Users, 
-  Plane, 
-  Building2, 
+import {
+  LayoutDashboard,
+  FolderKanban,
+  ClipboardList,
+  Users,
+  Plane,
+  Building2,
   Settings,
   LogOut,
   Menu,
@@ -16,7 +16,9 @@ import {
   Shield,
   AlertTriangle,
   Target,
-  BookOpen
+  BookOpen,
+  ClipboardCheck,
+  FileCheck
 } from 'lucide-react'
 
 const navigation = [
@@ -32,6 +34,10 @@ const safetyNavigation = [
   { name: 'CAPAs', href: '/capas', icon: Target },
 ]
 
+const complianceNavigation = [
+  { name: 'Compliance Hub', href: '/compliance', icon: ClipboardCheck },
+]
+
 const libraries = [
   { name: 'Operators', href: '/operators', icon: Users },
   { name: 'Fleet', href: '/aircraft', icon: Plane },
@@ -43,6 +49,7 @@ function Sidebar({ mobile, onClose }) {
   const navigate = useNavigate()
   const [librariesOpen, setLibrariesOpen] = useState(true)
   const [safetyOpen, setSafetyOpen] = useState(true)
+  const [complianceOpen, setComplianceOpen] = useState(true)
 
   const handleSignOut = async () => {
     await signOut()
@@ -112,6 +119,30 @@ function Sidebar({ mobile, onClose }) {
           {safetyOpen && (
             <div id="safety-nav" className="mt-1 space-y-1">
               {safetyNavigation.map((item) => (
+                <NavItem key={item.name} item={item} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Compliance section */}
+        <div className="pt-4">
+          <button
+            type="button"
+            onClick={() => setComplianceOpen(!complianceOpen)}
+            className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700"
+            aria-expanded={complianceOpen}
+            aria-controls="compliance-nav"
+          >
+            <span className="flex items-center gap-2">
+              <ClipboardCheck className="w-4 h-4" aria-hidden="true" />
+              Compliance
+            </span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${complianceOpen ? '' : '-rotate-90'}`} aria-hidden="true" />
+          </button>
+          {complianceOpen && (
+            <div id="compliance-nav" className="mt-1 space-y-1">
+              {complianceNavigation.map((item) => (
                 <NavItem key={item.name} item={item} />
               ))}
             </div>
