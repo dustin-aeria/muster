@@ -52,6 +52,7 @@ import {
   getSiteStats,
   calculatePolygonArea
 } from '../../lib/mapDataStructures'
+import NoAircraftAssignedModal from '../NoAircraftAssignedModal'
 
 // ============================================
 // CONSTANTS
@@ -236,37 +237,41 @@ function OperationTypeSelector({ value, onChange }) {
 // AIRCRAFT SELECTOR
 // ============================================
 
-function SiteAircraftSelector({ 
-  projectAircraft = [], 
+function SiteAircraftSelector({
+  projectAircraft = [],
   siteAircraft = [],
   primaryAircraftId = null,
   onToggleAircraft,
   onSetPrimary,
-  onNavigateToAircraft 
+  onAddAircraft
 }) {
+  const siteAircraftIds = siteAircraft.map(a => typeof a === 'string' ? a : a.id)
+
+  // No aircraft in project - show prominent call to action
   if (projectAircraft.length === 0) {
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <p className="text-sm text-amber-800 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" />
-          No aircraft in project fleet. Add aircraft in project settings first.
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
+        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Plane className="w-6 h-6 text-amber-600" />
+        </div>
+        <h4 className="font-medium text-amber-900 mb-1">No Aircraft Available</h4>
+        <p className="text-sm text-amber-700 mb-4">
+          Add aircraft to your inventory to assign them to this site.
         </p>
-        {onNavigateToAircraft && (
+        {onAddAircraft && (
           <button
             type="button"
-            onClick={onNavigateToAircraft}
-            className="mt-2 text-sm text-amber-700 hover:text-amber-900 flex items-center gap-1"
+            onClick={onAddAircraft}
+            className="btn btn-primary inline-flex items-center gap-2"
           >
-            <ExternalLink className="w-3 h-3" />
-            Go to Aircraft
+            <Plus className="w-4 h-4" />
+            Add Aircraft
           </button>
         )}
       </div>
     )
   }
-  
-  const siteAircraftIds = siteAircraft.map(a => typeof a === 'string' ? a : a.id)
-  
+
   return (
     <div className="space-y-3">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -275,18 +280,18 @@ function SiteAircraftSelector({
           Select aircraft for this site. Mark one as <strong>primary</strong> for SORA calculations.
         </p>
       </div>
-      
+
       <div className="space-y-2">
         {projectAircraft.map(aircraft => {
           const isAssigned = siteAircraftIds.includes(aircraft.id)
           const isPrimary = primaryAircraftId === aircraft.id
-          
+
           return (
             <div
               key={aircraft.id}
               className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                isAssigned 
-                  ? 'bg-aeria-navy/5 border-aeria-navy' 
+                isAssigned
+                  ? 'bg-aeria-navy/5 border-aeria-navy'
                   : 'bg-gray-50 border-gray-200'
               }`}
             >
@@ -306,7 +311,7 @@ function SiteAircraftSelector({
                   {aircraft.maxSpeed && ` • Max ${aircraft.maxSpeed}m/s`}
                 </p>
               </div>
-              
+
               {isAssigned && (
                 <button
                   type="button"
@@ -324,7 +329,7 @@ function SiteAircraftSelector({
           )
         })}
       </div>
-      
+
       {siteAircraftIds.length > 0 && !primaryAircraftId && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
@@ -333,11 +338,23 @@ function SiteAircraftSelector({
           </p>
         </div>
       )}
-      
+
       {siteAircraftIds.length === 0 && (
         <p className="text-sm text-gray-500 italic text-center py-2">
           No aircraft assigned to this site yet.
         </p>
+      )}
+
+      {/* Add more aircraft button */}
+      {onAddAircraft && (
+        <button
+          type="button"
+          onClick={onAddAircraft}
+          className="w-full p-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-aeria-navy hover:text-aeria-navy hover:bg-aeria-sky/20 transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Add More Aircraft
+        </button>
       )}
     </div>
   )
@@ -623,6 +640,7 @@ function FlightParametersSummary({ site, projectFlightPlan }) {
 
 export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSection }) {
   const [showMap, setShowMap] = useState(true)
+  const [showAircraftModal, setShowAircraftModal] = useState(false)
 
   // Map controls - lifted to page level so we can render controls outside the map
   const mapControls = useMapData(project, onUpdate, {
@@ -734,6 +752,39 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
   const handleSetPrimaryAircraft = useCallback((aircraftId) => {
     updateSiteFlightPlan({ primaryAircraftId: aircraftId })
   }, [updateSiteFlightPlan])
+
+  // Handle aircraft selected from modal (new or existing)
+  const handleAircraftFromModal = useCallback((aircraft) => {
+    // Add to project aircraft list
+    const currentAircraft = project?.aircraft || []
+    const exists = currentAircraft.some(a => a.id === aircraft.id)
+
+    if (!exists) {
+      const updatedProjectAircraft = [
+        ...currentAircraft,
+        {
+          id: aircraft.id,
+          nickname: aircraft.nickname,
+          make: aircraft.make,
+          model: aircraft.model,
+          serialNumber: aircraft.serialNumber,
+          mtow: aircraft.mtow,
+          maxSpeed: aircraft.maxSpeed,
+          endurance: aircraft.endurance
+        }
+      ]
+      onUpdate({ aircraft: updatedProjectAircraft })
+    }
+
+    // Auto-assign to current site and set as primary
+    const currentSiteAircraft = siteFlightPlan.aircraft || []
+    if (!currentSiteAircraft.includes(aircraft.id)) {
+      updateSiteFlightPlan({
+        aircraft: [...currentSiteAircraft, aircraft.id],
+        primaryAircraftId: aircraft.id
+      })
+    }
+  }, [project?.aircraft, siteFlightPlan.aircraft, onUpdate, updateSiteFlightPlan])
   
   // ============================================
   // VALIDATION
@@ -1338,6 +1389,7 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
           primaryAircraftId={siteFlightPlan.primaryAircraftId}
           onToggleAircraft={handleToggleSiteAircraft}
           onSetPrimary={handleSetPrimaryAircraft}
+          onAddAircraft={() => setShowAircraftModal(true)}
         />
       </CollapsibleSection>
       
@@ -1382,6 +1434,14 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
+
+      {/* No Aircraft Modal */}
+      <NoAircraftAssignedModal
+        isOpen={showAircraftModal}
+        onClose={() => setShowAircraftModal(false)}
+        onAircraftSelected={handleAircraftFromModal}
+        context="flight planning"
+      />
     </div>
   )
 }

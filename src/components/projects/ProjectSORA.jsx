@@ -71,6 +71,7 @@ import {
   calculateAdjacentAreaDistance,
   checkAllOSOCompliance
 } from '../../lib/soraConfig'
+import NoAircraftAssignedModal from '../NoAircraftAssignedModal'
 
 // ============================================
 // CONSTANTS
@@ -1110,6 +1111,9 @@ function MultiSiteSummary({ sites, calculations }) {
 // ============================================
 
 export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) {
+  // State for aircraft modal
+  const [showAircraftModal, setShowAircraftModal] = useState(false)
+
   // Get sites array
   const sites = useMemo(() => {
     return Array.isArray(project?.sites) ? project.sites : []
@@ -1227,7 +1231,55 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
       updateSiteSORA({ populationCategory: surveyCategory })
     }
   }, [activeSite, updateSiteSORA])
-  
+
+  // Handle aircraft selected from modal
+  const handleAircraftFromModal = useCallback((aircraft) => {
+    // Add to project aircraft list if not already there
+    const currentAircraft = project?.aircraft || []
+    const exists = currentAircraft.some(a => a.id === aircraft.id)
+
+    const updates = {}
+
+    if (!exists) {
+      updates.aircraft = [
+        ...currentAircraft,
+        {
+          id: aircraft.id,
+          nickname: aircraft.nickname,
+          make: aircraft.make,
+          model: aircraft.model,
+          serialNumber: aircraft.serialNumber,
+          mtow: aircraft.mtow,
+          maxSpeed: aircraft.maxSpeed,
+          endurance: aircraft.endurance
+        }
+      ]
+    }
+
+    // Auto-assign to current site's flight plan and set as primary
+    if (activeSiteId) {
+      const currentSiteAircraft = activeSite?.flightPlan?.aircraft || []
+      if (!currentSiteAircraft.includes(aircraft.id)) {
+        const updatedSites = sites.map(site => {
+          if (site.id !== activeSiteId) return site
+          return {
+            ...site,
+            flightPlan: {
+              ...site.flightPlan,
+              aircraft: [...currentSiteAircraft, aircraft.id],
+              primaryAircraftId: aircraft.id
+            }
+          }
+        })
+        updates.sites = updatedSites
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      onUpdate(updates)
+    }
+  }, [project?.aircraft, sites, activeSiteId, activeSite?.flightPlan?.aircraft, onUpdate])
+
   // ============================================
   // AUTO-SYNC FROM SITE SURVEY AND FLIGHT PLAN
   // ============================================
@@ -1326,7 +1378,32 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
       
       {/* Multi-Site Summary */}
       <MultiSiteSummary sites={sites} calculations={calculations} />
-      
+
+      {/* No Aircraft Warning */}
+      {!primaryAircraft && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Plane className="w-6 h-6 text-amber-600 flex-shrink-0" />
+              <div>
+                <h3 className="font-medium text-amber-900">No Aircraft Assigned</h3>
+                <p className="text-sm text-amber-700 mt-1">
+                  SORA calculations require aircraft specifications (weight, speed) to determine risk categories.
+                  Assign an aircraft to get accurate assessments.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAircraftModal(true)}
+              className="btn btn-primary whitespace-nowrap"
+            >
+              Add Aircraft
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Scope Warning */}
       {!activeCalc.withinScope && activeCalc.fGRC !== null && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -1575,7 +1652,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
           <ArrowRight className="w-4 h-4 rotate-180" />
           Back to Site Survey
         </button>
-        
+
         <button
           type="button"
           onClick={() => onNavigateToSection?.('flightPlan')}
@@ -1585,6 +1662,14 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
+
+      {/* No Aircraft Modal */}
+      <NoAircraftAssignedModal
+        isOpen={showAircraftModal}
+        onClose={() => setShowAircraftModal(false)}
+        onAircraftSelected={handleAircraftFromModal}
+        context="SORA"
+      />
     </div>
   )
 }

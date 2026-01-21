@@ -34,7 +34,7 @@ const safetyNavigation = [
 
 const libraries = [
   { name: 'Operators', href: '/operators', icon: Users },
-  { name: 'Aircraft', href: '/aircraft', icon: Plane },
+  { name: 'Fleet', href: '/aircraft', icon: Plane },
   { name: 'Clients', href: '/clients', icon: Building2 },
 ]
 

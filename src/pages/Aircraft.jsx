@@ -162,10 +162,10 @@ export default function Aircraft() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Aircraft</h1>
-          <p className="text-gray-600 mt-1">RPAS fleet management</p>
+          <h1 className="text-2xl font-bold text-gray-900">Fleet</h1>
+          <p className="text-gray-600 mt-1">Global aircraft inventory for all projects</p>
         </div>
-        <button 
+        <button
           onClick={() => setShowModal(true)}
           className="btn-primary inline-flex items-center gap-2"
         >
