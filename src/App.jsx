@@ -1,46 +1,61 @@
 /**
  * App.jsx
  * Main application component with routing
- * 
+ *
  * Batch 3 Fix:
  * - Added ErrorBoundary for graceful error handling (M-07)
- * 
+ *
+ * Batch 8 Fix:
+ * - Added React.lazy() for bundle size optimization
+ * - Core pages remain synchronous for fast initial load
+ * - Secondary modules (Safety, Compliance, Admin) are lazy-loaded
+ *
  * @location src/App.jsx
  * @action REPLACE
  */
 
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
 import Layout from './components/Layout'
+
+// Core pages - keep synchronous for fast initial load
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Projects from './pages/Projects'
 import ProjectView from './pages/ProjectView'
-import Forms from './pages/Forms'
-import Operators from './pages/Operators'
-import Aircraft from './pages/Aircraft'
-import Clients from './pages/Clients'
-import Settings from './pages/Settings'
-import PolicyLibrary from './components/PolicyLibrary'
-import PolicyDetail from './pages/PolicyDetail'
-import MyAcknowledgments from './pages/MyAcknowledgments'
-import MasterPolicyAdmin from './pages/MasterPolicyAdmin'
 
-// Safety Module Pages
-import SafetyDashboard from './pages/SafetyDashboard'
-import Incidents from './pages/Incidents'
-import IncidentReport from './pages/IncidentReport'
-import IncidentDetail from './pages/IncidentDetail'
-import Capas from './pages/Capas'
-import CapaNew from './pages/CapaNew'
-import CapaDetail from './pages/CapaDetail'
+// Lazy-loaded pages - secondary features
+const Forms = lazy(() => import('./pages/Forms'))
+const Operators = lazy(() => import('./pages/Operators'))
+const Aircraft = lazy(() => import('./pages/Aircraft'))
+const Clients = lazy(() => import('./pages/Clients'))
+const Settings = lazy(() => import('./pages/Settings'))
+const PolicyLibrary = lazy(() => import('./components/PolicyLibrary'))
+const PolicyDetail = lazy(() => import('./pages/PolicyDetail'))
+const MyAcknowledgments = lazy(() => import('./pages/MyAcknowledgments'))
+const MasterPolicyAdmin = lazy(() => import('./pages/MasterPolicyAdmin'))
 
-// Compliance Module Pages
-import ComplianceHub from './pages/ComplianceHub'
-import ComplianceApplicationEditor from './pages/ComplianceApplicationEditor'
-import ComplianceProjectView from './pages/ComplianceProjectView'
+// Safety Module Pages - lazy-loaded
+const SafetyDashboard = lazy(() => import('./pages/SafetyDashboard'))
+const Incidents = lazy(() => import('./pages/Incidents'))
+const IncidentReport = lazy(() => import('./pages/IncidentReport'))
+const IncidentDetail = lazy(() => import('./pages/IncidentDetail'))
+const Capas = lazy(() => import('./pages/Capas'))
+const CapaNew = lazy(() => import('./pages/CapaNew'))
+const CapaDetail = lazy(() => import('./pages/CapaDetail'))
+
+// Compliance Module Pages - lazy-loaded
+const ComplianceHub = lazy(() => import('./pages/ComplianceHub'))
+const ComplianceApplicationEditor = lazy(() => import('./pages/ComplianceApplicationEditor'))
+const ComplianceProjectView = lazy(() => import('./pages/ComplianceProjectView'))
+
+// Suspense fallback component
+function PageLoader() {
+  return <LoadingSpinner size="lg" message="Loading..." />
+}
 
 // Protected route wrapper
 function ProtectedRoute({ children }) {
@@ -77,55 +92,58 @@ function App() {
     <ErrorBoundary>
       <Routes>
         {/* Public routes */}
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             <PublicRoute>
               <Login />
             </PublicRoute>
-          } 
+          }
         />
-        
+
         {/* Protected routes */}
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
             <ProtectedRoute>
               <Layout />
             </ProtectedRoute>
           }
         >
+          {/* Core pages - no Suspense needed (not lazy) */}
           <Route index element={<Dashboard />} />
           <Route path="projects" element={<Projects />} />
           <Route path="projects/:projectId" element={<ProjectView />} />
-          <Route path="forms" element={<Forms />} />
-          <Route path="policies" element={<PolicyLibrary />} />
-          <Route path="policies/:id" element={<PolicyDetail />} />
-          <Route path="my-acknowledgments" element={<MyAcknowledgments />} />
-          <Route path="admin/master-policies" element={<MasterPolicyAdmin />} />
-          <Route path="operators" element={<Operators />} />
-          <Route path="aircraft" element={<Aircraft />} />
-          <Route path="clients" element={<Clients />} />
-          <Route path="settings" element={<Settings />} />
-          
-          {/* Safety Module Routes */}
-          <Route path="safety" element={<SafetyDashboard />} />
-          <Route path="incidents" element={<Incidents />} />
-          <Route path="incidents/new" element={<IncidentReport />} />
-          <Route path="incidents/:id" element={<IncidentDetail />} />
-          <Route path="incidents/:id/edit" element={<IncidentReport />} />
-          <Route path="capas" element={<Capas />} />
-          <Route path="capas/new" element={<CapaNew />} />
-          <Route path="capas/:id" element={<CapaDetail />} />
-          <Route path="capas/:id/edit" element={<CapaNew />} />
 
-          {/* Compliance Module Routes */}
-          <Route path="compliance" element={<ComplianceHub />} />
-          <Route path="compliance/templates" element={<ComplianceHub />} />
-          <Route path="compliance/application/:id" element={<ComplianceApplicationEditor />} />
-          <Route path="compliance/project/:id" element={<ComplianceProjectView />} />
+          {/* Lazy-loaded pages - wrapped in Suspense */}
+          <Route path="forms" element={<Suspense fallback={<PageLoader />}><Forms /></Suspense>} />
+          <Route path="policies" element={<Suspense fallback={<PageLoader />}><PolicyLibrary /></Suspense>} />
+          <Route path="policies/:id" element={<Suspense fallback={<PageLoader />}><PolicyDetail /></Suspense>} />
+          <Route path="my-acknowledgments" element={<Suspense fallback={<PageLoader />}><MyAcknowledgments /></Suspense>} />
+          <Route path="admin/master-policies" element={<Suspense fallback={<PageLoader />}><MasterPolicyAdmin /></Suspense>} />
+          <Route path="operators" element={<Suspense fallback={<PageLoader />}><Operators /></Suspense>} />
+          <Route path="aircraft" element={<Suspense fallback={<PageLoader />}><Aircraft /></Suspense>} />
+          <Route path="clients" element={<Suspense fallback={<PageLoader />}><Clients /></Suspense>} />
+          <Route path="settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
+
+          {/* Safety Module Routes - lazy-loaded */}
+          <Route path="safety" element={<Suspense fallback={<PageLoader />}><SafetyDashboard /></Suspense>} />
+          <Route path="incidents" element={<Suspense fallback={<PageLoader />}><Incidents /></Suspense>} />
+          <Route path="incidents/new" element={<Suspense fallback={<PageLoader />}><IncidentReport /></Suspense>} />
+          <Route path="incidents/:id" element={<Suspense fallback={<PageLoader />}><IncidentDetail /></Suspense>} />
+          <Route path="incidents/:id/edit" element={<Suspense fallback={<PageLoader />}><IncidentReport /></Suspense>} />
+          <Route path="capas" element={<Suspense fallback={<PageLoader />}><Capas /></Suspense>} />
+          <Route path="capas/new" element={<Suspense fallback={<PageLoader />}><CapaNew /></Suspense>} />
+          <Route path="capas/:id" element={<Suspense fallback={<PageLoader />}><CapaDetail /></Suspense>} />
+          <Route path="capas/:id/edit" element={<Suspense fallback={<PageLoader />}><CapaNew /></Suspense>} />
+
+          {/* Compliance Module Routes - lazy-loaded */}
+          <Route path="compliance" element={<Suspense fallback={<PageLoader />}><ComplianceHub /></Suspense>} />
+          <Route path="compliance/templates" element={<Suspense fallback={<PageLoader />}><ComplianceHub /></Suspense>} />
+          <Route path="compliance/application/:id" element={<Suspense fallback={<PageLoader />}><ComplianceApplicationEditor /></Suspense>} />
+          <Route path="compliance/project/:id" element={<Suspense fallback={<PageLoader />}><ComplianceProjectView /></Suspense>} />
         </Route>
-        
+
         {/* Catch all - redirect to dashboard */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
