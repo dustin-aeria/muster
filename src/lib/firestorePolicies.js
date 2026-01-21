@@ -1160,17 +1160,11 @@ export async function getAvailableContentPolicyNumbers() {
 }
 
 // ============================================
-// SEED DATA FUNCTION
+// SAMPLE POLICIES DATA
 // ============================================
 
-/**
- * Seed the database with sample policies
- * @param {string} userId - User ID performing the seed
- * @returns {Promise<{success: boolean, count: number, error?: string}>}
- */
-export async function seedSamplePolicies(userId) {
-  // Sample policies data
-  const SAMPLE_POLICIES = [
+// Sample policies data - defined at module level so it can be reused
+const SAMPLE_POLICIES = [
     // RPAS Operations (1001-1012)
     {
       number: '1001',
@@ -2146,6 +2140,16 @@ export async function seedSamplePolicies(userId) {
     }
   ]
 
+// ============================================
+// SEED DATA FUNCTION
+// ============================================
+
+/**
+ * Seed the database with sample policies
+ * @param {string} userId - User ID performing the seed
+ * @returns {Promise<{success: boolean, count: number, error?: string}>}
+ */
+export async function seedSamplePolicies(userId) {
   try {
     // Check if policies already exist
     const existingSnapshot = await getDocs(query(policiesRef, limit(1)))
