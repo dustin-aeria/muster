@@ -46,10 +46,12 @@ import {
   Trash2,
   History,
   Bell,
-  Settings
+  Settings,
+  Check,
+  ChevronDown
 } from 'lucide-react'
 import PolicyEditor from './policies/PolicyEditor'
-import { getPoliciesEnhanced, deletePolicyEnhanced, seedSamplePolicies, seedMissingPolicies, updatePoliciesWithContent } from '../lib/firestorePolicies'
+import { getPoliciesEnhanced, deletePolicyEnhanced, seedSamplePolicies, seedMissingPolicies, updatePoliciesWithContent, updatePolicyField } from '../lib/firestorePolicies'
 import { usePolicyPermissions, usePendingAcknowledgments } from '../hooks/usePolicyPermissions'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -1356,6 +1358,206 @@ const formatDate = (dateString) => {
   })
 }
 
+// Status options for the inline dropdown
+const STATUS_OPTIONS = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'active', label: 'Active' },
+  { value: 'under-review', label: 'Under Review' },
+  { value: 'retired', label: 'Retired' }
+]
+
+// ============================================
+// INLINE EDITING COMPONENTS
+// ============================================
+
+/**
+ * Inline status dropdown editor
+ * Shows current status as clickable badge, opens dropdown on click
+ */
+function InlineStatusEditor({ policy, onUpdate, disabled }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const dropdownRef = React.useRef(null)
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleStatusChange = async (newStatus, e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (newStatus === policy.status) {
+      setIsOpen(false)
+      return
+    }
+
+    setSaving(true)
+    try {
+      await onUpdate(policy.id, { status: newStatus })
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 1500)
+    } catch (error) {
+      console.error('Failed to update status:', error)
+    } finally {
+      setSaving(false)
+      setIsOpen(false)
+    }
+  }
+
+  const currentOption = STATUS_OPTIONS.find(opt => opt.value === policy.status) || STATUS_OPTIONS[0]
+
+  const statusColors = {
+    draft: 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200',
+    active: 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200',
+    'under-review': 'bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200',
+    retired: 'bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-200'
+  }
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          if (!disabled) setIsOpen(!isOpen)
+        }}
+        disabled={disabled || saving}
+        className={`inline-flex items-center gap-1 px-2 py-1 rounded border text-xs font-medium transition-all ${statusColors[policy.status] || statusColors.draft} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+      >
+        {saving ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : showSuccess ? (
+          <Check className="w-3 h-3 text-green-600" />
+        ) : (
+          <>
+            {currentOption.label}
+            <ChevronDown className="w-3 h-3" />
+          </>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[120px]">
+          {STATUS_OPTIONS.map(option => (
+            <button
+              key={option.value}
+              onClick={(e) => handleStatusChange(option.value, e)}
+              className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
+                option.value === policy.status ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Inline review date editor
+ * Shows current date as clickable text, opens date picker on click
+ */
+function InlineReviewDateEditor({ policy, onUpdate, disabled }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const inputRef = React.useRef(null)
+
+  // Focus input when editing starts
+  React.useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isEditing])
+
+  const handleDateChange = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const newDate = e.target.value
+    if (newDate === policy.reviewDate) {
+      setIsEditing(false)
+      return
+    }
+
+    setSaving(true)
+    try {
+      await onUpdate(policy.id, { reviewDate: newDate })
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 1500)
+    } catch (error) {
+      console.error('Failed to update review date:', error)
+    } finally {
+      setSaving(false)
+      setIsEditing(false)
+    }
+  }
+
+  const handleClick = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!disabled) setIsEditing(true)
+  }
+
+  const handleBlur = (e) => {
+    // Delay hiding to allow change event to fire
+    setTimeout(() => setIsEditing(false), 100)
+  }
+
+  // Format date for display
+  const displayDate = policy.reviewDate ? formatDate(policy.reviewDate) : 'Not set'
+
+  // Format date for input (YYYY-MM-DD)
+  const inputDate = policy.reviewDate || ''
+
+  if (isEditing) {
+    return (
+      <div className="inline-flex items-center" onClick={(e) => e.stopPropagation()}>
+        <input
+          ref={inputRef}
+          type="date"
+          value={inputDate}
+          onChange={handleDateChange}
+          onBlur={handleBlur}
+          disabled={saving}
+          className="px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          onClick={(e) => e.stopPropagation()}
+        />
+        {saving && <Loader2 className="w-3 h-3 ml-1 animate-spin text-blue-500" />}
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={disabled}
+      className={`inline-flex items-center gap-1 text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      <Calendar className="w-3 h-3" />
+      {showSuccess ? (
+        <>
+          <Check className="w-3 h-3 text-green-600" />
+          <span className="text-green-600">Saved</span>
+        </>
+      ) : (
+        <span>{displayDate}</span>
+      )}
+    </button>
+  )
+}
+
 // ============================================
 // UI COMPONENTS
 // ============================================
@@ -1411,7 +1613,8 @@ function PolicyStatusBadge({ policy }) {
   )
 }
 
-function PolicyCard({ policy, view }) {
+function PolicyCard({ policy, view, onUpdate }) {
+  const navigate = useNavigate()
   const category = CATEGORIES[policy?.category] || CATEGORIES.rpas
 
   const categoryColors = {
@@ -1422,11 +1625,18 @@ function PolicyCard({ policy, view }) {
 
   const colorClass = categoryColors[category?.color] || categoryColors.blue
 
+  const handleCardClick = (e) => {
+    // Navigate to policy detail if not clicking on an interactive element
+    if (!e.defaultPrevented) {
+      navigate(`/policies/${policy?.id}`)
+    }
+  }
+
   if (view === 'list') {
     return (
-      <Link
-        to={`/policies/${policy?.id}`}
-        className="block w-full p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all text-left flex items-center gap-4"
+      <div
+        onClick={handleCardClick}
+        className="block w-full p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all text-left flex items-center gap-4 cursor-pointer"
       >
         <div className="w-16 text-center flex-shrink-0">
           <span className={`inline-block px-3 py-1 rounded-lg text-sm font-bold ${colorClass}`}>
@@ -1440,43 +1650,54 @@ function PolicyCard({ policy, view }) {
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
-          <span className={`px-2 py-0.5 rounded text-xs font-medium ${colorClass}`}>
-            {category?.name || 'Policy'}
-          </span>
-          <PolicyStatusBadge policy={policy} />
+          {/* Review Date - Inline Editable */}
+          <InlineReviewDateEditor
+            policy={policy}
+            onUpdate={onUpdate}
+          />
+
+          {/* Status - Inline Editable */}
+          <InlineStatusEditor
+            policy={policy}
+            onUpdate={onUpdate}
+          />
+
           <ChevronRight className="w-5 h-5 text-gray-400" />
         </div>
-      </Link>
+      </div>
     )
   }
 
   // Grid view
   return (
-    <Link
-      to={`/policies/${policy?.id}`}
-      className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-md transition-all text-left h-full flex flex-col"
+    <div
+      onClick={handleCardClick}
+      className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-md transition-all text-left h-full flex flex-col cursor-pointer"
     >
       <div className="flex items-start justify-between mb-3">
         <span className={`px-3 py-1 rounded-lg text-sm font-bold ${colorClass}`}>
           {policy?.number || '-'}
         </span>
-        <PolicyStatusBadge policy={policy} />
+        <InlineStatusEditor
+          policy={policy}
+          onUpdate={onUpdate}
+        />
       </div>
 
       <h3 className="font-medium text-gray-900 mb-2">{policy?.title || 'Untitled'}</h3>
       <p className="text-sm text-gray-500 flex-1 line-clamp-2">{policy?.description || ''}</p>
 
       <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-        <span className="flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
-          v{policy?.version || '1.0'}
-        </span>
+        <InlineReviewDateEditor
+          policy={policy}
+          onUpdate={onUpdate}
+        />
         <span className="flex items-center gap-1">
           <User className="w-3 h-3" />
           {policy?.owner || 'Unassigned'}
         </span>
       </div>
-    </Link>
+    </div>
   )
 }
 
@@ -1772,6 +1993,21 @@ export default function PolicyLibrary() {
     }
   }
 
+  // Handle inline field updates (for review date and status)
+  const handleInlineUpdate = async (policyId, fields) => {
+    try {
+      await updatePolicyField(policyId, fields, user?.uid)
+      // Update local state to reflect the change immediately
+      setPolicies(prev => prev.map(p =>
+        p.id === policyId ? { ...p, ...fields } : p
+      ))
+    } catch (err) {
+      setError('Failed to update policy. Please try again.')
+      console.error('Error updating policy field:', err)
+      throw err // Re-throw so the inline editor knows it failed
+    }
+  }
+
   // Filter and sort policies
   const filteredPolicies = useMemo(() => {
     let result = [...policies]
@@ -2061,6 +2297,7 @@ export default function PolicyLibrary() {
               key={policy.id}
               policy={policy}
               view="list"
+              onUpdate={handleInlineUpdate}
             />
           ))}
         </div>
@@ -2071,6 +2308,7 @@ export default function PolicyLibrary() {
               key={policy.id}
               policy={policy}
               view="grid"
+              onUpdate={handleInlineUpdate}
             />
           ))}
         </div>

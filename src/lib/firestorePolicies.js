@@ -754,6 +754,27 @@ export async function updatePolicyEnhanced(id, data, options = {}) {
 }
 
 /**
+ * Quick update for single policy fields (no version tracking)
+ * Used for inline editing of fields like reviewDate and status
+ * @param {string} id - Policy ID
+ * @param {Object} fields - Fields to update (e.g., { reviewDate: '2025-06-01' } or { status: 'active' })
+ * @param {string} userId - User making the update
+ * @returns {Promise<Object>}
+ */
+export async function updatePolicyField(id, fields, userId = null) {
+  const policyRef = doc(db, 'policies', id)
+
+  await updateDoc(policyRef, {
+    ...fields,
+    updatedAt: serverTimestamp(),
+    updatedBy: userId
+  })
+
+  // Return the updated fields with the id
+  return { id, ...fields }
+}
+
+/**
  * Get all policies with optional filtering
  * @param {Object} filters - Filter options
  * @returns {Promise<Array>}
