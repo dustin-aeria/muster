@@ -51,9 +51,10 @@ import {
   ChevronDown
 } from 'lucide-react'
 import PolicyEditor from './policies/PolicyEditor'
-import { getPoliciesEnhanced, deletePolicyEnhanced, seedSamplePolicies, seedMissingPolicies, updatePoliciesWithContent, updatePolicyField } from '../lib/firestorePolicies'
+import { getPoliciesEnhanced, deletePolicyEnhanced, seedSamplePolicies, seedMissingPolicies, updatePoliciesWithContent, updatePolicyField, seedFromMasterPolicies, seedMissingFromMaster } from '../lib/firestorePolicies'
 import { usePolicyPermissions, usePendingAcknowledgments } from '../hooks/usePolicyPermissions'
 import { useAuth } from '../contexts/AuthContext'
+import { UpdateBadge, PolicyUpdatesPanel, usePolicyUpdates } from './policies/PolicyUpdateNotification'
 
 // ============================================
 // POLICY DATA
@@ -1840,6 +1841,7 @@ export default function PolicyLibrary() {
   const { user, userProfile } = useAuth()
   const permissions = usePolicyPermissions()
   const { pendingCount } = usePendingAcknowledgments()
+  const { count: updateCount, refresh: refreshUpdates } = usePolicyUpdates()
 
   const [policies, setPolicies] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1857,6 +1859,7 @@ export default function PolicyLibrary() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [seeding, setSeeding] = useState(false)
   const [populatingContent, setPopulatingContent] = useState(false)
+  const [showUpdatesPanel, setShowUpdatesPanel] = useState(false)
 
   // Load policies from Firestore
   const loadPolicies = async () => {
@@ -1904,7 +1907,7 @@ export default function PolicyLibrary() {
     setDeletingPolicy(policy)
   }
 
-  // Handle seed sample policies
+  // Handle seed sample policies (prefers master policies, falls back to JS)
   const handleSeedPolicies = async () => {
     if (!user) return
 
@@ -1912,9 +1915,11 @@ export default function PolicyLibrary() {
     setError('')
 
     try {
-      const result = await seedSamplePolicies(user.uid)
+      // Try to seed from master policies first, falls back to JS if none exist
+      const result = await seedFromMasterPolicies(user.uid)
       if (result.success) {
         await loadPolicies()
+        refreshUpdates()
       } else {
         setError(result.error || 'Failed to seed policies')
       }
@@ -1926,7 +1931,7 @@ export default function PolicyLibrary() {
     }
   }
 
-  // Handle seed missing policies (add new ones without clearing existing)
+  // Handle seed missing policies (prefers master policies, falls back to JS)
   const handleSeedMissingPolicies = async () => {
     if (!user) return
 
@@ -1934,9 +1939,11 @@ export default function PolicyLibrary() {
     setError('')
 
     try {
-      const result = await seedMissingPolicies(user.uid)
+      // Try to seed from master policies first, falls back to JS if none exist
+      const result = await seedMissingFromMaster(user.uid)
       if (result.success) {
         await loadPolicies()
+        refreshUpdates()
         if (result.added > 0) {
           alert(`Successfully added ${result.added} new policies. ${result.skipped} policies already existed.`)
         } else {
@@ -2101,6 +2108,23 @@ export default function PolicyLibrary() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Policy Updates Available */}
+            <UpdateBadge
+              count={updateCount}
+              onClick={() => setShowUpdatesPanel(true)}
+            />
+
+            {/* Platform Admin Link */}
+            {permissions.isPlatformAdmin && (
+              <button
+                onClick={() => navigate('/admin/master-policies')}
+                className="flex items-center gap-2 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="font-medium">Master Policies</span>
+              </button>
+            )}
+
             {/* Pending Acknowledgments */}
             {pendingCount > 0 && (
               <button
@@ -2332,6 +2356,17 @@ export default function PolicyLibrary() {
         onCancel={() => setDeletingPolicy(null)}
         deleting={isDeleting}
       />
+
+      {/* Policy Updates Panel */}
+      {showUpdatesPanel && (
+        <PolicyUpdatesPanel
+          onClose={() => {
+            setShowUpdatesPanel(false)
+            refreshUpdates()
+            loadPolicies()
+          }}
+        />
+      )}
     </div>
   )
 }

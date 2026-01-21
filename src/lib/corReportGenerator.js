@@ -215,7 +215,7 @@ export async function generateCORReport(data, options = {}) {
   // ========== SECTION 1: EXECUTIVE SUMMARY ==========
   pdf.addNewSection('Executive Summary')
   
-  pdf.addParagraph(`This report documents Aeria Solutions Ltd.'s integrated safety management system for COR audit purposes. The program encompasses 53 policies across three domains: Health, Safety & Environment (32), RPAS Operations (12), and Crew Resource Management (9), plus 4 detailed operational procedures.`)
+  pdf.addParagraph(`This report documents the Company's integrated safety management system for COR audit purposes. The program encompasses 53 policies across three domains: Health, Safety & Environment (32), RPAS Operations (12), and Crew Resource Management (9), plus 4 detailed operational procedures.`)
   
   pdf.addSpacer(8)
   
@@ -471,7 +471,7 @@ export async function generateCORReport(data, options = {}) {
     [
       ['Version Control', 'All policies tracked with revision history'],
       ['Review Cycle', 'Annual review with documented amendments'],
-      ['Distribution', 'Electronic via Aeria Ops platform'],
+      ['Distribution', 'Electronic via company platform'],
       ['Retention', 'Per regulatory requirements (min 3 years)']
     ]
   )
@@ -550,7 +550,7 @@ export async function generateCORReport(data, options = {}) {
   // ========== CERTIFICATION ==========
   pdf.addNewSection('Certification')
   
-  pdf.addParagraph('I certify that this report accurately represents the Health, Safety & Environment program of Aeria Solutions Ltd. as of the date indicated.')
+  pdf.addParagraph('I certify that this report accurately represents the Health, Safety & Environment program of the Company as of the date indicated.')
   
   pdf.addSpacer(15)
   

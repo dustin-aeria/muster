@@ -1,8 +1,8 @@
 /**
  * Policy Content Data
- * Full content extracted from Aeria policy PDF documents
+ * Full content extracted from the Companypolicy PDF documents
  *
- * Structure matches the standard Aeria policy format:
+ * Structure matches the standard the Companypolicy format:
  * 1. Document Control
  * 2. Purpose & Scope
  * 3. Definitions & References
@@ -36,10 +36,10 @@ export const POLICY_CONTENT = {
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To define the minimum competencies required for all crew members engaged in Remotely Piloted Aircraft Systems (RPAS) operations with Aeria Solutions. This ensures safe, compliant, and professional operations in line with Canadian Aviation Regulations and internal company standards.
+To define the minimum competencies required for all crew members engaged in Remotely Piloted Aircraft Systems (RPAS) operations with the Company. This ensures safe, compliant, and professional operations in line with Canadian Aviation Regulations and internal company standards.
 
 Scope:
-This policy applies to all RPAS crew members, including Pilots in Command (PIC), Visual Observers (VO), Operations Managers, Maintenance Managers, subcontractors, and trainees operating under Aeria Solutions.`
+This policy applies to all RPAS crew members, including Pilots in Command (PIC), Visual Observers (VO), Operations Managers, Maintenance Managers, subcontractors, and trainees operating under the Company.`
       },
       {
         title: 'Definitions & References',
@@ -53,7 +53,7 @@ References:
       },
       {
         title: 'Policy Statement',
-        content: `All Aeria RPAS operations shall only be conducted by competent crew members who meet minimum training, licensing, and certification standards, and who demonstrate ongoing compliance with fitness-for-duty requirements.`
+        content: `All the CompanyRPAS operations shall only be conducted by competent crew members who meet minimum training, licensing, and certification standards, and who demonstrate ongoing compliance with fitness-for-duty requirements.`
       },
       {
         title: 'Procedures',
@@ -61,7 +61,7 @@ References:
 
 Verify Crew Eligibility:
 • Confirm crew member is ≥18 years of age.
-• Confirm compliance with Aeria policies and procedures.
+• Confirm compliance with the Companypolicies and procedures.
 
 Fitness for Duty:
 • Crew must meet fatigue and fitness requirements under CAR 901.19 (minimum rest periods, alcohol/drug restrictions, mental health readiness).
@@ -73,9 +73,9 @@ Certification Verification:
 • Emergency First Aid & CPR for all crew; Wilderness First Aid required for remote ops.
 
 Practice Requirements:
-• Minimum 25 minutes of airtime per month logged in Aeria's AirData system.
+• Minimum 25 minutes of airtime per month logged in the Company's AirData system.
 • At least 5 take-offs/landings per month.
-• Flight logs must be synced to Aeria AirData for validation.
+• Flight logs must be synced to the CompanyAirData for validation.
 
 Tools, Forms, or Checklists:
 • AirData platform (flight logs, maintenance, recurrency tracking)
@@ -142,10 +142,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To define the specific responsibilities of all roles involved in Aeria Solutions' RPAS operations, ensuring compliance with Canadian Aviation Regulations (CARs), safe operational practices, and accountability across all mission phases.
+To define the specific responsibilities of all roles involved in the Company' RPAS operations, ensuring compliance with Canadian Aviation Regulations (CARs), safe operational practices, and accountability across all mission phases.
 
 Scope:
-This policy applies to all Aeria Solutions RPAS personnel, including Accountable Executives, Operations Managers, Maintenance Managers, Pilots in Command (PIC), and Visual Observers (VO), as well as subcontractors working under Aeria Solutions' operational control.`
+This policy applies to all the Company RPAS personnel, including Accountable Executives, Operations Managers, Maintenance Managers, Pilots in Command (PIC), and Visual Observers (VO), as well as subcontractors working under the Company' operational control.`
       },
       {
         title: 'Definitions & References',
@@ -160,7 +160,7 @@ References:
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions requires that all personnel involved in RPAS operations fulfill clearly defined roles and responsibilities. These responsibilities ensure compliance with Transport Canada regulations, operational safety, and company standards.`
+        content: `the Company requires that all personnel involved in RPAS operations fulfill clearly defined roles and responsibilities. These responsibilities ensure compliance with Transport Canada regulations, operational safety, and company standards.`
       },
       {
         title: 'Procedures',
@@ -171,13 +171,13 @@ References:
 
 Safety/Compliance/Quality Requirements:
 • Compliance with CARs Part IX
-• Adherence to Aeria Solutions Policies and Procedures
+• Adherence to the Company Policies and Procedures
 • All personnel must complete relevant orientation, training, and recertification
 
 Reporting or Escalation:
 • Any failure to meet responsibilities must be reported to the Operations Manager.
 • Serious breaches (e.g., regulatory non-compliance, safety risks) escalate to the Accountable Executive.
-• Incident/accident reporting must follow the Aeria Operations Manual and HSE protocols.`
+• Incident/accident reporting must follow the the CompanyOperations Manual and HSE protocols.`
       },
       {
         title: 'Roles & Responsibilities',
@@ -191,7 +191,7 @@ Reporting or Escalation:
 
 Operations Manager:
 • Plans and manages daily operations, logistics, and personnel deployment.
-• Ensures compliance with safety regulations and Aeria procedures.
+• Ensures compliance with safety regulations and the Companyprocedures.
 • Liaises with clients and stakeholders.
 • Briefs crew on operational planning documents.
 • Validates maintenance compliance and equipment readiness.
@@ -242,7 +242,7 @@ Reporting Obligations:
     number: '1003',
     title: 'RPAS Operations - Airworthiness & Maintenance Policy',
     category: 'rpas',
-    description: 'Ensures all RPAS operated by Aeria Solutions remain airworthy, safe, and fully compliant with Transport Canada regulations and manufacturer specifications.',
+    description: 'Ensures all RPAS operated by the Company remain airworthy, safe, and fully compliant with Transport Canada regulations and manufacturer specifications.',
     version: '1.0',
     effectiveDate: '2025-09-16',
     reviewDate: '2026-02-01',
@@ -254,10 +254,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To ensure all Remotely Piloted Aircraft Systems (RPAS) operated by Aeria Solutions remain airworthy, safe, and fully compliant with Transport Canada regulations and manufacturer specifications.
+To ensure all Remotely Piloted Aircraft Systems (RPAS) operated by the Company remain airworthy, safe, and fully compliant with Transport Canada regulations and manufacturer specifications.
 
 Scope:
-This policy applies to all RPAS, associated payloads, ground control stations, and batteries used in Aeria Solutions operations. It applies to the Accountable Executive, Maintenance Manager, Operations Manager, Pilots in Command (PIC), and all crew members performing inspections or reporting defects.`
+This policy applies to all RPAS, associated payloads, ground control stations, and batteries used in the Company operations. It applies to the Accountable Executive, Maintenance Manager, Operations Manager, Pilots in Command (PIC), and all crew members performing inspections or reporting defects.`
       },
       {
         title: 'Definitions & References',
@@ -265,7 +265,7 @@ This policy applies to all RPAS, associated payloads, ground control stations, a
 • Airworthiness: Condition in which an RPAS is fit for safe operation in accordance with CAR Part IX.
 • Pre-Operation Inspection: Checks are completed before an RPAS is deployed in the field.
 • Scheduled Maintenance: Manufacturer-recommended or system-tracked service requirements.
-• AirData: Digital tracking system used by Aeria Solutions to manage flight logs, maintenance, and battery records.
+• AirData: Digital tracking system used by the Company to manage flight logs, maintenance, and battery records.
 
 References:
 • Canadian Aviation Regulations Part IX.
@@ -273,7 +273,7 @@ References:
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions will not operate any RPAS that does not meet Transport Canada's recognition requirements or manufacturer safety declarations. All RPAS equipment must be regularly inspected, maintained, and documented in AirData to ensure operational safety, compliance, and reliability.`
+        content: `the Company will not operate any RPAS that does not meet Transport Canada's recognition requirements or manufacturer safety declarations. All RPAS equipment must be regularly inspected, maintained, and documented in AirData to ensure operational safety, compliance, and reliability.`
       },
       {
         title: 'Procedures',
@@ -374,10 +374,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To ensure the safety and well-being of all Aeria Solutions personnel by mandating the provision, correct use, inspection, and maintenance of Personal Protective Equipment (PPE). PPE serves as the last line of defense against workplace hazards when elimination, substitution, engineering, or administrative controls cannot fully mitigate risk.
+To ensure the safety and well-being of all the Company personnel by mandating the provision, correct use, inspection, and maintenance of Personal Protective Equipment (PPE). PPE serves as the last line of defense against workplace hazards when elimination, substitution, engineering, or administrative controls cannot fully mitigate risk.
 
 Scope:
-This policy applies to all employees, contractors, subcontractors, and visitors engaged in operations at Aeria Solutions worksites, including RPAS operations, fieldwork, office activities, and client sites.`
+This policy applies to all employees, contractors, subcontractors, and visitors engaged in operations at the Company worksites, including RPAS operations, fieldwork, office activities, and client sites.`
       },
       {
         title: 'Definitions & References',
@@ -392,7 +392,7 @@ References:
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions will provide, enforce, and maintain appropriate PPE for all tasks where hazards cannot be eliminated by other means. All employees, contractors, and visitors must wear required PPE at all times in designated areas and during operations, in compliance with applicable legislation, manufacturer requirements, and company standards.`
+        content: `the Company will provide, enforce, and maintain appropriate PPE for all tasks where hazards cannot be eliminated by other means. All employees, contractors, and visitors must wear required PPE at all times in designated areas and during operations, in compliance with applicable legislation, manufacturer requirements, and company standards.`
       },
       {
         title: 'Procedures',
@@ -403,7 +403,7 @@ Hazard Assessment:
 • Apply the hierarchy of controls; PPE is used only where other measures cannot fully eliminate hazards.
 
 Provision of PPE:
-• Aeria provides CSA/ANSI-approved PPE at no cost to employees.
+• the Companyprovides CSA/ANSI-approved PPE at no cost to employees.
 • Specialized PPE (e.g., fall protection, respirators) issued as required.
 
 PPE Use:
@@ -472,22 +472,22 @@ Reporting Obligations:
     number: '1005',
     title: 'RPAS Operations - General Procedures Policy',
     category: 'rpas',
-    description: 'Establishes that all Aeria Solutions operations must follow approved general procedures, ensuring consistency, safety, and compliance across all RPAS activities.',
+    description: 'Establishes that all the Company operations must follow approved general procedures, ensuring consistency, safety, and compliance across all RPAS activities.',
     version: '1.0',
     effectiveDate: '2025-09-16',
     reviewDate: '2026-02-01',
     owner: 'Operations Manager',
     status: 'active',
-    regulatoryRefs: ['Canadian Aviation Regulations Part IX', 'Aeria RPAS Procedures'],
+    regulatoryRefs: ['Canadian Aviation Regulations Part IX', 'the CompanyRPAS Procedures'],
     keywords: ['procedures', 'operations', 'SOP', 'compliance', 'workflow'],
     sections: [
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To establish that all Aeria Solutions operations must follow approved general procedures, ensuring consistency, safety, and compliance across all RPAS activities.
+To establish that all the Company operations must follow approved general procedures, ensuring consistency, safety, and compliance across all RPAS activities.
 
 Scope:
-This policy applies to all Aeria Solutions personnel involved in RPAS operations, including employees, contractors, subcontractors, and visitors operating under Aeria Solutions' direction.`
+This policy applies to all the Company personnel involved in RPAS operations, including employees, contractors, subcontractors, and visitors operating under the Company' direction.`
       },
       {
         title: 'Definitions & References',
@@ -495,13 +495,13 @@ This policy applies to all Aeria Solutions personnel involved in RPAS operations
 • General Procedures: Standardized operational workflows covering activities such as kit preparation, site setup, RPAS setup, checklists, communication protocols, and debrief processes.
 
 References:
-• Aeria RPAS Procedures
-• Aeria HSE Procedures
+• the CompanyRPAS Procedures
+• the CompanyHSE Procedures
 • General Procedure PDFs (RPAS Procedures Docs)`
       },
       {
         title: 'Policy Statement',
-        content: `All personnel engaged in RPAS operations with Aeria Solutions must follow the official General Procedures as defined in the approved procedure documents. These procedures are mandatory and form part of the company's standard operating procedures. Deviation is not permitted except under formally approved amendments.`
+        content: `All personnel engaged in RPAS operations with the Company must follow the official General Procedures as defined in the approved procedure documents. These procedures are mandatory and form part of the company's standard operating procedures. Deviation is not permitted except under formally approved amendments.`
       },
       {
         title: 'Procedures',
@@ -523,11 +523,11 @@ Tools, Forms, or Checklists:
 • Compliance Logs
 
 Safety/Compliance/Quality Requirements:
-• Procedures are written to comply with CARs, manufacturer guidance, and Aeria's internal safety standards.
+• Procedures are written to comply with CARs, manufacturer guidance, and the Company's internal safety standards.
 • Failure to adhere may result in non-compliance with Transport Canada requirements.
 
 Reporting or Escalation:
-• Deviations or challenges following procedures must be reported through Aeria's Incident and Hazard Reporting system.
+• Deviations or challenges following procedures must be reported through the Company's Incident and Hazard Reporting system.
 • Escalations go to the Operations Manager and, if unresolved, to the Accountable Executive.`
       },
       {
@@ -567,22 +567,22 @@ Reporting Obligations:
     number: '1006',
     title: 'RPAS Operations - Emergency Procedures Policy',
     category: 'rpas',
-    description: 'Ensures that all personnel engaged in Aeria Solutions operations are prepared to respond effectively to emergencies by following official Emergency Procedures.',
+    description: 'Ensures that all personnel engaged in the Company operations are prepared to respond effectively to emergencies by following official Emergency Procedures.',
     version: '1.0',
     effectiveDate: '2025-09-16',
     reviewDate: '2026-02-01',
     owner: 'Operations Manager',
     status: 'active',
-    regulatoryRefs: ['Canadian Aviation Regulations Part IX', 'Aeria HSE ERP'],
+    regulatoryRefs: ['Canadian Aviation Regulations Part IX', 'the CompanyHSE ERP'],
     keywords: ['emergency', 'procedures', 'response', 'ERP', 'safety'],
     sections: [
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To ensure that all personnel engaged in Aeria Solutions operations are prepared to respond effectively to emergencies by following the official Emergency Procedures.
+To ensure that all personnel engaged in the Company operations are prepared to respond effectively to emergencies by following the official Emergency Procedures.
 
 Scope:
-This policy applies to all Aeria Solutions employees, contractors, and subcontractors involved in RPAS operations and field activities.`
+This policy applies to all the Company employees, contractors, and subcontractors involved in RPAS operations and field activities.`
       },
       {
         title: 'Definitions & References',
@@ -591,13 +591,13 @@ This policy applies to all Aeria Solutions employees, contractors, and subcontra
 • ERP (Emergency Response Plan): Broader company HSE emergency procedures that complement RPAS-specific protocols.
 
 References:
-• Aeria RPAS Procedures
-• Aeria HSE Procedures
+• the CompanyRPAS Procedures
+• the CompanyHSE Procedures
 • Emergency Procedure PDFs (RPAS Procedures Docs)`
       },
       {
         title: 'Policy Statement',
-        content: `All personnel must follow Aeria Solutions' approved Emergency Procedures during operations. These procedures are mandatory and define the standard response to RPAS-related or site-related emergencies. Deviation is not permitted except under approved amendments or adaptations by the Pilot in Command (PIC) in immediate safety-of-life circumstances.`
+        content: `All personnel must follow the Company' approved Emergency Procedures during operations. These procedures are mandatory and define the standard response to RPAS-related or site-related emergencies. Deviation is not permitted except under approved amendments or adaptations by the Pilot in Command (PIC) in immediate safety-of-life circumstances.`
       },
       {
         title: 'Procedures',
@@ -619,7 +619,7 @@ Tools, Forms, or Checklists:
 • ERP Training Acknowledgment
 
 Safety/Compliance/Quality Requirements:
-• Procedures are aligned with CARs Part IX requirements and Aeria HSE ERP standards.
+• Procedures are aligned with CARs Part IX requirements and the CompanyHSE ERP standards.
 • Non-compliance places personnel, equipment, and the public at risk and is considered a serious breach.
 
 Reporting or Escalation:
@@ -675,10 +675,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To ensure safe, reliable, and standardized communication practices during all RPAS operations by mandating adherence to Aeria Solutions' approved communication protocols.
+To ensure safe, reliable, and standardized communication practices during all RPAS operations by mandating adherence to the Company' approved communication protocols.
 
 Scope:
-This policy applies to all Aeria Solutions employees, contractors, and subcontractors who participate in RPAS operations, including Pilots in Command (PIC), Visual Observers (VO), Operations Managers, and field crew.`
+This policy applies to all the Company employees, contractors, and subcontractors who participate in RPAS operations, including Pilots in Command (PIC), Visual Observers (VO), Operations Managers, and field crew.`
       },
       {
         title: 'Definitions & References',
@@ -687,13 +687,13 @@ This policy applies to all Aeria Solutions employees, contractors, and subcontra
 • Sterile Cockpit: A communications rule requiring minimal distractions during critical phases of operation.
 
 References:
-• Aeria RPAS Policies
-• Aeria HSE Policies
+• the CompanyRPAS Policies
+• the CompanyHSE Policies
 • Canadian Aviation Regulations Part IX`
       },
       {
         title: 'Policy Statement',
-        content: `All RPAS operations conducted by Aeria Solutions must follow the company's approved communication procedures. These procedures are mandatory and form a critical part of operational safety. Clear, accurate, and timely communication is required between all crew members, clients, and external authorities as applicable.`
+        content: `All RPAS operations conducted by the Company must follow the company's approved communication procedures. These procedures are mandatory and form a critical part of operational safety. Clear, accurate, and timely communication is required between all crew members, clients, and external authorities as applicable.`
       },
       {
         title: 'Procedures',
@@ -750,7 +750,7 @@ Consequences for Non-Compliance:
 • Disciplinary action for repeated or serious breaches.
 
 Reporting Obligations:
-• All communication-related incidents must be documented and retained in accordance with Aeria's record-keeping requirements.`
+• All communication-related incidents must be documented and retained in accordance with the Company's record-keeping requirements.`
       }
     ]
   },
@@ -771,10 +771,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To establish Aeria Solutions' policy on collision detection, avoidance, and separation during RPAS operations. This ensures compliance with regulatory requirements, prioritizes safety, and reduces risks of airspace or ground conflicts.
+To establish the Company' policy on collision detection, avoidance, and separation during RPAS operations. This ensures compliance with regulatory requirements, prioritizes safety, and reduces risks of airspace or ground conflicts.
 
 Scope:
-This policy applies to all RPAS operations conducted by Aeria Solutions, including flights in controlled and uncontrolled airspace, BVLOS (Beyond Visual Line of Sight) missions, and operations near people, property, or other aircraft.`
+This policy applies to all RPAS operations conducted by the Company, including flights in controlled and uncontrolled airspace, BVLOS (Beyond Visual Line of Sight) missions, and operations near people, property, or other aircraft.`
       },
       {
         title: 'Definitions & References',
@@ -784,14 +784,14 @@ This policy applies to all RPAS operations conducted by Aeria Solutions, includi
 • Separation: Maintaining minimum safe distances between RPAS, manned aircraft, obstacles, and people.
 
 References:
-• Aeria RPAS Procedures
+• the CompanyRPAS Procedures
 • Canadian Aviation Regulations Part IX
-• Aeria HSE Policies
+• the CompanyHSE Policies
 • Procedure PDFs (RPAS Procedures Docs)`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions requires all personnel to adhere to approved detection, avoidance, and separation procedures at all times. Operators must yield to manned aircraft, maintain safe ground and airspace separation, and follow Aeria Solutions' conflict avoidance standards. These requirements are mandatory and non-negotiable, forming a core element of operational safety.`
+        content: `the Company requires all personnel to adhere to approved detection, avoidance, and separation procedures at all times. Operators must yield to manned aircraft, maintain safe ground and airspace separation, and follow the Company' conflict avoidance standards. These requirements are mandatory and non-negotiable, forming a core element of operational safety.`
       },
       {
         title: 'Procedures',
@@ -805,7 +805,7 @@ Adherence:
 • Unauthorized deviations are prohibited except in life-safety emergencies, which must be documented.
 
 Reporting:
-• All conflict, near-miss, or separation incidents must be reported immediately through Aeria's Incident Reporting system.
+• All conflict, near-miss, or separation incidents must be reported immediately through the Company's Incident Reporting system.
 
 Tools, Forms, or Checklists:
 • Detection, Avoidance & Separation Procedure PDFs
@@ -815,7 +815,7 @@ Tools, Forms, or Checklists:
 Safety/Compliance/Quality Requirements:
 • CAR 901.17: RPAS must give way to manned aircraft.
 • CAR 901.18: RPAS must not fly near or in a manner hazardous to people or property.
-• Aeria Solutions' internal minimum separation standards.
+• the Company' internal minimum separation standards.
 
 Reporting or Escalation:
 • Near-miss or conflict events reported immediately to Operations Manager.
@@ -847,7 +847,7 @@ Consequences for Non-Compliance:
 • Disciplinary measures up to termination for repeated or deliberate breaches.
 
 Reporting Obligations:
-• Near-miss and separation incidents logged and retained in compliance with CAR 901.49 and Aeria's record-keeping standards.`
+• Near-miss and separation incidents logged and retained in compliance with CAR 901.49 and the Company's record-keeping standards.`
       }
     ]
   },
@@ -868,10 +868,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To define the minimum weather requirements for Aeria Solutions RPAS operations, ensuring safety, compliance, and risk mitigation during all flight activities.
+To define the minimum weather requirements for the Company RPAS operations, ensuring safety, compliance, and risk mitigation during all flight activities.
 
 Scope:
-This policy applies to all RPAS operations conducted by Aeria Solutions, including basic, advanced, and special operations. It covers all crew members, contractors, and subcontractors involved in flight activities.`
+This policy applies to all RPAS operations conducted by the Company, including basic, advanced, and special operations. It covers all crew members, contractors, and subcontractors involved in flight activities.`
       },
       {
         title: 'Definitions & References',
@@ -881,12 +881,12 @@ This policy applies to all RPAS operations conducted by Aeria Solutions, includi
 
 References:
 • Canadian Aviation Regulations Part IX
-• Aeria RPAS Procedures
-• Aeria HSE policy`
+• the CompanyRPAS Procedures
+• the CompanyHSE policy`
       },
       {
         title: 'Policy Statement',
-        content: `RPAS operations must not be conducted outside of the defined minimum weather requirements. Aeria Solutions enforces an additional 20% safety buffer below the manufacturer's specified maximum weather limits (e.g., wind speed, temperature, precipitation). Operations must be postponed, adjusted, or cancelled if conditions exceed these thresholds.`
+        content: `RPAS operations must not be conducted outside of the defined minimum weather requirements. the Company enforces an additional 20% safety buffer below the manufacturer's specified maximum weather limits (e.g., wind speed, temperature, precipitation). Operations must be postponed, adjusted, or cancelled if conditions exceed these thresholds.`
       },
       {
         title: 'Procedures',
@@ -971,7 +971,7 @@ Reporting Obligations:
 To ensure all accidents, incidents, and near-misses are reported, documented, and escalated immediately to the proper authorities and company representatives.
 
 Scope:
-Applies to all Aeria Solutions employees, contractors, subcontractors, and visitors engaged in RPAS operations and related fieldwork.`
+Applies to all the Company employees, contractors, subcontractors, and visitors engaged in RPAS operations and related fieldwork.`
       },
       {
         title: 'Definitions & References',
@@ -981,8 +981,8 @@ Applies to all Aeria Solutions employees, contractors, subcontractors, and visit
 • Near-Miss: An event with potential for harm but avoided due to chance or timely intervention.
 
 References:
-• Aeria RPAS Operations
-• Aeria HSE Policy
+• the CompanyRPAS Operations
+• the CompanyHSE Policy
 • Canadian Aviation Regulations (CARs) 901.49(1)
 • Canada Labour Code, Part II, Section 125(1)(c)`
       },
@@ -996,31 +996,31 @@ References:
 
 1. Medical Emergency (injury or fatality):
    • Call 911 immediately.
-   • Then notify Aeria Accountable Executive.
+   • Then notify the CompanyAccountable Executive.
 
 2. Serious RPAS Accident (collision with manned aircraft, >25kg RPAS crash, injury, or death):
    • Call Transportation Safety Board (TSB): Toll-Free: 1-800-387-3557
    • Notify Transport Canada RPAS Centre of Excellence.
-   • Notify Aeria Accountable Executive.
+   • Notify the CompanyAccountable Executive.
 
 3. Other Incidents (loss of control, fly-away, property damage, near-miss):
    • Notify Transport Canada (via CADORS if applicable).
-   • Notify Aeria Operations Manager.
+   • Notify the CompanyOperations Manager.
 
 4. Internal Reporting:
-   • Complete Aeria Incident/Accident Report Form (SiteDocs).
+   • Complete the CompanyIncident/Accident Report Form (SiteDocs).
    • Submit to Operations Manager and HSE Representative.
 
 Call Order by Priority:
 1. Emergency Services (if required for life safety)
 2. TSB (for major aviation occurrences)
 3. Transport Canada (for reportable RPAS events)
-4. Aeria Accountable Executive
-5. Aeria Operations Manager
-6. Aeria HSE Representative
+4. the CompanyAccountable Executive
+5. the CompanyOperations Manager
+6. the CompanyHSE Representative
 
 Tools, Forms, or Checklists:
-• Aeria Incident/Accident Report Form (SiteDocs)
+• the CompanyIncident/Accident Report Form (SiteDocs)
 • TSB Reporting Form (if applicable)
 • AirData flight logs for supporting evidence
 
@@ -1084,10 +1084,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To ensure all Aeria Solutions RPAS operations are conducted safely, lawfully, and consistently by requiring the completion of a site survey and flight plan prior to any mission.
+To ensure all the Company RPAS operations are conducted safely, lawfully, and consistently by requiring the completion of a site survey and flight plan prior to any mission.
 
 Scope:
-This policy applies to all Aeria Solutions personnel, contractors, and subcontractors involved in RPAS operations, including planning, piloting, observation, and operational management.`
+This policy applies to all the Company personnel, contractors, and subcontractors involved in RPAS operations, including planning, piloting, observation, and operational management.`
       },
       {
         title: 'Definitions & References',
@@ -1096,15 +1096,15 @@ This policy applies to all Aeria Solutions personnel, contractors, and subcontra
 • Flight Plan: A documented plan that includes mission details, operational limits, and emergency procedures, submitted where required (e.g., NavCanada).
 
 References:
-• Aeria RPAS Operations Manual – Site Survey & Flight Planning
-• Aeria HSE Policy – Hazard Assessment
+• the CompanyRPAS Operations Manual – Site Survey & Flight Planning
+• the CompanyHSE Policy – Hazard Assessment
 • Canadian Aviation Regulations, Part IX (901.62 for Advanced Operations)
 • SiteDocs – Hazard & Site Survey tools
 • AirData – Flight planning, logging, and compliance tools`
       },
       {
         title: 'Policy Statement',
-        content: `All operations conducted under Aeria Solutions must include a completed site survey and flight plan. These documents are mandatory requirements to ensure operational safety, regulatory compliance, and risk mitigation. Aeria Solutions utilizes SiteDocs and AirData as the primary tools for conducting, documenting, and retaining these records. No RPAS mission may be launched without these elements in place.`
+        content: `All operations conducted under the Company must include a completed site survey and flight plan. These documents are mandatory requirements to ensure operational safety, regulatory compliance, and risk mitigation. the Company utilizes SiteDocs and AirData as the primary tools for conducting, documenting, and retaining these records. No RPAS mission may be launched without these elements in place.`
       },
       {
         title: 'Procedures',
@@ -1188,7 +1188,7 @@ Reporting Obligations:
 To ensure every Remotely Piloted Aircraft System (RPAS), payload, ground control station, and associated power system is tested, safe, and airworthy before operational use, after maintenance or updates, and at defined intervals, using a standardized, documented process with clear pass/fail criteria (CLEAR vs LOCKOUT).
 
 Scope:
-Applies to all Aeria Solutions aircraft, payloads/sensors (e.g., LiDAR, RGB/MS, delivery payloads), ground control stations, firmware/software, antennas, data links, and batteries used in Aeria operations (newly acquired, in-service, repaired/updated, or annually re-certified).`
+Applies to all the Company aircraft, payloads/sensors (e.g., LiDAR, RGB/MS, delivery payloads), ground control stations, firmware/software, antennas, data links, and batteries used in the Companyoperations (newly acquired, in-service, repaired/updated, or annually re-certified).`
       },
       {
         title: 'Definitions & References',
@@ -1206,7 +1206,7 @@ References:
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions will not deploy any RPAS equipment operationally unless it has passed the defined equipment tests and is marked CLEAR. Any malfunction, anomaly, or incomplete test results in LOCKOUT, and the equipment remains out of service until corrective actions are completed and a full re-test passes. All testing must be documented in AirData (and SiteDocs, where applicable) and retained per record-keeping requirements.`
+        content: `the Company will not deploy any RPAS equipment operationally unless it has passed the defined equipment tests and is marked CLEAR. Any malfunction, anomaly, or incomplete test results in LOCKOUT, and the equipment remains out of service until corrective actions are completed and a full re-test passes. All testing must be documented in AirData (and SiteDocs, where applicable) and retained per record-keeping requirements.`
       },
       {
         title: 'Procedures',
@@ -1216,7 +1216,7 @@ When to Test:
 • All new equipment, prior to operations, after any maintenance or updates, and annually.
 
 Testing Standards:
-• Use Aeria's standardized RPAS Test Sheet covering startup, control link, payload, launch/hover, maneuvering, RTH, and battery performance.
+• Use the Company's standardized RPAS Test Sheet covering startup, control link, payload, launch/hover, maneuvering, RTH, and battery performance.
 
 Pass/Fail Criteria:
 • CLEAR = all steps successful
@@ -1234,13 +1234,13 @@ Escalation:
 
 Tools, Forms, or Checklists:
 • AirData (mandatory): flight/test logs, maintenance events, batteries, service intervals, reports
-• Aeria RPAS Test Sheet / Checklist
+• the CompanyRPAS Test Sheet / Checklist
 • SiteDocs (optional): forms for test session, hazard notes, incident reports
 • Manufacturer manuals for aircraft/payload specifics
 
 Safety/Compliance/Quality Requirements:
-• Testing must follow manufacturer limitations and Aeria's ≤80% weather margin policy.
-• Comply with CARs Part IX and Aeria HSE policies.
+• Testing must follow manufacturer limitations and the Company's ≤80% weather margin policy.
+• Comply with CARs Part IX and the CompanyHSE policies.
 • Use only recognized RPAS with manufacturer safety declaration (CAR 901.76).
 
 Reporting or Escalation:
@@ -1297,16 +1297,16 @@ Reporting Obligations:
     reviewDate: '2026-02-01',
     owner: 'Chief Pilot',
     status: 'active',
-    regulatoryRefs: ['Transport Canada Advisory Circular 700-042', 'Aeria CRM Manual'],
+    regulatoryRefs: ['Transport Canada Advisory Circular 700-042', 'the CompanyCRM Manual'],
     keywords: ['TEM', 'threat', 'error', 'management', 'ATM', 'safety', 'CRM'],
     sections: [
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-To establish a structured Threat and Error Management (TEM) policy that ensures Aeria RPAS operations identify, prevent, and mitigate threats and errors that may arise during missions.
+To establish a structured Threat and Error Management (TEM) policy that ensures the CompanyRPAS operations identify, prevent, and mitigate threats and errors that may arise during missions.
 
 Scope:
-Applies to all Aeria RPAS operational crew members, including Pilots in Command (PICs), Visual Observers (VOs), Operations Managers, subcontractors, and support personnel engaged in RPAS operations.`
+Applies to all the CompanyRPAS operational crew members, including Pilots in Command (PICs), Visual Observers (VOs), Operations Managers, subcontractors, and support personnel engaged in RPAS operations.`
       },
       {
         title: 'Definitions & References',
@@ -1317,13 +1317,13 @@ Applies to all Aeria RPAS operational crew members, including Pilots in Command 
 • Intentional Non-Compliance: Knowingly disregarding SOPs or regulations.
 
 References:
-• Aeria CRM Manual, Section: Threat and Error Management
-• Aeria RPAS Operations Manual
+• the CompanyCRM Manual, Section: Threat and Error Management
+• the CompanyRPAS Operations Manual
 • Transport Canada Advisory Circular 700-042, Appendix A`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions mandates that all RPAS crew adopt proactive Threat and Error Management strategies to ensure safety, operational effectiveness, and compliance. Operators are required to apply structured Avoidance, Trapping, and Mitigation (ATM) strategies throughout all phases of operation. Intentional non-compliance with SOPs or TEM requirements is strictly prohibited.`
+        content: `the Company mandates that all RPAS crew adopt proactive Threat and Error Management strategies to ensure safety, operational effectiveness, and compliance. Operators are required to apply structured Avoidance, Trapping, and Mitigation (ATM) strategies throughout all phases of operation. Intentional non-compliance with SOPs or TEM requirements is strictly prohibited.`
       },
       {
         title: 'Procedures',
@@ -1343,11 +1343,11 @@ Roles & Responsibilities for Each Step:
 Tools, Forms, or Checklists:
 • RPAS Pre-Flight and In-Flight Checklists
 • Site Survey & Operational Risk Assessment forms
-• Aeria Fly-Away Emergency Communication Script
+• the CompanyFly-Away Emergency Communication Script
 
 Safety/Compliance/Quality Requirements:
 • Compliance with CARs Part IX (RPAS regulations)
-• Strict adherence to Aeria SOPs
+• Strict adherence to the CompanySOPs
 • Mandatory recurrent TEM training
 
 Reporting or Escalation:
@@ -1396,7 +1396,7 @@ Reporting Obligations:
     reviewDate: '2026-02-01',
     owner: 'Chief Pilot',
     status: 'active',
-    regulatoryRefs: ['Transport Canada Advisory Circular 700-042', 'Aeria CRM Manual'],
+    regulatoryRefs: ['Transport Canada Advisory Circular 700-042', 'the CompanyCRM Manual'],
     keywords: ['communication', 'PACE', 'phraseology', 'feedback', 'CRM'],
     sections: [
       {
@@ -1405,7 +1405,7 @@ Reporting Obligations:
 To establish structured communication protocols that enhance safety, clarity, and teamwork in RPAS operations. Effective communication ensures accurate information transfer, situational awareness, and timely decision-making.
 
 Scope:
-Applies to all Aeria RPAS operational personnel, including PICs, VOs, Operations Managers, subcontractors, and supporting staff engaged in pre-flight, in-flight, and post-flight phases.`
+Applies to all the CompanyRPAS operational personnel, including PICs, VOs, Operations Managers, subcontractors, and supporting staff engaged in pre-flight, in-flight, and post-flight phases.`
       },
       {
         title: 'Definitions & References',
@@ -1415,13 +1415,13 @@ Applies to all Aeria RPAS operational personnel, including PICs, VOs, Operations
 • Feedback Loop: Confirmation by recipient that a message was received and understood.
 
 References:
-• Aeria CRM Manual, Section: Communication
-• Aeria RPAS Operations Manual, Section: Communication Techniques
+• the CompanyCRM Manual, Section: Communication
+• the CompanyRPAS Operations Manual, Section: Communication Techniques
 • Transport Canada Advisory Circular 700-042, Appendix A`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria mandates clear, concise, and standardized communication across all operational phases. All team members must use structured protocols, confirmation loops, and escalation models to ensure that information is correctly exchanged and acted upon.`
+        content: `the Companymandates clear, concise, and standardized communication across all operational phases. All team members must use structured protocols, confirmation loops, and escalation models to ensure that information is correctly exchanged and acted upon.`
       },
       {
         title: 'Procedures',
@@ -1444,7 +1444,7 @@ Post-Flight:
 Tools, Forms, or Checklists:
 • Pre-flight Communication Checklist
 • Post-flight Debrief Template
-• Aeria Fly-Away Communication Script
+• the CompanyFly-Away Communication Script
 
 Safety/Compliance/Quality Requirements:
 • Compliance with CARs Part IX and RPAS communication regulations.
@@ -1495,7 +1495,7 @@ Reporting Obligations:
     reviewDate: '2026-02-01',
     owner: 'Chief Pilot',
     status: 'active',
-    regulatoryRefs: ['Transport Canada Advisory Circular 700-042', 'Aeria CRM Manual'],
+    regulatoryRefs: ['Transport Canada Advisory Circular 700-042', 'the CompanyCRM Manual'],
     keywords: ['situational awareness', 'SA', 'perception', 'comprehension', 'projection'],
     sections: [
       {
@@ -1504,7 +1504,7 @@ Reporting Obligations:
 To establish a structured policy for building, maintaining, and recovering situational awareness (SA) in RPAS operations. Maintaining SA ensures operators perceive, comprehend, and anticipate operational conditions to minimize threats, prevent errors, and ensure mission safety.
 
 Scope:
-Applies to all Aeria RPAS operational personnel, including Pilots in Command (PICs), Visual Observers (VOs), Operations Managers, subcontractors, and any supporting crew members involved in mission planning, execution, and debrief.`
+Applies to all the CompanyRPAS operational personnel, including Pilots in Command (PICs), Visual Observers (VOs), Operations Managers, subcontractors, and any supporting crew members involved in mission planning, execution, and debrief.`
       },
       {
         title: 'Definitions & References',
@@ -1514,13 +1514,13 @@ Applies to all Aeria RPAS operational personnel, including Pilots in Command (PI
 • SA Loss: A condition where an operator becomes disconnected from mission-critical factors, leading to degraded safety.
 
 References:
-• Aeria CRM Manual, Section: Situational Awareness
-• Aeria RPAS Operations Manual, Section: Communication Techniques
+• the CompanyCRM Manual, Section: Situational Awareness
+• the CompanyRPAS Operations Manual, Section: Communication Techniques
 • Transport Canada Advisory Circular 700-042, Appendix A`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions requires all operators to actively build and sustain situational awareness throughout all phases of RPAS missions. Operators must use structured countermeasures, communication protocols, and workload distribution techniques to anticipate threats, recognize early signs of SA loss, and recover awareness immediately.`
+        content: `the Company requires all operators to actively build and sustain situational awareness throughout all phases of RPAS missions. Operators must use structured countermeasures, communication protocols, and workload distribution techniques to anticipate threats, recognize early signs of SA loss, and recover awareness immediately.`
       },
       {
         title: 'Procedures',
@@ -1555,7 +1555,7 @@ Tools, Forms, or Checklists:
 
 Safety/Compliance/Quality Requirements:
 • Compliance with CARs Part IX regarding continuous RPAS monitoring.
-• Adherence to Aeria SOPs for crew briefings and communication updates.
+• Adherence to the CompanySOPs for crew briefings and communication updates.
 
 Reporting or Escalation:
 • All instances of SA loss or recovery must be documented in debrief reports.
@@ -2646,7 +2646,7 @@ Reporting Obligations:
     number: '1027',
     title: 'HSE Health & Safety Policy',
     category: 'hse',
-    description: 'Establishes a framework for health, safety, and environmental management at Aeria Solutions Ltd., preventing workplace injuries and ensuring compliance with legal standards.',
+    description: 'Establishes a framework for health, safety, and environmental management at the Company, preventing workplace injuries and ensuring compliance with legal standards.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -2658,10 +2658,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to establish a framework for health, safety, and environmental management at Aeria Solutions Ltd. Its objectives include preventing workplace injuries, ensuring compliance with legal and industry standards, and fostering a culture of safety, addressing the problem of occupational hazards and environmental risks.
+This policy exists to establish a framework for health, safety, and environmental management at the Company Its objectives include preventing workplace injuries, ensuring compliance with legal and industry standards, and fostering a culture of safety, addressing the problem of occupational hazards and environmental risks.
 
 Scope:
-This policy applies to all employees, contractors, and visitors of Aeria Solutions Ltd., encompassing all departments, roles, activities, and locations where the company operates.`
+This policy applies to all employees, contractors, and visitors of the Company, encompassing all departments, roles, activities, and locations where the company operates.`
       },
       {
         title: 'Definitions & References',
@@ -2673,12 +2673,12 @@ This policy applies to all employees, contractors, and visitors of Aeria Solutio
 References:
 • BC Occupational Health and Safety Regulation
 • Workers Compensation Act (British Columbia)
-• Aeria Solutions Ltd. Environmental Policy
+• the Company Environmental Policy
 • ISO 14001:2015 Environmental Management Systems`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. is dedicated to providing a safe and healthy workplace for all employees, contractors, and visitors. We commit to complying with all applicable health, safety, and environmental regulations, integrating safety into our operations, and continuously improving our practices to prevent incidents and protect the environment.`
+        content: `the Company is dedicated to providing a safe and healthy workplace for all employees, contractors, and visitors. We commit to complying with all applicable health, safety, and environmental regulations, integrating safety into our operations, and continuously improving our practices to prevent incidents and protect the environment.`
       },
       {
         title: 'Procedures',
@@ -3838,7 +3838,7 @@ Reporting Obligations:
     number: '1040',
     title: 'HSE - Company Rules',
     category: 'hse',
-    description: 'Outlines the general rules at Aeria Solutions Ltd. to ensure a safe, productive, and respectful workplace.',
+    description: 'Outlines the general rules at the Company to ensure a safe, productive, and respectful workplace.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -3850,10 +3850,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This document outlines the general rules at Aeria Solutions Ltd. to ensure a safe, productive, and respectful workplace. Its objectives include maintaining order, promoting professionalism, and ensuring compliance with legal and company standards, addressing issues like misconduct and safety violations.
+This document outlines the general rules at the Company to ensure a safe, productive, and respectful workplace. Its objectives include maintaining order, promoting professionalism, and ensuring compliance with legal and company standards, addressing issues like misconduct and safety violations.
 
 Scope:
-These rules apply to all employees, contractors, and visitors at Aeria Solutions Ltd., covering all work sites, company events, and business-related activities.`
+These rules apply to all employees, contractors, and visitors at the Company, covering all work sites, company events, and business-related activities.`
       },
       {
         title: 'Definitions & References',
@@ -3865,12 +3865,12 @@ These rules apply to all employees, contractors, and visitors at Aeria Solutions
 References:
 • BC Occupational Health and Safety Regulation (Part 4 - General Conditions)
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities
-• Aeria Solutions Ltd. Health & Safety Policy
-• Aeria Solutions Ltd. Harassment & Violence Policy`
+• the Company Health & Safety Policy
+• the Company Harassment & Violence Policy`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. expects all personnel to adhere to these company rules to maintain a safe, respectful, and efficient workplace. Violations will be addressed through appropriate disciplinary actions, with a commitment to fairness and compliance with all legal obligations.
+        content: `the Company expects all personnel to adhere to these company rules to maintain a safe, respectful, and efficient workplace. Violations will be addressed through appropriate disciplinary actions, with a commitment to fairness and compliance with all legal obligations.
 
 Company Rules:
 • General Conduct: Treat all personnel with respect; no harassment, bullying, or discrimination.
@@ -3949,7 +3949,7 @@ Reporting Obligations:
     number: '1041',
     title: 'HSE - General Safety Rules',
     category: 'hse',
-    description: 'Establishes general safety rules at Aeria Solutions Ltd. to prevent workplace injuries and ensure a safe environment.',
+    description: 'Establishes general safety rules at the Company to prevent workplace injuries and ensure a safe environment.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -3961,10 +3961,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This document establishes general safety rules at Aeria Solutions Ltd. to prevent workplace injuries and ensure a safe environment. Its objectives include promoting awareness, ensuring compliance with safety standards, and addressing hazards across all operations.
+This document establishes general safety rules at the Company to prevent workplace injuries and ensure a safe environment. Its objectives include promoting awareness, ensuring compliance with safety standards, and addressing hazards across all operations.
 
 Scope:
-These rules apply to all employees, contractors, and visitors at Aeria Solutions Ltd., covering all work sites, tasks, and activities.`
+These rules apply to all employees, contractors, and visitors at the Company, covering all work sites, tasks, and activities.`
       },
       {
         title: 'Definitions & References',
@@ -3976,11 +3976,11 @@ These rules apply to all employees, contractors, and visitors at Aeria Solutions
 References:
 • BC Occupational Health and Safety Regulation (Part 4 - General Conditions)
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities
-• Aeria Solutions Ltd. Health & Safety Policy`
+• the Company Health & Safety Policy`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. requires all personnel to follow these general safety rules to maintain a safe workplace. Compliance is mandatory, and violations will be addressed to protect the health and safety of everyone on site.
+        content: `the Company requires all personnel to follow these general safety rules to maintain a safe workplace. Compliance is mandatory, and violations will be addressed to protect the health and safety of everyone on site.
 
 General Safety Rules:
 • PPE Usage: Wear required PPE (e.g., hard hats, safety boots) at all times in designated areas.
@@ -4059,7 +4059,7 @@ Reporting Obligations:
     number: '1042',
     title: 'HSE - Grounds for Dismissal',
     category: 'hse',
-    description: 'Outlines the grounds for dismissal at Aeria Solutions Ltd. to maintain a safe and productive workplace.',
+    description: 'Outlines the grounds for dismissal at the Company to maintain a safe and productive workplace.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -4071,10 +4071,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This document outlines the grounds for dismissal at Aeria Solutions Ltd. to maintain a safe and productive workplace. Its objectives include ensuring fair enforcement, complying with legal standards, and addressing serious misconduct or performance issues.
+This document outlines the grounds for dismissal at the Company to maintain a safe and productive workplace. Its objectives include ensuring fair enforcement, complying with legal standards, and addressing serious misconduct or performance issues.
 
 Scope:
-This policy applies to all employees at Aeria Solutions Ltd., covering all work sites, shifts, and business-related activities.`
+This policy applies to all employees at the Company, covering all work sites, shifts, and business-related activities.`
       },
       {
         title: 'Definitions & References',
@@ -4086,12 +4086,12 @@ This policy applies to all employees at Aeria Solutions Ltd., covering all work 
 References:
 • BC Employment Standards Act
 • BC Workers Compensation Act (Part 3 - Rights and Responsibilities)
-• Aeria Solutions Ltd. Company Rules
-• Aeria Solutions Ltd. Harassment & Violence Policy`
+• the Company Company Rules
+• the Company Harassment & Violence Policy`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. may dismiss employees for serious or repeated violations of company policies, legal obligations, or performance standards. Dismissal will follow a fair process, including investigation and documentation, while adhering to applicable employment laws.
+        content: `the Company may dismiss employees for serious or repeated violations of company policies, legal obligations, or performance standards. Dismissal will follow a fair process, including investigation and documentation, while adhering to applicable employment laws.
 
 Grounds for Dismissal:
 
@@ -4181,7 +4181,7 @@ Reporting Obligations:
     number: '1043',
     title: 'HSE - Public & Visitors Policy',
     category: 'hse',
-    description: 'Ensures the safety and security of the public and visitors at Aeria Solutions Ltd. sites while protecting company operations.',
+    description: 'Ensures the safety and security of the public and visitors at the Company sites while protecting company operations.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -4193,27 +4193,27 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to ensure the safety and security of the public and visitors at Aeria Solutions Ltd. sites while protecting company operations. Its objectives include managing access, ensuring compliance with safety standards, and addressing risks posed by external individuals.
+This policy exists to ensure the safety and security of the public and visitors at the Company sites while protecting company operations. Its objectives include managing access, ensuring compliance with safety standards, and addressing risks posed by external individuals.
 
 Scope:
-This policy applies to all members of the public and visitors at Aeria Solutions Ltd. work sites, covering all operational areas and company premises.`
+This policy applies to all members of the public and visitors at the Company work sites, covering all operational areas and company premises.`
       },
       {
         title: 'Definitions & References',
         content: `Definitions:
-• Visitor: Any individual not employed by Aeria Solutions Ltd. entering company premises, including clients, contractors' guests, or delivery personnel.
+• Visitor: Any individual not employed by the Company entering company premises, including clients, contractors' guests, or delivery personnel.
 • Public: Individuals accessing company property for non-business purposes (e.g., community members near sites).
 • Access Control: Procedures to restrict entry to authorized individuals only.
 
 References:
 • BC Occupational Health and Safety Regulation (Part 4 - General Conditions)
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities
-• Aeria Solutions Ltd. Health & Safety Policy
-• Aeria Solutions Ltd. Security Policy`
+• the Company Health & Safety Policy
+• the Company Security Policy`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. requires all visitors and members of the public to adhere to safety and security protocols when on company premises. We are committed to providing a safe environment, managing access effectively, and complying with all relevant regulations.
+        content: `the Company requires all visitors and members of the public to adhere to safety and security protocols when on company premises. We are committed to providing a safe environment, managing access effectively, and complying with all relevant regulations.
 
 Public & Visitors Rules:
 • Sign-In Requirement: All visitors must register upon arrival and wear a visitor badge.
@@ -4291,7 +4291,7 @@ Reporting Obligations:
     number: '1044',
     title: 'HSE - Contractors Policy',
     category: 'hse',
-    description: 'Regulates the engagement and conduct of contractors at Aeria Solutions Ltd. to ensure safety, compliance, and alignment with company standards.',
+    description: 'Regulates the engagement and conduct of contractors at the Company to ensure safety, compliance, and alignment with company standards.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -4303,27 +4303,27 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to regulate the engagement and conduct of contractors at Aeria Solutions Ltd. to ensure safety, compliance, and alignment with company standards. Its objectives include minimizing risks, ensuring accountability, and addressing the challenges of integrating external workers into operations.
+This policy exists to regulate the engagement and conduct of contractors at the Company to ensure safety, compliance, and alignment with company standards. Its objectives include minimizing risks, ensuring accountability, and addressing the challenges of integrating external workers into operations.
 
 Scope:
-This policy applies to all contractors working for or on behalf of Aeria Solutions Ltd., covering all work sites, projects, and activities performed under contract.`
+This policy applies to all contractors working for or on behalf of the Company, covering all work sites, projects, and activities performed under contract.`
       },
       {
         title: 'Definitions & References',
         content: `Definitions:
-• Contractor: An individual or entity hired to perform specific tasks or services for Aeria Solutions Ltd.
+• Contractor: An individual or entity hired to perform specific tasks or services for the Company
 • Pre-Qualification: The process of assessing a contractor's safety and compliance credentials.
 • Incident: Any event involving injury, damage, or violation of safety protocols.
 
 References:
 • BC Occupational Health and Safety Regulation (Part 4 - General Conditions)
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities
-• Aeria Solutions Ltd. Health & Safety Policy
-• Aeria Solutions Ltd. Public and Visitors Policy`
+• the Company Health & Safety Policy
+• the Company Public and Visitors Policy`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. requires all contractors to adhere to company safety, security, and operational standards. We are committed to pre-qualifying contractors, monitoring their performance, and ensuring compliance with all applicable laws and policies.
+        content: `the Company requires all contractors to adhere to company safety, security, and operational standards. We are committed to pre-qualifying contractors, monitoring their performance, and ensuring compliance with all applicable laws and policies.
 
 Contractor Rules:
 • Safety Compliance: Adhere to all safety rules and wear required PPE.
@@ -4344,7 +4344,7 @@ Orientation Training:
 • Conduct site-specific safety and policy training for all contractors.
 
 Work Supervision:
-• Assign Aeria Solutions Ltd. personnel to oversee contractor activities.
+• Assign the Company personnel to oversee contractor activities.
 
 Incident Reporting:
 • Require contractors to report all incidents immediately.
@@ -4401,7 +4401,7 @@ Reporting Obligations:
     number: '1045',
     title: 'HSE - Employer Duties',
     category: 'hse',
-    description: 'Outlines the duties of Aeria Solutions Ltd. as an employer to ensure a safe, compliant, and supportive workplace.',
+    description: 'Outlines the duties of the Company as an employer to ensure a safe, compliant, and supportive workplace.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -4413,10 +4413,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This document outlines the duties of Aeria Solutions Ltd. as an employer to ensure a safe, compliant, and supportive workplace. Its objectives include meeting legal obligations, protecting employee well-being, and addressing workplace hazards effectively.
+This document outlines the duties of the Company as an employer to ensure a safe, compliant, and supportive workplace. Its objectives include meeting legal obligations, protecting employee well-being, and addressing workplace hazards effectively.
 
 Scope:
-This policy applies to Aeria Solutions Ltd. management and supervisory staff, covering all work sites, employees, contractors, and operational activities.`
+This policy applies to the Company management and supervisory staff, covering all work sites, employees, contractors, and operational activities.`
       },
       {
         title: 'Definitions & References',
@@ -4428,12 +4428,12 @@ This policy applies to Aeria Solutions Ltd. management and supervisory staff, co
 References:
 • BC Workers Compensation Act (Part 3 - Rights and Responsibilities)
 • BC Occupational Health and Safety Regulation (Part 3 - General Duties of Employers)
-• Aeria Solutions Ltd. Health & Safety Policy
+• the Company Health & Safety Policy
 • WorkSafeBC Guidelines on Employer Responsibilities`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. is committed to fulfilling its duties as an employer by providing a safe working environment, complying with all legal requirements, and supporting employee health and safety through proactive measures and resource allocation.
+        content: `the Company is committed to fulfilling its duties as an employer by providing a safe working environment, complying with all legal requirements, and supporting employee health and safety through proactive measures and resource allocation.
 
 Employer Duties:
 • Safety Provision: Ensure a workplace free from recognized hazards.
@@ -4524,10 +4524,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to outline Aeria Solutions Ltd.'s compliance with Part 13 of the Alberta Occupational Health and Safety Code, which governs joint health and safety committees (JHSCs) and health and safety representatives (HSRs). Its objectives include ensuring worker involvement in safety decisions, addressing occupational health concerns, and preventing incidents through structured consultation, addressing gaps in workplace safety governance.
+This policy exists to outline the Company's compliance with Part 13 of the Alberta Occupational Health and Safety Code, which governs joint health and safety committees (JHSCs) and health and safety representatives (HSRs). Its objectives include ensuring worker involvement in safety decisions, addressing occupational health concerns, and preventing incidents through structured consultation, addressing gaps in workplace safety governance.
 
 Scope:
-This policy applies to all work sites required to have a JHSC under section 13 of the OHS Act or an HSR under section 14, including all employees, supervisors, and management at Aeria Solutions Ltd. operational locations in Alberta.`
+This policy applies to all work sites required to have a JHSC under section 13 of the OHS Act or an HSR under section 14, including all employees, supervisors, and management at the Company operational locations in Alberta.`
       },
       {
         title: 'Definitions & References',
@@ -4539,12 +4539,12 @@ This policy applies to all work sites required to have a JHSC under section 13 o
 References:
 • Alberta Occupational Health and Safety Act (OHS Act), sections 13-15 (Joint Worksites and Committees)
 • Alberta Occupational Health and Safety Code, Part 13 (Joint Health and Safety Committees and Health and Safety Representatives)
-• Aeria Solutions Ltd. Health & Safety Policy
+• the Company Health & Safety Policy
 • WorkSafeBC/Alberta OHS Guidelines on JHSC/HSR Establishment and Duties`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. is committed to complying with Part 13 of the Alberta OHS Code by establishing and maintaining effective JHSCs or HSRs where required. We ensure balanced representation, regular consultation on health and safety matters, and proactive resolution of concerns to foster a collaborative safety culture and meet all legal obligations.`
+        content: `the Company is committed to complying with Part 13 of the Alberta OHS Code by establishing and maintaining effective JHSCs or HSRs where required. We ensure balanced representation, regular consultation on health and safety matters, and proactive resolution of concerns to foster a collaborative safety culture and meet all legal obligations.`
       },
       {
         title: 'Procedures',
@@ -4614,7 +4614,7 @@ Reporting Obligations:
     number: '1047',
     title: 'HSE - Hazard Assessment Policy',
     category: 'hse',
-    description: 'Ensures Aeria Solutions Ltd. identifies and controls workplace hazards to prevent injuries and illnesses through systematic assessment.',
+    description: 'Ensures the Company identifies and controls workplace hazards to prevent injuries and illnesses through systematic assessment.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -4626,10 +4626,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to ensure Aeria Solutions Ltd. identifies and controls workplace hazards to prevent injuries and illnesses. Its objectives include meeting legal requirements, promoting a proactive safety culture, and addressing risks through systematic assessment, tackling challenges like unrecognized or evolving hazards.
+This policy exists to ensure the Company identifies and controls workplace hazards to prevent injuries and illnesses. Its objectives include meeting legal requirements, promoting a proactive safety culture, and addressing risks through systematic assessment, tackling challenges like unrecognized or evolving hazards.
 
 Scope:
-This policy applies to all employees, contractors, and supervisors at Aeria Solutions Ltd., covering all work sites, tasks, and activities where hazards may be present.`
+This policy applies to all employees, contractors, and supervisors at the Company, covering all work sites, tasks, and activities where hazards may be present.`
       },
       {
         title: 'Definitions & References',
@@ -4641,12 +4641,12 @@ This policy applies to all employees, contractors, and supervisors at Aeria Solu
 References:
 • BC Occupational Health and Safety Regulation (Section 3.5 - General Hazard Identification and Assessment)
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities
-• Aeria Solutions Ltd. Health & Safety Policy
+• the Company Health & Safety Policy
 • WorkSafeBC Guidelines on Hazard Identification and Risk Assessment`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. is committed to conducting regular hazard assessments to identify and control risks, ensuring a safe working environment for all personnel. We comply with all applicable regulations and encourage active participation in hazard management processes.`
+        content: `the Company is committed to conducting regular hazard assessments to identify and control risks, ensuring a safe working environment for all personnel. We comply with all applicable regulations and encourage active participation in hazard management processes.`
       },
       {
         title: 'Procedures',
@@ -4716,7 +4716,7 @@ Reporting Obligations:
     number: '1048',
     title: 'HSE - Hazard Control Policy',
     category: 'hse',
-    description: 'Establishes procedures for controlling hazards at Aeria Solutions Ltd. to minimize risks and ensure a safe workplace.',
+    description: 'Establishes procedures for controlling hazards at the Company to minimize risks and ensure a safe workplace.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -4728,10 +4728,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to establish procedures for controlling hazards at Aeria Solutions Ltd. to minimize risks and ensure a safe workplace. Its objectives include implementing effective controls, complying with safety regulations, and addressing the challenge of managing identified hazards across operations.
+This policy exists to establish procedures for controlling hazards at the Company to minimize risks and ensure a safe workplace. Its objectives include implementing effective controls, complying with safety regulations, and addressing the challenge of managing identified hazards across operations.
 
 Scope:
-This policy applies to all employees, contractors, and supervisors at Aeria Solutions Ltd., covering all work sites, tasks, and activities where hazard controls are required.`
+This policy applies to all employees, contractors, and supervisors at the Company, covering all work sites, tasks, and activities where hazard controls are required.`
       },
       {
         title: 'Definitions & References',
@@ -4743,12 +4743,12 @@ This policy applies to all employees, contractors, and supervisors at Aeria Solu
 References:
 • BC Occupational Health and Safety Regulation (Section 3.6 - Hazard Control)
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities
-• Aeria Solutions Ltd. Hazard Assessment Policy
+• the Company Hazard Assessment Policy
 • WorkSafeBC Guidelines on Hazard Control Measures`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. is committed to controlling workplace hazards using the hierarchy of controls to ensure employee safety and regulatory compliance. We prioritize hazard elimination and provide resources to implement effective control measures.`
+        content: `the Company is committed to controlling workplace hazards using the hierarchy of controls to ensure employee safety and regulatory compliance. We prioritize hazard elimination and provide resources to implement effective control measures.`
       },
       {
         title: 'Procedures',
@@ -4818,7 +4818,7 @@ Reporting Obligations:
     number: '1049',
     title: 'HSE - Inspection Policy',
     category: 'hse',
-    description: 'Establishes a systematic inspection process at Aeria Solutions Ltd. to identify and address workplace hazards, ensuring safety and compliance.',
+    description: 'Establishes a systematic inspection process at the Company to identify and address workplace hazards, ensuring safety and compliance.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -4834,10 +4834,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to establish a systematic inspection process at Aeria Solutions Ltd. to identify and address workplace hazards, ensuring safety and compliance. Its objectives include preventing incidents, meeting regulatory requirements, and addressing the challenge of maintaining a safe work environment through regular oversight.
+This policy exists to establish a systematic inspection process at the Company to identify and address workplace hazards, ensuring safety and compliance. Its objectives include preventing incidents, meeting regulatory requirements, and addressing the challenge of maintaining a safe work environment through regular oversight.
 
 Scope:
-This policy applies to all employees, contractors, and supervisors at Aeria Solutions Ltd., covering all work sites, equipment, and operational areas requiring inspection.`
+This policy applies to all employees, contractors, and supervisors at the Company, covering all work sites, equipment, and operational areas requiring inspection.`
       },
       {
         title: 'Definitions & References',
@@ -4849,12 +4849,12 @@ This policy applies to all employees, contractors, and supervisors at Aeria Solu
 References:
 • BC Occupational Health and Safety Regulation (Section 3.5 - General Hazard Identification and Assessment).
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities.
-• Aeria Solutions Ltd. Health & Safety Policy.
+• the Company Health & Safety Policy.
 • WorkSafeBC Guidelines on Workplace Inspections.`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. is committed to conducting regular inspections to maintain a safe and compliant workplace. We require all personnel to participate in inspections, report findings, and implement corrective actions to address identified hazards.`
+        content: `the Company is committed to conducting regular inspections to maintain a safe and compliant workplace. We require all personnel to participate in inspections, report findings, and implement corrective actions to address identified hazards.`
       },
       {
         title: 'Procedures',
@@ -4914,7 +4914,7 @@ Reporting Obligations:
     number: '1050',
     title: 'HSE - Preventative Maintenance Policy',
     category: 'hse',
-    description: 'Establishes a preventative maintenance program at Aeria Solutions Ltd. to ensure equipment reliability, safety, and operational efficiency.',
+    description: 'Establishes a preventative maintenance program at the Company to ensure equipment reliability, safety, and operational efficiency.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -4930,10 +4930,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to establish a preventative maintenance program at Aeria Solutions Ltd. to ensure equipment reliability, safety, and operational efficiency. Its objectives include reducing downtime, preventing hazards, and complying with safety regulations, addressing the challenge of equipment failure and wear.
+This policy exists to establish a preventative maintenance program at the Company to ensure equipment reliability, safety, and operational efficiency. Its objectives include reducing downtime, preventing hazards, and complying with safety regulations, addressing the challenge of equipment failure and wear.
 
 Scope:
-This policy applies to all employees, contractors, and supervisors at Aeria Solutions Ltd., covering all machinery, tools, and equipment used across work sites.`
+This policy applies to all employees, contractors, and supervisors at the Company, covering all machinery, tools, and equipment used across work sites.`
       },
       {
         title: 'Definitions & References',
@@ -4945,12 +4945,12 @@ This policy applies to all employees, contractors, and supervisors at Aeria Solu
 References:
 • BC Occupational Health and Safety Regulation (Section 4.4 - Maintenance of Equipment).
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities.
-• Aeria Solutions Ltd. Health & Safety Policy.
+• the Company Health & Safety Policy.
 • WorkSafeBC Guidelines on Equipment Maintenance.`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. is committed to implementing a preventative maintenance program to ensure all equipment operates safely and efficiently. We require regular maintenance schedules, documentation, and employee training to prevent hazards and comply with all applicable regulations.`
+        content: `the Company is committed to implementing a preventative maintenance program to ensure all equipment operates safely and efficiently. We require regular maintenance schedules, documentation, and employee training to prevent hazards and comply with all applicable regulations.`
       },
       {
         title: 'Procedures',
@@ -5010,7 +5010,7 @@ Reporting Obligations:
     number: '1051',
     title: 'HSE - Emergency Response Policy',
     category: 'hse',
-    description: 'Establishes an effective emergency response plan at Aeria Solutions Ltd. to protect personnel and property during crises.',
+    description: 'Establishes an effective emergency response plan at the Company to protect personnel and property during crises.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -5026,10 +5026,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to establish an effective emergency response plan at Aeria Solutions Ltd. to protect personnel and property during crises. Its objectives include ensuring rapid response, complying with safety regulations, and addressing emergencies such as fires, spills, or medical incidents.
+This policy exists to establish an effective emergency response plan at the Company to protect personnel and property during crises. Its objectives include ensuring rapid response, complying with safety regulations, and addressing emergencies such as fires, spills, or medical incidents.
 
 Scope:
-This policy applies to all employees, contractors, and visitors at Aeria Solutions Ltd., covering all work sites and operational areas during emergencies.`
+This policy applies to all employees, contractors, and visitors at the Company, covering all work sites and operational areas during emergencies.`
       },
       {
         title: 'Definitions & References',
@@ -5041,12 +5041,12 @@ This policy applies to all employees, contractors, and visitors at Aeria Solutio
 References:
 • BC Occupational Health and Safety Regulation (Section 3.16 - Emergency Preparedness).
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities.
-• Aeria Solutions Ltd. Health & Safety Policy.
+• the Company Health & Safety Policy.
 • WorkSafeBC Guidelines on Emergency Preparedness and Response.`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. is committed to preparing for and responding to emergencies to safeguard all personnel and assets. We require regular training, clear procedures, and coordination with emergency services to ensure a swift and effective response to any crisis.`
+        content: `the Company is committed to preparing for and responding to emergencies to safeguard all personnel and assets. We require regular training, clear procedures, and coordination with emergency services to ensure a swift and effective response to any crisis.`
       },
       {
         title: 'Procedures',
@@ -5106,7 +5106,7 @@ Reporting Obligations:
     number: '1052',
     title: 'HSE - Investigations Policy',
     category: 'hse',
-    description: 'Establishes a structured process for investigating workplace incidents at Aeria Solutions Ltd. to determine causes and prevent recurrence.',
+    description: 'Establishes a structured process for investigating workplace incidents at the Company to determine causes and prevent recurrence.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -5122,10 +5122,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to establish a structured process for investigating workplace incidents at Aeria Solutions Ltd. to determine causes and prevent recurrence. Its objectives include ensuring compliance with safety regulations, protecting personnel, and addressing the challenge of identifying root causes of incidents.
+This policy exists to establish a structured process for investigating workplace incidents at the Company to determine causes and prevent recurrence. Its objectives include ensuring compliance with safety regulations, protecting personnel, and addressing the challenge of identifying root causes of incidents.
 
 Scope:
-This policy applies to all employees, contractors, and supervisors at Aeria Solutions Ltd., covering all work sites and incidents requiring investigation, including injuries, near misses, and property damage.`
+This policy applies to all employees, contractors, and supervisors at the Company, covering all work sites and incidents requiring investigation, including injuries, near misses, and property damage.`
       },
       {
         title: 'Definitions & References',
@@ -5137,12 +5137,12 @@ This policy applies to all employees, contractors, and supervisors at Aeria Solu
 References:
 • BC Occupational Health and Safety Regulation (Section 3.4 - Investigation of Incidents).
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities.
-• Aeria Solutions Ltd. Health & Safety Policy.
+• the Company Health & Safety Policy.
 • WorkSafeBC Guidelines on Incident Investigation.`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. is committed to conducting thorough and timely investigations of all workplace incidents to determine causes and implement corrective actions. We ensure compliance with legal requirements and foster a culture of safety through transparent and effective investigation processes.`
+        content: `the Company is committed to conducting thorough and timely investigations of all workplace incidents to determine causes and implement corrective actions. We ensure compliance with legal requirements and foster a culture of safety through transparent and effective investigation processes.`
       },
       {
         title: 'Procedures',
@@ -5202,7 +5202,7 @@ Reporting Obligations:
     number: '1053',
     title: 'HSE - Systems Overview & Audit Policy',
     category: 'hse',
-    description: 'Establishes procedures for the systematic overhaul and audit of operational systems at Aeria Solutions Ltd. to ensure safety, efficiency, and compliance.',
+    description: 'Establishes procedures for the systematic overhaul and audit of operational systems at the Company to ensure safety, efficiency, and compliance.',
     version: '1.0',
     effectiveDate: '2025-09-18',
     reviewDate: '2026-02-01',
@@ -5218,10 +5218,10 @@ Reporting Obligations:
       {
         title: 'Purpose & Scope',
         content: `Purpose:
-This policy exists to establish procedures for the systematic overhaul and audit of operational systems at Aeria Solutions Ltd. to ensure safety, efficiency, and compliance. Its objectives include identifying system deficiencies, implementing upgrades, and addressing the challenge of outdated or non-compliant processes.
+This policy exists to establish procedures for the systematic overhaul and audit of operational systems at the Company to ensure safety, efficiency, and compliance. Its objectives include identifying system deficiencies, implementing upgrades, and addressing the challenge of outdated or non-compliant processes.
 
 Scope:
-This policy applies to all employees, contractors, and supervisors at Aeria Solutions Ltd., covering all operational systems, equipment, and safety protocols across work sites.`
+This policy applies to all employees, contractors, and supervisors at the Company, covering all operational systems, equipment, and safety protocols across work sites.`
       },
       {
         title: 'Definitions & References',
@@ -5233,12 +5233,12 @@ This policy applies to all employees, contractors, and supervisors at Aeria Solu
 References:
 • BC Occupational Health and Safety Regulation (Section 3.5 - General Hazard Identification and Assessment).
 • Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities.
-• Aeria Solutions Ltd. Health & Safety Policy.
+• the Company Health & Safety Policy.
 • WorkSafeBC Guidelines on Workplace Audits and System Upgrades.`
       },
       {
         title: 'Policy Statement',
-        content: `Aeria Solutions Ltd. is committed to regularly overhauling and auditing operational systems to maintain safety, efficiency, and regulatory compliance. We ensure thorough assessments, timely upgrades, and documentation to address system risks and enhance workplace performance.`
+        content: `the Company is committed to regularly overhauling and auditing operational systems to maintain safety, efficiency, and regulatory compliance. We ensure thorough assessments, timely upgrades, and documentation to address system risks and enhance workplace performance.`
       },
       {
         title: 'Procedures',

@@ -56,6 +56,7 @@ import PolicyAcknowledgment from '../components/policies/PolicyAcknowledgment'
 import PolicyEditor from '../components/policies/PolicyEditor'
 import AcknowledgmentDashboard from '../components/policies/AcknowledgmentDashboard'
 import { getPolicyContent } from '../data/policyContent'
+import { useBranding } from '../components/BrandingSettings'
 
 const CATEGORY_CONFIG = {
   rpas: { name: 'RPAS Operations', icon: Plane, color: 'blue' },
@@ -118,6 +119,7 @@ export default function PolicyDetail() {
   const [expandedSections, setExpandedSections] = useState({})
 
   const permissions = usePolicyPermissions(policy)
+  const { applyCompanyName, companyName } = useBranding()
 
   const toggleSection = (index) => {
     setExpandedSections(prev => ({
@@ -434,7 +436,7 @@ export default function PolicyDetail() {
               {/* Description */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
-                <p className="text-gray-700">{policy.description || 'No description provided.'}</p>
+                <p className="text-gray-700">{applyCompanyName(policy.description) || 'No description provided.'}</p>
               </div>
 
               {/* Main content */}
@@ -503,7 +505,7 @@ export default function PolicyDetail() {
                             <div className="p-4 border-t border-gray-200 bg-white">
                               {sectionContent ? (
                                 <div className="text-gray-600 whitespace-pre-wrap">
-                                  {sectionContent}
+                                  {applyCompanyName(sectionContent)}
                                 </div>
                               ) : (
                                 <p className="text-gray-400 italic">

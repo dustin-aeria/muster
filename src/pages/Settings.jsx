@@ -33,9 +33,9 @@ export default function Settings() {
   
   // Company state
   const [companyData, setCompanyData] = useState({
-    name: 'Aeria Solutions Ltd.',
-    operatorNumber: '930355',
-    email: 'ops@aeriasolutions.ca',
+    name: '',
+    operatorNumber: '',
+    email: '',
     phone: '',
     address: ''
   })

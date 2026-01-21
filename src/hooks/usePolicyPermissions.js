@@ -14,6 +14,7 @@ import {
   canManageCategories,
   canManageDefaults
 } from '../lib/firestorePolicies'
+import { isPlatformAdmin as checkPlatformAdmin } from '../lib/firestoreMasterPolicies'
 
 /**
  * Permission levels for quick reference
@@ -22,7 +23,8 @@ export const PERMISSION_LEVELS = {
   VIEWER: 'viewer',
   EDITOR: 'editor',
   APPROVER: 'approver',
-  ADMIN: 'admin'
+  ADMIN: 'admin',
+  PLATFORM_ADMIN: 'platformAdmin'
 }
 
 /**
@@ -90,7 +92,9 @@ export function usePolicyPermissions(policy = null) {
         canViewVersions: false,
         canRollback: false,
         permissionLevel: null,
-        isAdmin: false
+        isAdmin: false,
+        isPlatformAdmin: false,
+        canManageMasterPolicies: false
       }
     }
 
@@ -98,6 +102,7 @@ export function usePolicyPermissions(policy = null) {
     const role = userProfile?.role || 'viewer'
     const policyPermissions = userProfile?.policyPermissions || DEFAULT_ROLE_PERMISSIONS[role] || DEFAULT_ROLE_PERMISSIONS.viewer
     const isAdmin = role === 'admin'
+    const isPlatformAdmin = checkPlatformAdmin(userProfile)
 
     // Build user object for permission checks
     const userForCheck = {
@@ -120,7 +125,9 @@ export function usePolicyPermissions(policy = null) {
 
     // Determine permission level
     let permissionLevel = PERMISSION_LEVELS.VIEWER
-    if (isAdmin) {
+    if (isPlatformAdmin) {
+      permissionLevel = PERMISSION_LEVELS.PLATFORM_ADMIN
+    } else if (isAdmin) {
       permissionLevel = PERMISSION_LEVELS.ADMIN
     } else if (canApprove) {
       permissionLevel = PERMISSION_LEVELS.APPROVER
@@ -157,6 +164,8 @@ export function usePolicyPermissions(policy = null) {
       // Meta
       permissionLevel,
       isAdmin,
+      isPlatformAdmin,
+      canManageMasterPolicies: isPlatformAdmin,
       userRole: role
     }
   }, [user, userProfile, policy])

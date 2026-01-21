@@ -26,6 +26,7 @@ import Settings from './pages/Settings'
 import PolicyLibrary from './components/PolicyLibrary'
 import PolicyDetail from './pages/PolicyDetail'
 import MyAcknowledgments from './pages/MyAcknowledgments'
+import MasterPolicyAdmin from './pages/MasterPolicyAdmin'
 
 // Safety Module Pages
 import SafetyDashboard from './pages/SafetyDashboard'
@@ -96,6 +97,7 @@ function App() {
           <Route path="policies" element={<PolicyLibrary />} />
           <Route path="policies/:id" element={<PolicyDetail />} />
           <Route path="my-acknowledgments" element={<MyAcknowledgments />} />
+          <Route path="admin/master-policies" element={<MasterPolicyAdmin />} />
           <Route path="operators" element={<Operators />} />
           <Route path="aircraft" element={<Aircraft />} />
           <Route path="clients" element={<Clients />} />

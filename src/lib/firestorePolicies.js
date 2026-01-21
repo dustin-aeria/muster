@@ -2096,7 +2096,7 @@ const SAMPLE_POLICIES = [
       number: '1042',
       title: 'HSE - Grounds for Dismissal',
       category: 'hse',
-      description: 'Outlines the grounds for dismissal at Aeria Solutions Ltd. to maintain a safe and productive workplace.',
+      description: 'Outlines the grounds for dismissal at the Company to maintain a safe and productive workplace.',
       version: '1.0',
       effectiveDate: '2025-09-18',
       reviewDate: '2026-02-01',
@@ -2118,7 +2118,7 @@ const SAMPLE_POLICIES = [
       number: '1043',
       title: 'HSE - Public & Visitors Policy',
       category: 'hse',
-      description: 'Ensures the safety and security of the public and visitors at Aeria Solutions Ltd. sites while protecting company operations.',
+      description: 'Ensures the safety and security of the public and visitors at the Company sites while protecting company operations.',
       version: '1.0',
       effectiveDate: '2025-09-18',
       reviewDate: '2026-02-01',
@@ -2482,4 +2482,282 @@ export async function seedMissingPolicies(userId) {
     console.error('Error seeding missing policies:', error)
     return { success: false, added: 0, skipped: 0, error: error.message }
   }
+}
+
+// ============================================
+// MASTER POLICY INTEGRATION
+// ============================================
+
+/**
+ * Seed operator policies from masterPolicies collection
+ * This is the preferred method - seeds from Firestore masterPolicies
+ * @param {string} userId - User ID performing the seed
+ * @returns {Promise<{success: boolean, count: number, error?: string}>}
+ */
+export async function seedFromMasterPolicies(userId) {
+  try {
+    // Dynamic import to avoid circular dependencies
+    const { getPublishedMasterPolicies } = await import('./firestoreMasterPolicies.js')
+
+    // Check if policies already exist
+    const existingSnapshot = await getDocs(query(policiesRef, limit(1)))
+    if (!existingSnapshot.empty) {
+      return { success: false, count: 0, error: 'Policies already exist. Clear existing policies first.' }
+    }
+
+    // Get published master policies
+    const masterPolicies = await getPublishedMasterPolicies()
+
+    if (masterPolicies.length === 0) {
+      // Fallback to SAMPLE_POLICIES if no master policies exist
+      return seedSamplePolicies(userId)
+    }
+
+    const batch = writeBatch(db)
+    const now = serverTimestamp()
+
+    masterPolicies.forEach((master) => {
+      const docRef = doc(policiesRef)
+      batch.set(docRef, {
+        // Core fields from master
+        number: master.number,
+        title: master.title,
+        category: master.category,
+        description: master.description,
+        version: '1.0',
+        effectiveDate: master.metadata?.effectiveDate || null,
+        reviewDate: master.metadata?.reviewDate || null,
+        owner: master.metadata?.owner || '',
+        status: 'active',
+        keywords: master.metadata?.keywords || [],
+        regulatoryRefs: master.metadata?.regulatoryRefs || [],
+        sections: master.content?.sections || [],
+
+        // Source tracking
+        sourceId: master.id,
+        sourceVersion: master.version,
+        isCustomized: false,
+
+        // Standard fields
+        type: 'adopted',
+        isTemplate: false,
+        isLatest: true,
+        content: master.content || {},
+        attachments: [],
+        permissions: {
+          viewRoles: [],
+          editRoles: ['admin', 'manager'],
+          approveRoles: ['admin']
+        },
+        acknowledgmentSettings: {
+          required: false,
+          requiredRoles: [],
+          deadline: null,
+          reacknowledgmentPeriod: null,
+          signatureRequired: false,
+          signatureType: 'checkbox'
+        },
+        createdAt: now,
+        createdBy: userId,
+        updatedAt: now,
+        updatedBy: userId
+      })
+    })
+
+    await batch.commit()
+
+    return { success: true, count: masterPolicies.length }
+  } catch (error) {
+    console.error('Error seeding from master policies:', error)
+    return { success: false, count: 0, error: error.message }
+  }
+}
+
+/**
+ * Seed only missing policies from masterPolicies
+ * @param {string} userId - User ID performing the seed
+ * @returns {Promise<{success: boolean, added: number, skipped: number, error?: string}>}
+ */
+export async function seedMissingFromMaster(userId) {
+  try {
+    const { getPublishedMasterPolicies } = await import('./firestoreMasterPolicies.js')
+
+    // Get existing policy numbers
+    const existingSnapshot = await getDocs(policiesRef)
+    const existingNumbers = new Set(
+      existingSnapshot.docs.map(doc => doc.data().number)
+    )
+
+    // Get published master policies
+    const masterPolicies = await getPublishedMasterPolicies()
+
+    if (masterPolicies.length === 0) {
+      // Fallback to seedMissingPolicies if no master policies
+      return seedMissingPolicies(userId)
+    }
+
+    // Filter to only policies that don't exist
+    const missingPolicies = masterPolicies.filter(
+      master => !existingNumbers.has(master.number)
+    )
+
+    if (missingPolicies.length === 0) {
+      return { success: true, added: 0, skipped: masterPolicies.length }
+    }
+
+    const batch = writeBatch(db)
+    const now = serverTimestamp()
+
+    missingPolicies.forEach((master) => {
+      const docRef = doc(policiesRef)
+      batch.set(docRef, {
+        number: master.number,
+        title: master.title,
+        category: master.category,
+        description: master.description,
+        version: '1.0',
+        effectiveDate: master.metadata?.effectiveDate || null,
+        reviewDate: master.metadata?.reviewDate || null,
+        owner: master.metadata?.owner || '',
+        status: 'active',
+        keywords: master.metadata?.keywords || [],
+        regulatoryRefs: master.metadata?.regulatoryRefs || [],
+        sections: master.content?.sections || [],
+
+        // Source tracking
+        sourceId: master.id,
+        sourceVersion: master.version,
+        isCustomized: false,
+
+        type: 'adopted',
+        isTemplate: false,
+        isLatest: true,
+        content: master.content || {},
+        attachments: [],
+        permissions: {
+          viewRoles: [],
+          editRoles: ['admin', 'manager'],
+          approveRoles: ['admin']
+        },
+        acknowledgmentSettings: {
+          required: false,
+          requiredRoles: [],
+          deadline: null,
+          reacknowledgmentPeriod: null,
+          signatureRequired: false,
+          signatureType: 'checkbox'
+        },
+        createdAt: now,
+        createdBy: userId,
+        updatedAt: now,
+        updatedBy: userId
+      })
+    })
+
+    await batch.commit()
+
+    return {
+      success: true,
+      added: missingPolicies.length,
+      skipped: masterPolicies.length - missingPolicies.length
+    }
+  } catch (error) {
+    console.error('Error seeding missing from master:', error)
+    return { success: false, added: 0, skipped: 0, error: error.message }
+  }
+}
+
+/**
+ * Check for available updates from master policies
+ * @returns {Promise<Array>} Array of policies with updates available
+ */
+export async function checkForMasterUpdates() {
+  try {
+    const { checkForUpdates } = await import('./firestoreMasterPolicies.js')
+
+    // Get all operator policies
+    const snapshot = await getDocs(policiesRef)
+    const operatorPolicies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+    // Check for updates
+    return await checkForUpdates(operatorPolicies)
+  } catch (error) {
+    console.error('Error checking for master updates:', error)
+    return []
+  }
+}
+
+/**
+ * Update an operator policy from its master source
+ * @param {string} policyId - Operator policy ID
+ * @param {boolean} preserveCustomizations - If true, only update non-customized fields
+ * @param {string} userId - User performing the update
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export async function updateFromMaster(policyId, preserveCustomizations = true, userId) {
+  try {
+    const { getMasterPolicy } = await import('./firestoreMasterPolicies.js')
+
+    // Get the operator policy
+    const policyRef = doc(db, 'policies', policyId)
+    const policySnapshot = await getDoc(policyRef)
+
+    if (!policySnapshot.exists()) {
+      return { success: false, error: 'Policy not found' }
+    }
+
+    const policy = policySnapshot.data()
+
+    if (!policy.sourceId) {
+      return { success: false, error: 'Policy has no source master to update from' }
+    }
+
+    // Get the master policy
+    const master = await getMasterPolicy(policy.sourceId)
+
+    if (master.status !== 'published') {
+      return { success: false, error: 'Master policy is not published' }
+    }
+
+    // Build update data
+    const updateData = {
+      sourceVersion: master.version,
+      updatedAt: serverTimestamp(),
+      updatedBy: userId
+    }
+
+    // If not preserving customizations or policy isn't customized, update content
+    if (!preserveCustomizations || !policy.isCustomized) {
+      updateData.title = master.title
+      updateData.description = master.description
+      updateData.content = master.content
+      updateData.keywords = master.metadata?.keywords || []
+      updateData.regulatoryRefs = master.metadata?.regulatoryRefs || []
+      updateData.sections = master.content?.sections || []
+      updateData.owner = master.metadata?.owner || ''
+      updateData.isCustomized = false
+    }
+
+    await updateDoc(policyRef, updateData)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating from master:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Mark a policy as customized (called when user edits adopted policy)
+ * @param {string} policyId - Policy ID
+ * @param {string} userId - User making the edit
+ */
+export async function markAsCustomized(policyId, userId) {
+  const policyRef = doc(db, 'policies', policyId)
+  await updateDoc(policyRef, {
+    isCustomized: true,
+    customizedAt: serverTimestamp(),
+    customizedBy: userId,
+    updatedAt: serverTimestamp()
+  })
 }

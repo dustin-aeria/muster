@@ -48,11 +48,11 @@ async function loadJsPDF() {
 
 const DEFAULT_BRANDING = {
   operator: {
-    name: 'Aeria Solutions Ltd.',
-    registration: 'Transport Canada Operator #930355',
+    name: 'Your Company Name',
+    registration: '',
     tagline: 'Professional RPAS Operations',
-    website: 'www.aeriasolutions.ca',
-    email: 'ops@aeriasolutions.ca',
+    website: '',
+    email: '',
     phone: '',
     address: '',
     logo: null,

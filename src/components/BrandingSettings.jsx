@@ -27,11 +27,11 @@ import { useAuth } from '../contexts/AuthContext'
 // DEFAULT BRANDING CONFIGURATION
 // ============================================
 const DEFAULT_OPERATOR_BRANDING = {
-  name: 'Aeria Solutions Ltd.',
-  registration: 'Transport Canada Operator #930355',
+  name: 'Your Company Name',
+  registration: '',
   tagline: 'Professional RPAS Operations',
-  website: 'www.aeriasolutions.ca',
-  email: 'ops@aeriasolutions.ca',
+  website: '',
+  email: '',
   phone: '',
   address: '',
   logo: null,
@@ -609,7 +609,7 @@ export function useBranding() {
     const loadBranding = async () => {
       try {
         const brandingDoc = await getDoc(doc(db, 'settings', 'branding'))
-        
+
         if (brandingDoc.exists()) {
           const data = brandingDoc.data()
           setBranding({
@@ -631,9 +631,67 @@ export function useBranding() {
     return branding.clients.find(c => c.id === clientId) || null
   }
 
+  /**
+   * Replace company name placeholders in text content
+   * Replaces: "the Company", "the Company's", "{companyName}"
+   * @param {string} text - Text containing placeholders
+   * @returns {string} Text with company name inserted
+   */
+  const applyCompanyName = (text) => {
+    if (!text || typeof text !== 'string') return text
+    const companyName = branding.operator.name || 'Your Company'
+    return text
+      .replace(/the Company's/g, `${companyName}'s`)
+      .replace(/the Company/g, companyName)
+      .replace(/\{companyName\}/g, companyName)
+  }
+
+  /**
+   * Apply company name to policy content (sections, description, etc.)
+   * @param {Object} policy - Policy object
+   * @returns {Object} Policy with company name applied
+   */
+  const applyBrandingToPolicy = (policy) => {
+    if (!policy) return policy
+
+    const branded = { ...policy }
+
+    // Apply to description
+    if (branded.description) {
+      branded.description = applyCompanyName(branded.description)
+    }
+
+    // Apply to sections
+    if (branded.sections && Array.isArray(branded.sections)) {
+      branded.sections = branded.sections.map(section => ({
+        ...section,
+        content: applyCompanyName(section.content)
+      }))
+    }
+
+    // Apply to content object if it has sections
+    if (branded.content?.sections && Array.isArray(branded.content.sections)) {
+      branded.content = {
+        ...branded.content,
+        sections: branded.content.sections.map(section => ({
+          ...section,
+          content: applyCompanyName(section.content)
+        }))
+      }
+    }
+
+    return branded
+  }
+
   return {
     branding,
     loading,
-    getClientBranding
+    getClientBranding,
+    applyCompanyName,
+    applyBrandingToPolicy,
+    companyName: branding.operator.name
   }
 }
+
+// Export default branding for use in other files
+export { DEFAULT_OPERATOR_BRANDING }
