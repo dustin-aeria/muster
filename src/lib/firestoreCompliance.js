@@ -754,6 +754,259 @@ export async function runGapAnalysis(applicationId) {
   return gapAnalysis
 }
 
+// ============================================
+// COMPLIANCE PROJECTS (Simple Q&A Model)
+// ============================================
+
+const complianceProjectsRef = collection(db, 'complianceProjects')
+
+/**
+ * Get compliance projects for an operator
+ * @param {string} operatorId - Operator ID
+ * @param {Object} filters - Optional filters
+ * @returns {Promise<Array>}
+ */
+export async function getComplianceProjects(operatorId, filters = {}) {
+  let q = query(
+    complianceProjectsRef,
+    where('operatorId', '==', operatorId),
+    orderBy('updatedAt', 'desc')
+  )
+
+  if (filters.linkedProjectId) {
+    q = query(
+      complianceProjectsRef,
+      where('operatorId', '==', operatorId),
+      where('linkedProjectId', '==', filters.linkedProjectId),
+      orderBy('updatedAt', 'desc')
+    )
+  }
+
+  if (filters.limit) {
+    q = query(q, limit(filters.limit))
+  }
+
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+}
+
+/**
+ * Get a single compliance project by ID
+ * @param {string} id - Project ID
+ * @returns {Promise<Object>}
+ */
+export async function getComplianceProject(id) {
+  const docRef = doc(db, 'complianceProjects', id)
+  const snapshot = await getDoc(docRef)
+
+  if (!snapshot.exists()) {
+    throw new Error('Compliance project not found')
+  }
+
+  return { id: snapshot.id, ...snapshot.data() }
+}
+
+/**
+ * Create a new compliance project
+ * @param {Object} data - Project data
+ * @returns {Promise<Object>}
+ */
+export async function createComplianceProject(data) {
+  const project = {
+    // Basic info
+    name: data.name || 'New Compliance Project',
+    description: data.description || '',
+
+    // Operator
+    operatorId: data.operatorId,
+
+    // Optional link to operations project
+    linkedProjectId: data.linkedProjectId || null,
+    linkedProjectName: data.linkedProjectName || null,
+
+    // Questions/requirements (simple array)
+    questions: [],
+
+    // Status
+    status: 'active', // 'active', 'completed', 'archived'
+
+    // Stats (computed)
+    stats: {
+      total: 0,
+      answered: 0,
+      unanswered: 0
+    },
+
+    // Timestamps
+    createdAt: serverTimestamp(),
+    createdBy: data.createdBy || null,
+    updatedAt: serverTimestamp()
+  }
+
+  const docRef = await addDoc(complianceProjectsRef, project)
+  return { id: docRef.id, ...project }
+}
+
+/**
+ * Update a compliance project
+ * @param {string} id - Project ID
+ * @param {Object} data - Updated data
+ */
+export async function updateComplianceProject(id, data) {
+  const docRef = doc(db, 'complianceProjects', id)
+  await updateDoc(docRef, {
+    ...data,
+    updatedAt: serverTimestamp()
+  })
+}
+
+/**
+ * Add a question to a compliance project
+ * @param {string} projectId - Project ID
+ * @param {Object} questionData - Question data
+ * @returns {Promise<Object>} Updated project
+ */
+export async function addComplianceQuestion(projectId, questionData) {
+  return await runTransaction(db, async (transaction) => {
+    const projectRef = doc(db, 'complianceProjects', projectId)
+    const projectSnap = await transaction.get(projectRef)
+
+    if (!projectSnap.exists()) {
+      throw new Error('Project not found')
+    }
+
+    const projectData = projectSnap.data()
+    const questions = [...(projectData.questions || [])]
+
+    // Create new question
+    const newQuestion = {
+      id: `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      question: questionData.question || '',
+      answer: questionData.answer || '',
+      category: questionData.category || null,
+      regulatoryRef: questionData.regulatoryRef || null,
+      documentRefs: questionData.documentRefs || [],
+      notes: questionData.notes || '',
+      status: questionData.answer ? 'answered' : 'unanswered',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    questions.push(newQuestion)
+
+    // Update stats
+    const stats = {
+      total: questions.length,
+      answered: questions.filter(q => q.status === 'answered').length,
+      unanswered: questions.filter(q => q.status === 'unanswered').length
+    }
+
+    transaction.update(projectRef, {
+      questions,
+      stats,
+      updatedAt: serverTimestamp()
+    })
+
+    return { question: newQuestion, stats }
+  })
+}
+
+/**
+ * Update a question in a compliance project
+ * @param {string} projectId - Project ID
+ * @param {string} questionId - Question ID
+ * @param {Object} questionData - Updated question data
+ * @returns {Promise<Object>} Updated project
+ */
+export async function updateComplianceQuestion(projectId, questionId, questionData) {
+  return await runTransaction(db, async (transaction) => {
+    const projectRef = doc(db, 'complianceProjects', projectId)
+    const projectSnap = await transaction.get(projectRef)
+
+    if (!projectSnap.exists()) {
+      throw new Error('Project not found')
+    }
+
+    const projectData = projectSnap.data()
+    const questions = [...(projectData.questions || [])]
+
+    const questionIndex = questions.findIndex(q => q.id === questionId)
+    if (questionIndex === -1) {
+      throw new Error('Question not found')
+    }
+
+    // Update the question
+    questions[questionIndex] = {
+      ...questions[questionIndex],
+      ...questionData,
+      status: questionData.answer ? 'answered' : 'unanswered',
+      updatedAt: new Date().toISOString()
+    }
+
+    // Update stats
+    const stats = {
+      total: questions.length,
+      answered: questions.filter(q => q.status === 'answered').length,
+      unanswered: questions.filter(q => q.status === 'unanswered').length
+    }
+
+    transaction.update(projectRef, {
+      questions,
+      stats,
+      updatedAt: serverTimestamp()
+    })
+
+    return { question: questions[questionIndex], stats }
+  })
+}
+
+/**
+ * Delete a question from a compliance project
+ * @param {string} projectId - Project ID
+ * @param {string} questionId - Question ID
+ */
+export async function deleteComplianceQuestion(projectId, questionId) {
+  return await runTransaction(db, async (transaction) => {
+    const projectRef = doc(db, 'complianceProjects', projectId)
+    const projectSnap = await transaction.get(projectRef)
+
+    if (!projectSnap.exists()) {
+      throw new Error('Project not found')
+    }
+
+    const projectData = projectSnap.data()
+    const questions = (projectData.questions || []).filter(q => q.id !== questionId)
+
+    // Update stats
+    const stats = {
+      total: questions.length,
+      answered: questions.filter(q => q.status === 'answered').length,
+      unanswered: questions.filter(q => q.status === 'unanswered').length
+    }
+
+    transaction.update(projectRef, {
+      questions,
+      stats,
+      updatedAt: serverTimestamp()
+    })
+
+    return { stats }
+  })
+}
+
+/**
+ * Delete a compliance project
+ * @param {string} id - Project ID
+ */
+export async function deleteComplianceProject(id) {
+  const docRef = doc(db, 'complianceProjects', id)
+  await deleteDoc(docRef)
+}
+
+// ============================================
+// SEED FUNCTIONS
+// ============================================
+
 /**
  * Seed a compliance template
  * Used by seed scripts to add templates

@@ -12,6 +12,7 @@ export { default as EnhancedAIPanel } from './EnhancedAIPanel'
 export { default as BatchIndexPanel } from './BatchIndexPanel'
 export { default as PatternInsightsPanel, PatternBadge } from './PatternInsightsPanel'
 export { default as ComplianceDocumentParser, ComplianceDocumentParserModal } from './ComplianceDocumentParser'
+export { default as ComplianceProjectEditor } from './ComplianceProjectEditor'
 export { AutoPopulateButton, GapAnalysisPanel, ProjectLinkBanner, analyzeGaps } from './SmartPopulate'
 
 // Re-export parser utilities for external use
