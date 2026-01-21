@@ -4506,6 +4506,312 @@ Reporting Obligations:
 • All safety or compliance issues must be reported to HSE Representatives within 24 hours.`
       }
     ]
+  },
+
+  '1046': {
+    number: '1046',
+    title: 'HSE - Part 13 Code Requirements',
+    category: 'hse',
+    description: 'Outlines compliance with Part 13 of the Alberta OHS Code governing joint health and safety committees (JHSCs) and health and safety representatives (HSRs).',
+    version: '1.0',
+    effectiveDate: '2025-09-18',
+    reviewDate: '2026-02-01',
+    owner: 'HSE Manager',
+    status: 'active',
+    regulatoryRefs: ['Alberta OHS Act (Sections 13-15)', 'Alberta OHS Code Part 13'],
+    keywords: ['JHSC', 'HSR', 'joint committee', 'safety representative', 'worker participation', 'Alberta OHS'],
+    sections: [
+      {
+        title: 'Purpose & Scope',
+        content: `Purpose:
+This policy exists to outline Aeria Solutions Ltd.'s compliance with Part 13 of the Alberta Occupational Health and Safety Code, which governs joint health and safety committees (JHSCs) and health and safety representatives (HSRs). Its objectives include ensuring worker involvement in safety decisions, addressing occupational health concerns, and preventing incidents through structured consultation, addressing gaps in workplace safety governance.
+
+Scope:
+This policy applies to all work sites required to have a JHSC under section 13 of the OHS Act or an HSR under section 14, including all employees, supervisors, and management at Aeria Solutions Ltd. operational locations in Alberta.`
+      },
+      {
+        title: 'Definitions & References',
+        content: `Definitions:
+• Joint Health and Safety Committee (JHSC): A group of employer and worker representatives responsible for identifying and resolving health and safety issues.
+• Health and Safety Representative (HSR): A worker-designated individual to represent workers on health and safety matters in smaller workplaces.
+• Occupational Health and Safety (OHS) Code: Alberta's technical rules for workplace health and safety under the OHS Act.
+
+References:
+• Alberta Occupational Health and Safety Act (OHS Act), sections 13-15 (Joint Worksites and Committees)
+• Alberta Occupational Health and Safety Code, Part 13 (Joint Health and Safety Committees and Health and Safety Representatives)
+• Aeria Solutions Ltd. Health & Safety Policy
+• WorkSafeBC/Alberta OHS Guidelines on JHSC/HSR Establishment and Duties`
+      },
+      {
+        title: 'Policy Statement',
+        content: `Aeria Solutions Ltd. is committed to complying with Part 13 of the Alberta OHS Code by establishing and maintaining effective JHSCs or HSRs where required. We ensure balanced representation, regular consultation on health and safety matters, and proactive resolution of concerns to foster a collaborative safety culture and meet all legal obligations.`
+      },
+      {
+        title: 'Procedures',
+        content: `Step-by-Step Actions:
+
+Committee Establishment:
+• Determine if a JHSC or HSR is required based on site size and hazard levels, then form the group with equal employer and worker representatives.
+
+Member Selection:
+• Select worker representatives through democratic election and appoint employer representatives.
+
+Training Provision:
+• Deliver mandatory OHS Code training within 14 days of designation.
+
+Meeting Scheduling:
+• Hold JHSC meetings at least quarterly or as needed for urgent issues.
+
+Issue Resolution:
+• Identify, discuss, and resolve health and safety concerns, with minutes and recommendations documented.
+
+Roles & Responsibilities for Each Step:
+• Committee Establishment: Management and HSE team
+• Member Selection: Worker group for elections; management for appointments
+• Training Provision: HSE Management and external trainers
+• Meeting Scheduling: JHSC co-chairs
+• Issue Resolution: JHSC/HSR members and supervisors
+
+Tools, Forms, or Checklists:
+• JHSC/HSR designation forms
+• Election ballots
+• Training certificates
+• Meeting agendas/minutes templates
+• Issue tracking logs
+
+Safety/Compliance/Quality Requirements:
+Full adherence to Alberta OHS Code Part 13, including no reprisal for participation and timely response to recommendations (within 14 days where practicable).
+
+Reporting or Escalation:
+Report unresolved issues to senior management or OHS authorities; escalate imminent hazards immediately to supervisors for stop-work authority.`
+      },
+      {
+        title: 'Roles & Responsibilities',
+        content: `Management:
+• Establish JHSC/HSR as required, provide paid time for meetings/training, respond to recommendations, and ensure no reprisals for participation.
+
+Supervisors:
+• Cooperate with JHSC/HSR, attend meetings when requested, and implement approved safety measures.
+
+Staff:
+• Elect/select representatives, participate in consultations, and raise health/safety concerns through the committee.`
+      },
+      {
+        title: 'Monitoring, Compliance & Enforcement',
+        content: `How Compliance Will Be Monitored:
+• Through quarterly JHSC/HSR meeting reviews, annual audits of participation records, and feedback surveys to verify adherence to Part 13.
+
+Consequences for Non-Compliance:
+• Corrective action plans, retraining, or regulatory reporting for failures; progressive discipline for reprisals against participants.
+
+Reporting Obligations:
+• All JHSC/HSR recommendations and unresolved issues must be documented and reported to management within 14 days; incidents escalated to OHS authorities as required.`
+      }
+    ]
+  },
+
+  '1047': {
+    number: '1047',
+    title: 'HSE - Hazard Assessment Policy',
+    category: 'hse',
+    description: 'Ensures Aeria Solutions Ltd. identifies and controls workplace hazards to prevent injuries and illnesses through systematic assessment.',
+    version: '1.0',
+    effectiveDate: '2025-09-18',
+    reviewDate: '2026-02-01',
+    owner: 'HSE Manager',
+    status: 'active',
+    regulatoryRefs: ['BC OHS Regulation (Section 3.5)', 'Workers Compensation Act (BC) Part 3'],
+    keywords: ['hazard assessment', 'risk evaluation', 'hazard identification', 'control measures', 'FLRA', 'FLHA'],
+    sections: [
+      {
+        title: 'Purpose & Scope',
+        content: `Purpose:
+This policy exists to ensure Aeria Solutions Ltd. identifies and controls workplace hazards to prevent injuries and illnesses. Its objectives include meeting legal requirements, promoting a proactive safety culture, and addressing risks through systematic assessment, tackling challenges like unrecognized or evolving hazards.
+
+Scope:
+This policy applies to all employees, contractors, and supervisors at Aeria Solutions Ltd., covering all work sites, tasks, and activities where hazards may be present.`
+      },
+      {
+        title: 'Definitions & References',
+        content: `Definitions:
+• Hazard: Any source with the potential to cause injury, illness, or property damage (e.g., physical, chemical, biological).
+• Hazard Assessment: A systematic process to identify, evaluate, and control workplace risks.
+• Control Measure: Actions or equipment to eliminate or mitigate identified hazards.
+
+References:
+• BC Occupational Health and Safety Regulation (Section 3.5 - General Hazard Identification and Assessment)
+• Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities
+• Aeria Solutions Ltd. Health & Safety Policy
+• WorkSafeBC Guidelines on Hazard Identification and Risk Assessment`
+      },
+      {
+        title: 'Policy Statement',
+        content: `Aeria Solutions Ltd. is committed to conducting regular hazard assessments to identify and control risks, ensuring a safe working environment for all personnel. We comply with all applicable regulations and encourage active participation in hazard management processes.`
+      },
+      {
+        title: 'Procedures',
+        content: `Step-by-Step Actions:
+
+Initial Assessment:
+• Conduct a baseline hazard assessment for all new sites or tasks.
+
+Routine Monitoring:
+• Perform regular inspections to identify new or changing hazards.
+
+Risk Evaluation:
+• Assess the likelihood and severity of identified hazards.
+
+Control Implementation:
+• Apply appropriate control measures (e.g., engineering, administrative, PPE).
+
+Documentation Update:
+• Record findings, controls, and reviews in hazard assessment logs.
+
+Roles & Responsibilities for Each Step:
+• Initial Assessment: HSE Representatives and supervisors
+• Routine Monitoring: Supervisors and safety officers
+• Risk Evaluation: HSE team and management
+• Control Implementation: Supervisors and workers
+• Documentation Update: HSE Representatives
+
+Tools, Forms, or Checklists:
+• Hazard identification forms (e.g., FLRA/FLHA)
+• Inspection checklists
+• Risk matrix
+• Control measure logs
+• Assessment records
+
+Safety/Compliance/Quality Requirements:
+Adherence to BC OHS Regulation Section 3.5 and internal safety protocols during all hazard assessments.
+
+Reporting or Escalation:
+Report hazards to supervisors; escalate uncontrolled risks to HSE Representatives within 24 hours.`
+      },
+      {
+        title: 'Roles & Responsibilities',
+        content: `Management:
+• Oversee hazard assessment programs, provide resources, and ensure compliance.
+
+Supervisors:
+• Conduct assessments, enforce controls, and report issues.
+
+Staff:
+• Participate in assessments, report hazards, and follow control measures.`
+      },
+      {
+        title: 'Monitoring, Compliance & Enforcement',
+        content: `How Compliance Will Be Monitored:
+• Through monthly hazard assessment reviews, site inspection reports, and incident analysis to ensure adherence.
+
+Consequences for Non-Compliance:
+• Warnings, retraining, or disciplinary action for failing to conduct or follow assessments.
+
+Reporting Obligations:
+• All hazards or non-compliance must be reported to supervisors within 24 hours.`
+      }
+    ]
+  },
+
+  '1048': {
+    number: '1048',
+    title: 'HSE - Hazard Control Policy',
+    category: 'hse',
+    description: 'Establishes procedures for controlling hazards at Aeria Solutions Ltd. to minimize risks and ensure a safe workplace.',
+    version: '1.0',
+    effectiveDate: '2025-09-18',
+    reviewDate: '2026-02-01',
+    owner: 'HSE Manager',
+    status: 'active',
+    regulatoryRefs: ['BC OHS Regulation (Section 3.6)', 'Workers Compensation Act (BC) Part 3'],
+    keywords: ['hazard control', 'hierarchy of controls', 'elimination', 'substitution', 'engineering controls', 'PPE'],
+    sections: [
+      {
+        title: 'Purpose & Scope',
+        content: `Purpose:
+This policy exists to establish procedures for controlling hazards at Aeria Solutions Ltd. to minimize risks and ensure a safe workplace. Its objectives include implementing effective controls, complying with safety regulations, and addressing the challenge of managing identified hazards across operations.
+
+Scope:
+This policy applies to all employees, contractors, and supervisors at Aeria Solutions Ltd., covering all work sites, tasks, and activities where hazard controls are required.`
+      },
+      {
+        title: 'Definitions & References',
+        content: `Definitions:
+• Hazard Control: Measures to eliminate or reduce the risk of identified hazards.
+• Hierarchy of Controls: A prioritized system (elimination, substitution, engineering, administrative, PPE) for managing hazards.
+• Residual Risk: The remaining risk after control measures are applied.
+
+References:
+• BC Occupational Health and Safety Regulation (Section 3.6 - Hazard Control)
+• Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities
+• Aeria Solutions Ltd. Hazard Assessment Policy
+• WorkSafeBC Guidelines on Hazard Control Measures`
+      },
+      {
+        title: 'Policy Statement',
+        content: `Aeria Solutions Ltd. is committed to controlling workplace hazards using the hierarchy of controls to ensure employee safety and regulatory compliance. We prioritize hazard elimination and provide resources to implement effective control measures.`
+      },
+      {
+        title: 'Procedures',
+        content: `Step-by-Step Actions:
+
+Hazard Identification:
+• Use hazard assessments to pinpoint risks.
+
+Control Selection:
+• Apply the hierarchy of controls, starting with elimination where feasible.
+
+Implementation Process:
+• Install or enforce controls (e.g., guards, training, PPE).
+
+Monitoring Effectiveness:
+• Regularly inspect and evaluate control measures.
+
+Adjustment Review:
+• Update controls based on monitoring results or new hazards.
+
+Roles & Responsibilities for Each Step:
+• Hazard Identification: HSE Representatives and supervisors
+• Control Selection: HSE team and management
+• Implementation Process: Supervisors and workers
+• Monitoring Effectiveness: Safety officers and supervisors
+• Adjustment Review: HSE Representatives and management
+
+Tools, Forms, or Checklists:
+• Hazard assessment forms
+• Control implementation logs
+• Inspection checklists
+• Monitoring reports
+• Review records
+
+Safety/Compliance/Quality Requirements:
+Adherence to BC OHS Regulation Section 3.6 and internal safety protocols during all control processes.
+
+Reporting or Escalation:
+Report control failures to supervisors; escalate persistent issues to HSE Representatives within 24 hours.`
+      },
+      {
+        title: 'Roles & Responsibilities',
+        content: `Management:
+• Fund and oversee control implementation, ensure compliance, and provide training.
+
+Supervisors:
+• Enforce controls, monitor effectiveness, and report issues.
+
+Staff:
+• Follow control measures, report failures, and suggest improvements.`
+      },
+      {
+        title: 'Monitoring, Compliance & Enforcement',
+        content: `How Compliance Will Be Monitored:
+• Through weekly control inspections, monthly review of hazard logs, and incident analysis to ensure adherence.
+
+Consequences for Non-Compliance:
+• Warnings, retraining, or disciplinary action for failing to implement or follow controls.
+
+Reporting Obligations:
+• All control failures or non-compliance must be reported to supervisors within 24 hours.`
+      }
+    ]
   }
 }
 
