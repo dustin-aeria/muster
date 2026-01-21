@@ -34,7 +34,10 @@ import {
   X,
   ArrowRight,
   Edit3,
-  Book
+  Book,
+  Target,
+  FileCheck,
+  Shield
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
@@ -44,6 +47,7 @@ import {
   getUnfilledPlaceholders
 } from '../../lib/complianceAssistant'
 import { useKnowledgeBase } from '../../hooks/useKnowledgeBase'
+import { PatternBadge } from './PatternInsightsPanel'
 
 // ============================================
 // SOURCE ICONS
@@ -358,6 +362,7 @@ export default function EnhancedAIPanel({
 
   // Section visibility
   const [sections, setSections] = useState({
+    patternInsights: true,
     knowledgeBase: true,
     projectData: true,
     templates: true,
@@ -482,6 +487,84 @@ export default function EnhancedAIPanel({
       {/* Suggestions */}
       {!loading && suggestions && (
         <>
+          {/* Pattern Insights Section */}
+          {suggestions.patternAnalysis && (
+            <div>
+              <SectionHeader
+                icon={Target}
+                title="Pattern Insights"
+                count={suggestions.patternAnalysis.suggestedEvidence?.length || 0}
+                expanded={sections.patternInsights}
+                onToggle={() => toggleSection('patternInsights')}
+                color="amber"
+              />
+              {sections.patternInsights && (
+                <div className="p-4 pt-0 space-y-3">
+                  {/* Category & Confidence */}
+                  {suggestions.patternAnalysis.category && (
+                    <div className="flex items-center justify-between">
+                      <PatternBadge requirement={requirement} />
+                      <span className="text-xs text-gray-500">
+                        {Math.round(suggestions.patternAnalysis.confidence * 100)}% confidence
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Response Hints */}
+                  {suggestions.patternAnalysis.responseHints?.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-gray-600">Response should include:</p>
+                      {suggestions.patternAnalysis.responseHints.slice(0, 3).map((hint, i) => (
+                        <div key={i} className="flex items-start gap-2 text-sm">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700">{hint}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Suggested Evidence */}
+                  {suggestions.patternAnalysis.suggestedEvidence?.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-gray-600">Evidence typically needed:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {suggestions.patternAnalysis.suggestedEvidence.slice(0, 4).map((evidence, i) => (
+                          <span
+                            key={i}
+                            className="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-200"
+                            title={evidence.description}
+                          >
+                            <FileCheck className="w-3 h-3 inline mr-1" />
+                            {evidence.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Question Pattern Match */}
+                  {suggestions.patternAnalysis.questionPattern && (
+                    <div className="p-2 bg-purple-50 rounded border border-purple-200">
+                      <p className="text-xs text-purple-700">
+                        <Shield className="w-3 h-3 inline mr-1" />
+                        <strong>Pattern recognized:</strong> This is typically a{' '}
+                        <span className="font-medium">
+                          {suggestions.patternAnalysis.questionPattern.id.replace(/_/g, ' ')}
+                        </span>{' '}
+                        question
+                        {suggestions.patternAnalysis.questionPattern.regulatoryRef && (
+                          <span className="ml-1">
+                            (related to {suggestions.patternAnalysis.questionPattern.regulatoryRef})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Project Data Section */}
           {projectCount > 0 && (
             <div>

@@ -13,6 +13,13 @@
 
 import { findRelevantDocs, searchKnowledgeBase } from './firestoreKnowledgeBase'
 import { getAutoPopulateSuggestions } from '../components/compliance/SmartPopulate'
+import {
+  mapRequirementToPatterns,
+  findMatchingQuestionPattern,
+  analyzeComplianceText,
+  COMPLIANCE_CATEGORIES,
+  EVIDENCE_PATTERNS
+} from './regulatoryPatterns'
 
 // ============================================
 // RESPONSE TEMPLATES
@@ -408,7 +415,7 @@ export function findRelatedRequirements(requirement, allRequirements, responses)
 
 /**
  * Get comprehensive suggestions for a requirement
- * Combines all sources: Knowledge Base, Project Data, Templates
+ * Combines all sources: Knowledge Base, Project Data, Templates, Pattern Analysis
  */
 export async function getComprehensiveSuggestions(operatorId, requirement, project = null, allRequirements = [], responses = {}) {
   const suggestions = {
@@ -416,34 +423,91 @@ export async function getComprehensiveSuggestions(operatorId, requirement, proje
     fromProject: [],
     templates: [],
     relatedRequirements: [],
+    patternAnalysis: null,
     compositeResponse: null
   }
 
-  // 1. Get Knowledge Base suggestions
+  // 1. Analyze requirement patterns (fast, local)
   try {
-    suggestions.fromKnowledgeBase = await findRelevantDocs(operatorId, requirement)
+    suggestions.patternAnalysis = getPatternBasedSuggestions(requirement)
+  } catch (err) {
+    console.warn('Pattern analysis failed:', err)
+    suggestions.patternAnalysis = null
+  }
+
+  // 2. Get Knowledge Base suggestions
+  try {
+    // Use pattern analysis to enhance KB search
+    const searchTerms = suggestions.patternAnalysis?.searchTerms || []
+    suggestions.fromKnowledgeBase = await findRelevantDocs(operatorId, {
+      ...requirement,
+      // Add pattern-detected keywords to improve search
+      keywords: [...(requirement.keywords || []), ...searchTerms]
+    })
   } catch (err) {
     console.warn('KB search failed:', err)
     suggestions.fromKnowledgeBase = { directMatches: [], relatedMatches: [], gaps: [] }
   }
 
-  // 2. Get Project Data suggestions
+  // 3. Get Project Data suggestions
   if (project) {
     suggestions.fromProject = getAutoPopulateSuggestions(requirement, project)
   }
 
-  // 3. Find matching templates
+  // 4. Find matching templates
   suggestions.templates = findMatchingTemplates(requirement)
 
-  // 4. Find related requirements
+  // 5. Find related requirements
   if (allRequirements.length > 0) {
     suggestions.relatedRequirements = findRelatedRequirements(requirement, allRequirements, responses)
   }
 
-  // 5. Build composite response suggestion
+  // 6. Build composite response suggestion
   suggestions.compositeResponse = buildCompositeResponse(suggestions, requirement)
 
   return suggestions
+}
+
+/**
+ * Get pattern-based suggestions for a requirement
+ * Uses regulatory pattern library for intelligent matching
+ */
+export function getPatternBasedSuggestions(requirement) {
+  const patterns = mapRequirementToPatterns(requirement)
+  const questionMatch = findMatchingQuestionPattern(
+    requirement.text || requirement.shortText || ''
+  )
+
+  return {
+    // Primary detected category
+    category: patterns.primaryCategory,
+
+    // Confidence in the pattern match
+    confidence: patterns.analysis.confidence,
+
+    // Suggested evidence types
+    suggestedEvidence: patterns.suggestedEvidence,
+
+    // Response hints (what should be included)
+    responseHints: patterns.responseHints,
+
+    // Related regulations
+    relatedRegs: patterns.relatedRegs,
+
+    // Search terms for knowledge base
+    searchTerms: patterns.searchTerms,
+
+    // Full analysis details
+    analysis: patterns.analysis,
+
+    // Common question pattern match
+    questionPattern: questionMatch,
+
+    // Get category-specific guidance
+    categoryGuidance: patterns.primaryCategory
+      ? COMPLIANCE_CATEGORIES[patterns.primaryCategory.id]
+      : null
+  }
 }
 
 /**
@@ -608,6 +672,7 @@ export default {
   REQUIREMENT_RELATIONSHIPS,
   findRelatedRequirements,
   getComprehensiveSuggestions,
+  getPatternBasedSuggestions,
   findMatchingTemplates,
   applyTemplate,
   getUnfilledPlaceholders,
