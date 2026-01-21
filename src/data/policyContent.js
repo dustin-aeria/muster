@@ -4812,6 +4812,294 @@ Reporting Obligations:
 • All control failures or non-compliance must be reported to supervisors within 24 hours.`
       }
     ]
+  },
+
+  '1049': {
+    number: '1049',
+    title: 'HSE - Inspection Policy',
+    category: 'hse',
+    description: 'Establishes a systematic inspection process at Aeria Solutions Ltd. to identify and address workplace hazards, ensuring safety and compliance.',
+    version: '1.0',
+    effectiveDate: '2025-09-18',
+    reviewDate: '2026-02-01',
+    owner: 'HSE Manager',
+    status: 'active',
+    regulatoryRefs: [
+      'BC OHS Regulation Section 3.5 - General Hazard Identification and Assessment',
+      'Workers Compensation Act (BC) Part 3 - Rights and Responsibilities',
+      'WorkSafeBC Guidelines on Workplace Inspections'
+    ],
+    keywords: ['inspection', 'hazard identification', 'workplace safety', 'corrective action', 'compliance'],
+    sections: [
+      {
+        title: 'Purpose & Scope',
+        content: `Purpose:
+This policy exists to establish a systematic inspection process at Aeria Solutions Ltd. to identify and address workplace hazards, ensuring safety and compliance. Its objectives include preventing incidents, meeting regulatory requirements, and addressing the challenge of maintaining a safe work environment through regular oversight.
+
+Scope:
+This policy applies to all employees, contractors, and supervisors at Aeria Solutions Ltd., covering all work sites, equipment, and operational areas requiring inspection.`
+      },
+      {
+        title: 'Definitions & References',
+        content: `Definitions:
+• Inspection: A planned examination of the workplace, equipment, or processes to identify hazards or non-compliance.
+• Corrective Action: Steps taken to address identified issues or hazards.
+• Frequency: The scheduled intervals for conducting inspections (e.g., daily, weekly).
+
+References:
+• BC Occupational Health and Safety Regulation (Section 3.5 - General Hazard Identification and Assessment).
+• Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities.
+• Aeria Solutions Ltd. Health & Safety Policy.
+• WorkSafeBC Guidelines on Workplace Inspections.`
+      },
+      {
+        title: 'Policy Statement',
+        content: `Aeria Solutions Ltd. is committed to conducting regular inspections to maintain a safe and compliant workplace. We require all personnel to participate in inspections, report findings, and implement corrective actions to address identified hazards.`
+      },
+      {
+        title: 'Procedures',
+        content: `Step-by-Step Actions:
+• Inspection Scheduling: Plan and assign inspections based on site risk levels (e.g., daily for high-risk areas).
+• Conduct Inspection: Perform thorough checks using standardized checklists.
+• Hazard Reporting: Document and report all identified hazards or issues.
+• Corrective Action: Implement and verify fixes for reported hazards.
+• Record Keeping: Maintain inspection logs and review outcomes periodically.
+
+Roles & Responsibilities for Each Step:
+• Inspection Scheduling: HSE Representatives and supervisors.
+• Conduct Inspection: Supervisors, safety officers, and workers.
+• Hazard Reporting: All personnel involved in inspections.
+• Corrective Action: Supervisors and management.
+• Record Keeping: HSE team.
+
+Tools, Forms, or Checklists:
+• Inspection schedules
+• Checklist templates (e.g., FLRA/FLHA)
+• Hazard report forms
+• Corrective action logs
+• Inspection records
+
+Safety/Compliance/Quality Requirements:
+Adherence to BC OHS Regulation Section 3.5 and internal safety protocols during all inspection activities.
+
+Reporting or Escalation:
+Report hazards to supervisors; escalate unresolved issues to HSE Representatives within 24 hours.`
+      },
+      {
+        title: 'Roles & Responsibilities',
+        content: `Management:
+• Oversee inspection programs, provide resources, and ensure compliance.
+
+Supervisors:
+• Schedule and conduct inspections, enforce corrective actions, and report issues.
+
+Staff:
+• Participate in inspections, report hazards, and follow safety protocols.`
+      },
+      {
+        title: 'Monitoring, Compliance & Enforcement',
+        content: `How Compliance Will Be Monitored:
+• Through weekly inspection log reviews, monthly audit of corrective actions, and incident analysis to ensure adherence.
+
+Consequences for Non-Compliance:
+• Warnings, retraining, or disciplinary action for failing to conduct or address inspections.
+
+Reporting Obligations:
+• All inspection findings or non-compliance must be reported to supervisors within 24 hours.`
+      }
+    ]
+  },
+
+  '1050': {
+    number: '1050',
+    title: 'HSE - Preventative Maintenance Policy',
+    category: 'hse',
+    description: 'Establishes a preventative maintenance program at Aeria Solutions Ltd. to ensure equipment reliability, safety, and operational efficiency.',
+    version: '1.0',
+    effectiveDate: '2025-09-18',
+    reviewDate: '2026-02-01',
+    owner: 'HSE Manager',
+    status: 'active',
+    regulatoryRefs: [
+      'BC OHS Regulation Section 4.4 - Maintenance of Equipment',
+      'Workers Compensation Act (BC) Part 3 - Rights and Responsibilities',
+      'WorkSafeBC Guidelines on Equipment Maintenance'
+    ],
+    keywords: ['preventative maintenance', 'equipment', 'maintenance schedule', 'reliability', 'downtime'],
+    sections: [
+      {
+        title: 'Purpose & Scope',
+        content: `Purpose:
+This policy exists to establish a preventative maintenance program at Aeria Solutions Ltd. to ensure equipment reliability, safety, and operational efficiency. Its objectives include reducing downtime, preventing hazards, and complying with safety regulations, addressing the challenge of equipment failure and wear.
+
+Scope:
+This policy applies to all employees, contractors, and supervisors at Aeria Solutions Ltd., covering all machinery, tools, and equipment used across work sites.`
+      },
+      {
+        title: 'Definitions & References',
+        content: `Definitions:
+• Preventative Maintenance: Scheduled activities to maintain equipment in good working condition and prevent failures.
+• Downtime: Period when equipment is unavailable due to maintenance or breakdown.
+• Maintenance Log: Record of all maintenance activities, including dates and findings.
+
+References:
+• BC Occupational Health and Safety Regulation (Section 4.4 - Maintenance of Equipment).
+• Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities.
+• Aeria Solutions Ltd. Health & Safety Policy.
+• WorkSafeBC Guidelines on Equipment Maintenance.`
+      },
+      {
+        title: 'Policy Statement',
+        content: `Aeria Solutions Ltd. is committed to implementing a preventative maintenance program to ensure all equipment operates safely and efficiently. We require regular maintenance schedules, documentation, and employee training to prevent hazards and comply with all applicable regulations.`
+      },
+      {
+        title: 'Procedures',
+        content: `Step-by-Step Actions:
+• Maintenance Scheduling: Develop and assign a maintenance schedule based on equipment type and usage.
+• Inspection Routine: Conduct regular checks to identify wear or potential issues.
+• Maintenance Execution: Perform scheduled repairs, lubrication, or part replacements.
+• Documentation Process: Record all maintenance activities in a log.
+• Review and Adjustment: Assess maintenance effectiveness and update schedules as needed.
+
+Roles & Responsibilities for Each Step:
+• Maintenance Scheduling: Maintenance team and supervisors.
+• Inspection Routine: Supervisors and maintenance staff.
+• Maintenance Execution: Maintenance personnel and technicians.
+• Documentation Process: Maintenance team.
+• Review and Adjustment: HSE Representatives and management.
+
+Tools, Forms, or Checklists:
+• Maintenance schedules
+• Inspection checklists
+• Repair logs
+• Equipment manuals
+• Review reports
+
+Safety/Compliance/Quality Requirements:
+Adherence to BC OHS Regulation Section 4.4 and manufacturer guidelines during all maintenance activities.
+
+Reporting or Escalation:
+Report equipment issues to supervisors; escalate critical failures to HSE Representatives within 24 hours.`
+      },
+      {
+        title: 'Roles & Responsibilities',
+        content: `Management:
+• Oversee maintenance programs, provide resources, and ensure compliance.
+
+Supervisors:
+• Schedule inspections, monitor maintenance, and report issues.
+
+Staff:
+• Report equipment problems, assist in maintenance where trained, and follow safety protocols.`
+      },
+      {
+        title: 'Monitoring, Compliance & Enforcement',
+        content: `How Compliance Will Be Monitored:
+• Through weekly maintenance log reviews, equipment performance checks, and incident analysis to ensure adherence.
+
+Consequences for Non-Compliance:
+• Warnings, retraining, or disciplinary action for failing to perform or document maintenance.
+
+Reporting Obligations:
+• All maintenance issues or non-compliance must be reported to supervisors within 24 hours.`
+      }
+    ]
+  },
+
+  '1051': {
+    number: '1051',
+    title: 'HSE - Emergency Response Policy',
+    category: 'hse',
+    description: 'Establishes an effective emergency response plan at Aeria Solutions Ltd. to protect personnel and property during crises.',
+    version: '1.0',
+    effectiveDate: '2025-09-18',
+    reviewDate: '2026-02-01',
+    owner: 'HSE Manager',
+    status: 'active',
+    regulatoryRefs: [
+      'BC OHS Regulation Section 3.16 - Emergency Preparedness',
+      'Workers Compensation Act (BC) Part 3 - Rights and Responsibilities',
+      'WorkSafeBC Guidelines on Emergency Preparedness and Response'
+    ],
+    keywords: ['emergency response', 'evacuation', 'first aid', 'crisis management', 'emergency preparedness'],
+    sections: [
+      {
+        title: 'Purpose & Scope',
+        content: `Purpose:
+This policy exists to establish an effective emergency response plan at Aeria Solutions Ltd. to protect personnel and property during crises. Its objectives include ensuring rapid response, complying with safety regulations, and addressing emergencies such as fires, spills, or medical incidents.
+
+Scope:
+This policy applies to all employees, contractors, and visitors at Aeria Solutions Ltd., covering all work sites and operational areas during emergencies.`
+      },
+      {
+        title: 'Definitions & References',
+        content: `Definitions:
+• Emergency: A sudden event requiring immediate action to protect health, safety, or property (e.g., fire, chemical spill).
+• Evacuation: Organized movement of personnel to a safe location during an emergency.
+• First Aid: Immediate medical assistance provided to injured persons.
+
+References:
+• BC Occupational Health and Safety Regulation (Section 3.16 - Emergency Preparedness).
+• Workers Compensation Act (British Columbia), Part 3 - Rights and Responsibilities.
+• Aeria Solutions Ltd. Health & Safety Policy.
+• WorkSafeBC Guidelines on Emergency Preparedness and Response.`
+      },
+      {
+        title: 'Policy Statement',
+        content: `Aeria Solutions Ltd. is committed to preparing for and responding to emergencies to safeguard all personnel and assets. We require regular training, clear procedures, and coordination with emergency services to ensure a swift and effective response to any crisis.`
+      },
+      {
+        title: 'Procedures',
+        content: `Step-by-Step Actions:
+• Emergency Planning: Develop and update an emergency response plan for each site.
+• Training Sessions: Conduct regular drills and training on emergency procedures.
+• Alarm Activation: Sound alarms and notify personnel of emergencies immediately.
+• Evacuation Process: Direct safe evacuation to designated assembly points.
+• Post-Event Review: Assess response effectiveness and update plans as needed.
+
+Roles & Responsibilities for Each Step:
+• Emergency Planning: HSE Representatives and management.
+• Training Sessions: Training coordinators and supervisors.
+• Alarm Activation: Designated alarm officers or supervisors.
+• Evacuation Process: Evacuation wardens and supervisors.
+• Post-Event Review: HSE team and management.
+
+Tools, Forms, or Checklists:
+• Emergency response plan templates
+• Training attendance logs
+• Evacuation maps
+• Incident report forms
+• Review checklists
+
+Safety/Compliance/Quality Requirements:
+Adherence to BC OHS Regulation Section 3.16 and coordination with local emergency services during all response activities.
+
+Reporting or Escalation:
+Report emergencies to supervisors; escalate critical incidents to HSE Representatives and emergency services immediately.`
+      },
+      {
+        title: 'Roles & Responsibilities',
+        content: `Management:
+• Develop and fund emergency plans, ensure training, and coordinate with external agencies.
+
+Supervisors:
+• Oversee evacuations, activate alarms, and report incidents.
+
+Staff:
+• Participate in drills, follow evacuation orders, and assist where trained.`
+      },
+      {
+        title: 'Monitoring, Compliance & Enforcement',
+        content: `How Compliance Will Be Monitored:
+• Through quarterly drill evaluations, emergency plan reviews, and incident debriefs to ensure adherence.
+
+Consequences for Non-Compliance:
+• Warnings, retraining, or disciplinary action for failing to follow emergency procedures.
+
+Reporting Obligations:
+• All emergencies or non-compliance must be reported to supervisors immediately.`
+      }
+    ]
   }
 }
 
