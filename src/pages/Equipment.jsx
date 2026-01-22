@@ -3,7 +3,7 @@
 // Equipment library management with category filtering
 // ============================================
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Plus,
   Search,
@@ -17,6 +17,7 @@ import {
   Clock,
   Eye,
   Download,
+  Upload,
   Package,
   Radio,
   Camera,
@@ -29,8 +30,12 @@ import {
   AlertTriangle,
   Calendar,
   Grid,
-  List
+  List,
+  FileSpreadsheet,
+  FileText,
+  ChevronDown
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import {
   getEquipment,
   deleteEquipment,
@@ -41,6 +46,7 @@ import EquipmentModal from '../components/EquipmentModal'
 import EquipmentSpecSheet, { generateEquipmentSpecPDF } from '../components/EquipmentSpecSheet'
 import EquipmentImport from '../components/EquipmentImport'
 import { useBranding } from '../components/BrandingSettings'
+import { BrandedPDF } from '../lib/pdfExportService'
 import { logger } from '../lib/logger'
 
 // ============================================
@@ -98,6 +104,9 @@ export default function Equipment() {
   const [menuOpen, setMenuOpen] = useState(null)
   const [selectedSpec, setSelectedSpec] = useState(null)
   const [showImport, setShowImport] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const exportMenuRef = useRef(null)
 
   const { branding } = useBranding()
 
@@ -187,6 +196,193 @@ export default function Equipment() {
     return nextService < new Date()
   }
 
+  // ============================================
+  // EXPORT FUNCTIONS
+  // ============================================
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    setExporting(true)
+    setShowExportMenu(false)
+
+    try {
+      const exportData = filteredEquipment.map(item => ({
+        'Name': item.name || '',
+        'Category': EQUIPMENT_CATEGORIES[item.category]?.label || item.category,
+        'Manufacturer': item.manufacturer || '',
+        'Model': item.model || '',
+        'Serial Number': item.serialNumber || '',
+        'Status': statusConfig[item.status]?.label || item.status,
+        'Condition': item.condition || '',
+        'Purchase Date': item.purchaseDate || '',
+        'Purchase Price': item.purchasePrice ? `$${item.purchasePrice}` : '',
+        'Maintenance Interval (days)': item.maintenanceInterval || '',
+        'Last Service': item.lastServiceDate || '',
+        'Next Service': item.nextServiceDate || '',
+        'Notes': item.notes || ''
+      }))
+
+      const ws = XLSX.utils.json_to_sheet(exportData)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Equipment')
+
+      // Auto-size columns
+      const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+        wch: Math.max(key.length, ...exportData.map(row => String(row[key] || '').length))
+      }))
+      ws['!cols'] = colWidths
+
+      const filename = `equipment_inventory_${new Date().toISOString().split('T')[0]}.xlsx`
+      XLSX.writeFile(wb, filename)
+    } catch (err) {
+      logger.error('Export to Excel failed:', err)
+      alert('Failed to export to Excel')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // Export to CSV
+  const handleExportCSV = () => {
+    setExporting(true)
+    setShowExportMenu(false)
+
+    try {
+      const exportData = filteredEquipment.map(item => ({
+        'Name': item.name || '',
+        'Category': EQUIPMENT_CATEGORIES[item.category]?.label || item.category,
+        'Manufacturer': item.manufacturer || '',
+        'Model': item.model || '',
+        'Serial Number': item.serialNumber || '',
+        'Status': statusConfig[item.status]?.label || item.status,
+        'Condition': item.condition || '',
+        'Purchase Date': item.purchaseDate || '',
+        'Purchase Price': item.purchasePrice || '',
+        'Maintenance Interval (days)': item.maintenanceInterval || '',
+        'Last Service': item.lastServiceDate || '',
+        'Next Service': item.nextServiceDate || '',
+        'Notes': item.notes || ''
+      }))
+
+      const ws = XLSX.utils.json_to_sheet(exportData)
+      const csv = XLSX.utils.sheet_to_csv(ws)
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `equipment_inventory_${new Date().toISOString().split('T')[0]}.csv`
+      link.click()
+      URL.revokeObjectURL(link.href)
+    } catch (err) {
+      logger.error('Export to CSV failed:', err)
+      alert('Failed to export to CSV')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // Export to PDF Report
+  const handleExportPDF = async () => {
+    setExporting(true)
+    setShowExportMenu(false)
+
+    try {
+      const pdf = new BrandedPDF({
+        title: 'Equipment Inventory Report',
+        subtitle: `${filteredEquipment.length} Items`,
+        projectName: 'Equipment Library',
+        projectCode: categoryFilter !== 'all' ? EQUIPMENT_CATEGORIES[categoryFilter]?.label : 'All Categories',
+        branding
+      })
+
+      await pdf.init()
+      pdf.addCoverPage()
+      pdf.addNewPage()
+
+      // Summary section
+      pdf.addSectionTitle('Inventory Summary')
+      pdf.addKPIRow([
+        { label: 'Total Items', value: stats.total },
+        { label: 'Available', value: stats.available },
+        { label: 'Assigned', value: stats.assigned },
+        { label: 'In Maintenance', value: stats.maintenance }
+      ])
+
+      // Maintenance alerts
+      const overdueItems = filteredEquipment.filter(isMaintenanceOverdue)
+      const dueSoonItems = filteredEquipment.filter(item => isMaintenanceDueSoon(item) && !isMaintenanceOverdue(item))
+
+      if (overdueItems.length > 0 || dueSoonItems.length > 0) {
+        pdf.addSpacer(5)
+        if (overdueItems.length > 0) {
+          pdf.addInfoBox('Maintenance Overdue', `${overdueItems.length} item(s) have overdue maintenance`, 'danger')
+        }
+        if (dueSoonItems.length > 0) {
+          pdf.addInfoBox('Maintenance Due Soon', `${dueSoonItems.length} item(s) due for maintenance within 30 days`, 'warning')
+        }
+      }
+
+      // Category breakdown
+      pdf.addSectionTitle('Category Breakdown')
+      const categoryRows = Object.entries(EQUIPMENT_CATEGORIES).map(([key, cat]) => [
+        cat.label,
+        String(categoryCounts[key] || 0),
+        `${stats.total > 0 ? Math.round((categoryCounts[key] || 0) / stats.total * 100) : 0}%`
+      ])
+      pdf.addTable(['Category', 'Count', 'Percentage'], categoryRows)
+
+      // Equipment list by category
+      const groupedEquipment = {}
+      filteredEquipment.forEach(item => {
+        const cat = item.category || 'support'
+        if (!groupedEquipment[cat]) groupedEquipment[cat] = []
+        groupedEquipment[cat].push(item)
+      })
+
+      Object.entries(groupedEquipment).forEach(([category, items]) => {
+        pdf.addNewPage()
+        pdf.addSectionTitle(EQUIPMENT_CATEGORIES[category]?.label || category)
+
+        const rows = items.map(item => [
+          item.name || '',
+          `${item.manufacturer || ''} ${item.model || ''}`.trim() || '-',
+          item.serialNumber || '-',
+          statusConfig[item.status]?.label || item.status,
+          item.nextServiceDate || '-'
+        ])
+
+        pdf.addTable(
+          ['Name', 'Manufacturer/Model', 'Serial #', 'Status', 'Next Service'],
+          rows
+        )
+      })
+
+      pdf.save(`equipment_inventory_${new Date().toISOString().split('T')[0]}.pdf`)
+    } catch (err) {
+      logger.error('Export to PDF failed:', err)
+      alert('Failed to export to PDF')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+        setShowExportMenu(false)
+      }
+    }
+
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showExportMenu])
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -196,11 +392,54 @@ export default function Equipment() {
           <p className="text-gray-600 mt-1">Manage all operational equipment and inventory</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Export dropdown */}
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={exporting || equipment.length === 0}
+              className="btn-secondary inline-flex items-center gap-2"
+            >
+              {exporting ? (
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Export
+              <ChevronDown className="w-3 h-3" />
+            </button>
+
+            {showExportMenu && (
+              <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                <button
+                  onClick={handleExportExcel}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                  Export to Excel
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  Export to CSV
+                </button>
+                <button
+                  onClick={handleExportPDF}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4 text-red-600" />
+                  Export PDF Report
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => setShowImport(true)}
             className="btn-secondary inline-flex items-center gap-2"
           >
-            <Download className="w-4 h-4" />
+            <Upload className="w-4 h-4" />
             Import
           </button>
           <button

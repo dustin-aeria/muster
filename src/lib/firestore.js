@@ -1059,6 +1059,162 @@ export async function getEquipmentDueForMaintenance(daysAhead = 30) {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 }
 
+/**
+ * Get equipment maintenance statistics
+ * @returns {Promise<Object>} Maintenance statistics
+ */
+export async function getEquipmentMaintenanceStats() {
+  const allEquipment = await getEquipment()
+  const today = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+
+  const stats = {
+    total: allEquipment.length,
+    withMaintenance: 0,
+    overdue: 0,
+    dueSoon: 0, // within 30 days
+    upToDate: 0,
+    noSchedule: 0,
+    overdueItems: [],
+    dueSoonItems: []
+  }
+
+  allEquipment.forEach(item => {
+    if (item.status === 'retired') return
+
+    if (!item.nextServiceDate) {
+      stats.noSchedule++
+      return
+    }
+
+    stats.withMaintenance++
+    const nextService = new Date(item.nextServiceDate)
+    const daysUntil = Math.ceil((nextService - today) / (1000 * 60 * 60 * 24))
+
+    if (daysUntil < 0) {
+      stats.overdue++
+      stats.overdueItems.push({
+        ...item,
+        daysOverdue: Math.abs(daysUntil)
+      })
+    } else if (daysUntil <= 30) {
+      stats.dueSoon++
+      stats.dueSoonItems.push({
+        ...item,
+        daysUntil
+      })
+    } else {
+      stats.upToDate++
+    }
+  })
+
+  // Sort by urgency
+  stats.overdueItems.sort((a, b) => b.daysOverdue - a.daysOverdue)
+  stats.dueSoonItems.sort((a, b) => a.daysUntil - b.daysUntil)
+
+  return stats
+}
+
+/**
+ * Record maintenance completion for equipment
+ * Updates lastServiceDate and calculates nextServiceDate based on interval
+ * @param {string} equipmentId - Equipment ID
+ * @param {string} serviceDate - Date of service (YYYY-MM-DD format)
+ * @param {string} notes - Optional service notes
+ * @returns {Promise<Object>} Updated equipment data
+ */
+export async function recordEquipmentMaintenance(equipmentId, serviceDate, notes = '') {
+  const equipment = await getEquipmentById(equipmentId)
+
+  const updateData = {
+    lastServiceDate: serviceDate,
+    status: 'available' // Return to available after maintenance
+  }
+
+  // Calculate next service date if interval is set
+  if (equipment.maintenanceInterval) {
+    const lastService = new Date(serviceDate)
+    lastService.setDate(lastService.getDate() + parseInt(equipment.maintenanceInterval))
+    updateData.nextServiceDate = lastService.toISOString().split('T')[0]
+  }
+
+  // Add maintenance note to existing notes
+  if (notes) {
+    const timestamp = new Date().toISOString().split('T')[0]
+    const maintenanceLog = `[${timestamp}] Maintenance completed: ${notes}`
+    updateData.notes = equipment.notes
+      ? `${equipment.notes}\n\n${maintenanceLog}`
+      : maintenanceLog
+  }
+
+  await updateEquipment(equipmentId, updateData)
+
+  return { id: equipmentId, ...equipment, ...updateData }
+}
+
+/**
+ * Set equipment maintenance status
+ * @param {string} equipmentId - Equipment ID
+ * @param {boolean} inMaintenance - Whether equipment is in maintenance
+ * @param {string} notes - Optional notes
+ */
+export async function setEquipmentMaintenanceStatus(equipmentId, inMaintenance, notes = '') {
+  const updateData = {
+    status: inMaintenance ? 'maintenance' : 'available'
+  }
+
+  if (notes) {
+    const equipment = await getEquipmentById(equipmentId)
+    const timestamp = new Date().toISOString().split('T')[0]
+    const statusNote = inMaintenance
+      ? `[${timestamp}] Sent for maintenance: ${notes}`
+      : `[${timestamp}] Returned from maintenance: ${notes}`
+    updateData.notes = equipment.notes
+      ? `${equipment.notes}\n\n${statusNote}`
+      : statusNote
+  }
+
+  await updateEquipment(equipmentId, updateData)
+}
+
+/**
+ * Get equipment value summary (for insurance/accounting)
+ * @returns {Promise<Object>} Value summary by category and status
+ */
+export async function getEquipmentValueSummary() {
+  const allEquipment = await getEquipment()
+
+  const summary = {
+    totalValue: 0,
+    totalItems: allEquipment.length,
+    byCategory: {},
+    byStatus: {}
+  }
+
+  allEquipment.forEach(item => {
+    const value = parseFloat(item.purchasePrice) || 0
+    summary.totalValue += value
+
+    // By category
+    const cat = item.category || 'support'
+    if (!summary.byCategory[cat]) {
+      summary.byCategory[cat] = { count: 0, value: 0 }
+    }
+    summary.byCategory[cat].count++
+    summary.byCategory[cat].value += value
+
+    // By status
+    const status = item.status || 'available'
+    if (!summary.byStatus[status]) {
+      summary.byStatus[status] = { count: 0, value: 0 }
+    }
+    summary.byStatus[status].count++
+    summary.byStatus[status].value += value
+  })
+
+  return summary
+}
+
 // ============================================
 // FORMS
 // ============================================
