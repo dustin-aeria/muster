@@ -24,7 +24,6 @@ import {
   FHA_STATUSES,
   LIKELIHOOD_RATINGS,
   SEVERITY_RATINGS,
-  calculateRiskScore,
   getRiskLevel,
   createFormalHazard,
   updateFormalHazard
@@ -171,8 +170,8 @@ export default function FHAEditorModal({
 
   // Update risk scores when likelihood/severity change
   useEffect(() => {
-    const riskScore = calculateRiskScore(formData.likelihood, formData.severity)
-    const residualRiskScore = calculateRiskScore(formData.residualLikelihood, formData.residualSeverity)
+    const riskScore = formData.likelihood * formData.severity
+    const residualRiskScore = formData.residualLikelihood * formData.residualSeverity
     if (riskScore !== formData.riskScore || residualRiskScore !== formData.residualRiskScore) {
       setFormData(prev => ({
         ...prev,
