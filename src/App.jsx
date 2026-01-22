@@ -33,8 +33,9 @@ const Operators = lazy(() => import('./pages/Operators'))
 const Aircraft = lazy(() => import('./pages/Aircraft'))
 const Clients = lazy(() => import('./pages/Clients'))
 const Settings = lazy(() => import('./pages/Settings'))
-const PolicyLibrary = lazy(() => import('./components/PolicyLibrary'))
+const PolicyProcedureLibrary = lazy(() => import('./pages/PolicyProcedureLibrary'))
 const PolicyDetail = lazy(() => import('./pages/PolicyDetail'))
+const ProcedureDetail = lazy(() => import('./pages/ProcedureDetail'))
 const MyAcknowledgments = lazy(() => import('./pages/MyAcknowledgments'))
 const MasterPolicyAdmin = lazy(() => import('./pages/MasterPolicyAdmin'))
 
@@ -117,8 +118,10 @@ function App() {
 
           {/* Lazy-loaded pages - wrapped in Suspense */}
           <Route path="forms" element={<Suspense fallback={<PageLoader />}><Forms /></Suspense>} />
-          <Route path="policies" element={<Suspense fallback={<PageLoader />}><PolicyLibrary /></Suspense>} />
+          <Route path="policies" element={<Suspense fallback={<PageLoader />}><PolicyProcedureLibrary /></Suspense>} />
           <Route path="policies/:id" element={<Suspense fallback={<PageLoader />}><PolicyDetail /></Suspense>} />
+          <Route path="procedures" element={<Suspense fallback={<PageLoader />}><PolicyProcedureLibrary /></Suspense>} />
+          <Route path="procedures/:id" element={<Suspense fallback={<PageLoader />}><ProcedureDetail /></Suspense>} />
           <Route path="my-acknowledgments" element={<Suspense fallback={<PageLoader />}><MyAcknowledgments /></Suspense>} />
           <Route path="admin/master-policies" element={<Suspense fallback={<PageLoader />}><MasterPolicyAdmin /></Suspense>} />
           <Route path="operators" element={<Suspense fallback={<PageLoader />}><Operators /></Suspense>} />
