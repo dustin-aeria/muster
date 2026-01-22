@@ -39,13 +39,11 @@ import FHADetailModal from '../components/fha/FHADetailModal'
 import FieldHazardReviewPanel from '../components/fha/FieldHazardReviewPanel'
 import { getPendingReviewsCount } from '../lib/firestoreFieldHazardReviews'
 import {
-  getFormalHazards,
   getUserFormalHazards,
   getFHAStats,
   deleteFormalHazard,
   seedDefaultFHAs,
-  FHA_CATEGORIES,
-  getRiskLevel
+  FHA_CATEGORIES
 } from '../lib/firestoreFHA'
 import { DEFAULT_FHA_TEMPLATES } from '../data/defaultFHATemplates'
 

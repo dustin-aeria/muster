@@ -162,7 +162,7 @@ function FileItem({ file, status, error, onRemove, onUpdateMeta, meta }) {
  * Main Upload Modal
  */
 export default function FHAUploadModal({ isOpen, onClose, onSuccess }) {
-  const { user, userProfile } = useAuth()
+  const { user } = useAuth()
   const fileInputRef = useRef(null)
 
   const [files, setFiles] = useState([]) // { file, status, error, meta }
@@ -292,7 +292,7 @@ export default function FHAUploadModal({ isOpen, onClose, onSuccess }) {
           regulatoryRefs: []
         }
 
-        const savedFHA = await createFormalHazard(fhaData)
+        const savedFHA = await createFormalHazard(fhaData, user.uid)
         results.push(savedFHA)
 
         // Update status to success

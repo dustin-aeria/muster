@@ -220,7 +220,7 @@ export async function approveAndCreateFHA(reviewId, fhaData, reviewer) {
     ...fhaData,
     source: 'field_triggered',
     fieldReviewId: reviewId
-  })
+  }, reviewer.uid)
 
   // Update the review
   await updateFieldHazardReview(reviewId, {

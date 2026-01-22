@@ -18,6 +18,7 @@ import {
   ChevronUp,
   Loader2
 } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 import {
   FHA_CATEGORIES,
   FHA_STATUSES,
@@ -140,6 +141,7 @@ export default function FHAEditorModal({
   fha = null,
   onSave
 }) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState(getEmptyFHA())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -233,7 +235,7 @@ export default function FHAEditorModal({
       if (isEditing) {
         savedFHA = await updateFormalHazard(fha.id, dataToSave)
       } else {
-        savedFHA = await createFormalHazard(dataToSave)
+        savedFHA = await createFormalHazard(dataToSave, user.uid)
       }
 
       onSave?.(savedFHA)
