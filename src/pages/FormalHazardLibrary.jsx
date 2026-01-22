@@ -36,6 +36,8 @@ import { RiskMatrixDisplay, RiskSummaryStats } from '../components/fha/FHARiskMa
 import FHAEditorModal from '../components/fha/FHAEditorModal'
 import FHAUploadModal from '../components/fha/FHAUploadModal'
 import FHADetailModal from '../components/fha/FHADetailModal'
+import FieldHazardReviewPanel from '../components/fha/FieldHazardReviewPanel'
+import { getPendingReviewsCount } from '../lib/firestoreFieldHazardReviews'
 import {
   getFormalHazards,
   getUserFormalHazards,
@@ -68,14 +70,15 @@ export default function FormalHazardLibrary() {
     source: null
   })
 
-  // Modal state (to be implemented in Batch 3)
+  // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [editingFHA, setEditingFHA] = useState(null)
   const [viewingFHA, setViewingFHA] = useState(null)
 
-  // Field hazard review state (to be implemented in Batch 5)
+  // Field hazard review state
   const [pendingReviews, setPendingReviews] = useState(0)
+  const [showReviewPanel, setShowReviewPanel] = useState(false)
 
   // Load FHAs
   useEffect(() => {
@@ -89,12 +92,14 @@ export default function FormalHazardLibrary() {
     setError(null)
 
     try {
-      const data = await getUserFormalHazards(user.uid)
+      const [data, statsData, reviewCount] = await Promise.all([
+        getUserFormalHazards(user.uid),
+        getFHAStats(user.uid),
+        getPendingReviewsCount(user.uid)
+      ])
       setFhas(data)
-
-      // Load stats
-      const statsData = await getFHAStats(user.uid)
       setStats(statsData)
+      setPendingReviews(reviewCount)
     } catch (err) {
       console.error('Error loading FHAs:', err)
       setError(err.message)
@@ -288,9 +293,12 @@ export default function FormalHazardLibrary() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Field Hazard Review Badge (placeholder for Batch 5) */}
+            {/* Field Hazard Review Badge */}
             {pendingReviews > 0 && (
-              <button className="relative inline-flex items-center gap-2 px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200">
+              <button
+                onClick={() => setShowReviewPanel(true)}
+                className="relative inline-flex items-center gap-2 px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200"
+              >
                 <Bell className="w-5 h-5" />
                 <span className="font-medium">{pendingReviews} Review{pendingReviews !== 1 ? 's' : ''}</span>
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
@@ -512,6 +520,15 @@ export default function FormalHazardLibrary() {
         onEdit={(fha) => {
           setViewingFHA(null)
           setEditingFHA(fha)
+        }}
+      />
+
+      {/* Field Hazard Review Panel */}
+      <FieldHazardReviewPanel
+        isOpen={showReviewPanel}
+        onClose={() => setShowReviewPanel(false)}
+        onReviewComplete={() => {
+          loadFHAs() // Refresh FHAs and review count
         }}
       />
     </div>
