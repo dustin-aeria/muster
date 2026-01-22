@@ -390,9 +390,11 @@ export default function AcknowledgmentDashboard({ policyId = null }) {
           {/* Search */}
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+              <label htmlFor="ack-dashboard-search" className="sr-only">Search by name or email</label>
               <input
-                type="text"
+                id="ack-dashboard-search"
+                type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name or email..."
@@ -403,8 +405,10 @@ export default function AcknowledgmentDashboard({ policyId = null }) {
 
           {/* Status filter */}
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
+            <Filter className="w-4 h-4 text-gray-400" aria-hidden="true" />
+            <label htmlFor="ack-status-filter" className="sr-only">Filter by status</label>
             <select
+              id="ack-status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

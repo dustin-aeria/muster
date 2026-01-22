@@ -407,16 +407,18 @@ export default function KnowledgeBasePanel({
       <div className={`space-y-3 ${compact ? 'p-4' : ''}`}>
         <div className="flex gap-2">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+            <label htmlFor="knowledge-base-search" className="sr-only">Search knowledge base</label>
             <input
-              type="text"
+              id="knowledge-base-search"
+              type="search"
               placeholder="Search policies, procedures, requirements..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-aeria-navy focus:border-transparent"
             />
             {searching && (
-              <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+              <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" aria-hidden="true" />
             )}
           </div>
           <button

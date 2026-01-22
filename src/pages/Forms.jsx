@@ -878,9 +878,11 @@ export default function Forms() {
 
         {/* Search */}
         <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
+          <label htmlFor="form-search" className="sr-only">Search forms</label>
           <input
-            type="text"
+            id="form-search"
+            type="search"
             placeholder="Search forms..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

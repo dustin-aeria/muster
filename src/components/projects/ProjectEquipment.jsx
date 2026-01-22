@@ -401,9 +401,11 @@ export default function ProjectEquipment({ project, onUpdate }) {
               
               <div className="p-4">
                 <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+                  <label htmlFor="equipment-aircraft-search" className="sr-only">Search aircraft</label>
                   <input
-                    type="text"
+                    id="equipment-aircraft-search"
+                    type="search"
                     placeholder="Search aircraft..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}

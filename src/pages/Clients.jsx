@@ -576,9 +576,11 @@ export default function Clients() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
+        <label htmlFor="client-search" className="sr-only">Search clients</label>
         <input
-          type="text"
+          id="client-search"
+          type="search"
           placeholder="Search clients..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}

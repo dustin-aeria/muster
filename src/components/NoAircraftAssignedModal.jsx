@@ -385,9 +385,11 @@ export default function NoAircraftAssignedModal({
               <>
                 {/* Search */}
                 <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+                  <label htmlFor="aircraft-modal-search" className="sr-only">Search aircraft inventory</label>
                   <input
-                    type="text"
+                    id="aircraft-modal-search"
+                    type="search"
                     placeholder="Search aircraft inventory..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}

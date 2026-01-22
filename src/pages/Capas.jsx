@@ -238,16 +238,20 @@ export default function Capas() {
       {/* Filters and Search */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+          <label htmlFor="capa-search" className="sr-only">Search CAPAs</label>
           <input
-            type="text"
+            id="capa-search"
+            type="search"
             placeholder="Search CAPAs..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input pl-9"
           />
         </div>
+        <label htmlFor="capa-status-filter" className="sr-only">Filter by status</label>
         <select
+          id="capa-status-filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="input w-full sm:w-44"

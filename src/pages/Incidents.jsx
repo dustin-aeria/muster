@@ -227,16 +227,20 @@ export default function Incidents() {
       {/* Filters and Search */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+          <label htmlFor="incident-search" className="sr-only">Search incidents</label>
           <input
-            type="text"
+            id="incident-search"
+            type="search"
             placeholder="Search incidents..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input pl-9"
           />
         </div>
+        <label htmlFor="incident-status-filter" className="sr-only">Filter by status</label>
         <select
+          id="incident-status-filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="input w-full sm:w-44"

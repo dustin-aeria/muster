@@ -909,9 +909,11 @@ export default function ComplianceApplicationEditor() {
             {/* Search & Filters */}
             <div className="flex items-center gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+                <label htmlFor="requirement-search" className="sr-only">Search requirements</label>
                 <input
-                  type="text"
+                  id="requirement-search"
+                  type="search"
                   placeholder="Search requirements..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -919,7 +921,9 @@ export default function ComplianceApplicationEditor() {
                 />
               </div>
 
+              <label htmlFor="requirement-status-filter" className="sr-only">Filter by status</label>
               <select
+                id="requirement-status-filter"
                 value={filterStatus || ''}
                 onChange={(e) => setFilterStatus(e.target.value || null)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

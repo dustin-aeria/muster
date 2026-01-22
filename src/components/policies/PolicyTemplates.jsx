@@ -452,9 +452,11 @@ export default function PolicyTemplates({ onTemplateAdopted }) {
           {/* Search */}
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+              <label htmlFor="template-search" className="sr-only">Search templates</label>
               <input
-                type="text"
+                id="template-search"
+                type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search templates..."
@@ -465,7 +467,7 @@ export default function PolicyTemplates({ onTemplateAdopted }) {
 
           {/* Category filter */}
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
+            <Filter className="w-4 h-4 text-gray-400" aria-hidden="true" />
             <button
               onClick={() => setCategoryFilter(null)}
               className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${

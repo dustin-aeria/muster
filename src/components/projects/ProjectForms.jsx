@@ -1893,9 +1893,11 @@ function FormLibrary({ onSelectForm, onClose }) {
         {/* Search & Filter */}
         <div className="p-4 border-b space-y-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+            <label htmlFor="project-form-search" className="sr-only">Search forms</label>
             <input
-              type="text"
+              id="project-form-search"
+              type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search forms..."

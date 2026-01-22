@@ -726,9 +726,11 @@ export default function MasterPolicyAdmin() {
       <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
         <div className="flex items-center gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
+            <label htmlFor="master-policy-search" className="sr-only">Search master policies</label>
             <input
-              type="text"
+              id="master-policy-search"
+              type="search"
               placeholder="Search master policies..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -736,7 +738,9 @@ export default function MasterPolicyAdmin() {
             />
           </div>
 
+          <label htmlFor="master-policy-category-filter" className="sr-only">Filter by category</label>
           <select
+            id="master-policy-category-filter"
             value={categoryFilter || ''}
             onChange={(e) => setCategoryFilter(e.target.value || null)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
