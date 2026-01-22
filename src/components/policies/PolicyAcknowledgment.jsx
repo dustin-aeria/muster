@@ -107,6 +107,9 @@ function SignaturePad({ onSignatureChange, disabled }) {
           onTouchStart={startDrawing}
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
+          role="img"
+          aria-label="Signature pad - draw your signature using mouse or touch"
+          tabIndex={disabled ? -1 : 0}
         />
         {!hasSignature && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

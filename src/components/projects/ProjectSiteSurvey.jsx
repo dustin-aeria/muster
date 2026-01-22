@@ -235,8 +235,11 @@ function SiteManagementPanel({
                   <button
                     onClick={(e) => handleMenuToggle(e, site.id)}
                     className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                    aria-label={`Site options for ${site.name}`}
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpenId === site.id}
                   >
-                    <MoreVertical className="w-4 h-4" />
+                    <MoreVertical className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
               )}
