@@ -99,7 +99,7 @@ export async function getProcedureCategories() {
     return DEFAULT_PROCEDURE_CATEGORIES
   }
 
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
 }
 
 /**
@@ -289,7 +289,7 @@ export async function getProcedureVersions(procedureId) {
     orderBy('createdAt', 'desc')
   )
   const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
 }
 
 /**
@@ -462,7 +462,7 @@ export async function getProcedureAcknowledgments(procedureId) {
     orderBy('acknowledgedAt', 'desc')
   )
   const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
 }
 
 /**
@@ -477,7 +477,7 @@ export async function getUserProcedureAcknowledgments(userId) {
     orderBy('acknowledgedAt', 'desc')
   )
   const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
 }
 
 /**
@@ -495,7 +495,7 @@ export async function getPendingProcedureAcknowledgments(userId, userRole) {
     where('status', '==', 'active')
   )
   const proceduresSnapshot = await getDocs(proceduresQuery)
-  const requiredProcedures = proceduresSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  const requiredProcedures = proceduresSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
 
   // Get user's existing acknowledgments
   const userAcks = await getUserProcedureAcknowledgments(userId)
@@ -819,7 +819,7 @@ export async function getProceduresEnhanced(filters = {}) {
   q = query(proceduresRef, ...constraints)
 
   const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
 }
 
 /**
