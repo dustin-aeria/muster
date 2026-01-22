@@ -38,6 +38,8 @@ import {
   EQUIPMENT_STATUS
 } from '../lib/firestore'
 import EquipmentModal from '../components/EquipmentModal'
+import EquipmentSpecSheet, { generateEquipmentSpecPDF } from '../components/EquipmentSpecSheet'
+import { useBranding } from '../components/BrandingSettings'
 import { logger } from '../lib/logger'
 
 // ============================================
@@ -93,6 +95,9 @@ export default function Equipment() {
   const [showModal, setShowModal] = useState(false)
   const [editingEquipment, setEditingEquipment] = useState(null)
   const [menuOpen, setMenuOpen] = useState(null)
+  const [selectedSpec, setSelectedSpec] = useState(null)
+
+  const { branding } = useBranding()
 
   useEffect(() => {
     loadEquipment()
@@ -334,6 +339,17 @@ export default function Equipment() {
 
             return (
               <div key={item.id} className="card hover:shadow-md transition-shadow">
+                {/* Image Header */}
+                {item.imageUrl && (
+                  <div className="mb-3 -mx-4 -mt-4 overflow-hidden rounded-t-xl">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-full h-32 object-cover"
+                    />
+                  </div>
+                )}
+
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -368,6 +384,27 @@ export default function Equipment() {
                           onClick={() => setMenuOpen(null)}
                         />
                         <div className="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                          <button
+                            onClick={() => {
+                              setSelectedSpec(item)
+                              setMenuOpen(null)
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View Specs
+                          </button>
+                          <button
+                            onClick={() => {
+                              const pdf = generateEquipmentSpecPDF(item, branding)
+                              pdf.save(`spec-sheet_${item.name}_${new Date().toISOString().split('T')[0]}.pdf`)
+                              setMenuOpen(null)
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download PDF
+                          </button>
                           <button
                             onClick={() => handleEdit(item)}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -517,6 +554,14 @@ export default function Equipment() {
         isOpen={showModal}
         onClose={handleModalClose}
         equipment={editingEquipment}
+      />
+
+      {/* Equipment Spec Sheet Modal */}
+      <EquipmentSpecSheet
+        equipment={selectedSpec}
+        isOpen={!!selectedSpec}
+        onClose={() => setSelectedSpec(null)}
+        branding={branding}
       />
     </div>
   )

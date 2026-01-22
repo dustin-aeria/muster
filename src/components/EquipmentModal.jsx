@@ -3,7 +3,7 @@
 // Dynamic form with category-specific fields
 // ============================================
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import Modal, { ModalFooter } from './Modal'
 import {
@@ -11,6 +11,7 @@ import {
   updateEquipment,
   EQUIPMENT_CATEGORIES
 } from '../lib/firestore'
+import { uploadEquipmentImage, deleteEquipmentImage } from '../lib/storageHelpers'
 import {
   AlertCircle,
   Package,
@@ -25,7 +26,10 @@ import {
   Briefcase,
   Calendar,
   DollarSign,
-  Wrench
+  Wrench,
+  Upload,
+  X,
+  Image as ImageIcon
 } from 'lucide-react'
 
 // ============================================
@@ -167,9 +171,13 @@ const categoryFields = {
 // ============================================
 export default function EquipmentModal({ isOpen, onClose, equipment }) {
   const isEditing = !!equipment
+  const fileInputRef = useRef(null)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -215,6 +223,10 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
         nextServiceDate: equipment.nextServiceDate || '',
         customFields: equipment.customFields || {}
       })
+      // Set existing image preview
+      if (equipment.imageUrl) {
+        setImagePreview(equipment.imageUrl)
+      }
     } else {
       resetForm()
     }
@@ -239,6 +251,46 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
       customFields: {}
     })
     setError('')
+    setImageFile(null)
+    setImagePreview(null)
+  }
+
+  // Handle image selection
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload a JPEG, PNG, or WebP image.')
+      return
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image too large. Maximum size is 10MB.')
+      return
+    }
+
+    setImageFile(file)
+    setError('')
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Remove image
+  const handleRemoveImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   const handleChange = (e) => {
@@ -292,10 +344,42 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
         maintenanceInterval: formData.maintenanceInterval ? parseInt(formData.maintenanceInterval, 10) : null
       }
 
+      let equipmentId = equipment?.id
+
       if (isEditing) {
-        await updateEquipment(equipment.id, equipmentData)
+        await updateEquipment(equipmentId, equipmentData)
       } else {
-        await createEquipment(equipmentData)
+        const newEquipment = await createEquipment(equipmentData)
+        equipmentId = newEquipment.id
+      }
+
+      // Handle image upload if there's a new file
+      if (imageFile && equipmentId) {
+        setUploadingImage(true)
+        try {
+          const uploadResult = await uploadEquipmentImage(imageFile, equipmentId)
+          await updateEquipment(equipmentId, {
+            imageUrl: uploadResult.url,
+            imagePath: uploadResult.path
+          })
+        } catch (uploadErr) {
+          console.error('Image upload failed:', uploadErr)
+          // Don't fail the whole operation, equipment is saved
+        }
+        setUploadingImage(false)
+      }
+
+      // Handle image removal (if editing and image was removed)
+      if (isEditing && equipment.imagePath && !imagePreview) {
+        try {
+          await deleteEquipmentImage(equipment.imagePath)
+          await updateEquipment(equipmentId, {
+            imageUrl: null,
+            imagePath: null
+          })
+        } catch (deleteErr) {
+          console.error('Image delete failed:', deleteErr)
+        }
       }
 
       onClose()
@@ -303,6 +387,7 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
       setError(err.message)
     } finally {
       setLoading(false)
+      setUploadingImage(false)
     }
   }
 
@@ -360,6 +445,65 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
           {currentCategory && (
             <p className="text-xs text-gray-500 mt-2">{currentCategory.description}</p>
           )}
+        </div>
+
+        {/* Image Upload */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <ImageIcon className="w-4 h-4" />
+            Equipment Image
+          </h3>
+          <div className="flex items-start gap-4">
+            {/* Image Preview */}
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt="Equipment preview"
+                  className="w-32 h-32 object-cover rounded-lg border border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                <ImageIcon className="w-8 h-8 text-gray-400" />
+              </div>
+            )}
+
+            {/* Upload Button */}
+            <div className="flex-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleImageSelect}
+                className="hidden"
+                id="equipment-image-upload"
+              />
+              <label
+                htmlFor="equipment-image-upload"
+                className="btn-secondary inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Upload className="w-4 h-4" />
+                {imagePreview ? 'Change Image' : 'Upload Image'}
+              </label>
+              <p className="text-xs text-gray-500 mt-2">
+                JPEG, PNG or WebP, max 10MB
+              </p>
+              {uploadingImage && (
+                <p className="text-xs text-aeria-blue mt-1 flex items-center gap-1">
+                  <span className="w-3 h-3 border-2 border-aeria-blue border-t-transparent rounded-full animate-spin"></span>
+                  Uploading image...
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Basic Information */}

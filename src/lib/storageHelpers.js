@@ -181,3 +181,71 @@ export async function deletePolicyAttachment(storagePath) {
   const storageRef = ref(storage, storagePath)
   await deleteObject(storageRef)
 }
+
+// ============================================
+// EQUIPMENT IMAGES
+// ============================================
+
+/**
+ * Upload an equipment image
+ * @param {File} file - The image file to upload
+ * @param {string} equipmentId - Equipment ID for organizing files
+ * @returns {Promise<{url: string, path: string, name: string, size: number, type: string}>}
+ */
+export async function uploadEquipmentImage(file, equipmentId) {
+  if (!file) throw new Error('No file provided')
+  if (!equipmentId) throw new Error('Equipment ID required')
+
+  // Validate file type
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
+  if (!validTypes.includes(file.type)) {
+    throw new Error('Invalid file type. Please upload JPEG, PNG, or WebP images.')
+  }
+
+  // Validate file size (max 10MB)
+  const maxSize = 10 * 1024 * 1024
+  if (file.size > maxSize) {
+    throw new Error('File too large. Maximum size is 10MB.')
+  }
+
+  // Generate unique filename
+  const timestamp = Date.now()
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filename = `${timestamp}_${safeName}`
+
+  // Create storage path: equipment/{equipmentId}/images/{filename}
+  const storagePath = `equipment/${equipmentId}/images/${filename}`
+  const storageRef = ref(storage, storagePath)
+
+  // Upload file
+  const snapshot = await uploadBytes(storageRef, file, {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name,
+      uploadedAt: new Date().toISOString()
+    }
+  })
+
+  // Get download URL
+  const url = await getDownloadURL(snapshot.ref)
+
+  return {
+    url,
+    path: storagePath,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    uploadedAt: new Date().toISOString()
+  }
+}
+
+/**
+ * Delete an equipment image from Firebase Storage
+ * @param {string} storagePath - The storage path of the image to delete
+ */
+export async function deleteEquipmentImage(storagePath) {
+  if (!storagePath) throw new Error('Storage path required')
+
+  const storageRef = ref(storage, storagePath)
+  await deleteObject(storageRef)
+}
