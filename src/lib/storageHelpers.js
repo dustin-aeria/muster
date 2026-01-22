@@ -1,7 +1,7 @@
 /**
  * storageHelpers.js
  * Firebase Storage helpers for file uploads
- * 
+ *
  * @location src/lib/storageHelpers.js
  */
 
@@ -20,28 +20,28 @@ export async function uploadSitePhoto(file, projectId, siteId, category = 'gener
   if (!file) throw new Error('No file provided')
   if (!projectId) throw new Error('Project ID required')
   if (!siteId) throw new Error('Site ID required')
-  
+
   // Validate file type
   const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
   if (!validTypes.includes(file.type)) {
     throw new Error('Invalid file type. Please upload JPEG, PNG, or WebP images.')
   }
-  
+
   // Validate file size (max 10MB)
   const maxSize = 10 * 1024 * 1024
   if (file.size > maxSize) {
     throw new Error('File too large. Maximum size is 10MB.')
   }
-  
+
   // Generate unique filename
   const timestamp = Date.now()
   const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
   const filename = `${timestamp}_${safeName}`
-  
+
   // Create storage path: projects/{projectId}/sites/{siteId}/photos/{category}/{filename}
   const storagePath = `projects/${projectId}/sites/${siteId}/photos/${category}/${filename}`
   const storageRef = ref(storage, storagePath)
-  
+
   // Upload file
   const snapshot = await uploadBytes(storageRef, file, {
     contentType: file.type,
@@ -51,10 +51,10 @@ export async function uploadSitePhoto(file, projectId, siteId, category = 'gener
       category
     }
   })
-  
+
   // Get download URL
   const url = await getDownloadURL(snapshot.ref)
-  
+
   return {
     url,
     path: storagePath,
@@ -71,7 +71,7 @@ export async function uploadSitePhoto(file, projectId, siteId, category = 'gener
  */
 export async function deleteSitePhoto(storagePath) {
   if (!storagePath) throw new Error('Storage path required')
-  
+
   const storageRef = ref(storage, storagePath)
   await deleteObject(storageRef)
 }
@@ -248,4 +248,179 @@ export async function deleteEquipmentImage(storagePath) {
 
   const storageRef = ref(storage, storagePath)
   await deleteObject(storageRef)
+}
+
+// ============================================
+// FHA ATTACHMENTS
+// ============================================
+
+/**
+ * Upload an FHA attachment (PDF, Word doc, images, etc.)
+ * @param {File} file - The file to upload
+ * @param {string} fhaId - FHA ID for organizing files
+ * @returns {Promise<{url: string, path: string, name: string, size: number, type: string}>}
+ */
+export async function uploadFHAAttachment(file, fhaId) {
+  if (!file) throw new Error('No file provided')
+  if (!fhaId) throw new Error('FHA ID required')
+
+  // Validate file type
+  const validTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'image/jpeg',
+    'image/png',
+    'image/webp'
+  ]
+
+  if (!validTypes.includes(file.type)) {
+    throw new Error('Invalid file type. Please upload PDF, Word, Excel, text, or image files.')
+  }
+
+  // Validate file size (max 25MB for documents)
+  const maxSize = 25 * 1024 * 1024
+  if (file.size > maxSize) {
+    throw new Error('File too large. Maximum size is 25MB.')
+  }
+
+  // Generate unique filename
+  const timestamp = Date.now()
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filename = `${timestamp}_${safeName}`
+
+  // Create storage path: fha/{fhaId}/attachments/{filename}
+  const storagePath = `fha/${fhaId}/attachments/${filename}`
+  const storageRef = ref(storage, storagePath)
+
+  // Upload file
+  const snapshot = await uploadBytes(storageRef, file, {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name,
+      uploadedAt: new Date().toISOString()
+    }
+  })
+
+  // Get download URL
+  const url = await getDownloadURL(snapshot.ref)
+
+  return {
+    url,
+    path: storagePath,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    uploadedAt: new Date().toISOString()
+  }
+}
+
+/**
+ * Delete an FHA attachment from Firebase Storage
+ * @param {string} storagePath - The storage path of the file to delete
+ */
+export async function deleteFHAAttachment(storagePath) {
+  if (!storagePath) throw new Error('Storage path required')
+
+  const storageRef = ref(storage, storagePath)
+  await deleteObject(storageRef)
+}
+
+/**
+ * Upload an FHA document (for uploaded source FHAs)
+ * @param {File} file - The file to upload
+ * @param {string} fhaId - FHA ID
+ * @returns {Promise<{url: string, path: string, name: string, size: number, type: string}>}
+ */
+export async function uploadFHADocument(file, fhaId) {
+  if (!file) throw new Error('No file provided')
+  if (!fhaId) throw new Error('FHA ID required')
+
+  // Validate file type - only allow documents for FHA uploads
+  const validTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]
+
+  if (!validTypes.includes(file.type)) {
+    throw new Error('Invalid file type. Please upload PDF or Word documents.')
+  }
+
+  // Validate file size (max 50MB for main documents)
+  const maxSize = 50 * 1024 * 1024
+  if (file.size > maxSize) {
+    throw new Error('File too large. Maximum size is 50MB.')
+  }
+
+  // Generate unique filename
+  const timestamp = Date.now()
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filename = `${timestamp}_${safeName}`
+
+  // Create storage path: fha/{fhaId}/documents/{filename}
+  const storagePath = `fha/${fhaId}/documents/${filename}`
+  const storageRef = ref(storage, storagePath)
+
+  // Upload file
+  const snapshot = await uploadBytes(storageRef, file, {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name,
+      uploadedAt: new Date().toISOString(),
+      documentType: 'fha_source'
+    }
+  })
+
+  // Get download URL
+  const url = await getDownloadURL(snapshot.ref)
+
+  return {
+    url,
+    path: storagePath,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    uploadedAt: new Date().toISOString()
+  }
+}
+
+/**
+ * Delete an FHA document from Firebase Storage
+ * @param {string} storagePath - The storage path of the file to delete
+ */
+export async function deleteFHADocument(storagePath) {
+  if (!storagePath) throw new Error('Storage path required')
+
+  const storageRef = ref(storage, storagePath)
+  await deleteObject(storageRef)
+}
+
+/**
+ * Upload multiple FHA attachments
+ * @param {FileList|File[]} files - Files to upload
+ * @param {string} fhaId - FHA ID
+ * @param {function} onProgress - Progress callback (index, total)
+ * @returns {Promise<Array<{url: string, path: string, name: string}>>}
+ */
+export async function uploadMultipleFHAAttachments(files, fhaId, onProgress) {
+  const results = []
+  const fileArray = Array.from(files)
+
+  for (let i = 0; i < fileArray.length; i++) {
+    const file = fileArray[i]
+    if (onProgress) onProgress(i + 1, fileArray.length)
+
+    try {
+      const result = await uploadFHAAttachment(file, fhaId)
+      results.push(result)
+    } catch (error) {
+      results.push({ error: error.message, name: file.name })
+    }
+  }
+
+  return results
 }
