@@ -33,6 +33,7 @@ import { useAuth } from '../contexts/AuthContext'
 import FHACard from '../components/fha/FHACard'
 import FHAFilters from '../components/fha/FHAFilters'
 import { RiskMatrixDisplay, RiskSummaryStats } from '../components/fha/FHARiskMatrix'
+import FHAEditorModal from '../components/fha/FHAEditorModal'
 import {
   getFormalHazards,
   getUserFormalHazards,
@@ -472,22 +473,28 @@ export default function FormalHazardLibrary() {
         </div>
       )}
 
-      {/* Placeholder for modals - to be implemented in Batch 3 */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
-            <h2 className="text-xl font-semibold mb-4">Create FHA</h2>
-            <p className="text-gray-500 mb-4">FHA Editor will be implemented in Batch 3</p>
-            <button
-              onClick={() => setShowCreateModal(false)}
-              className="px-4 py-2 bg-gray-100 rounded-lg"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {/* FHA Editor Modal - Create */}
+      <FHAEditorModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSave={(savedFHA) => {
+          setFhas(prev => [savedFHA, ...prev])
+          loadFHAs() // Refresh to get updated stats
+        }}
+      />
 
+      {/* FHA Editor Modal - Edit */}
+      <FHAEditorModal
+        isOpen={!!editingFHA}
+        onClose={() => setEditingFHA(null)}
+        fha={editingFHA}
+        onSave={(savedFHA) => {
+          setFhas(prev => prev.map(f => f.id === savedFHA.id ? savedFHA : f))
+          loadFHAs() // Refresh to get updated stats
+        }}
+      />
+
+      {/* Upload Modal Placeholder - to be implemented in Batch 4 */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
@@ -496,69 +503,6 @@ export default function FormalHazardLibrary() {
             <button
               onClick={() => setShowUploadModal(false)}
               className="px-4 py-2 bg-gray-100 rounded-lg"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {editingFHA && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-4">
-              {editingFHA.fhaNumber} - {editingFHA.title}
-            </h2>
-            <div className="space-y-4 text-sm">
-              <div>
-                <span className="font-medium text-gray-700">Category:</span>{' '}
-                {FHA_CATEGORIES.find(c => c.id === editingFHA.category)?.name}
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Description:</span>
-                <p className="text-gray-600 mt-1">{editingFHA.description}</p>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Consequences:</span>
-                <p className="text-gray-600 mt-1">{editingFHA.consequences}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="font-medium text-gray-700">Initial Risk:</span>
-                  <p className="text-gray-600">
-                    L:{editingFHA.likelihood} × S:{editingFHA.severity} = {editingFHA.riskScore}
-                    ({getRiskLevel(editingFHA.riskScore).level})
-                  </p>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-700">Residual Risk:</span>
-                  <p className="text-gray-600">
-                    L:{editingFHA.residualLikelihood} × S:{editingFHA.residualSeverity} = {editingFHA.residualRiskScore}
-                    ({getRiskLevel(editingFHA.residualRiskScore).level})
-                  </p>
-                </div>
-              </div>
-              {editingFHA.controlMeasures?.length > 0 && (
-                <div>
-                  <span className="font-medium text-gray-700">Control Measures:</span>
-                  <ul className="mt-2 space-y-2">
-                    {editingFHA.controlMeasures.map((control, i) => (
-                      <li key={i} className="bg-gray-50 p-2 rounded">
-                        <span className="text-xs font-medium text-blue-600 uppercase">{control.type}</span>
-                        <p className="text-gray-600">{control.description}</p>
-                        {control.responsible && (
-                          <p className="text-xs text-gray-500">Responsible: {control.responsible}</p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-            <p className="text-gray-400 text-sm mt-4">Full FHA Editor will be implemented in Batch 3</p>
-            <button
-              onClick={() => setEditingFHA(null)}
-              className="mt-4 px-4 py-2 bg-gray-100 rounded-lg"
             >
               Close
             </button>
