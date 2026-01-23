@@ -71,6 +71,32 @@ import {
 // CONFIGURATION DATA
 // ============================================
 
+const WEATHER_CONDITIONS = {
+  clear: { id: 'clear', name: 'Clear/Sunny', description: 'Minimal cloud cover, good visibility' },
+  partly_cloudy: { id: 'partly_cloudy', name: 'Partly Cloudy', description: 'Scattered clouds, good visibility' },
+  overcast: { id: 'overcast', name: 'Overcast', description: 'Full cloud cover, reduced light' },
+  light_rain: { id: 'light_rain', name: 'Light Rain/Drizzle', description: 'Light precipitation, reduced visibility' },
+  fog: { id: 'fog', name: 'Fog/Mist', description: 'Significantly reduced visibility' },
+  snow: { id: 'snow', name: 'Snow/Ice', description: 'Winter conditions, cold temperatures' },
+  high_winds: { id: 'high_winds', name: 'High Winds', description: 'Wind speeds 25+ km/h' }
+}
+
+const SEASONS = {
+  spring: { id: 'spring', name: 'Spring', description: 'Mar-May: Variable weather, potential mud' },
+  summer: { id: 'summer', name: 'Summer', description: 'Jun-Aug: Long days, heat concerns' },
+  fall: { id: 'fall', name: 'Fall/Autumn', description: 'Sep-Nov: Shorter days, variable conditions' },
+  winter: { id: 'winter', name: 'Winter', description: 'Dec-Feb: Cold, snow, short days' },
+  year_round: { id: 'year_round', name: 'Year-Round', description: 'Operations in any season' }
+}
+
+const TIME_OF_DAY = {
+  dawn: { id: 'dawn', name: 'Dawn/Civil Twilight', description: '30 min before sunrise' },
+  morning: { id: 'morning', name: 'Morning', description: 'Sunrise to noon' },
+  afternoon: { id: 'afternoon', name: 'Afternoon', description: 'Noon to sunset' },
+  dusk: { id: 'dusk', name: 'Dusk/Civil Twilight', description: '30 min after sunset' },
+  night: { id: 'night', name: 'Night', description: 'After civil twilight' }
+}
+
 const MISSION_PROFILES = {
   inspection: {
     id: 'inspection',
@@ -680,52 +706,52 @@ const getWeightClass = (payloadIds) => {
 }
 
 const determineRegulatoryPathway = (analysis) => {
-  const { operationType, environment, airspace, payloads } = analysis
-  
-  // Check for SFOC requirements
-  const sfocIndicators = [
-    operationType?.includes('night'),
-    operationType?.includes('bvlos'),
-    airspace === 'control_zone' || airspace === 'restricted_special',
-    environment === 'gathering',
-    environment === 'urban' && operationType !== 'vlos_day'
-  ]
-  
+  const { operationTypes = [], environments = [], airspaces = [], payloads } = analysis
+
+  // Check for SFOC requirements (any match triggers SFOC)
+  const hasNightOps = operationTypes.some(op => op?.includes('night'))
+  const hasBvlosOps = operationTypes.some(op => op?.includes('bvlos'))
+  const hasComplexAirspace = airspaces.some(a => a === 'control_zone' || a === 'restricted_special')
+  const hasGathering = environments.includes('gathering')
+  const hasUrbanNonDay = environments.includes('urban') && operationTypes.some(op => op !== 'vlos_day')
+
+  const sfocIndicators = [hasNightOps, hasBvlosOps, hasComplexAirspace, hasGathering, hasUrbanNonDay]
+
   if (sfocIndicators.filter(Boolean).length >= 1) {
     return {
       pathway: 'SFOC',
-      reason: 'Special Flight Operations Certificate required due to: ' + 
+      reason: 'Special Flight Operations Certificate required due to: ' +
         [
-          operationType?.includes('night') && 'Night operations',
-          operationType?.includes('bvlos') && 'BVLOS operations',
-          (airspace === 'control_zone' || airspace === 'restricted_special') && 'Complex airspace',
-          environment === 'gathering' && 'Operations over gatherings',
-          (environment === 'urban' && operationType !== 'vlos_day') && 'Urban operations'
+          hasNightOps && 'Night operations',
+          hasBvlosOps && 'BVLOS operations',
+          hasComplexAirspace && 'Complex airspace',
+          hasGathering && 'Operations over gatherings',
+          hasUrbanNonDay && 'Urban non-day operations'
         ].filter(Boolean).join(', '),
       complexity: 'high'
     }
   }
-  
+
   // Check for Advanced operations
-  const advancedIndicators = [
-    environment === 'suburban' || environment === 'urban',
-    airspace === 'controlled_transition' || airspace === 'near_aerodrome',
-    operationType === 'evlos_day' || operationType === 'vlos_twilight'
-  ]
-  
+  const hasPopulatedEnv = environments.some(e => e === 'suburban' || e === 'urban')
+  const hasControlledAirspace = airspaces.some(a => a === 'controlled_transition' || a === 'near_aerodrome')
+  const hasEvlosOrTwilight = operationTypes.some(op => op === 'evlos_day' || op === 'vlos_twilight')
+
+  const advancedIndicators = [hasPopulatedEnv, hasControlledAirspace, hasEvlosOrTwilight]
+
   if (advancedIndicators.filter(Boolean).length >= 1) {
     return {
       pathway: 'Advanced',
       reason: 'Advanced operations certificate required for operations in ' +
         [
-          (environment === 'suburban' || environment === 'urban') && 'populated areas',
-          (airspace === 'controlled_transition' || airspace === 'near_aerodrome') && 'controlled airspace',
-          (operationType === 'evlos_day' || operationType === 'vlos_twilight') && 'EVLOS/twilight operations'
+          hasPopulatedEnv && 'populated areas',
+          hasControlledAirspace && 'controlled airspace',
+          hasEvlosOrTwilight && 'EVLOS/twilight operations'
         ].filter(Boolean).join(', '),
       complexity: 'medium'
     }
   }
-  
+
   // Basic operations
   return {
     pathway: 'Basic',
@@ -735,32 +761,27 @@ const determineRegulatoryPathway = (analysis) => {
 }
 
 const estimateSAIL = (analysis) => {
-  const { operationType, environment, airspace } = analysis
-  
-  // Base SAIL from environment
-  let baseSAIL = 1
-  switch (environment) {
-    case 'controlled': baseSAIL = 1; break
-    case 'remote': baseSAIL = 1; break
-    case 'sparsely': baseSAIL = 2; break
-    case 'suburban': baseSAIL = 3; break
-    case 'urban': baseSAIL = 4; break
-    case 'gathering': baseSAIL = 5; break
-    case 'mixed': baseSAIL = 3; break
-    default: baseSAIL = 2
+  const { operationTypes = [], environments = [], airspaces = [] } = analysis
+
+  // Base SAIL from environment - take highest (most conservative)
+  const envSailMap = {
+    controlled: 1, remote: 1, sparsely: 2, suburban: 3,
+    urban: 4, gathering: 5, mixed: 3
   }
-  
-  // Airspace modifier
-  let airspaceModifier = 0
-  if (airspace === 'control_zone' || airspace === 'restricted_special') {
-    airspaceModifier = 1
-  }
-  
-  // Operation type modifier
-  const opMod = OPERATION_TYPES[operationType]?.sailModifier || 0
-  
+  const baseSAIL = environments.length > 0
+    ? Math.max(...environments.map(e => envSailMap[e] || 2))
+    : 2
+
+  // Airspace modifier - check if any complex airspace
+  const airspaceModifier = airspaces.some(a => a === 'control_zone' || a === 'restricted_special') ? 1 : 0
+
+  // Operation type modifier - take highest
+  const opMod = operationTypes.length > 0
+    ? Math.max(...operationTypes.map(op => OPERATION_TYPES[op]?.sailModifier || 0))
+    : 0
+
   const finalSAIL = Math.min(6, Math.max(1, baseSAIL + airspaceModifier + opMod))
-  
+
   return {
     level: ['I', 'II', 'III', 'IV', 'V', 'VI'][finalSAIL - 1],
     numeric: finalSAIL,
@@ -773,27 +794,27 @@ const estimateSAIL = (analysis) => {
 }
 
 const generateCrewRequirements = (analysis) => {
-  const { missionProfile, operationType, coverage, environment } = analysis
+  const { missionProfiles = [], operationTypes = [], coverage, environments = [] } = analysis
   const requirements = {
     pic: { required: true, count: 1, notes: [] },
     vo: { required: false, count: 0, notes: [] },
     payloadOperator: { required: false, count: 0, notes: [] },
     groundSupport: { required: false, count: 0, notes: [] }
   }
-  
+
   // Visual Observer requirements
-  if (operationType?.includes('evlos')) {
+  if (operationTypes.some(op => op?.includes('evlos'))) {
     requirements.vo.required = true
     requirements.vo.count = 1
     requirements.vo.notes.push('Required for EVLOS operations')
   }
-  
+
   if (coverage === 'large_area' || coverage === 'very_large' || coverage === 'linear_long') {
     requirements.vo.required = true
     requirements.vo.count = Math.max(requirements.vo.count, 2)
     requirements.vo.notes.push('Recommended for large area operations')
   }
-  
+
   // Payload Operator
   const complexPayloads = ['lidar', 'multispectral', 'cinema_camera', 'gas_sensor']
   const selectedPayloads = analysis.payloads || []
@@ -802,28 +823,27 @@ const generateCrewRequirements = (analysis) => {
     requirements.payloadOperator.count = 1
     requirements.payloadOperator.notes.push('Complex payload requires dedicated operator')
   }
-  
+
   // Ground Support
-  if (environment === 'urban' || environment === 'gathering') {
+  if (environments.some(e => e === 'urban' || e === 'gathering')) {
     requirements.groundSupport.required = true
     requirements.groundSupport.count = 1
     requirements.groundSupport.notes.push('Crowd/traffic management in populated areas')
   }
-  
-  if (missionProfile === 'emergency' || missionProfile === 'security') {
+
+  if (missionProfiles.some(m => m === 'emergency' || m === 'security')) {
     requirements.groundSupport.count = Math.max(requirements.groundSupport.count, 2)
     requirements.groundSupport.notes.push('Coordination with emergency/security services')
   }
-  
+
   return requirements
 }
 
 const generateAircraftRequirements = (analysis) => {
-  const { missionProfile, coverage, payloads, operationType } = analysis
-  const profile = MISSION_PROFILES[missionProfile]
+  const { missionProfiles = [], coverage, payloads, operationTypes = [] } = analysis
   const coverageInfo = COVERAGE_TYPES[coverage]
   const weightClass = getWeightClass(payloads || [])
-  
+
   // Determine platform type
   let platformType = 'Multi-rotor'
   if (coverage === 'very_large' || coverage === 'linear_long') {
@@ -831,24 +851,24 @@ const generateAircraftRequirements = (analysis) => {
   } else if (coverage === 'large_area' || coverage === 'linear_short') {
     platformType = 'Multi-rotor or VTOL'
   }
-  
+
   // Payload capacity
   let minCapacity = '250g'
   if (weightClass === 'medium') minCapacity = '500g'
   if (weightClass === 'heavy') minCapacity = '1kg+'
-  
+
   // Flight time
   let minFlightTime = '20 min'
   if (['large_area', 'very_large', 'linear_long'].includes(coverage)) {
     minFlightTime = '30+ min'
   }
-  
+
   // Special features
   const features = []
-  if (operationType?.includes('night') || operationType?.includes('twilight')) {
+  if (operationTypes.some(op => op?.includes('night') || op?.includes('twilight'))) {
     features.push('Anti-collision lighting')
   }
-  if (operationType?.includes('bvlos')) {
+  if (operationTypes.some(op => op?.includes('bvlos'))) {
     features.push('Redundant C2 link', 'Return-to-home', 'Geofencing')
   }
   if (payloads?.includes('thermal')) {
@@ -857,10 +877,10 @@ const generateAircraftRequirements = (analysis) => {
   if (payloads?.includes('lidar')) {
     features.push('Stable platform', 'High payload capacity')
   }
-  if (missionProfile === 'emergency') {
+  if (missionProfiles.includes('emergency')) {
     features.push('Quick deployment', 'All-weather capability')
   }
-  
+
   return {
     platformType,
     minCapacity,
@@ -871,8 +891,8 @@ const generateAircraftRequirements = (analysis) => {
 }
 
 const generateEquipmentChecklist = (analysis) => {
-  const { missionProfile, operationType, payloads, environment, airspace } = analysis
-  
+  const { missionProfiles = [], operationTypes = [], payloads, environments = [], airspaces = [] } = analysis
+
   const equipment = {
     flightEquipment: [
       { item: 'Aircraft (primary)', required: true },
@@ -886,25 +906,25 @@ const generateEquipmentChecklist = (analysis) => {
       { item: 'Fire extinguisher', required: true },
       { item: 'First aid kit', required: true },
       { item: 'High-visibility vest', required: true },
-      { item: 'Safety cones/tape', required: environment !== 'remote' },
-      { item: 'Hard hat', required: ['construction', 'mining', 'inspection'].includes(missionProfile) }
+      { item: 'Safety cones/tape', required: !environments.includes('remote') },
+      { item: 'Hard hat', required: missionProfiles.some(m => ['construction', 'mining', 'inspection'].includes(m)) }
     ],
     communicationEquipment: [
       { item: 'Two-way radio', required: true },
       { item: 'Mobile phone', required: true },
-      { item: 'Aviation radio', required: ['control_zone', 'near_aerodrome', 'controlled_transition'].includes(airspace) }
+      { item: 'Aviation radio', required: airspaces.some(a => ['control_zone', 'near_aerodrome', 'controlled_transition'].includes(a)) }
     ],
     documentationEquipment: [
       { item: 'Pilot certificate', required: true },
       { item: 'Aircraft registration', required: true },
       { item: 'Insurance documentation', required: true },
-      { item: 'Site authorization', required: environment !== 'controlled' },
-      { item: 'SFOC (if applicable)', required: operationType?.includes('bvlos') || operationType?.includes('night') }
+      { item: 'Site authorization', required: !environments.includes('controlled') || environments.length === 0 },
+      { item: 'SFOC (if applicable)', required: operationTypes.some(op => op?.includes('bvlos') || op?.includes('night')) }
     ],
     payloadEquipment: [],
     additionalEquipment: []
   }
-  
+
   // Add payload-specific equipment
   if (payloads?.includes('thermal')) {
     equipment.payloadEquipment.push({ item: 'Thermal calibration target', required: false })
@@ -922,37 +942,37 @@ const generateEquipmentChecklist = (analysis) => {
       { item: 'GPS ground control', required: true }
     )
   }
-  
+
   // Mission-specific additions
-  if (missionProfile === 'survey_mapping') {
+  if (missionProfiles.includes('survey_mapping')) {
     equipment.additionalEquipment.push(
       { item: 'Ground control points', required: true },
       { item: 'RTK/PPK receiver', required: false },
       { item: 'Measuring tape/rod', required: false }
     )
   }
-  if (missionProfile === 'emergency') {
+  if (missionProfiles.includes('emergency')) {
     equipment.additionalEquipment.push(
-      { item: 'Spotlight/floodlight', required: operationType?.includes('night') },
+      { item: 'Spotlight/floodlight', required: operationTypes.some(op => op?.includes('night')) },
       { item: 'Emergency beacon', required: false },
       { item: 'Incident command radio', required: true }
     )
   }
-  if (operationType?.includes('night')) {
+  if (operationTypes.some(op => op?.includes('night'))) {
     equipment.additionalEquipment.push(
       { item: 'Headlamp/flashlight', required: true },
       { item: 'Reflective markers', required: true },
       { item: 'Illuminated landing pad', required: true }
     )
   }
-  
+
   return equipment
 }
 
 const generateDocumentationRequirements = (analysis) => {
-  const { operationType, environment, airspace } = analysis
+  const { operationTypes = [], airspaces = [] } = analysis
   const regulatory = determineRegulatoryPathway(analysis)
-  
+
   const docs = {
     required: [
       'Pilot certificate (appropriate level)',
@@ -971,7 +991,7 @@ const generateDocumentationRequirements = (analysis) => {
       'Weather briefing documentation'
     ]
   }
-  
+
   // Add based on regulatory pathway
   if (regulatory.pathway === 'Advanced') {
     docs.required.push(
@@ -980,7 +1000,7 @@ const generateDocumentationRequirements = (analysis) => {
       'Site survey documentation'
     )
   }
-  
+
   if (regulatory.pathway === 'SFOC') {
     docs.required.push(
       'SFOC (Special Flight Operations Certificate)',
@@ -989,22 +1009,22 @@ const generateDocumentationRequirements = (analysis) => {
       'Aircraft airworthiness documentation'
     )
   }
-  
-  if (['control_zone', 'near_aerodrome', 'controlled_transition'].includes(airspace)) {
+
+  if (airspaces.some(a => ['control_zone', 'near_aerodrome', 'controlled_transition'].includes(a))) {
     docs.required.push(
       'NAV CANADA authorization',
       'NOTAM request/confirmation'
     )
   }
-  
-  if (operationType?.includes('bvlos')) {
+
+  if (operationTypes.some(op => op?.includes('bvlos'))) {
     docs.required.push(
       'BVLOS-specific procedures',
       'DAA system documentation',
       'C2 link specifications'
     )
   }
-  
+
   return docs
 }
 
@@ -1052,18 +1072,24 @@ function CollapsibleSection({ title, icon: Icon, children, defaultOpen = true, b
   )
 }
 
-function SelectionCard({ item, selected, onSelect, icon: Icon }) {
+function SelectionCard({ item, selected, onSelect, icon: Icon, multiSelect = false }) {
   return (
     <button
       onClick={() => onSelect(item.id)}
       className={`p-4 rounded-lg border-2 text-left transition-all ${
-        selected 
-          ? 'border-aeria-navy bg-aeria-navy/5' 
+        selected
+          ? 'border-aeria-navy bg-aeria-navy/5'
           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
       }`}
     >
       <div className="flex items-start gap-3">
-        {Icon ? (
+        {multiSelect ? (
+          <div className={`w-5 h-5 flex-shrink-0 rounded border-2 flex items-center justify-center mt-0.5 ${
+            selected ? 'border-aeria-navy bg-aeria-navy' : 'border-gray-300'
+          }`}>
+            {selected && <CheckCircle2 className="w-3 h-3 text-white" />}
+          </div>
+        ) : Icon ? (
           <Icon className={`w-6 h-6 flex-shrink-0 ${selected ? 'text-aeria-navy' : 'text-gray-400'}`} />
         ) : item.icon ? (
           <item.icon className={`w-6 h-6 flex-shrink-0 ${selected ? 'text-aeria-navy' : 'text-gray-400'}`} />
@@ -1074,11 +1100,35 @@ function SelectionCard({ item, selected, onSelect, icon: Icon }) {
           </p>
           <p className="text-sm text-gray-500 mt-1">{item.description}</p>
         </div>
-        {selected && (
+        {selected && !multiSelect && (
           <CheckCircle2 className="w-5 h-5 text-aeria-navy flex-shrink-0" />
         )}
       </div>
     </button>
+  )
+}
+
+function MultiSelectChips({ items, selected = [], onToggle, label }) {
+  return (
+    <div>
+      {label && <p className="text-sm font-medium text-gray-700 mb-2">{label}</p>}
+      <div className="flex flex-wrap gap-2">
+        {Object.values(items).map(item => (
+          <button
+            key={item.id}
+            onClick={() => onToggle(item.id)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              selected.includes(item.id)
+                ? 'bg-aeria-navy text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+            title={item.description}
+          >
+            {item.name}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -1422,58 +1472,80 @@ function DocumentationResult({ docs }) {
 // ============================================
 
 export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) {
-  // Analysis state
+  // Analysis state - supports multi-select arrays for key fields
   const [analysis, setAnalysis] = useState(() => {
-    return project?.needsAnalysis || {
-      missionProfile: null,
-      environment: null,
-      airspace: null,
-      operationType: null,
-      coverage: null,
-      payloads: []
+    const saved = project?.needsAnalysis || {}
+    return {
+      // Convert legacy single values to arrays if needed
+      missionProfiles: saved.missionProfiles || (saved.missionProfile ? [saved.missionProfile] : []),
+      environments: saved.environments || (saved.environment ? [saved.environment] : []),
+      airspaces: saved.airspaces || (saved.airspace ? [saved.airspace] : []),
+      operationTypes: saved.operationTypes || (saved.operationType ? [saved.operationType] : []),
+      coverage: saved.coverage || null,
+      payloads: saved.payloads || [],
+      // Weather/atmosphere section
+      weatherConditions: saved.weatherConditions || [],
+      seasons: saved.seasons || [],
+      timesOfDay: saved.timesOfDay || [],
+      // Keep legacy fields for backward compatibility reads
+      missionProfile: saved.missionProfile || null,
+      environment: saved.environment || null,
+      airspace: saved.airspace || null,
+      operationType: saved.operationType || null
     }
   })
   
   const [showResults, setShowResults] = useState(false)
-  
-  // Update analysis field
+
+  // Update analysis field (for single-select fields like coverage)
   const updateAnalysis = useCallback((field, value) => {
     setAnalysis(prev => {
       const updated = { ...prev, [field]: value }
-      
+
       // Auto-save to project
       if (onUpdate) {
         onUpdate({ needsAnalysis: updated })
       }
-      
+
       return updated
     })
   }, [onUpdate])
-  
-  // Toggle payload selection
-  const togglePayload = useCallback((payloadId) => {
+
+  // Toggle function for multi-select array fields
+  const toggleArrayField = useCallback((field, itemId) => {
     setAnalysis(prev => {
-      const payloads = prev.payloads || []
-      const updated = payloads.includes(payloadId)
-        ? payloads.filter(p => p !== payloadId)
-        : [...payloads, payloadId]
-      
-      const newAnalysis = { ...prev, payloads: updated }
-      
+      const currentArray = prev[field] || []
+      const updated = currentArray.includes(itemId)
+        ? currentArray.filter(id => id !== itemId)
+        : [...currentArray, itemId]
+
+      const newAnalysis = { ...prev, [field]: updated }
+
       if (onUpdate) {
         onUpdate({ needsAnalysis: newAnalysis })
       }
-      
+
       return newAnalysis
     })
   }, [onUpdate])
+
+  // Convenience toggle functions
+  const toggleMissionProfile = useCallback((id) => toggleArrayField('missionProfiles', id), [toggleArrayField])
+  const toggleEnvironment = useCallback((id) => toggleArrayField('environments', id), [toggleArrayField])
+  const toggleAirspace = useCallback((id) => toggleArrayField('airspaces', id), [toggleArrayField])
+  const toggleOperationType = useCallback((id) => toggleArrayField('operationTypes', id), [toggleArrayField])
+  const togglePayload = useCallback((id) => toggleArrayField('payloads', id), [toggleArrayField])
+  const toggleWeatherCondition = useCallback((id) => toggleArrayField('weatherConditions', id), [toggleArrayField])
+  const toggleSeason = useCallback((id) => toggleArrayField('seasons', id), [toggleArrayField])
+  const toggleTimeOfDay = useCallback((id) => toggleArrayField('timesOfDay', id), [toggleArrayField])
   
   // Calculate results
   const results = useMemo(() => {
-    if (!analysis.missionProfile || !analysis.environment || !analysis.airspace || !analysis.operationType) {
+    if (!analysis.missionProfiles?.length || !analysis.environments?.length ||
+        !analysis.airspaces?.length || !analysis.operationTypes?.length) {
       return null
     }
-    
+
     return {
       regulatory: determineRegulatoryPathway(analysis),
       sail: estimateSAIL(analysis),
@@ -1483,21 +1555,22 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
       documentation: generateDocumentationRequirements(analysis)
     }
   }, [analysis])
-  
+
   // Completeness check
   const completeness = useMemo(() => {
     const checks = {
-      missionProfile: !!analysis.missionProfile,
-      environment: !!analysis.environment,
-      airspace: !!analysis.airspace,
-      operationType: !!analysis.operationType,
+      missionProfiles: (analysis.missionProfiles?.length || 0) > 0,
+      environments: (analysis.environments?.length || 0) > 0,
+      airspaces: (analysis.airspaces?.length || 0) > 0,
+      operationTypes: (analysis.operationTypes?.length || 0) > 0,
       coverage: !!analysis.coverage,
-      payloads: (analysis.payloads?.length || 0) > 0
+      payloads: (analysis.payloads?.length || 0) > 0,
+      weather: (analysis.weatherConditions?.length || 0) > 0 || (analysis.seasons?.length || 0) > 0
     }
-    
+
     const completed = Object.values(checks).filter(Boolean).length
     const total = Object.keys(checks).length
-    
+
     return {
       checks,
       completed,
@@ -1506,9 +1579,10 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
       isComplete: completed === total
     }
   }, [analysis])
-  
-  // Selected mission profile details
-  const selectedProfile = analysis.missionProfile ? MISSION_PROFILES[analysis.missionProfile] : null
+
+  // Selected mission profiles details (first one for display)
+  const selectedProfiles = analysis.missionProfiles?.map(id => MISSION_PROFILES[id]).filter(Boolean) || []
+  const primaryProfile = selectedProfiles[0] || null
   
   return (
     <div className="space-y-6">
@@ -1549,54 +1623,63 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
       {/* Analysis Sections */}
       <div className="space-y-4">
         {/* Mission Profile */}
-        <CollapsibleSection 
-          title="Mission Profile" 
-          icon={Target} 
+        <CollapsibleSection
+          title="Mission Profiles"
+          icon={Target}
           badge="Step 1"
-          complete={completeness.checks.missionProfile}
-          defaultOpen={!completeness.checks.missionProfile}
+          complete={completeness.checks.missionProfiles}
+          defaultOpen={!completeness.checks.missionProfiles}
         >
           <p className="text-sm text-gray-600 mb-4">
-            Select the type of operation that best describes your mission objectives.
+            Select all mission types that apply to this operation. Multiple selections allowed.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {Object.values(MISSION_PROFILES).map(profile => (
               <SelectionCard
                 key={profile.id}
                 item={profile}
-                selected={analysis.missionProfile === profile.id}
-                onSelect={(id) => updateAnalysis('missionProfile', id)}
+                selected={analysis.missionProfiles?.includes(profile.id)}
+                onSelect={toggleMissionProfile}
+                multiSelect
               />
             ))}
           </div>
-          
-          {selectedProfile && (
-            <div className="mt-4 p-4 bg-aeria-navy/5 rounded-lg">
-              <h4 className="font-medium text-aeria-navy mb-3">Mission Profile Details</h4>
+
+          {analysis.missionProfiles?.length > 0 && (
+            <div className="mt-4 p-3 bg-aeria-navy/5 rounded-lg">
+              <p className="text-sm font-medium text-aeria-navy mb-2">
+                Selected ({analysis.missionProfiles.length}): {analysis.missionProfiles.map(id => MISSION_PROFILES[id]?.name).join(', ')}
+              </p>
+            </div>
+          )}
+
+          {primaryProfile && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-3">Primary Profile Details: {primaryProfile.name}</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-500">Typical Altitude</p>
-                  <p className="font-medium">{selectedProfile.typicalAltitude}</p>
+                  <p className="font-medium">{primaryProfile.typicalAltitude}</p>
                 </div>
                 <div>
                   <p className="text-gray-500">Typical Duration</p>
-                  <p className="font-medium">{selectedProfile.typicalDuration}</p>
+                  <p className="font-medium">{primaryProfile.typicalDuration}</p>
                 </div>
                 <div>
                   <p className="text-gray-500">Recommended Op Type</p>
-                  <p className="font-medium">{selectedProfile.recommendedOperationType}</p>
+                  <p className="font-medium">{primaryProfile.recommendedOperationType}</p>
                 </div>
                 <div>
                   <p className="text-gray-500">Common Payloads</p>
                   <p className="font-medium">
-                    {selectedProfile.typicalPayloads.map(p => PAYLOAD_TYPES[p]?.name || p).join(', ')}
+                    {primaryProfile.typicalPayloads.map(p => PAYLOAD_TYPES[p]?.name || p).join(', ')}
                   </p>
                 </div>
               </div>
               <div className="mt-3">
                 <p className="text-gray-500 text-sm mb-1">Key Considerations:</p>
                 <ul className="text-sm text-gray-700 space-y-1">
-                  {selectedProfile.considerations.map((c, i) => (
+                  {primaryProfile.considerations.map((c, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <ChevronRight className="w-4 h-4 text-aeria-navy flex-shrink-0 mt-0.5" />
                       {c}
@@ -1609,85 +1692,103 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
         </CollapsibleSection>
         
         {/* Operating Environment */}
-        <CollapsibleSection 
-          title="Operating Environment" 
-          icon={MapPin} 
+        <CollapsibleSection
+          title="Operating Environments"
+          icon={MapPin}
           badge="Step 2"
-          complete={completeness.checks.environment}
-          defaultOpen={completeness.checks.missionProfile && !completeness.checks.environment}
+          complete={completeness.checks.environments}
+          defaultOpen={completeness.checks.missionProfiles && !completeness.checks.environments}
         >
           <p className="text-sm text-gray-600 mb-4">
-            Characterize the ground environment where operations will take place.
+            Select all environment types that apply. For operations spanning multiple areas, select each applicable environment.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {Object.values(OPERATING_ENVIRONMENTS).map(env => (
               <SelectionCard
                 key={env.id}
                 item={env}
-                selected={analysis.environment === env.id}
-                onSelect={(id) => updateAnalysis('environment', id)}
+                selected={analysis.environments?.includes(env.id)}
+                onSelect={toggleEnvironment}
+                multiSelect
               />
             ))}
           </div>
-          
-          {analysis.environment && (
-            <InfoBanner type="info">
-              <strong>SORA Category:</strong> {OPERATING_ENVIRONMENTS[analysis.environment].soraCategory}
-              <br />
-              <strong>Typical SAIL Range:</strong> {OPERATING_ENVIRONMENTS[analysis.environment].typicalSAIL}
-            </InfoBanner>
+
+          {analysis.environments?.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm font-medium text-gray-700">
+                Selected ({analysis.environments.length}): {analysis.environments.map(id => OPERATING_ENVIRONMENTS[id]?.name).join(', ')}
+              </p>
+              <InfoBanner type="info">
+                <strong>SORA Categories:</strong> {analysis.environments.map(id => OPERATING_ENVIRONMENTS[id]?.soraCategory).join(', ')}
+                <br />
+                <strong>Note:</strong> Analysis uses the most conservative (highest risk) environment selected.
+              </InfoBanner>
+            </div>
           )}
         </CollapsibleSection>
         
         {/* Airspace */}
-        <CollapsibleSection 
-          title="Airspace" 
-          icon={Plane} 
+        <CollapsibleSection
+          title="Airspace Classifications"
+          icon={Plane}
           badge="Step 3"
-          complete={completeness.checks.airspace}
-          defaultOpen={completeness.checks.environment && !completeness.checks.airspace}
+          complete={completeness.checks.airspaces}
+          defaultOpen={completeness.checks.environments && !completeness.checks.airspaces}
         >
           <p className="text-sm text-gray-600 mb-4">
-            Select the airspace scenario that applies to your operation area.
+            Select all airspace types that apply to your operation area. For operations spanning multiple airspace classes, select each.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {Object.values(AIRSPACE_SCENARIOS).map(scenario => (
               <button
                 key={scenario.id}
-                onClick={() => updateAnalysis('airspace', scenario.id)}
+                onClick={() => toggleAirspace(scenario.id)}
                 className={`p-4 rounded-lg border-2 text-left transition-all ${
-                  analysis.airspace === scenario.id
+                  analysis.airspaces?.includes(scenario.id)
                     ? 'border-aeria-navy bg-aeria-navy/5'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className={`font-medium ${
-                      analysis.airspace === scenario.id ? 'text-aeria-navy' : 'text-gray-900'
-                    }`}>
-                      {scenario.name}
-                    </p>
-                    <p className="text-sm text-gray-500">Class {scenario.class}</p>
-                  </div>
-                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                    scenario.complexity === 'low' ? 'bg-green-100 text-green-700' :
-                    scenario.complexity === 'medium' ? 'bg-amber-100 text-amber-700' :
-                    'bg-red-100 text-red-700'
+                <div className="flex items-start gap-3">
+                  <div className={`w-5 h-5 flex-shrink-0 rounded border-2 flex items-center justify-center mt-0.5 ${
+                    analysis.airspaces?.includes(scenario.id) ? 'border-aeria-navy bg-aeria-navy' : 'border-gray-300'
                   }`}>
-                    {scenario.complexity}
-                  </span>
+                    {analysis.airspaces?.includes(scenario.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className={`font-medium ${
+                          analysis.airspaces?.includes(scenario.id) ? 'text-aeria-navy' : 'text-gray-900'
+                        }`}>
+                          {scenario.name}
+                        </p>
+                        <p className="text-sm text-gray-500">Class {scenario.class}</p>
+                      </div>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                        scenario.complexity === 'low' ? 'bg-green-100 text-green-700' :
+                        scenario.complexity === 'medium' ? 'bg-amber-100 text-amber-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {scenario.complexity}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500">{scenario.description}</p>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500">{scenario.description}</p>
               </button>
             ))}
           </div>
-          
-          {analysis.airspace && (
+
+          {analysis.airspaces?.length > 0 && (
             <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <h4 className="font-medium text-amber-800 mb-2">Requirements:</h4>
+              <p className="font-medium text-amber-800 mb-2">
+                Selected ({analysis.airspaces.length}): {analysis.airspaces.map(id => AIRSPACE_SCENARIOS[id]?.name).join(', ')}
+              </p>
+              <h4 className="font-medium text-amber-800 mb-2 mt-3">Combined Requirements:</h4>
               <ul className="text-sm text-amber-700 space-y-1">
-                {AIRSPACE_SCENARIOS[analysis.airspace].requirements.map((req, i) => (
+                {[...new Set(analysis.airspaces.flatMap(id => AIRSPACE_SCENARIOS[id]?.requirements || []))].map((req, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <ChevronRight className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     {req}
@@ -1699,38 +1800,45 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
         </CollapsibleSection>
         
         {/* Operation Type */}
-        <CollapsibleSection 
-          title="Operation Type" 
-          icon={Eye} 
+        <CollapsibleSection
+          title="Operation Types"
+          icon={Eye}
           badge="Step 4"
-          complete={completeness.checks.operationType}
-          defaultOpen={completeness.checks.airspace && !completeness.checks.operationType}
+          complete={completeness.checks.operationTypes}
+          defaultOpen={completeness.checks.airspaces && !completeness.checks.operationTypes}
         >
           <p className="text-sm text-gray-600 mb-4">
-            Define the visual line of sight and time-of-day parameters.
+            Select all operation types that may be used. Multiple types can apply to different phases or conditions.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {Object.values(OPERATION_TYPES).map(op => (
               <button
                 key={op.id}
-                onClick={() => updateAnalysis('operationType', op.id)}
+                onClick={() => toggleOperationType(op.id)}
                 className={`p-4 rounded-lg border-2 text-left transition-all ${
-                  analysis.operationType === op.id
+                  analysis.operationTypes?.includes(op.id)
                     ? 'border-aeria-navy bg-aeria-navy/5'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center gap-3 mb-2">
-                  <op.icon className={`w-6 h-6 ${
-                    analysis.operationType === op.id ? 'text-aeria-navy' : 'text-gray-400'
-                  }`} />
-                  <div>
-                    <p className={`font-medium ${
-                      analysis.operationType === op.id ? 'text-aeria-navy' : 'text-gray-900'
-                    }`}>
-                      {op.name}
-                    </p>
-                    <p className={`text-xs ${
+                <div className="flex items-start gap-3">
+                  <div className={`w-5 h-5 flex-shrink-0 rounded border-2 flex items-center justify-center mt-0.5 ${
+                    analysis.operationTypes?.includes(op.id) ? 'border-aeria-navy bg-aeria-navy' : 'border-gray-300'
+                  }`}>
+                    {analysis.operationTypes?.includes(op.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <op.icon className={`w-5 h-5 ${
+                        analysis.operationTypes?.includes(op.id) ? 'text-aeria-navy' : 'text-gray-400'
+                      }`} />
+                      <p className={`font-medium ${
+                        analysis.operationTypes?.includes(op.id) ? 'text-aeria-navy' : 'text-gray-900'
+                      }`}>
+                        {op.name}
+                      </p>
+                    </div>
+                    <p className={`text-xs mb-1 ${
                       op.complexity === 'standard' ? 'text-green-600' :
                       op.complexity === 'enhanced' ? 'text-amber-600' :
                       op.complexity === 'advanced' ? 'text-orange-600' :
@@ -1738,36 +1846,37 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
                     }`}>
                       {op.complexity}
                     </p>
+                    <p className="text-sm text-gray-500">{op.description}</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-500">{op.description}</p>
               </button>
             ))}
           </div>
-          
-          {analysis.operationType && (
-            <InfoBanner type={
-              OPERATION_TYPES[analysis.operationType].complexity === 'standard' ? 'success' :
-              OPERATION_TYPES[analysis.operationType].complexity === 'enhanced' ? 'info' :
-              'warning'
-            }>
-              <strong>Requirements:</strong>
-              <ul className="mt-1 space-y-1">
-                {OPERATION_TYPES[analysis.operationType].requirements.map((req, i) => (
-                  <li key={i}>• {req}</li>
-                ))}
-              </ul>
-            </InfoBanner>
+
+          {analysis.operationTypes?.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                Selected ({analysis.operationTypes.length}): {analysis.operationTypes.map(id => OPERATION_TYPES[id]?.name).join(', ')}
+              </p>
+              <InfoBanner type="warning">
+                <strong>Combined Requirements:</strong>
+                <ul className="mt-1 space-y-1">
+                  {[...new Set(analysis.operationTypes.flatMap(id => OPERATION_TYPES[id]?.requirements || []))].map((req, i) => (
+                    <li key={i}>• {req}</li>
+                  ))}
+                </ul>
+              </InfoBanner>
+            </div>
           )}
         </CollapsibleSection>
         
         {/* Coverage Requirements */}
-        <CollapsibleSection 
-          title="Coverage Requirements" 
-          icon={Crosshair} 
+        <CollapsibleSection
+          title="Coverage Requirements"
+          icon={Crosshair}
           badge="Step 5"
           complete={completeness.checks.coverage}
-          defaultOpen={completeness.checks.operationType && !completeness.checks.coverage}
+          defaultOpen={completeness.checks.operationTypes && !completeness.checks.coverage}
         >
           <p className="text-sm text-gray-600 mb-4">
             Estimate the area or distance to be covered.
@@ -1806,9 +1915,9 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
         </CollapsibleSection>
         
         {/* Payloads & Sensors */}
-        <CollapsibleSection 
-          title="Payloads & Sensors" 
-          icon={Camera} 
+        <CollapsibleSection
+          title="Payloads & Sensors"
+          icon={Camera}
           badge="Step 6"
           complete={completeness.checks.payloads}
           defaultOpen={completeness.checks.coverage && !completeness.checks.payloads}
@@ -1817,10 +1926,10 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
             Select all payload types required for the mission. Weight classification affects aircraft requirements.
           </p>
           
-          {selectedProfile && (
+          {primaryProfile && (
             <InfoBanner type="info">
-              <strong>Recommended for {selectedProfile.name}:</strong>{' '}
-              {selectedProfile.typicalPayloads.map(p => PAYLOAD_TYPES[p]?.name || p).join(', ')}
+              <strong>Recommended for {primaryProfile.name}:</strong>{' '}
+              {primaryProfile.typicalPayloads.map(p => PAYLOAD_TYPES[p]?.name || p).join(', ')}
             </InfoBanner>
           )}
           
@@ -1851,6 +1960,137 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
                   {getWeightClass(analysis.payloads)}
                 </span>
               </p>
+            </div>
+          )}
+        </CollapsibleSection>
+
+        {/* Weather & Conditions */}
+        <CollapsibleSection
+          title="Weather & Conditions"
+          icon={Wind}
+          badge="Step 7"
+          complete={completeness.checks.weather}
+          defaultOpen={completeness.checks.payloads && !completeness.checks.weather}
+        >
+          <p className="text-sm text-gray-600 mb-4">
+            Define expected weather conditions, seasons, and times of day for operations.
+          </p>
+
+          <div className="space-y-6">
+            {/* Weather Conditions */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Expected Weather Conditions</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {Object.values(WEATHER_CONDITIONS).map(condition => (
+                  <button
+                    key={condition.id}
+                    onClick={() => toggleWeatherCondition(condition.id)}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                      analysis.weatherConditions?.includes(condition.id)
+                        ? 'border-aeria-navy bg-aeria-navy/5'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    title={condition.description}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 flex-shrink-0 rounded border-2 flex items-center justify-center ${
+                        analysis.weatherConditions?.includes(condition.id) ? 'border-aeria-navy bg-aeria-navy' : 'border-gray-300'
+                      }`}>
+                        {analysis.weatherConditions?.includes(condition.id) && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span className={`text-sm font-medium ${
+                        analysis.weatherConditions?.includes(condition.id) ? 'text-aeria-navy' : 'text-gray-700'
+                      }`}>
+                        {condition.name}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Seasons */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Operating Seasons</h4>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                {Object.values(SEASONS).map(season => (
+                  <button
+                    key={season.id}
+                    onClick={() => toggleSeason(season.id)}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                      analysis.seasons?.includes(season.id)
+                        ? 'border-aeria-navy bg-aeria-navy/5'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    title={season.description}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 flex-shrink-0 rounded border-2 flex items-center justify-center ${
+                        analysis.seasons?.includes(season.id) ? 'border-aeria-navy bg-aeria-navy' : 'border-gray-300'
+                      }`}>
+                        {analysis.seasons?.includes(season.id) && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span className={`text-sm font-medium ${
+                        analysis.seasons?.includes(season.id) ? 'text-aeria-navy' : 'text-gray-700'
+                      }`}>
+                        {season.name}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Times of Day */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Times of Day</h4>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                {Object.values(TIME_OF_DAY).map(time => (
+                  <button
+                    key={time.id}
+                    onClick={() => toggleTimeOfDay(time.id)}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                      analysis.timesOfDay?.includes(time.id)
+                        ? 'border-aeria-navy bg-aeria-navy/5'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    title={time.description}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 flex-shrink-0 rounded border-2 flex items-center justify-center ${
+                        analysis.timesOfDay?.includes(time.id) ? 'border-aeria-navy bg-aeria-navy' : 'border-gray-300'
+                      }`}>
+                        {analysis.timesOfDay?.includes(time.id) && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span className={`text-sm font-medium ${
+                        analysis.timesOfDay?.includes(time.id) ? 'text-aeria-navy' : 'text-gray-700'
+                      }`}>
+                        {time.name}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {(analysis.weatherConditions?.length > 0 || analysis.seasons?.length > 0 || analysis.timesOfDay?.length > 0) && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
+              {analysis.weatherConditions?.length > 0 && (
+                <p className="text-gray-600">
+                  <strong>Weather:</strong> {analysis.weatherConditions.map(id => WEATHER_CONDITIONS[id]?.name).join(', ')}
+                </p>
+              )}
+              {analysis.seasons?.length > 0 && (
+                <p className="text-gray-600 mt-1">
+                  <strong>Seasons:</strong> {analysis.seasons.map(id => SEASONS[id]?.name).join(', ')}
+                </p>
+              )}
+              {analysis.timesOfDay?.length > 0 && (
+                <p className="text-gray-600 mt-1">
+                  <strong>Times:</strong> {analysis.timesOfDay.map(id => TIME_OF_DAY[id]?.name).join(', ')}
+                </p>
+              )}
             </div>
           )}
         </CollapsibleSection>
