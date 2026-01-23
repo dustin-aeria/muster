@@ -24,6 +24,9 @@ export const HAZARD_CATEGORIES = [
   { value: 'vlos_limitations', label: 'VLOS Limitations', description: 'Visual line of sight obstructions, lighting', category: 'rpas' },
   { value: 'payload', label: 'Payload Hazards', description: 'Camera/sensor weight, balance, detachment', category: 'rpas' },
   { value: 'ground_crew', label: 'Ground Crew Safety', description: 'Prop strike, hand launch/catch, rotor hazards', category: 'rpas' },
+
+  // Other category for custom hazards
+  { value: 'other', label: 'Other', description: 'Specify custom hazard type in description', category: 'general' },
 ]
 
 // Standard hazard categories (for filtering)

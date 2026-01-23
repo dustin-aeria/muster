@@ -145,6 +145,157 @@ function NotificationTriggersPanel({ triggers }) {
   )
 }
 
+// Location picker component with GPS and map selection
+function LocationPicker({ field, value, onChange, required, allowMapSelect }) {
+  const [showMapPicker, setShowMapPicker] = useState(false)
+  const [gettingLocation, setGettingLocation] = useState(false)
+  const [manualCoords, setManualCoords] = useState(value || '')
+
+  // Parse coordinates from value
+  const parseCoords = (val) => {
+    if (!val) return null
+    const parts = val.split(',').map(p => parseFloat(p.trim()))
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return { lat: parts[0], lng: parts[1] }
+    }
+    return null
+  }
+
+  const coords = parseCoords(value)
+
+  const getCurrentPosition = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser')
+      return
+    }
+    setGettingLocation(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const newValue = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`
+        setManualCoords(newValue)
+        onChange(newValue)
+        setGettingLocation(false)
+      },
+      (err) => {
+        alert(`Unable to get location: ${err.message}`)
+        setGettingLocation(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  const handleManualChange = (e) => {
+    setManualCoords(e.target.value)
+    onChange(e.target.value)
+  }
+
+  const handleMapSelect = (lat, lng) => {
+    const newValue = `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+    setManualCoords(newValue)
+    onChange(newValue)
+    setShowMapPicker(false)
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {field.label} {required && <span className="text-red-500">*</span>}
+      </label>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={manualCoords}
+          onChange={handleManualChange}
+          placeholder="Lat, Long (e.g., 49.2827, -123.1207)"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aeria-navy focus:border-transparent transition-colors flex-1"
+          required={required}
+        />
+        <button
+          type="button"
+          onClick={getCurrentPosition}
+          disabled={gettingLocation}
+          className="px-3 py-2 bg-aeria-navy text-white rounded-lg hover:bg-aeria-blue transition-colors flex items-center gap-1 disabled:opacity-50"
+          title="Use current location"
+        >
+          {gettingLocation ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <MapPin className="w-4 h-4" />
+          )}
+        </button>
+        {allowMapSelect && (
+          <button
+            type="button"
+            onClick={() => setShowMapPicker(!showMapPicker)}
+            className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
+            title="Select on map"
+          >
+            <Search className="w-4 h-4" />
+            Map
+          </button>
+        )}
+      </div>
+
+      {/* Simple map picker */}
+      {showMapPicker && (
+        <div className="mt-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
+          <p className="text-sm text-gray-600 mb-2">
+            Enter coordinates manually or use GPS above. Map integration coming soon.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-gray-500">Latitude</label>
+              <input
+                type="number"
+                step="0.000001"
+                value={coords?.lat || ''}
+                onChange={(e) => {
+                  const lat = parseFloat(e.target.value)
+                  const lng = coords?.lng || 0
+                  if (!isNaN(lat)) handleMapSelect(lat, lng)
+                }}
+                placeholder="-90 to 90"
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Longitude</label>
+              <input
+                type="number"
+                step="0.000001"
+                value={coords?.lng || ''}
+                onChange={(e) => {
+                  const lng = parseFloat(e.target.value)
+                  const lat = coords?.lat || 0
+                  if (!isNaN(lng)) handleMapSelect(lat, lng)
+                }}
+                placeholder="-180 to 180"
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowMapPicker(false)}
+            className="mt-2 text-xs text-gray-500 hover:text-gray-700"
+          >
+            Close
+          </button>
+        </div>
+      )}
+
+      {coords && (
+        <p className="text-xs text-green-600 mt-1">
+          Valid coordinates: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+        </p>
+      )}
+
+      {field.helpText && <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>}
+    </div>
+  )
+}
+
 // Library select component - fetches data from firestore
 function LibrarySelect({ field, value, onChange, fetchFn, labelFn, valueFn, detailFn, required, returnFullItem }) {
   const [options, setOptions] = useState([])
@@ -651,34 +802,15 @@ function FormField({ field, value, onChange, formData, formId }) {
       )
 
     case 'gps':
+    case 'map_location':
       return (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {field.label} {field.required && <span className="text-red-500">*</span>}
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={localValue}
-              onChange={(e) => handleChange(e.target.value)}
-              placeholder="Lat, Long"
-              className={`${baseInputClass} flex-1`}
-            />
-            <button
-              type="button"
-              className="px-3 py-2 bg-aeria-navy text-white rounded-lg hover:bg-aeria-blue transition-colors flex items-center gap-1"
-              onClick={() => {
-                if (navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition((pos) => {
-                    handleChange(`${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`)
-                  })
-                }
-              }}
-            >
-              <MapPin className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        <LocationPicker
+          field={field}
+          value={localValue}
+          onChange={handleChange}
+          required={field.required}
+          allowMapSelect={field.type === 'map_location' || field.allowMapSelect}
+        />
       )
 
     case 'file_upload':
