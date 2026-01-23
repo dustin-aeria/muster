@@ -102,7 +102,7 @@ export default function CORAuditModal({
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <FileCheck className="w-5 h-5 text-aeria-blue" />
-            {isEditing ? `Audit ${audit.auditNumber}` : 'Schedule COR Audit'}
+            {isEditing ? `Audit ${audit.auditNumber}` : 'Schedule Safety Audit'}
           </h2>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded">
             <X className="w-5 h-5" />

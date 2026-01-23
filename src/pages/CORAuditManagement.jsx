@@ -168,8 +168,8 @@ export default function CORAuditManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">COR Audit Management</h1>
-          <p className="text-gray-600 mt-1">Certificate of Recognition - Audit Cycle & Compliance</p>
+          <h1 className="text-2xl font-bold text-gray-900">Safety Audit Management</h1>
+          <p className="text-gray-600 mt-1">Safety Management System - Audit Cycle & Compliance</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -195,7 +195,7 @@ export default function CORAuditManagement() {
                 <Award className="w-8 h-8" />
                 <div>
                   <h2 className="text-xl font-bold">
-                    {cycleStatus.hasCertificate ? 'COR Certified' : 'Not Certified'}
+                    {cycleStatus.hasCertificate ? 'Safety Certified' : 'Not Certified'}
                   </h2>
                   {cycleStatus.hasCertificate && (
                     <p className="text-white/80 text-sm">
@@ -270,11 +270,11 @@ export default function CORAuditManagement() {
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* COR Elements Summary */}
+            {/* Safety Elements Summary */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Target className="w-5 h-5 text-aeria-blue" />
-                COR Element Requirements (8 Elements)
+                Safety Element Requirements (8 Elements)
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {Object.entries(COR_ELEMENTS).map(([key, element]) => (
@@ -395,7 +395,7 @@ export default function CORAuditManagement() {
         {activeTab === 'audits' && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">COR Audits</h3>
+              <h3 className="font-semibold text-gray-900">Safety Audits</h3>
               <button
                 onClick={handleScheduleAudit}
                 className="flex items-center gap-2 px-4 py-2 bg-aeria-blue text-white rounded-lg hover:bg-aeria-navy transition-colors"
@@ -466,7 +466,7 @@ export default function CORAuditManagement() {
                   {audits.length === 0 && (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                        No audits found. Schedule your first COR audit.
+                        No audits found. Schedule your first safety audit.
                       </td>
                     </tr>
                   )}
@@ -480,7 +480,7 @@ export default function CORAuditManagement() {
         {activeTab === 'certificates' && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">COR Certificates</h3>
+              <h3 className="font-semibold text-gray-900">Safety Certificates</h3>
               <button
                 onClick={handleAddCertificate}
                 className="flex items-center gap-2 px-4 py-2 bg-aeria-blue text-white rounded-lg hover:bg-aeria-navy transition-colors"
@@ -509,7 +509,7 @@ export default function CORAuditManagement() {
                         {cert.certificateNumber}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {cert.corType} COR
+                        {cert.corType}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {cert.certifyingPartner || '-'}
@@ -623,7 +623,7 @@ export default function CORAuditManagement() {
                   {auditors.length === 0 && (
                     <tr>
                       <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                        No auditors registered. COR requires trained internal auditors.
+                        No auditors registered. Safety audits require trained internal auditors.
                       </td>
                     </tr>
                   )}

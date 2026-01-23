@@ -195,9 +195,9 @@ export default function CORDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Award className="w-7 h-7 text-aeria-blue" />
-            COR Program Dashboard
+            Safety Program Dashboard
           </h1>
-          <p className="text-gray-600 mt-1">Certificate of Recognition Program Overview</p>
+          <p className="text-gray-600 mt-1">Safety Management System Overview</p>
         </div>
         <button
           onClick={loadDashboardData}
@@ -217,7 +217,7 @@ export default function CORDashboard() {
         {/* Overall Readiness */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-medium text-gray-500">COR Readiness</span>
+            <span className="text-sm font-medium text-gray-500">Safety Readiness</span>
             <TrendingUp className={`w-5 h-5 ${getScoreColor(overallReadiness)}`} />
           </div>
           <div className="flex items-end gap-2">
@@ -319,9 +319,9 @@ export default function CORDashboard() {
         </div>
       </div>
 
-      {/* COR Elements Grid */}
+      {/* Safety Elements Grid */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">COR Elements</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Safety Elements</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {COR_ELEMENTS.map(element => {
             const score = elementScores[element.id] || 0
@@ -364,7 +364,7 @@ export default function CORDashboard() {
 
         <div className="mt-4 p-4 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>COR Requirement:</strong> Minimum 80% overall score with no element below 50% to pass audit.
+            <strong>Audit Requirement:</strong> Minimum 80% overall score with no element below 50% to pass audit.
             Verification methods: Documentation (10-50%), Interviews (10-50%), Observation (10-50%).
           </p>
         </div>
@@ -379,7 +379,7 @@ export default function CORDashboard() {
             <div className="text-center py-8 text-gray-500">
               <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-400" />
               <p>No critical actions needed</p>
-              <p className="text-sm mt-1">Your COR program is in good shape!</p>
+              <p className="text-sm mt-1">Your safety program is in good shape!</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -425,7 +425,7 @@ export default function CORDashboard() {
             >
               <Award className="w-8 h-8 text-aeria-blue" />
               <div>
-                <p className="font-medium text-gray-900">COR Audits</p>
+                <p className="font-medium text-gray-900">Safety Audits</p>
                 <p className="text-xs text-gray-500">Manage audit cycle</p>
               </div>
             </Link>

@@ -109,7 +109,7 @@ export default function CORCertificateModal({
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Award className="w-5 h-5 text-aeria-blue" />
-            {isEditing ? 'Certificate Details' : 'Issue COR Certificate'}
+            {isEditing ? 'Certificate Details' : 'Issue Safety Certificate'}
           </h2>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded">
             <X className="w-5 h-5" />
@@ -164,7 +164,7 @@ export default function CORCertificateModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">COR Type *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Certificate Type *</label>
                   <select
                     name="corType"
                     value={formData.corType}
