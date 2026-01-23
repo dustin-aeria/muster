@@ -706,57 +706,110 @@ const getWeightClass = (payloadIds) => {
 }
 
 const determineRegulatoryPathway = (analysis) => {
-  const { operationTypes = [], environments = [], airspaces = [], payloads } = analysis
+  const { operationTypes = [], environments = [], airspaces = [] } = analysis
+
+  // Canadian Drone Regulations (CARs Part IX) Decision Tree:
+  // 1. SFOC - Required for: BVLOS, Night, over gatherings, restricted airspace
+  // 2. Complex (Level 1) - Specific advanced scenarios with additional requirements
+  // 3. Advanced - Near people, controlled airspace, aerodromes (with authorization)
+  // 4. Basic - Uncontrolled airspace, away from people, specific sites only
 
   // Check for SFOC requirements (any match triggers SFOC)
   const hasNightOps = operationTypes.some(op => op?.includes('night'))
   const hasBvlosOps = operationTypes.some(op => op?.includes('bvlos'))
-  const hasComplexAirspace = airspaces.some(a => a === 'control_zone' || a === 'restricted_special')
+  const hasRestrictedAirspace = airspaces.some(a => a === 'restricted_special')
   const hasGathering = environments.includes('gathering')
-  const hasUrbanNonDay = environments.includes('urban') && operationTypes.some(op => op !== 'vlos_day')
 
-  const sfocIndicators = [hasNightOps, hasBvlosOps, hasComplexAirspace, hasGathering, hasUrbanNonDay]
+  if (hasNightOps || hasBvlosOps || hasRestrictedAirspace || hasGathering) {
+    const reasons = [
+      hasNightOps && 'Night operations (after civil twilight)',
+      hasBvlosOps && 'Beyond Visual Line of Sight (BVLOS)',
+      hasRestrictedAirspace && 'Restricted/special use airspace',
+      hasGathering && 'Operations over assembly of people'
+    ].filter(Boolean)
 
-  if (sfocIndicators.filter(Boolean).length >= 1) {
     return {
       pathway: 'SFOC',
-      reason: 'Special Flight Operations Certificate required due to: ' +
-        [
-          hasNightOps && 'Night operations',
-          hasBvlosOps && 'BVLOS operations',
-          hasComplexAirspace && 'Complex airspace',
-          hasGathering && 'Operations over gatherings',
-          hasUrbanNonDay && 'Urban non-day operations'
-        ].filter(Boolean).join(', '),
-      complexity: 'high'
+      pathwayFull: 'Special Flight Operations Certificate',
+      reason: 'SFOC required under CARs 903.03 due to: ' + reasons.join(', '),
+      complexity: 'high',
+      requirements: [
+        'Submit SFOC application to Transport Canada (min 30 business days)',
+        'Detailed risk assessment and mitigation plan',
+        'Emergency response procedures',
+        'Crew qualification documentation',
+        'Aircraft airworthiness documentation'
+      ]
+    }
+  }
+
+  // Check for Complex operations (higher risk Advanced scenarios)
+  const hasControlZone = airspaces.some(a => a === 'control_zone')
+  const hasUrbanEnv = environments.includes('urban')
+  const hasTwilightOps = operationTypes.some(op => op === 'vlos_twilight')
+
+  if (hasControlZone || (hasUrbanEnv && hasTwilightOps)) {
+    const reasons = [
+      hasControlZone && 'Within airport control zone',
+      (hasUrbanEnv && hasTwilightOps) && 'Urban twilight operations'
+    ].filter(Boolean)
+
+    return {
+      pathway: 'Complex',
+      pathwayFull: 'Advanced Operations (Complex Scenarios)',
+      reason: 'Complex operations under CARs Part IX due to: ' + reasons.join(', '),
+      complexity: 'high',
+      requirements: [
+        'Advanced pilot certificate with appropriate ratings',
+        'Site-specific NAV CANADA authorization',
+        'Enhanced safety documentation',
+        'Real-time ATC communication capability',
+        'NOTAM publication'
+      ]
     }
   }
 
   // Check for Advanced operations
   const hasPopulatedEnv = environments.some(e => e === 'suburban' || e === 'urban')
   const hasControlledAirspace = airspaces.some(a => a === 'controlled_transition' || a === 'near_aerodrome')
-  const hasEvlosOrTwilight = operationTypes.some(op => op === 'evlos_day' || op === 'vlos_twilight')
+  const hasEvlos = operationTypes.some(op => op === 'evlos_day')
 
-  const advancedIndicators = [hasPopulatedEnv, hasControlledAirspace, hasEvlosOrTwilight]
+  if (hasPopulatedEnv || hasControlledAirspace || hasEvlos) {
+    const reasons = [
+      hasPopulatedEnv && 'Operations in populated areas (within 30m of people)',
+      hasControlledAirspace && 'Controlled airspace or near aerodrome',
+      hasEvlos && 'Extended Visual Line of Sight (EVLOS)'
+    ].filter(Boolean)
 
-  if (advancedIndicators.filter(Boolean).length >= 1) {
     return {
       pathway: 'Advanced',
-      reason: 'Advanced operations certificate required for operations in ' +
-        [
-          hasPopulatedEnv && 'populated areas',
-          hasControlledAirspace && 'controlled airspace',
-          hasEvlosOrTwilight && 'EVLOS/twilight operations'
-        ].filter(Boolean).join(', '),
-      complexity: 'medium'
+      pathwayFull: 'Advanced Operations',
+      reason: 'Advanced operations under CARs 901.71 due to: ' + reasons.join(', '),
+      complexity: 'medium',
+      requirements: [
+        'Advanced pilot certificate (Small or Large)',
+        'RPAS registered and marked',
+        'NAV CANADA authorization for controlled airspace',
+        'Site survey and risk assessment',
+        'Liability insurance'
+      ]
     }
   }
 
-  // Basic operations
+  // Basic operations - default
   return {
     pathway: 'Basic',
-    reason: 'Basic operations in uncontrolled airspace over unpopulated areas',
-    complexity: 'low'
+    pathwayFull: 'Basic Operations',
+    reason: 'Basic operations under CARs 901.45: VLOS in uncontrolled airspace, away from bystanders',
+    complexity: 'low',
+    requirements: [
+      'Basic pilot certificate (Small or Large based on MTOW)',
+      'RPAS registered and marked',
+      'Fly in Class G airspace only',
+      'Maintain 30m from bystanders',
+      'Maximum 122m (400ft) AGL',
+      'Liability insurance recommended'
+    ]
   }
 }
 
@@ -815,13 +868,22 @@ const generateCrewRequirements = (analysis) => {
     requirements.vo.notes.push('Recommended for large area operations')
   }
 
-  // Payload Operator
-  const complexPayloads = ['lidar', 'multispectral', 'cinema_camera', 'gas_sensor']
+  // Payload Operator - only required for cinema/film work or real-time complex monitoring
+  // LiDAR, multispectral, gas sensors are typically autonomous and don't need dedicated operator
   const selectedPayloads = analysis.payloads || []
-  if (selectedPayloads.some(p => complexPayloads.includes(p))) {
+  const hasCinemaPayload = selectedPayloads.includes('cinema_camera')
+  const hasMultipleComplexPayloads = selectedPayloads.filter(p =>
+    ['lidar', 'multispectral', 'thermal', 'gas_sensor'].includes(p)
+  ).length >= 2
+
+  if (hasCinemaPayload) {
     requirements.payloadOperator.required = true
     requirements.payloadOperator.count = 1
-    requirements.payloadOperator.notes.push('Complex payload requires dedicated operator')
+    requirements.payloadOperator.notes.push('Cinema/gimbal operator for professional film work')
+  } else if (hasMultipleComplexPayloads) {
+    requirements.payloadOperator.required = false // Recommended, not required
+    requirements.payloadOperator.count = 1
+    requirements.payloadOperator.notes.push('Recommended when operating multiple sensor payloads simultaneously')
   }
 
   // Ground Support
@@ -932,14 +994,17 @@ const generateEquipmentChecklist = (analysis) => {
   if (payloads?.includes('lidar')) {
     equipment.payloadEquipment.push(
       { item: 'LiDAR sensor', required: true },
-      { item: 'Ground control points', required: true },
-      { item: 'RTK base station', required: false }
+      { item: 'Ground control points (GCPs)', required: true },
+      { item: 'RTK/PPK base station or NTRIP connection', required: true }, // Required for precision
+      { item: 'RTK rover/GNSS receiver', required: true }
     )
   }
   if (payloads?.includes('multispectral')) {
     equipment.payloadEquipment.push(
-      { item: 'Calibration panel', required: true },
-      { item: 'GPS ground control', required: true }
+      { item: 'Calibration reflectance panel', required: true },
+      { item: 'Ground control points (GCPs)', required: true },
+      { item: 'RTK/PPK positioning system', required: true }, // Required for precision agriculture/mapping
+      { item: 'Sun angle sensor (if separate)', required: false }
     )
   }
 
@@ -1203,23 +1268,40 @@ function PayloadCard({ payload, selected, onToggle }) {
 
 function RegulatoryPathwayResult({ pathway }) {
   if (!pathway) return null
-  
+
   const colors = {
     Basic: 'bg-green-100 border-green-300 text-green-800',
     Advanced: 'bg-amber-100 border-amber-300 text-amber-800',
+    Complex: 'bg-orange-100 border-orange-300 text-orange-800',
     SFOC: 'bg-red-100 border-red-300 text-red-800'
   }
-  
+
   return (
     <div className={`p-4 rounded-lg border-2 ${colors[pathway.pathway]}`}>
       <div className="flex items-center gap-3 mb-2">
         <Shield className="w-6 h-6" />
         <div>
-          <p className="text-xs uppercase tracking-wide opacity-75">Regulatory Pathway</p>
-          <p className="text-xl font-bold">{pathway.pathway} Operations</p>
+          <p className="text-xs uppercase tracking-wide opacity-75">Canadian Regulatory Pathway</p>
+          <p className="text-xl font-bold">{pathway.pathwayFull || pathway.pathway}</p>
         </div>
       </div>
-      <p className="text-sm opacity-90">{pathway.reason}</p>
+      <p className="text-sm opacity-90 mb-3">{pathway.reason}</p>
+      {pathway.requirements && pathway.requirements.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-current/20">
+          <p className="text-xs font-semibold uppercase mb-2 opacity-75">Key Requirements:</p>
+          <ul className="text-sm space-y-1">
+            {pathway.requirements.slice(0, 4).map((req, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <ChevronRight className="w-4 h-4 flex-shrink-0 mt-0.5 opacity-60" />
+                <span className="opacity-90">{req}</span>
+              </li>
+            ))}
+            {pathway.requirements.length > 4 && (
+              <li className="text-xs opacity-60 ml-6">+ {pathway.requirements.length - 4} more</li>
+            )}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
