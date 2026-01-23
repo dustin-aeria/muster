@@ -482,9 +482,10 @@ export default function ProjectComms({ project, onUpdate }) {
                 <label className="label">Emergency Word</label>
                 <input
                   type="text"
-                  value={comms.emergencyWord || 'MAYDAY'}
+                  value={comms.emergencyWord ?? ''}
                   onChange={(e) => updateComms({ emergencyWord: e.target.value })}
                   className="input font-bold text-red-600"
+                  placeholder="e.g., MAYDAY"
                 />
                 <p className="text-xs text-gray-500 mt-1">Word to indicate an emergency situation</p>
               </div>
@@ -492,9 +493,10 @@ export default function ProjectComms({ project, onUpdate }) {
                 <label className="label">Stop Work Word</label>
                 <input
                   type="text"
-                  value={comms.stopWord || 'STOP STOP STOP'}
+                  value={comms.stopWord ?? ''}
                   onChange={(e) => updateComms({ stopWord: e.target.value })}
                   className="input font-bold text-amber-600"
+                  placeholder="e.g., STOP STOP STOP"
                 />
                 <p className="text-xs text-gray-500 mt-1">Word to immediately cease all operations</p>
               </div>
