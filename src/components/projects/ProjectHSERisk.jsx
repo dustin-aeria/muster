@@ -23,7 +23,6 @@ import {
   Footprints,
   UserX,
   Wrench,
-  ShieldCheck,
   ClipboardCheck,
   MapPin,
   Download,
@@ -161,7 +160,13 @@ const RiskMatrix = ({ hazards }) => {
 
   return (
     <div className="p-4 bg-gray-50 rounded-lg border">
-      <h4 className="text-sm font-medium text-gray-700 mb-3">Risk Matrix Overview</h4>
+      <div className="mb-4">
+        <h4 className="text-sm font-medium text-gray-900 mb-1">5×5 Risk Assessment Matrix</h4>
+        <p className="text-xs text-gray-600">
+          Risk Score = Likelihood × Severity. Identified hazards are plotted below with their hazard numbers.
+          Higher scores indicate greater risk requiring more robust controls.
+        </p>
+      </div>
       <div className="overflow-x-auto">
         {/* Severity axis label */}
         <div className="text-center text-xs font-medium text-gray-600 mb-1">
@@ -208,25 +213,37 @@ const RiskMatrix = ({ hazards }) => {
           </tbody>
         </table>
 
-        {/* Legend with score ranges */}
+        {/* Legend with score ranges and actions */}
         <div className="mt-4 p-3 bg-white rounded border">
-          <p className="text-xs font-medium text-gray-700 mb-2">Risk Levels (Likelihood × Severity)</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 bg-green-100 border border-green-300 rounded"></span>
-              <span><strong>Low</strong> (1-4)</span>
+          <p className="text-xs font-medium text-gray-700 mb-2">Risk Levels & Required Actions</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div className="flex items-start gap-2 p-2 bg-green-50 rounded">
+              <span className="w-4 h-4 bg-green-100 border border-green-300 rounded flex-shrink-0 mt-0.5"></span>
+              <div>
+                <span className="font-medium text-green-800">Low (1-4)</span>
+                <p className="text-green-700 text-[10px]">Acceptable with monitoring</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></span>
-              <span><strong>Medium</strong> (5-9)</span>
+            <div className="flex items-start gap-2 p-2 bg-yellow-50 rounded">
+              <span className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded flex-shrink-0 mt-0.5"></span>
+              <div>
+                <span className="font-medium text-yellow-800">Medium (5-9)</span>
+                <p className="text-yellow-700 text-[10px]">Mitigations recommended</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 bg-orange-100 border border-orange-300 rounded"></span>
-              <span><strong>High</strong> (10-16)</span>
+            <div className="flex items-start gap-2 p-2 bg-orange-50 rounded">
+              <span className="w-4 h-4 bg-orange-100 border border-orange-300 rounded flex-shrink-0 mt-0.5"></span>
+              <div>
+                <span className="font-medium text-orange-800">High (10-16)</span>
+                <p className="text-orange-700 text-[10px]">Mitigations required before proceeding</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 bg-red-100 border border-red-300 rounded"></span>
-              <span><strong>Critical</strong> (17-25)</span>
+            <div className="flex items-start gap-2 p-2 bg-red-50 rounded">
+              <span className="w-4 h-4 bg-red-100 border border-red-300 rounded flex-shrink-0 mt-0.5"></span>
+              <div>
+                <span className="font-medium text-red-800">Critical (17-25)</span>
+                <p className="text-red-700 text-[10px]">Do not proceed without controls</p>
+              </div>
             </div>
           </div>
           <p className="text-[10px] text-gray-500 mt-2">Numbers in cells indicate hazard #. Hover over cells for details.</p>
@@ -245,6 +262,7 @@ const HazardCard = ({ hazard, index, onUpdate, onRemove }) => {
   const CategoryIcon = category.icon
   const initialRisk = getRiskLevel(hazard.likelihood, hazard.severity)
   const residualRisk = getRiskLevel(hazard.residualLikelihood, hazard.residualSeverity)
+  const controlType = controlHierarchy.find(c => c.value === hazard.controlType)
 
   return (
     <div className={`rounded-lg border-2 overflow-hidden ${initialRisk.color.replace('text-', 'border-').split(' ')[0]}`}>
@@ -254,15 +272,31 @@ const HazardCard = ({ hazard, index, onUpdate, onRemove }) => {
           <CategoryIcon className={`w-5 h-5 ${category.color}`} />
           <div className="flex-1 min-w-0">
             <p className="font-medium text-gray-900 truncate">{hazard.description || 'Untitled Hazard'}</p>
-            <p className="text-xs text-gray-500">{category.label}</p>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span>{category.label}</span>
+              {hazard.controls && (
+                <>
+                  <span>•</span>
+                  <span className="text-gray-400 truncate max-w-[200px]">
+                    {controlType?.label || 'Control'}: {hazard.controls.substring(0, 40)}{hazard.controls.length > 40 ? '...' : ''}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-          <div className="text-right mr-2">
-            <p className="text-xs text-gray-500">Initial</p>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${initialRisk.color}`}>{initialRisk.level}</span>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-500">Residual</p>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${residualRisk.color}`}>{residualRisk.level}</span>
+          <div className="flex items-center gap-3">
+            <div className="text-center">
+              <p className="text-[10px] text-gray-400">Initial</p>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${initialRisk.color}`}>
+                {hazard.likelihood}×{hazard.severity}
+              </span>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-gray-400">Residual</p>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${residualRisk.color}`}>
+                {hazard.residualLikelihood}×{hazard.residualSeverity}
+              </span>
+            </div>
           </div>
           {expanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
         </div>
@@ -308,9 +342,9 @@ const HazardCard = ({ hazard, index, onUpdate, onRemove }) => {
             </div>
           </div>
 
-          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <h4 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-2">
-              <Shield className="w-4 h-4" />
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-gray-500" />
               Control Measures
             </h4>
             <div className="mb-3">
@@ -325,8 +359,8 @@ const HazardCard = ({ hazard, index, onUpdate, onRemove }) => {
             </div>
           </div>
 
-          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-            <h4 className="text-sm font-medium text-green-800 mb-2">Residual Risk (After Controls)</h4>
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Residual Risk (After Controls)</h4>
             <div className="grid sm:grid-cols-3 gap-3">
               <div>
                 <label className="label text-xs">Residual Likelihood</label>
@@ -508,13 +542,13 @@ const SiteSurveyImport = ({ project, existingHazards, onImport }) => {
   }
   
   return (
-    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-medium text-blue-900 flex items-center gap-2">
-          <Download className="w-4 h-4" />
+        <h4 className="font-medium text-gray-900 flex items-center gap-2">
+          <Download className="w-4 h-4 text-gray-500" />
           Import from Site Survey
         </h4>
-        <span className="text-xs text-blue-700">{availableHazards.length} available</span>
+        <span className="text-xs text-gray-600">{availableHazards.length} available</span>
       </div>
       
       <div className="space-y-2 mb-4">
@@ -527,14 +561,14 @@ const SiteSurveyImport = ({ project, existingHazards, onImport }) => {
             <label
               key={hazard.id}
               className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                isSelected ? 'bg-blue-100 border-blue-300' : 'bg-white border-gray-200'
+                isSelected ? 'bg-aeria-sky border-aeria-light-blue' : 'bg-white border-gray-200'
               } border`}
             >
               <input
                 type="checkbox"
                 checked={isSelected}
                 onChange={() => toggleItem(hazard.id)}
-                className="mt-1 rounded border-gray-300 text-blue-600"
+                className="mt-1 rounded border-gray-300 text-aeria-navy"
               />
               <CategoryIcon className={`w-4 h-4 mt-0.5 ${category?.color || 'text-gray-500'}`} />
               <div className="flex-1 min-w-0">
@@ -566,8 +600,7 @@ export default function ProjectHSERisk({ project, onUpdate }) {
     import: true,
     summary: true,
     hazards: true,
-    matrix: false,
-    review: true
+    matrix: false
   })
   const [initialized, setInitialized] = useState(false)
 
@@ -577,13 +610,7 @@ export default function ProjectHSERisk({ project, onUpdate }) {
       setInitialized(true)
       onUpdate({
         hseRiskAssessment: {
-          hazards: [],
-          overallRiskAcceptable: null,
-          reviewNotes: '',
-          reviewedBy: '',
-          reviewDate: '',
-          approvedBy: '',
-          approvalDate: ''
+          hazards: []
         }
       })
     } else {
@@ -731,48 +758,6 @@ export default function ProjectHSERisk({ project, onUpdate }) {
         )}
       </div>
 
-      {/* Review Section */}
-      <div className="card">
-        <button onClick={() => toggleSection('review')} className="flex items-center justify-between w-full text-left">
-          <h3 className="font-medium text-gray-900 flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-green-500" />
-            Review & Approval
-          </h3>
-          {expandedSections.review ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-        </button>
-
-        {expandedSections.review && (
-          <div className="mt-4 space-y-4">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={hseRisk.overallRiskAcceptable === true}
-                  onChange={(e) => updateHSERisk({ overallRiskAcceptable: e.target.checked ? true : null })}
-                  className="w-5 h-5 rounded border-gray-300 text-green-600"
-                />
-                <span className="font-medium text-gray-900">I confirm all identified hazards have been assessed and controlled to acceptable levels</span>
-              </label>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Reviewed By</label>
-                <input type="text" value={hseRisk.reviewedBy || ''} onChange={(e) => updateHSERisk({ reviewedBy: e.target.value })} className="input" placeholder="Reviewer name" />
-              </div>
-              <div>
-                <label className="label">Review Date</label>
-                <input type="date" value={hseRisk.reviewDate || ''} onChange={(e) => updateHSERisk({ reviewDate: e.target.value })} className="input" />
-              </div>
-            </div>
-
-            <div>
-              <label className="label">Review Notes</label>
-              <textarea value={hseRisk.reviewNotes || ''} onChange={(e) => updateHSERisk({ reviewNotes: e.target.value })} className="input min-h-[80px]" placeholder="Additional notes, conditions, or observations..." />
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
