@@ -222,10 +222,80 @@ function SAILBadge({ sail, size = 'md' }) {
 }
 
 // ============================================
-// GRC DISPLAY
+// SORA RISK PATH SUMMARY (Visual Flow)
 // ============================================
 
-function GRCDisplay({ label, value, description }) {
+function SORARiskPathSummary({ calc, sail }) {
+  const getGRCBgColor = (grc) => {
+    if (grc === null) return 'bg-gray-100 border-gray-300'
+    if (grc <= 2) return 'bg-green-100 border-green-400'
+    if (grc <= 4) return 'bg-yellow-100 border-yellow-400'
+    if (grc <= 6) return 'bg-orange-100 border-orange-400'
+    return 'bg-red-100 border-red-400'
+  }
+
+  const getARCBgColor = (arc) => {
+    if (!arc) return 'bg-gray-100 border-gray-300'
+    if (arc === 'ARC-a') return 'bg-green-100 border-green-400'
+    if (arc === 'ARC-b') return 'bg-yellow-100 border-yellow-400'
+    if (arc === 'ARC-c') return 'bg-orange-100 border-orange-400'
+    return 'bg-red-100 border-red-400'
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <h3 className="text-sm font-medium text-gray-500 mb-3 text-center">SORA Risk Assessment Flow</h3>
+      <div className="flex items-center justify-center gap-2 flex-wrap">
+        {/* Ground Risk Path */}
+        <div className="flex items-center gap-2">
+          <div className={`px-3 py-2 rounded-lg border-2 text-center ${getGRCBgColor(calc.iGRC)}`}>
+            <p className="text-[10px] text-gray-500 uppercase">iGRC</p>
+            <p className="text-lg font-bold">{calc.iGRC ?? '?'}</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-gray-400" />
+          <div className={`px-3 py-2 rounded-lg border-2 text-center ${getGRCBgColor(calc.fGRC)}`}>
+            <p className="text-[10px] text-gray-500 uppercase">fGRC</p>
+            <p className="text-lg font-bold">{calc.fGRC ?? '?'}</p>
+          </div>
+        </div>
+
+        <div className="hidden sm:block text-gray-300 text-2xl font-light mx-2">+</div>
+
+        {/* Air Risk Path */}
+        <div className="flex items-center gap-2">
+          <div className={`px-3 py-2 rounded-lg border-2 text-center ${getARCBgColor(calc.initialARC)}`}>
+            <p className="text-[10px] text-gray-500 uppercase">Init ARC</p>
+            <p className="text-sm font-bold">{calc.initialARC || '?'}</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-gray-400" />
+          <div className={`px-3 py-2 rounded-lg border-2 text-center ${getARCBgColor(calc.residualARC)}`}>
+            <p className="text-[10px] text-gray-500 uppercase">Res ARC</p>
+            <p className="text-sm font-bold">{calc.residualARC || '?'}</p>
+          </div>
+        </div>
+
+        <div className="hidden sm:block text-gray-300 text-2xl font-light mx-2">=</div>
+
+        {/* SAIL Result */}
+        <div className="px-4 py-2 rounded-lg text-center" style={{ backgroundColor: sail ? sailColors[sail] : '#E5E7EB' }}>
+          <p className="text-[10px] uppercase" style={{ color: sail && (sail === 'I' || sail === 'II') ? '#374151' : '#FFFFFF', opacity: 0.8 }}>SAIL</p>
+          <p className="text-xl font-bold" style={{ color: sail && (sail === 'I' || sail === 'II') ? '#1F2937' : '#FFFFFF' }}>
+            {sail || '?'}
+          </p>
+        </div>
+      </div>
+      {calc.fGRC !== null && calc.fGRC > 7 && (
+        <p className="text-center text-xs text-red-600 mt-2">⚠ fGRC &gt; 7: Outside SORA scope</p>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// GRC DISPLAY (Compact)
+// ============================================
+
+function GRCDisplay({ label, value, description, compact = false }) {
   const getGRCColor = (grc) => {
     if (grc === null) return 'bg-gray-200 text-gray-600'
     if (grc <= 2) return 'bg-green-500 text-white'
@@ -233,11 +303,22 @@ function GRCDisplay({ label, value, description }) {
     if (grc <= 6) return 'bg-orange-500 text-white'
     return 'bg-red-500 text-white'
   }
-  
+
+  if (compact) {
+    return (
+      <div className="text-center">
+        <div className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-lg font-bold ${getGRCColor(value)}`}>
+          {value ?? '?'}
+        </div>
+        <p className="text-xs text-gray-500 mt-1">{label}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="text-center p-4 bg-gray-50 rounded-lg">
       <p className="text-sm text-gray-600 mb-2">{label}</p>
-      <div 
+      <div
         className={`inline-flex items-center justify-center w-12 h-12 rounded-full text-xl font-bold ${getGRCColor(value)}`}
       >
         {value ?? '?'}
@@ -1356,29 +1437,23 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">SORA 2.5 Assessment</h2>
-          <p className="text-gray-500">JARUS Specific Operations Risk Assessment per site</p>
+          <p className="text-sm text-gray-500">JARUS Specific Operations Risk Assessment</p>
         </div>
-        
-        <div className="flex items-center gap-4">
-          {activeCalc.sail && (
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Site SAIL Level</p>
-              <SAILBadge sail={activeCalc.sail} size="lg" />
-            </div>
-          )}
-        </div>
+        {sites.length > 1 && (
+          <SiteSelectorBar
+            sites={sites}
+            activeSiteId={activeSiteId}
+            onSelectSite={handleSelectSite}
+            calculations={calculations}
+          />
+        )}
       </div>
-      
-      {/* Site Selector */}
-      <SiteSelectorBar
-        sites={sites}
-        activeSiteId={activeSiteId}
-        onSelectSite={handleSelectSite}
-        calculations={calculations}
-      />
-      
-      {/* Multi-Site Summary */}
-      <MultiSiteSummary sites={sites} calculations={calculations} />
+
+      {/* Visual Risk Path Summary - Always visible */}
+      <SORARiskPathSummary calc={activeCalc} sail={activeCalc.sail} />
+
+      {/* Multi-Site Summary - Only show for multiple sites */}
+      {sites.length > 1 && <MultiSiteSummary sites={sites} calculations={calculations} />}
 
       {/* No Aircraft Warning */}
       {!primaryAircraft && (
@@ -1423,57 +1498,48 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
       
       {/* Step 2: Intrinsic GRC */}
       <CollapsibleSection
-        title="Ground Risk - Intrinsic GRC (iGRC)"
+        title="Ground Risk - Intrinsic GRC"
         stepNumber={2}
-        badge={activeCalc.iGRC ? `iGRC: ${activeCalc.iGRC}` : null}
+        badge={activeCalc.iGRC ? `iGRC ${activeCalc.iGRC}` : null}
         status={activeCalc.iGRC ? 'complete' : 'missing'}
       >
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <p className="text-sm text-blue-800">
-            <Info className="w-4 h-4 inline mr-1" />
-            iGRC is determined by population density and UA characteristics (SORA 2.5 Table 2)
-          </p>
-        </div>
-        
+        <p className="text-sm text-gray-600 mb-4">
+          Select the population category and UA characteristics to determine intrinsic ground risk.
+        </p>
+
         <PopulationSelector
           value={siteSORA.populationCategory || activeCalc.population}
           onChange={(v) => updateSiteSORA({ populationCategory: v })}
           fromSiteSurvey={activeSite?.siteSurvey?.population?.category}
           onSyncFromSurvey={syncPopulationFromSurvey}
         />
-        
-        <div className="mt-6">
+
+        <div className="mt-4">
           <UACharacteristicsSelector
             value={siteSORA.uaCharacteristics || activeCalc.uaChar}
             onChange={(v) => updateSiteSORA({ uaCharacteristics: v })}
             aircraft={siteAircraft}
           />
         </div>
-        
-        <div className="mt-6 flex justify-center">
-          <GRCDisplay 
-            label="Intrinsic Ground Risk Class" 
-            value={activeCalc.iGRC}
-            description="Before mitigations"
-          />
+
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center justify-center gap-4">
+          <span className="text-sm text-gray-600">Result:</span>
+          <GRCDisplay label="iGRC" value={activeCalc.iGRC} compact />
         </div>
       </CollapsibleSection>
       
       {/* Step 3: Final GRC */}
       <CollapsibleSection
-        title="Ground Risk - Final GRC (fGRC)"
+        title="Ground Risk Mitigations"
         stepNumber={3}
-        badge={activeCalc.fGRC ? `fGRC: ${activeCalc.fGRC}` : null}
+        badge={activeCalc.fGRC ? `fGRC ${activeCalc.fGRC}` : null}
         status={activeCalc.fGRC ? 'complete' : 'missing'}
       >
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <p className="text-sm text-blue-800">
-            <Info className="w-4 h-4 inline mr-1" />
-            Apply mitigations to reduce ground risk. M3 (ERP) was removed in SORA 2.5.
-          </p>
-        </div>
-        
-        <div className="space-y-4">
+        <p className="text-sm text-gray-600 mb-4">
+          Apply mitigations to reduce ground risk class. Each mitigation can reduce the GRC.
+        </p>
+
+        <div className="space-y-3">
           {Object.entries(groundMitigations).map(([key, mitigation]) => (
             <MitigationSelector
               key={key}
@@ -1489,13 +1555,11 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
             />
           ))}
         </div>
-        
-        <div className="mt-6 flex justify-center gap-8">
-          <GRCDisplay label="iGRC" value={activeCalc.iGRC} />
-          <div className="flex items-center">
-            <ArrowRight className="w-8 h-8 text-gray-400" />
-          </div>
-          <GRCDisplay label="Final GRC" value={activeCalc.fGRC} description="After mitigations" />
+
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center justify-center gap-4">
+          <GRCDisplay label="iGRC" value={activeCalc.iGRC} compact />
+          <ArrowRight className="w-5 h-5 text-gray-400" />
+          <GRCDisplay label="fGRC" value={activeCalc.fGRC} compact />
         </div>
       </CollapsibleSection>
       
@@ -1506,52 +1570,41 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
         badge={siteSORA.initialARC || 'ARC-b'}
         status={siteSORA.initialARC ? 'complete' : 'missing'}
       >
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <p className="text-sm text-blue-800">
-            <Info className="w-4 h-4 inline mr-1" />
-            Initial ARC is determined by the airspace classification and encounter probability (SORA 2.5 Step #4)
-          </p>
-        </div>
-        
+        <p className="text-sm text-gray-600 mb-4">
+          Select the initial Air Risk Class based on airspace and expected traffic density.
+        </p>
+
         <ARCSelector
           value={siteSORA.initialARC || 'ARC-b'}
           onChange={(v) => updateSiteSORA({ initialARC: v })}
         />
-        
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg text-center">
-          <p className="text-sm text-gray-600 mb-1">Initial Air Risk Class</p>
-          <span className="text-2xl font-bold">{siteSORA.initialARC || 'ARC-b'}</span>
-        </div>
       </CollapsibleSection>
       
       {/* Step 5: Residual ARC (TMPR) */}
       <CollapsibleSection
-        title="Air Risk - Residual ARC (TMPR)"
+        title="Air Risk Mitigations (TMPR)"
         stepNumber={5}
         badge={activeCalc.residualARC}
         status={siteSORA.tmpr?.enabled ? 'complete' : 'info'}
       >
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <p className="text-sm text-blue-800">
-            <Info className="w-4 h-4 inline mr-1" />
-            Apply Tactical Mitigation Performance Requirements to reduce ARC (SORA 2.5 Step #5)
-          </p>
-        </div>
-        
+        <p className="text-sm text-gray-600 mb-4">
+          Apply Tactical Mitigation Performance Requirements to reduce air risk.
+        </p>
+
         <TMPRSelector
           value={siteSORA.tmpr || {}}
           onChange={(v) => updateSiteSORA({ tmpr: v })}
         />
-        
-        <div className="mt-4 flex justify-center gap-8 p-4 bg-gray-50 rounded-lg">
+
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center justify-center gap-4">
           <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Initial ARC</p>
             <span className="text-lg font-bold">{siteSORA.initialARC || 'ARC-b'}</span>
+            <p className="text-xs text-gray-500">Initial</p>
           </div>
-          <ArrowRight className="w-6 h-6 text-gray-400 self-center" />
+          <ArrowRight className="w-5 h-5 text-gray-400" />
           <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Residual ARC</p>
             <span className="text-lg font-bold text-green-600">{activeCalc.residualARC}</span>
+            <p className="text-xs text-gray-500">Residual</p>
           </div>
         </div>
       </CollapsibleSection>
@@ -1562,29 +1615,25 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
         stepNumber={6}
         badge={activeCalc.sail ? `SAIL ${activeCalc.sail}` : null}
         status={activeCalc.sail ? 'complete' : 'missing'}
+        defaultOpen={false}
       >
-        <div className="text-center py-6">
-          <p className="text-gray-600 mb-4">Based on Final GRC and Residual ARC</p>
-          
-          <div className="flex items-center justify-center gap-8 mb-6">
+        <div className="text-center py-4">
+          <div className="flex items-center justify-center gap-6 mb-4">
             <div className="text-center">
-              <p className="text-sm text-gray-500">Final GRC</p>
-              <p className="text-2xl font-bold">{activeCalc.fGRC ?? '?'}</p>
+              <p className="text-xs text-gray-500 uppercase">fGRC</p>
+              <p className="text-xl font-bold">{activeCalc.fGRC ?? '?'}</p>
             </div>
-            <span className="text-gray-400">×</span>
+            <span className="text-gray-300 text-xl">×</span>
             <div className="text-center">
-              <p className="text-sm text-gray-500">Residual ARC</p>
-              <p className="text-2xl font-bold">{activeCalc.residualARC}</p>
+              <p className="text-xs text-gray-500 uppercase">Res. ARC</p>
+              <p className="text-xl font-bold">{activeCalc.residualARC}</p>
             </div>
-            <span className="text-gray-400">=</span>
-            <div className="text-center">
-              <p className="text-sm text-gray-500">SAIL Level</p>
-              <SAILBadge sail={activeCalc.sail} size="lg" />
-            </div>
+            <span className="text-gray-300 text-xl">=</span>
+            <SAILBadge sail={activeCalc.sail} size="lg" />
           </div>
-          
+
           {activeCalc.sail && sailDescriptions[activeCalc.sail] && (
-            <p className="text-sm text-gray-600 max-w-md mx-auto">
+            <p className="text-sm text-gray-500 max-w-md mx-auto">
               {sailDescriptions[activeCalc.sail]}
             </p>
           )}
