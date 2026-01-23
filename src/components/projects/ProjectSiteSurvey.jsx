@@ -47,6 +47,7 @@ import UnifiedProjectMap from '../map/UnifiedProjectMap'
 import { LayerToggles, DrawingTools } from '../map/MapControls'
 import { useMapData } from '../../hooks/useMapData'
 import PhotoUpload, { PhotoCountBadge } from '../PhotoUpload'
+import { ObstacleLabelPrompt } from '../map/SiteSurveyMapTools'
 import { 
   POPULATION_CATEGORIES, 
   createDefaultSite,
@@ -856,6 +857,14 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
               />
             </div>
           )}
+
+          {/* Obstacle Label Prompt - shows when obstacle is placed */}
+          <ObstacleLabelPrompt
+            isOpen={!!mapControls.pendingObstacle}
+            position={mapControls.pendingObstacle?.lngLat}
+            onSave={(labelData) => mapControls.savePendingObstacle(labelData)}
+            onCancel={() => mapControls.cancelPendingObstacle()}
+          />
           
           {/* Location Details */}
           <CollapsibleSection 

@@ -34,6 +34,22 @@ import {
   validateSiteCompleteness,
   getSiteStats
 } from '../lib/mapDataStructures'
+import { reverseGeocode } from '../components/map/SiteSurveyMapTools'
+
+// ============================================
+// OBSTACLE TYPES MAP (for label display)
+// ============================================
+
+const OBSTACLE_TYPES_MAP = {
+  tower: 'Tower/Antenna',
+  wire: 'Power Lines',
+  building: 'Building',
+  tree: 'Trees',
+  terrain: 'Terrain',
+  crane: 'Crane',
+  water: 'Water Tower',
+  other: 'Obstacle'
+}
 
 // ============================================
 // DRAWING MODES
@@ -174,6 +190,9 @@ export function useMapData(project, onUpdate, options = {}) {
   
   // UI state
   const [showAllSites, setShowAllSites] = useState(false)
+
+  // Pending obstacle state - for label prompt workflow
+  const [pendingObstacle, setPendingObstacle] = useState(null)
 
   // ============================================
   // REF FOR LATEST PROJECT DATA
@@ -768,11 +787,11 @@ export function useMapData(project, onUpdate, options = {}) {
 
     const style = MAP_ELEMENT_STYLES[styleKey]
     if (!style) return
-    
+
     updateSiteMapData(mapData => {
       const newMapData = JSON.parse(JSON.stringify(mapData))
       const layer = style.layer
-      
+
       // Handle arrays
       if (elementType === 'obstacles' || elementType === 'obstacle') {
         if (Array.isArray(newMapData.siteSurvey?.obstacles)) {
@@ -802,10 +821,85 @@ export function useMapData(project, onUpdate, options = {}) {
           }
         }
       }
-      
+
       return newMapData
     })
   }, [activeSite, updateSiteMapData])
+
+  /**
+   * Update site survey data (for address auto-populate)
+   */
+  const updateSiteSurveyField = useCallback((field, value) => {
+    if (!onUpdate) return
+
+    const currentProject = projectRef.current
+    if (!currentProject) return
+
+    const currentSites = currentProject.sites || []
+    const targetSiteId = currentProject.activeSiteId || activeSiteId
+
+    if (!targetSiteId) return
+
+    const updatedSites = currentSites.map(site => {
+      if (site.id !== targetSiteId) return site
+
+      return {
+        ...site,
+        siteSurvey: {
+          ...site.siteSurvey,
+          [field]: value
+        },
+        updatedAt: new Date().toISOString()
+      }
+    })
+
+    onUpdate({ sites: updatedSites })
+  }, [activeSiteId, onUpdate])
+
+  /**
+   * Auto-populate address from coordinates using reverse geocoding
+   */
+  const autoPopulateAddress = useCallback(async (lat, lng) => {
+    try {
+      const result = await reverseGeocode(lat, lng)
+      if (result?.address) {
+        updateSiteSurveyField('address', result.address)
+        logger.info('[useMapData] Auto-populated address:', result.address)
+        return result.address
+      }
+    } catch (err) {
+      logger.error('[useMapData] Failed to auto-populate address:', err)
+    }
+    return null
+  }, [updateSiteSurveyField])
+
+  /**
+   * Save pending obstacle with label data
+   */
+  const savePendingObstacle = useCallback((labelData) => {
+    if (!pendingObstacle) return
+
+    const { lngLat } = pendingObstacle
+    setMarker('obstacle', lngLat, {
+      obstacleType: labelData.obstacleType || 'other',
+      height: labelData.height,
+      notes: labelData.notes,
+      properties: {
+        label: labelData.notes || OBSTACLE_TYPES_MAP[labelData.obstacleType] || 'Obstacle',
+        obstacleType: labelData.obstacleType,
+        height: labelData.height
+      }
+    })
+
+    setPendingObstacle(null)
+  }, [pendingObstacle, setMarker])
+
+  /**
+   * Cancel pending obstacle
+   */
+  const cancelPendingObstacle = useCallback(() => {
+    setPendingObstacle(null)
+  }, [])
 
   // ============================================
   // DRAWING COMPLETION HANDLERS
@@ -816,18 +910,32 @@ export function useMapData(project, onUpdate, options = {}) {
    */
   const completeDrawing = useCallback((lngLat = null) => {
     if (!isDrawing || !drawingMode || drawingMode.id === 'none') return
-    
+
     const { id: elementType, type: shapeType } = drawingMode
-    
+
     if (shapeType === 'marker') {
       // For markers, use the provided lngLat or last point
       const point = lngLat || (drawingPoints.length > 0 ? {
         lng: drawingPoints[drawingPoints.length - 1][0],
         lat: drawingPoints[drawingPoints.length - 1][1]
       } : null)
-      
+
       if (point) {
-        setMarker(elementType, point)
+        // Special handling for obstacles - show label prompt instead of immediate save
+        if (elementType === 'obstacle') {
+          setPendingObstacle({ lngLat: point, elementType })
+          cancelDrawing()
+          return
+        }
+
+        // For site location, also auto-populate address
+        if (elementType === 'siteLocation') {
+          setMarker(elementType, point)
+          // Trigger async address lookup
+          autoPopulateAddress(point.lat, point.lng)
+        } else {
+          setMarker(elementType, point)
+        }
       }
     } else if (shapeType === 'polygon') {
       // Need at least 3 points for a polygon
@@ -840,10 +948,10 @@ export function useMapData(project, onUpdate, options = {}) {
         addEvacuationRoute(drawingPoints)
       }
     }
-    
+
     // Reset drawing state
     cancelDrawing()
-  }, [isDrawing, drawingMode, drawingPoints, setMarker, setPolygon, addEvacuationRoute, cancelDrawing])
+  }, [isDrawing, drawingMode, drawingPoints, setMarker, setPolygon, addEvacuationRoute, cancelDrawing, autoPopulateAddress])
 
   // ============================================
   // UTILITY FUNCTIONS
@@ -910,38 +1018,41 @@ export function useMapData(project, onUpdate, options = {}) {
     selectedElement,
     basemap,
     showAllSites,
-    
+
+    // Pending obstacle state (for label prompt)
+    pendingObstacle,
+
     // Bounds
     activeSiteBounds,
     allSitesBounds,
     currentBounds,
-    
+
     // Statistics
     activeSiteStats,
     activeSiteValidation,
-    
+
     // Computed elements
     visibleMapElements,
-    
+
     // Site management
     selectSite,
-    
+
     // Layer management
     toggleLayer,
     setLayerVisibility,
     showAllLayers,
     hideAllLayers,
-    
+
     // Drawing
     startDrawing,
     cancelDrawing,
     addDrawingPoint,
     removeLastDrawingPoint,
     completeDrawing,
-    
+
     // Element selection
     setSelectedElement,
-    
+
     // Element CRUD
     setMarker,
     setPolygon,
@@ -949,7 +1060,13 @@ export function useMapData(project, onUpdate, options = {}) {
     removeElement,
     updateElement,
     updateSiteMapData,
-    
+
+    // Address and obstacle labeling
+    autoPopulateAddress,
+    savePendingObstacle,
+    cancelPendingObstacle,
+    updateSiteSurveyField,
+
     // View
     fitToActiveSite,
     fitToAllSites,
@@ -959,10 +1076,10 @@ export function useMapData(project, onUpdate, options = {}) {
     mapCenter,
     mapZoom,
     setShowAllSites,
-    
+
     // Utilities
     getDistanceBetween,
-    
+
     // Constants
     DRAWING_MODES,
     MAP_LAYERS,

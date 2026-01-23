@@ -533,6 +533,10 @@ export function UnifiedProjectMap({
                 coordinates: [newLngLat.lng, newLngLat.lat]
               }
             })
+            // Auto-update address if this is a site location marker
+            if (marker.elementType === 'siteLocation' && mapData.autoPopulateAddress) {
+              mapData.autoPopulateAddress(newLngLat.lat, newLngLat.lng)
+            }
           })
         }
 
@@ -1106,7 +1110,7 @@ export function UnifiedProjectMap({
 
       {/* Selection action panel - shows when element is selected in edit mode */}
       {editMode && selectedElement && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 bg-white rounded-lg shadow-xl border border-gray-200 p-3 min-w-[200px] max-w-[280px]">
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 bg-white rounded-lg shadow-xl border border-gray-200 p-3 min-w-[200px] max-w-[320px]">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <p className="font-medium text-gray-900 text-sm truncate">
@@ -1155,6 +1159,29 @@ export function UnifiedProjectMap({
               </svg>
             </button>
           </div>
+
+          {/* Re-draw option for polygons/boundaries */}
+          {selectedElement.geometry?.type === 'Polygon' && startDrawing && (
+            <button
+              onClick={() => {
+                const elementType = selectedElement.elementType
+                removeElement?.(selectedElement.id, elementType)
+                setSelectedElement(null)
+                // Start drawing the same type again
+                startDrawing(elementType)
+              }}
+              className="mt-2 w-full py-1.5 px-3 text-xs font-medium text-aeria-navy bg-aeria-navy/10 hover:bg-aeria-navy/20 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                <path d="M16 21h5v-5"/>
+              </svg>
+              Clear & Re-draw Boundary
+            </button>
+          )}
+
           <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2 text-xs text-gray-500">
             {/* Only show drag hint for Point geometry (markers) */}
             {selectedElement.geometry?.type === 'Point' && (

@@ -26,10 +26,46 @@ import {
   Loader2,
   X,
   Check,
-  RotateCcw
+  RotateCcw,
+  Tag
 } from 'lucide-react'
 import { POPULATION_CATEGORIES, calculatePolygonArea } from '../../lib/mapDataStructures'
 import { logger } from '../../lib/logger'
+
+// ============================================
+// REVERSE GEOCODING HELPER
+// ============================================
+
+export async function reverseGeocode(lat, lng) {
+  const token = import.meta.env.VITE_MAPBOX_TOKEN
+  if (!token) {
+    logger.warn('Mapbox token not configured for reverse geocoding')
+    return null
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&types=address,place,locality,neighborhood&limit=1`
+    )
+
+    if (!response.ok) {
+      throw new Error('Reverse geocoding failed')
+    }
+
+    const data = await response.json()
+    if (data.features && data.features.length > 0) {
+      return {
+        address: data.features[0].place_name,
+        shortAddress: data.features[0].text || data.features[0].place_name,
+        context: data.features[0].context || []
+      }
+    }
+    return null
+  } catch (err) {
+    logger.error('Reverse geocoding error:', err)
+    return null
+  }
+}
 
 // ============================================
 // COORDINATE INPUT TOOL
@@ -558,11 +594,142 @@ export function SiteSurveyInstructions() {
   )
 }
 
+// ============================================
+// OBSTACLE LABEL PROMPT
+// Shows immediately after placing an obstacle to label it
+// ============================================
+
+const OBSTACLE_TYPES_QUICK = [
+  { value: 'tower', label: 'Tower/Antenna', icon: '📡' },
+  { value: 'wire', label: 'Power Lines', icon: '⚡' },
+  { value: 'building', label: 'Building', icon: '🏢' },
+  { value: 'tree', label: 'Trees', icon: '🌲' },
+  { value: 'terrain', label: 'Terrain', icon: '⛰️' },
+  { value: 'crane', label: 'Crane', icon: '🏗️' },
+  { value: 'other', label: 'Other', icon: '⚠️' }
+]
+
+export function ObstacleLabelPrompt({
+  isOpen,
+  position,
+  onSave,
+  onCancel
+}) {
+  const [obstacleType, setObstacleType] = useState('other')
+  const [height, setHeight] = useState('')
+  const [notes, setNotes] = useState('')
+
+  const handleSave = () => {
+    onSave({
+      obstacleType,
+      height: height ? Number(height) : null,
+      notes: notes.trim() || null
+    })
+    // Reset form
+    setObstacleType('other')
+    setHeight('')
+    setNotes('')
+  }
+
+  const handleCancel = () => {
+    onCancel()
+    setObstacleType('other')
+    setHeight('')
+    setNotes('')
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/30">
+      <div
+        className="bg-white rounded-xl shadow-2xl border border-gray-200 w-80 max-w-[90vw] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-amber-600" />
+          <h3 className="font-semibold text-gray-900">Label Obstacle</h3>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Quick type selection */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-2">Type</label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {OBSTACLE_TYPES_QUICK.map(type => (
+                <button
+                  key={type.value}
+                  onClick={() => setObstacleType(type.value)}
+                  className={`p-2 rounded-lg text-center transition-all ${
+                    obstacleType === type.value
+                      ? 'bg-amber-100 border-2 border-amber-400'
+                      : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                  }`}
+                  title={type.label}
+                >
+                  <span className="text-lg">{type.icon}</span>
+                  <p className="text-[10px] text-gray-600 mt-0.5 truncate">{type.label}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Height input */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Height (meters) - optional
+            </label>
+            <input
+              type="number"
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              placeholder="e.g., 30"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+            />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Notes - optional
+            </label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g., Guy wires, red lights"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+          <button
+            onClick={handleCancel}
+            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 flex items-center gap-1"
+          >
+            <Tag className="w-4 h-4" />
+            Save Obstacle
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default {
   CoordinateInput,
   LocationSearch,
   AreaMeasurement,
   PopulationDensityHelper,
   SiteSurveyQuickActions,
-  SiteSurveyInstructions
+  SiteSurveyInstructions,
+  ObstacleLabelPrompt,
+  reverseGeocode
 }
