@@ -424,3 +424,116 @@ export async function uploadMultipleFHAAttachments(files, fhaId, onProgress) {
 
   return results
 }
+
+// ============================================
+// FORM ATTACHMENTS
+// ============================================
+
+/**
+ * Upload a form attachment (photos, documents, etc.)
+ * @param {File} file - The file to upload
+ * @param {string} formId - Form submission ID for organizing files
+ * @param {string} fieldId - Field ID for organizing files
+ * @returns {Promise<{url: string, path: string, name: string, size: number, type: string}>}
+ */
+export async function uploadFormAttachment(file, formId, fieldId) {
+  if (!file) throw new Error('No file provided')
+  if (!formId) throw new Error('Form ID required')
+  if (!fieldId) throw new Error('Field ID required')
+
+  // Validate file type - broad support for form uploads
+  const validTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'video/mp4',
+    'video/quicktime',
+    'video/webm'
+  ]
+
+  if (!validTypes.includes(file.type)) {
+    throw new Error('Invalid file type. Supported: PDF, Word, Excel, images, and videos.')
+  }
+
+  // Validate file size (max 50MB)
+  const maxSize = 50 * 1024 * 1024
+  if (file.size > maxSize) {
+    throw new Error('File too large. Maximum size is 50MB.')
+  }
+
+  // Generate unique filename
+  const timestamp = Date.now()
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filename = `${timestamp}_${safeName}`
+
+  // Create storage path: forms/{formId}/attachments/{fieldId}/{filename}
+  const storagePath = `forms/${formId}/attachments/${fieldId}/${filename}`
+  const storageRef = ref(storage, storagePath)
+
+  // Upload file
+  const snapshot = await uploadBytes(storageRef, file, {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name,
+      uploadedAt: new Date().toISOString(),
+      fieldId
+    }
+  })
+
+  // Get download URL
+  const url = await getDownloadURL(snapshot.ref)
+
+  return {
+    url,
+    path: storagePath,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    uploadedAt: new Date().toISOString()
+  }
+}
+
+/**
+ * Delete a form attachment from Firebase Storage
+ * @param {string} storagePath - The storage path of the file to delete
+ */
+export async function deleteFormAttachment(storagePath) {
+  if (!storagePath) throw new Error('Storage path required')
+
+  const storageRef = ref(storage, storagePath)
+  await deleteObject(storageRef)
+}
+
+/**
+ * Upload multiple form attachments
+ * @param {FileList|File[]} files - Files to upload
+ * @param {string} formId - Form submission ID
+ * @param {string} fieldId - Field ID
+ * @param {function} onProgress - Progress callback (index, total)
+ * @returns {Promise<Array<{url: string, path: string, name: string}>>}
+ */
+export async function uploadMultipleFormAttachments(files, formId, fieldId, onProgress) {
+  const results = []
+  const fileArray = Array.from(files)
+
+  for (let i = 0; i < fileArray.length; i++) {
+    const file = fileArray[i]
+    if (onProgress) onProgress(i + 1, fileArray.length)
+
+    try {
+      const result = await uploadFormAttachment(file, formId, fieldId)
+      results.push(result)
+    } catch (error) {
+      results.push({ error: error.message, name: file.name })
+    }
+  }
+
+  return results
+}

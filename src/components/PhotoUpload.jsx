@@ -69,6 +69,7 @@ export default function PhotoUpload({
   const [lightboxPhoto, setLightboxPhoto] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const lightboxRef = useRef(null)
 
   // Keyboard navigation for lightbox
@@ -270,11 +271,22 @@ export default function PhotoUpload({
             : 'border-gray-300 hover:border-gray-400'
         } ${uploading ? 'pointer-events-none opacity-50' : ''}`}
       >
+        {/* File browser input */}
         <input
           ref={fileInputRef}
           type="file"
           multiple
           accept="image/jpeg,image/png,image/webp,image/heic"
+          onChange={(e) => handleFileSelect(e.target.files)}
+          className="hidden"
+        />
+
+        {/* Camera capture input - for mobile devices */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
           onChange={(e) => handleFileSelect(e.target.files)}
           className="hidden"
         />
@@ -289,16 +301,25 @@ export default function PhotoUpload({
         ) : (
           <>
             <Camera className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-600 mb-2">
-              Drag and drop photos here, or{' '}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-2">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="px-4 py-2 bg-aeria-navy text-white rounded-lg hover:bg-aeria-blue transition-colors flex items-center gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                Take Photo
+              </button>
+              <span className="text-gray-400 hidden sm:inline">or</span>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-aeria-navy font-medium hover:underline"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
               >
-                browse
+                <Upload className="w-4 h-4" />
+                Browse Files
               </button>
-            </p>
+            </div>
             <p className="text-xs text-gray-500">
               JPEG, PNG, or WebP • Max 10MB each • {photos.length}/{maxPhotos} photos
             </p>

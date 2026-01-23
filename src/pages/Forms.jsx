@@ -19,17 +19,18 @@
  * @action REPLACE
  */
 
-import { useState, useEffect } from 'react'
-import { 
+import { useState, useEffect, useRef, useId } from 'react'
+import {
   Plus, Search, ClipboardList, Filter, ChevronRight, ChevronDown,
   Shield, AlertOctagon, AlertTriangle, Users, CheckSquare, FileText,
   Wrench, HardHat, GraduationCap, Truck, Calendar, ClipboardCheck,
   X, Clock, MapPin, User, Download, Eye, Trash2, Copy,
-  Phone, AlertCircle, CheckCircle2, ArrowRight
+  Phone, AlertCircle, CheckCircle2, ArrowRight, Loader2, Upload
 } from 'lucide-react'
 import { FORM_TEMPLATES, FORM_CATEGORIES, RPAS_INCIDENT_TRIGGERS, calculateRiskScore, SEVERITY_RATINGS, PROBABILITY_RATINGS, CONTROL_TYPES, HAZARD_CATEGORIES } from '../lib/formDefinitions'
 import { logger } from '../lib/logger'
 import { createForm, getForms } from '../lib/firestore'
+import { uploadFormAttachment, deleteFormAttachment } from '../lib/storageHelpers'
 import { useAuth } from '../contexts/AuthContext'
 
 // Icon mapping
@@ -145,8 +146,12 @@ function NotificationTriggersPanel({ triggers }) {
 }
 
 // Form field components
-function FormField({ field, value, onChange, formData }) {
+function FormField({ field, value, onChange, formData, formId }) {
+  const { user } = useAuth()
   const [localValue, setLocalValue] = useState(value || '')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState(null)
+  const fileInputRef = useRef(null)
   
   // Safe condition evaluator (replaces eval for security)
   const evaluateCondition = (condition, data) => {
@@ -415,19 +420,52 @@ function FormField({ field, value, onChange, formData }) {
       )
 
     case 'signature':
+      const signerName = user?.displayName || user?.email || 'User'
       return (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {field.label} {field.required && <span className="text-red-500">*</span>}
           </label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
-            <User className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-sm text-gray-600">Click to sign</p>
-            {localValue && (
-              <div className="mt-2">
-                <CheckCircle2 className="w-5 h-5 mx-auto text-green-500" />
-                <p className="text-xs text-green-600 mt-1">Signed</p>
+          <div
+            className={`border-2 rounded-lg p-4 text-center transition-colors cursor-pointer ${
+              localValue
+                ? 'border-green-300 bg-green-50'
+                : 'border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100'
+            }`}
+            onClick={() => {
+              if (!localValue) {
+                const signatureData = {
+                  name: signerName,
+                  timestamp: new Date().toISOString(),
+                  userId: user?.uid
+                }
+                handleChange(signatureData)
+              }
+            }}
+          >
+            {localValue ? (
+              <div className="space-y-1">
+                <CheckCircle2 className="w-8 h-8 mx-auto text-green-500" />
+                <p className="text-sm font-medium text-gray-700">{localValue.name}</p>
+                <p className="text-xs text-gray-500">
+                  {new Date(localValue.timestamp).toLocaleString()}
+                </p>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleChange(null)
+                  }}
+                  className="text-xs text-red-500 hover:underline mt-2"
+                >
+                  Clear signature
+                </button>
               </div>
+            ) : (
+              <>
+                <User className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                <p className="text-sm text-gray-600">Click to sign as {signerName}</p>
+              </>
             )}
           </div>
         </div>
@@ -465,16 +503,128 @@ function FormField({ field, value, onChange, formData }) {
       )
 
     case 'file_upload':
+      const files = Array.isArray(localValue) ? localValue : (localValue ? [localValue] : [])
+      const handleFileUpload = async (selectedFiles) => {
+        if (!selectedFiles || selectedFiles.length === 0) return
+        if (!formId) {
+          setUploadError('Please save the form first before uploading files')
+          return
+        }
+
+        setUploading(true)
+        setUploadError(null)
+
+        const newFiles = [...files]
+        for (const file of selectedFiles) {
+          try {
+            const result = await uploadFormAttachment(file, formId, field.id)
+            newFiles.push(result)
+          } catch (err) {
+            setUploadError(err.message || 'Upload failed')
+          }
+        }
+
+        setUploading(false)
+        handleChange(field.multiple ? newFiles : newFiles[newFiles.length - 1])
+      }
+
+      const handleFileDelete = async (index) => {
+        const fileToDelete = files[index]
+        try {
+          if (fileToDelete.path) {
+            await deleteFormAttachment(fileToDelete.path)
+          }
+          const newFiles = files.filter((_, i) => i !== index)
+          handleChange(field.multiple ? newFiles : null)
+        } catch (err) {
+          setUploadError(err.message || 'Delete failed')
+        }
+      }
+
       return (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {field.label} {field.required && <span className="text-red-500">*</span>}
           </label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 cursor-pointer transition-colors">
-            <Download className="w-8 h-8 mx-auto mb-2 text-gray-400 rotate-180" />
-            <p className="text-sm text-gray-600">Click to upload or drag files here</p>
-            <p className="text-xs text-gray-400 mt-1">{field.accept || 'Any file type'}</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple={field.multiple}
+            accept={field.accept}
+            onChange={(e) => handleFileUpload(Array.from(e.target.files))}
+            className="hidden"
+          />
+          <div
+            className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+              uploading ? 'opacity-50 pointer-events-none' : 'hover:bg-gray-50 cursor-pointer'
+            } border-gray-300`}
+            onClick={() => !uploading && fileInputRef.current?.click()}
+          >
+            {uploading ? (
+              <div className="py-2">
+                <Loader2 className="w-8 h-8 mx-auto text-aeria-navy animate-spin mb-2" />
+                <p className="text-sm text-gray-600">Uploading...</p>
+              </div>
+            ) : (
+              <>
+                <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                <p className="text-sm text-gray-600">Click to upload{field.multiple ? ' files' : ' a file'}</p>
+                <p className="text-xs text-gray-400 mt-1">{field.accept || 'PDF, Word, Excel, images, videos'}</p>
+              </>
+            )}
           </div>
+
+          {uploadError && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{uploadError}</span>
+              <button type="button" onClick={() => setUploadError(null)} className="ml-auto">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {files.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {files.map((file, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-200 rounded">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                    {file.size && (
+                      <span className="text-xs text-gray-400 flex-shrink-0">
+                        ({(file.size / 1024).toFixed(0)} KB)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {file.url && (
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-aeria-navy hover:text-aeria-blue"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleFileDelete(index)
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {field.helpText && <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>}
         </div>
       )
 
@@ -560,7 +710,7 @@ function FormField({ field, value, onChange, formData }) {
 }
 
 // Form section component
-function FormSection({ section, formData, onChange, isExpanded, onToggle, activeTriggers }) {
+function FormSection({ section, formData, onChange, isExpanded, onToggle, activeTriggers, formId }) {
   const [repeatableItems, setRepeatableItems] = useState([{ id: 1 }])
 
   const addRepeatableItem = () => {
@@ -645,6 +795,7 @@ function FormSection({ section, formData, onChange, isExpanded, onToggle, active
                           value={formData?.[`${section.id}_${index}_${field.id}`]}
                           onChange={(id, value) => onChange(`${section.id}_${index}_${id}`, value)}
                           formData={formData}
+                          formId={formId}
                         />
                       </div>
                     ))}
@@ -669,6 +820,7 @@ function FormSection({ section, formData, onChange, isExpanded, onToggle, active
                     value={formData?.[field.id]}
                     onChange={onChange}
                     formData={formData}
+                    formId={formId}
                   />
                 </div>
               ))}
@@ -685,6 +837,8 @@ function ActiveFormPanel({ template, onClose, onSave }) {
   const [formData, setFormData] = useState({})
   const [expandedSections, setExpandedSections] = useState({ [template.sections[0]?.id]: true })
   const [activeTriggers, setActiveTriggers] = useState([])
+  // Generate a unique form ID for file uploads (before the form is saved)
+  const [formId] = useState(() => `form_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
   
   const IconComponent = iconMap[template.icon] || ClipboardList
   
@@ -762,6 +916,7 @@ function ActiveFormPanel({ template, onClose, onSave }) {
                 isExpanded={expandedSections[section.id]}
                 onToggle={() => toggleSection(section.id)}
                 activeTriggers={activeTriggers}
+                formId={formId}
               />
             ))}
           </div>
