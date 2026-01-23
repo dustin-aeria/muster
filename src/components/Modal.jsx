@@ -62,7 +62,10 @@ export default function Modal({
       // Restore focus to previously focused element
       previousActiveElement.current?.focus()
     }
-  }, [isOpen, onClose])
+  // Note: onClose intentionally excluded from deps to prevent re-focusing
+  // when parent re-renders with new onClose reference
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   if (!isOpen) return null
 

@@ -29,6 +29,8 @@ import {
 } from 'lucide-react'
 import { FORM_TEMPLATES, FORM_CATEGORIES, RPAS_INCIDENT_TRIGGERS, calculateRiskScore, SEVERITY_RATINGS, PROBABILITY_RATINGS, CONTROL_TYPES, HAZARD_CATEGORIES } from '../lib/formDefinitions'
 import { logger } from '../lib/logger'
+import { createForm, getForms } from '../lib/firestore'
+import { useAuth } from '../contexts/AuthContext'
 
 // Icon mapping
 const iconMap = {
@@ -558,13 +560,50 @@ function FormField({ field, value, onChange, formData }) {
 }
 
 // Form section component
-function FormSection({ section, formData, onChange, isExpanded, onToggle }) {
+function FormSection({ section, formData, onChange, isExpanded, onToggle, activeTriggers }) {
   const [repeatableItems, setRepeatableItems] = useState([{ id: 1 }])
-  
+
   const addRepeatableItem = () => {
     setRepeatableItems([...repeatableItems, { id: Date.now() }])
   }
-  
+
+  // Handle special section types that don't have fields
+  if (section.type === 'trigger_checklist') {
+    return (
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          <h3 className="font-semibold text-gray-900">{section.title}</h3>
+          {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+        </button>
+
+        {isExpanded && (
+          <div className="p-4">
+            {section.description && (
+              <p className="text-sm text-gray-600 mb-4">{section.description}</p>
+            )}
+            {activeTriggers && activeTriggers.length > 0 ? (
+              <NotificationTriggersPanel triggers={activeTriggers} />
+            ) : (
+              <div className="text-center py-6 text-gray-500">
+                <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                <p>No regulatory notifications required based on current answers.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Skip rendering if section has no fields
+  if (!section.fields || section.fields.length === 0) {
+    return null
+  }
+
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
       <button
@@ -575,13 +614,13 @@ function FormSection({ section, formData, onChange, isExpanded, onToggle }) {
         <h3 className="font-semibold text-gray-900">{section.title}</h3>
         {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
       </button>
-      
+
       {isExpanded && (
         <div className="p-4 space-y-4">
           {section.description && (
             <p className="text-sm text-gray-600 mb-4">{section.description}</p>
           )}
-          
+
           {section.repeatable ? (
             <>
               {repeatableItems.map((item, index) => (
@@ -722,6 +761,7 @@ function ActiveFormPanel({ template, onClose, onSave }) {
                 onChange={handleFieldChange}
                 isExpanded={expandedSections[section.id]}
                 onToggle={() => toggleSection(section.id)}
+                activeTriggers={activeTriggers}
               />
             ))}
           </div>
@@ -755,11 +795,35 @@ function ActiveFormPanel({ template, onClose, onSave }) {
 
 // Main Forms page
 export default function Forms() {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [activeForm, setActiveForm] = useState(null)
   const [recentForms, setRecentForms] = useState([])
+  const [loadingForms, setLoadingForms] = useState(true)
   const [view, setView] = useState('templates') // 'templates' | 'submitted'
+
+  // Load submitted forms from Firebase on mount
+  useEffect(() => {
+    async function loadSubmittedForms() {
+      try {
+        const forms = await getForms({ status: 'completed' })
+        setRecentForms(forms.map(f => ({
+          id: f.id,
+          template: f.templateId,
+          templateName: f.templateName,
+          status: f.status,
+          date: f.createdAt?.toDate?.()?.toISOString() || f.createdAt,
+          submittedBy: f.submittedBy || 'Unknown'
+        })))
+      } catch (err) {
+        logger.error('Error loading forms:', err)
+      } finally {
+        setLoadingForms(false)
+      }
+    }
+    loadSubmittedForms()
+  }, [])
   
   // Filter templates based on search and category
   const filteredTemplates = Object.values(FORM_TEMPLATES).filter(template => {
@@ -777,21 +841,37 @@ export default function Forms() {
     }
   }
   
-  const handleSaveForm = (formData) => {
-    // Save form to Firebase (would implement actual save)
-    logger.debug('Saving form:', formData)
-    setRecentForms([
-      { 
-        id: Date.now(), 
-        template: activeForm.id, 
+  const handleSaveForm = async (formData) => {
+    try {
+      // Save form to Firebase
+      const savedForm = await createForm({
+        templateId: activeForm.id,
         templateName: activeForm.name,
-        status: 'completed', 
-        date: new Date().toISOString(),
-        submittedBy: 'Current User'
-      },
-      ...recentForms
-    ])
-    setActiveForm(null)
+        data: formData,
+        status: 'completed',
+        submittedBy: user?.displayName || user?.email || 'Unknown User',
+        submittedById: user?.uid
+      })
+
+      logger.debug('Form saved:', savedForm.id)
+
+      // Update local state with new form
+      setRecentForms([
+        {
+          id: savedForm.id,
+          template: activeForm.id,
+          templateName: activeForm.name,
+          status: 'completed',
+          date: new Date().toISOString(),
+          submittedBy: user?.displayName || user?.email || 'Unknown User'
+        },
+        ...recentForms
+      ])
+      setActiveForm(null)
+    } catch (err) {
+      logger.error('Error saving form:', err)
+      alert('Failed to save form. Please try again.')
+    }
   }
 
   return (
