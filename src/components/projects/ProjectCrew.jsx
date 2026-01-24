@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { getOperators } from '../../lib/firestore'
 import { 
@@ -189,7 +190,7 @@ export default function ProjectCrew({ project, onUpdate }) {
               </button>
             ) : (
               <p className="text-sm text-gray-400 mt-2">
-                <a href="/operators" className="text-aeria-blue hover:underline">Add operators</a> first to assign them to projects.
+                <Link to="/operators" className="text-aeria-blue hover:underline">Add operators</Link> first to assign them to projects.
               </p>
             )}
           </div>

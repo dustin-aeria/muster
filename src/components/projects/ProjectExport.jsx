@@ -5,6 +5,7 @@
 // ============================================
 
 import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import {
   Download,
@@ -818,7 +819,7 @@ export default function ProjectExport({ project, onUpdate }) {
             <p className="text-sm font-medium text-gray-700">{branding?.operator?.name || 'Your Company'}</p>
             <p className="text-xs text-gray-500">PDFs will be branded with your company identity</p>
           </div>
-          <a href="/settings" className="text-xs text-aeria-blue hover:underline">Edit branding</a>
+          <Link to="/settings" className="text-xs text-aeria-blue hover:underline">Edit branding</Link>
         </div>
       </div>
 
