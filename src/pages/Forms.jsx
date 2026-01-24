@@ -1207,6 +1207,182 @@ function FormField({ field, value, onChange, formData, formId }) {
         </div>
       )
 
+    case 'currency':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+            <input
+              type="number"
+              value={localValue}
+              onChange={(e) => handleChange(e.target.value)}
+              className={`${baseInputClass} pl-7`}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              required={field.required}
+            />
+          </div>
+          {field.helpText && <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>}
+        </div>
+      )
+
+    case 'phone':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </label>
+          <input
+            type="tel"
+            value={localValue}
+            onChange={(e) => handleChange(e.target.value)}
+            className={baseInputClass}
+            placeholder="(555) 123-4567"
+            required={field.required}
+          />
+          {field.helpText && <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>}
+        </div>
+      )
+
+    case 'user_auto':
+      // Auto-fill with current user's name
+      if (!localValue && user) {
+        const userName = user.displayName || user.email || 'Unknown User'
+        setTimeout(() => handleChange(userName), 0)
+      }
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+          <div className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-700">
+            {localValue || user?.displayName || user?.email || 'Unknown User'}
+          </div>
+        </div>
+      )
+
+    case 'calculated':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+          <div className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-600 italic">
+            {localValue || 'Auto-calculated'}
+          </div>
+          {field.helpText && <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>}
+        </div>
+      )
+
+    case 'yesno_conditional':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={`${formId}-${field.id}`}
+                checked={localValue === true}
+                onChange={() => handleChange(true)}
+                className="w-4 h-4 text-aeria-navy"
+              />
+              <span className="text-sm">Yes</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={`${formId}-${field.id}`}
+                checked={localValue === false}
+                onChange={() => handleChange(false)}
+                className="w-4 h-4 text-aeria-navy"
+              />
+              <span className="text-sm">No</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={`${formId}-${field.id}`}
+                checked={localValue === 'na'}
+                onChange={() => handleChange('na')}
+                className="w-4 h-4 text-aeria-navy"
+              />
+              <span className="text-sm">N/A</span>
+            </label>
+          </div>
+          {field.helpText && <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>}
+        </div>
+      )
+
+    case 'checklist':
+      const checklistOptions = typeof field.options === 'string' ? [] : (field.options || [])
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </label>
+          <div className="space-y-2 border border-gray-200 rounded-lg p-3 bg-gray-50">
+            {checklistOptions.map((opt, idx) => {
+              const optValue = opt.value || opt
+              const optLabel = opt.label || opt
+              const isChecked = Array.isArray(localValue) && localValue.includes(optValue)
+              return (
+                <label key={idx} className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={(e) => {
+                      const current = Array.isArray(localValue) ? localValue : []
+                      if (e.target.checked) {
+                        handleChange([...current, optValue])
+                      } else {
+                        handleChange(current.filter(v => v !== optValue))
+                      }
+                    }}
+                    className="w-4 h-4 text-aeria-navy rounded mt-0.5"
+                  />
+                  <span className="text-sm text-gray-700">{optLabel}</span>
+                </label>
+              )
+            })}
+          </div>
+          {field.helpText && <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>}
+        </div>
+      )
+
+    case 'weather_conditions':
+      const weatherOptions = [
+        { value: 'clear', label: 'Clear' },
+        { value: 'partly_cloudy', label: 'Partly Cloudy' },
+        { value: 'cloudy', label: 'Cloudy' },
+        { value: 'overcast', label: 'Overcast' },
+        { value: 'rain', label: 'Rain' },
+        { value: 'snow', label: 'Snow' },
+        { value: 'fog', label: 'Fog' },
+        { value: 'windy', label: 'Windy' }
+      ]
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </label>
+          <select
+            value={localValue}
+            onChange={(e) => handleChange(e.target.value)}
+            className={baseInputClass}
+            required={field.required}
+          >
+            <option value="">Select weather...</option>
+            {weatherOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          {field.helpText && <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>}
+        </div>
+      )
+
     default:
       return (
         <div>
