@@ -33,6 +33,7 @@ import { createForm, getForms, getProjects, getOperators, getAircraft, getEquipm
 import { uploadFormAttachment, deleteFormAttachment } from '../lib/storageHelpers'
 import { useAuth } from '../contexts/AuthContext'
 import FormBuilder from '../components/forms/FormBuilder'
+import TemplateLibrary from '../components/forms/TemplateLibrary'
 
 // Icon mapping
 const iconMap = {
@@ -1362,6 +1363,8 @@ export default function Forms() {
   const [loadingForms, setLoadingForms] = useState(true)
   const [view, setView] = useState('templates') // 'templates' | 'submitted'
   const [showFormBuilder, setShowFormBuilder] = useState(false)
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false)
+  const [importedTemplates, setImportedTemplates] = useState([])
 
   // Load submitted forms and custom forms from Firebase on mount
   useEffect(() => {
@@ -1400,6 +1403,31 @@ export default function Forms() {
     const saved = await createCustomForm(formData, user.uid)
     setCustomForms([saved, ...customForms])
     logger.debug('Custom form saved:', saved.id)
+  }
+
+  // Import template from library
+  const handleImportTemplate = async (template) => {
+    if (!user?.uid) {
+      throw new Error('You must be logged in to import templates')
+    }
+
+    // Save as a custom form (editable copy)
+    const formData = {
+      ...template,
+      id: `imported_${template.id}_${Date.now()}`,
+      name: template.name,
+      shortName: template.shortName,
+      description: template.description,
+      icon: template.icon || 'FileText',
+      isImported: true,
+      sourceTemplateId: template.id,
+      sections: template.sections
+    }
+
+    const saved = await createCustomForm(formData, user.uid)
+    setCustomForms([saved, ...customForms])
+    setImportedTemplates([...importedTemplates, template.id])
+    logger.debug('Template imported:', saved.id)
   }
   
   // Combine built-in templates with custom forms
@@ -1532,6 +1560,14 @@ export default function Forms() {
             ))}
           </div>
         )}
+
+        <button
+          onClick={() => setShowTemplateLibrary(true)}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-200 transition-colors mb-2"
+        >
+          <Download className="w-5 h-5" />
+          <span className="font-medium">Templates</span>
+        </button>
 
         <button
           onClick={() => setShowFormBuilder(true)}
@@ -1683,6 +1719,14 @@ export default function Forms() {
         isOpen={showFormBuilder}
         onClose={() => setShowFormBuilder(false)}
         onSave={handleSaveCustomForm}
+      />
+
+      {/* Template Library */}
+      <TemplateLibrary
+        isOpen={showTemplateLibrary}
+        onClose={() => setShowTemplateLibrary(false)}
+        onImport={handleImportTemplate}
+        importedTemplates={importedTemplates}
       />
     </div>
   )
