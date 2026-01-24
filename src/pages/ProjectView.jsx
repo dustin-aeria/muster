@@ -47,7 +47,8 @@ import {
   Cloud,
   CloudOff,
   Target,
-  MessageSquare
+  MessageSquare,
+  FileEdit
 } from 'lucide-react'
 import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
@@ -66,6 +67,7 @@ import ProjectForms from '../components/projects/ProjectForms'
 import ProjectExport from '../components/projects/ProjectExport'
 import ProjectNeedsAnalysis from '../components/projects/ProjectNeedsAnalysis'
 import ProjectComments from '../components/projects/ProjectComments'
+import ProjectProposal from '../components/projects/ProjectProposal'
 import { useAuth } from '../contexts/AuthContext'
 import { logger } from '../lib/logger'
 
@@ -85,6 +87,7 @@ const tabs = [
   { id: 'review', label: 'Review', icon: FileCheck },
   { id: 'tailgate', label: 'Tailgate', icon: FileText },
   { id: 'forms', label: 'Forms', icon: ClipboardList },
+  { id: 'proposal', label: 'Proposal', icon: FileEdit },
   { id: 'export', label: 'Export', icon: Download },
 ]
 
@@ -650,6 +653,9 @@ export default function ProjectView() {
         )}
         {activeTab === 'forms' && (
           <ProjectForms project={project} onUpdate={handleUpdate} />
+        )}
+        {activeTab === 'proposal' && (
+          <ProjectProposal project={project} />
         )}
         {activeTab === 'export' && (
           <ProjectExport project={project} />
