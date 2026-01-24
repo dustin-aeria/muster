@@ -29,7 +29,7 @@ import {
 } from 'lucide-react'
 import { FORM_TEMPLATES, FORM_CATEGORIES, RPAS_INCIDENT_TRIGGERS, calculateRiskScore, SEVERITY_RATINGS, PROBABILITY_RATINGS, CONTROL_TYPES, HAZARD_CATEGORIES } from '../lib/formDefinitions'
 import { logger } from '../lib/logger'
-import { createForm, getForms, getProjects, getOperators, getAircraft, getEquipment, getCustomForms, createCustomForm } from '../lib/firestore'
+import { createForm, getForms, getProjects, getOperators, getAircraft, getEquipment, getServices, getCustomForms, createCustomForm } from '../lib/firestore'
 import { uploadFormAttachment, deleteFormAttachment } from '../lib/storageHelpers'
 import { useAuth } from '../contexts/AuthContext'
 import FormBuilder from '../components/forms/FormBuilder'
@@ -741,13 +741,15 @@ function FormField({ field, value, onChange, formData, formId }) {
       )
 
     case 'risk_matrix':
-      const severity = formData?.[field.id.replace('_risk', '_severity')] || formData?.severity
-      const probability = formData?.[field.id.replace('_risk', '_probability')] || formData?.probability
-      const riskLevel = calculateRiskScore(severity, probability)
+      const severity = formData?.[field.id.replace('_risk', '_severity')] || formData?.severity || 1
+      const probability = formData?.[field.id.replace('_risk', '_probability')] || formData?.probability || 1
+      // calculateRiskScore expects (likelihood, severity) - probability is the same as likelihood
+      const riskResult = calculateRiskScore(probability, severity)
       return (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
-          <RiskBadge level={riskLevel} />
+          <RiskBadge level={riskResult.level.toLowerCase()} />
+          <span className="ml-2 text-sm text-gray-500">Score: {riskResult.score}</span>
         </div>
       )
 
@@ -1158,6 +1160,31 @@ function FormField({ field, value, onChange, formData, formId }) {
           valueFn={(item) => item.id}
           detailFn={(item) => item.serialNumber ? `S/N: ${item.serialNumber}` : null}
           required={field.required}
+        />
+      )
+
+    case 'service_select':
+      return (
+        <LibrarySelect
+          field={field}
+          value={localValue}
+          onChange={(val, item) => {
+            handleChange(val)
+            // Auto-populate rate details if configured
+            if (item && field.autoPopulate) {
+              field.autoPopulate.forEach(mapping => {
+                if (item[mapping.from] !== undefined) {
+                  onChange(mapping.to, item[mapping.from])
+                }
+              })
+            }
+          }}
+          fetchFn={() => getServices(field.serviceCategory ? { category: field.serviceCategory } : {})}
+          labelFn={(item) => item.name || 'Unknown Service'}
+          valueFn={(item) => item.id}
+          detailFn={(item) => item.hourlyRate ? `$${item.hourlyRate}/hr` : null}
+          required={field.required}
+          returnFullItem
         />
       )
 

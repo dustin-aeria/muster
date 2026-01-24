@@ -1231,6 +1231,96 @@ export async function getEquipmentValueSummary() {
 }
 
 // ============================================
+// SERVICES
+// ============================================
+
+const servicesRef = collection(db, 'services')
+
+/**
+ * Get all services with optional filters
+ * @param {Object} filters - Optional filters (category, status)
+ * @returns {Promise<Array>}
+ */
+export async function getServices(filters = {}) {
+  let q = query(servicesRef, orderBy('name', 'asc'))
+
+  if (filters.category) {
+    q = query(servicesRef, where('category', '==', filters.category), orderBy('name', 'asc'))
+  }
+
+  if (filters.status) {
+    q = query(q, where('status', '==', filters.status))
+  }
+
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+}
+
+/**
+ * Get a single service by ID
+ * @param {string} id - Service ID
+ * @returns {Promise<Object>}
+ */
+export async function getServiceById(id) {
+  const docRef = doc(db, 'services', id)
+  const snapshot = await getDoc(docRef)
+
+  if (!snapshot.exists()) {
+    throw new Error('Service not found')
+  }
+
+  return { id: snapshot.id, ...snapshot.data() }
+}
+
+/**
+ * Create a new service
+ * @param {Object} data - Service data
+ * @returns {Promise<Object>}
+ */
+export async function createService(data) {
+  const service = {
+    name: data.name,
+    category: data.category || 'other',
+    description: data.description || '',
+    hourlyRate: parseFloat(data.hourlyRate) || 0,
+    dailyRate: parseFloat(data.dailyRate) || 0,
+    weeklyRate: parseFloat(data.weeklyRate) || 0,
+    minimumCharge: parseFloat(data.minimumCharge) || 0,
+    unit: data.unit || 'hour',
+    status: data.status || 'active',
+    notes: data.notes || '',
+    createdBy: data.createdBy,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  }
+
+  const docRef = await addDoc(servicesRef, service)
+  return { id: docRef.id, ...service }
+}
+
+/**
+ * Update a service
+ * @param {string} id - Service ID
+ * @param {Object} data - Updated service data
+ */
+export async function updateServiceRecord(id, data) {
+  const docRef = doc(db, 'services', id)
+  await updateDoc(docRef, {
+    ...data,
+    updatedAt: serverTimestamp()
+  })
+}
+
+/**
+ * Delete a service
+ * @param {string} id - Service ID
+ */
+export async function deleteService(id) {
+  const docRef = doc(db, 'services', id)
+  await deleteDoc(docRef)
+}
+
+// ============================================
 // FORMS
 // ============================================
 
