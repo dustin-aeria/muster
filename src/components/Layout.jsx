@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import {
@@ -30,6 +30,7 @@ import {
 import FeedbackModal from './FeedbackModal'
 import NotificationBell from './NotificationBell'
 import CommandPalette from './CommandPalette'
+import KeyboardShortcuts from './KeyboardShortcuts'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -237,8 +238,84 @@ function Sidebar({ mobile, onClose }) {
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
+  const [showShortcuts, setShowShortcuts] = useState(false)
+  const [keySequence, setKeySequence] = useState('')
   const location = useLocation()
+  const navigate = useNavigate()
   const { user } = useAuth()
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    let sequenceTimeout
+
+    const handleKeyDown = (e) => {
+      // Skip if user is typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return
+      }
+
+      // "?" opens keyboard shortcuts
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        setShowShortcuts(true)
+        return
+      }
+
+      // "c" creates new project
+      if (e.key === 'c' && !e.metaKey && !e.ctrlKey && !keySequence) {
+        clearTimeout(sequenceTimeout)
+        navigate('/projects')
+        return
+      }
+
+      // Handle key sequences (g+h, g+p, etc.)
+      if (keySequence === 'g') {
+        clearTimeout(sequenceTimeout)
+        setKeySequence('')
+
+        if (e.key === 'h') {
+          e.preventDefault()
+          navigate('/')
+        } else if (e.key === 'p') {
+          e.preventDefault()
+          navigate('/projects')
+        } else if (e.key === 's') {
+          e.preventDefault()
+          navigate('/settings')
+        } else if (e.key === 'c') {
+          e.preventDefault()
+          navigate('/calendar')
+        }
+        return
+      }
+
+      if (keySequence === 'n') {
+        clearTimeout(sequenceTimeout)
+        setKeySequence('')
+
+        if (e.key === 'p') {
+          e.preventDefault()
+          navigate('/projects')
+        } else if (e.key === 'i') {
+          e.preventDefault()
+          navigate('/incidents/new')
+        }
+        return
+      }
+
+      // Start key sequence
+      if (e.key === 'g' || e.key === 'n') {
+        setKeySequence(e.key)
+        sequenceTimeout = setTimeout(() => setKeySequence(''), 1000)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      clearTimeout(sequenceTimeout)
+    }
+  }, [keySequence, navigate])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -318,6 +395,12 @@ export default function Layout() {
 
       {/* Command Palette */}
       <CommandPalette />
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcuts
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
     </div>
   )
 }
