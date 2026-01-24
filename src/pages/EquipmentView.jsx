@@ -51,7 +51,9 @@ const categoryIcons = {
   vehicles: Truck,
   power: Zap,
   communication: Radio,
-  support: Briefcase
+  support: Briefcase,
+  rpas: Package,
+  other: Archive
 }
 
 // Status configuration
