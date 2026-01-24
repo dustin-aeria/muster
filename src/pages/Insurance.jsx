@@ -8,7 +8,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-  FileShield,
+  ShieldCheck,
   Plus,
   Search,
   AlertTriangle,
@@ -384,7 +384,7 @@ export default function Insurance() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileShield className="w-7 h-7 text-aeria-navy" />
+            <ShieldCheck className="w-7 h-7 text-aeria-navy" />
             Insurance Management
           </h1>
           <p className="text-gray-500 mt-1">Track and manage insurance policies and coverage</p>
@@ -463,7 +463,7 @@ export default function Insurance() {
       {/* Policies List */}
       {filteredPolicies.length === 0 ? (
         <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-          <FileShield className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <ShieldCheck className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-gray-900">No policies found</h3>
           <p className="text-gray-500 mt-1">
             {policies.length === 0

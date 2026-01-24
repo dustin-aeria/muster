@@ -26,7 +26,7 @@ import {
   ListChecks,
   MessageSquarePlus,
   CalendarDays,
-  FileShield,
+  ShieldCheck,
   Briefcase
 } from 'lucide-react'
 import FeedbackModal from './FeedbackModal'
@@ -64,7 +64,7 @@ const libraries = [
   { name: 'Equipment', href: '/equipment', icon: Package },
   { name: 'Services', href: '/services', icon: Briefcase },
   { name: 'Clients', href: '/clients', icon: Building2 },
-  { name: 'Insurance', href: '/insurance', icon: FileShield },
+  { name: 'Insurance', href: '/insurance', icon: ShieldCheck },
 ]
 
 function Sidebar({ mobile, onClose }) {
