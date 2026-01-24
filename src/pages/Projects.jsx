@@ -24,7 +24,7 @@ import {
   Copy,
   AlertTriangle
 } from 'lucide-react'
-import { getProjects, deleteProject, getClients } from '../lib/firestore'
+import { getProjects, deleteProject, duplicateProject, getClients } from '../lib/firestore'
 import NewProjectModal from '../components/NewProjectModal'
 import { format } from 'date-fns'
 import { logger } from '../lib/logger'
@@ -102,7 +102,7 @@ export default function Projects() {
     if (!confirm(`Are you sure you want to delete "${projectName}"? This cannot be undone.`)) {
       return
     }
-    
+
     try {
       await deleteProject(projectId)
       setProjects(prev => prev.filter(p => p.id !== projectId))
@@ -111,6 +111,19 @@ export default function Projects() {
       alert('Failed to delete project. Please try again.')
     }
     setMenuOpen(null)
+  }
+
+  const handleDuplicate = async (projectId, projectName) => {
+    try {
+      const newProject = await duplicateProject(projectId)
+      // Add to list and navigate to the new project
+      setProjects(prev => [newProject, ...prev])
+      setMenuOpen(null)
+      navigate(`/projects/${newProject.id}`)
+    } catch (err) {
+      logger.error('Failed to duplicate project:', err)
+      alert('Failed to duplicate project. Please try again.')
+    }
   }
 
   // Filter projects
@@ -336,8 +349,7 @@ export default function Projects() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                alert('Duplicate feature coming soon')
-                                setMenuOpen(null)
+                                handleDuplicate(project.id, project.name)
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                             >

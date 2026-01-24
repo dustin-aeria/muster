@@ -495,6 +495,44 @@ export async function deleteProject(id) {
   await deleteDoc(docRef)
 }
 
+/**
+ * Duplicate an existing project
+ * Creates a copy with "(Copy)" appended to name, reset to draft status
+ */
+export async function duplicateProject(id) {
+  // Get the original project
+  const original = await getProject(id)
+
+  // Create duplicate data - remove id and reset certain fields
+  const { id: _id, createdAt, updatedAt, ...projectData } = original
+
+  const duplicateData = {
+    ...projectData,
+    name: `${projectData.name} (Copy)`,
+    status: 'draft',
+    // Reset approvals since this is a copy
+    approvals: {
+      preparedBy: null,
+      preparedDate: null,
+      reviewedBy: null,
+      reviewedDate: null,
+      approvedBy: null,
+      approvedDate: null,
+      crewAcknowledgments: []
+    },
+    // Reset tailgate for fresh briefing
+    tailgate: null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  }
+
+  // Serialize and save
+  const serializedData = serializeForFirestore(duplicateData)
+  const docRef = await addDoc(projectsRef, serializedData)
+
+  return { id: docRef.id, ...duplicateData }
+}
+
 // ============================================
 // SITE MANAGEMENT HELPERS
 // ============================================
