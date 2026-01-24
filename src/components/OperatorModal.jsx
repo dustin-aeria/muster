@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Modal, { ModalFooter } from './Modal'
 import { createOperator, updateOperator } from '../lib/firestore'
-import { Plus, Trash2, AlertCircle, Award } from 'lucide-react'
+import { Plus, Trash2, AlertCircle, Award, DollarSign } from 'lucide-react'
 
 const availableRoles = [
   'PIC',
@@ -73,7 +73,11 @@ export default function OperatorModal({ isOpen, onClose, operator }) {
       relationship: ''
     },
     roles: [],
-    status: 'active'
+    status: 'active',
+    // Billing rates (for cost estimator)
+    hourlyRate: '',
+    dailyRate: '',
+    weeklyRate: ''
   })
   
   const [certifications, setCertifications] = useState([])
@@ -93,7 +97,10 @@ export default function OperatorModal({ isOpen, onClose, operator }) {
           relationship: ''
         },
         roles: operator.roles || [],
-        status: operator.status || 'active'
+        status: operator.status || 'active',
+        hourlyRate: operator.hourlyRate || '',
+        dailyRate: operator.dailyRate || '',
+        weeklyRate: operator.weeklyRate || ''
       })
       setCertifications(operator.certifications || [])
     } else {
@@ -114,7 +121,10 @@ export default function OperatorModal({ isOpen, onClose, operator }) {
         relationship: ''
       },
       roles: [],
-      status: 'active'
+      status: 'active',
+      hourlyRate: '',
+      dailyRate: '',
+      weeklyRate: ''
     })
     setCertifications([])
     setError('')
@@ -205,7 +215,10 @@ export default function OperatorModal({ isOpen, onClose, operator }) {
 
       const operatorData = {
         ...formData,
-        certifications: processedCerts
+        certifications: processedCerts,
+        hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
+        dailyRate: formData.dailyRate ? parseFloat(formData.dailyRate) : null,
+        weeklyRate: formData.weeklyRate ? parseFloat(formData.weeklyRate) : null
       }
 
       if (isEditing) {
@@ -495,6 +508,59 @@ export default function OperatorModal({ isOpen, onClose, operator }) {
             </select>
           </div>
         )}
+
+        {/* Billing Rates (for Cost Estimator) */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <DollarSign className="w-4 h-4" />
+            Billing Rates
+            <span className="text-xs font-normal text-gray-500">(Admin only - for cost estimation)</span>
+          </h3>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div>
+              <label className="label">Hourly Rate ($)</label>
+              <input
+                type="number"
+                name="hourlyRate"
+                value={formData.hourlyRate}
+                onChange={handleChange}
+                className="input"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <div>
+              <label className="label">Daily Rate ($)</label>
+              <input
+                type="number"
+                name="dailyRate"
+                value={formData.dailyRate}
+                onChange={handleChange}
+                className="input"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <div>
+              <label className="label">Weekly Rate ($)</label>
+              <input
+                type="number"
+                name="weeklyRate"
+                value={formData.weeklyRate}
+                onChange={handleChange}
+                className="input"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            These rates are used in the project cost estimator.
+          </p>
+        </div>
 
         <ModalFooter>
           <button type="button" onClick={handleClose} className="btn-secondary">

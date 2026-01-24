@@ -25,7 +25,9 @@ import {
   Award,
   ListChecks,
   MessageSquarePlus,
-  CalendarDays
+  CalendarDays,
+  FileShield,
+  Briefcase
 } from 'lucide-react'
 import FeedbackModal from './FeedbackModal'
 import NotificationBell from './NotificationBell'
@@ -60,7 +62,9 @@ const libraries = [
   { name: 'Operators', href: '/operators', icon: Users },
   { name: 'Fleet', href: '/aircraft', icon: Plane },
   { name: 'Equipment', href: '/equipment', icon: Package },
+  { name: 'Services', href: '/services', icon: Briefcase },
   { name: 'Clients', href: '/clients', icon: Building2 },
+  { name: 'Insurance', href: '/insurance', icon: FileShield },
 ]
 
 function Sidebar({ mobile, onClose }) {
