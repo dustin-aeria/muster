@@ -15,6 +15,7 @@ import { db } from '../lib/firebase'
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import BrandingSettings from '../components/BrandingSettings'
+import InsuranceManager from '../components/insurance/InsuranceManager'
 import { seedPolicies, isPoliciesSeeded } from '../lib/seedPolicies'
 import { logger } from '../lib/logger'
 
@@ -236,6 +237,7 @@ export default function Settings() {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User, description: 'Your personal information' },
     { id: 'company', label: 'Company', icon: Building, description: 'Organization settings' },
+    { id: 'insurance', label: 'Insurance', icon: Shield, description: 'Insurance policies & documents' },
     { id: 'branding', label: 'Branding', icon: Palette, description: 'PDF export branding' },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alert preferences' },
     { id: 'security', label: 'Security', icon: Shield, description: 'Password & authentication' },
@@ -440,6 +442,13 @@ export default function Settings() {
                 />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Insurance Tab */}
+        {activeTab === 'insurance' && (
+          <div className="card">
+            <InsuranceManager operatorId={user?.uid} />
           </div>
         )}
 

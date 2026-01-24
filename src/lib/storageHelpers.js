@@ -637,3 +637,77 @@ export async function uploadMultipleInspectionPhotos(files, inspectionId, itemId
 
   return results
 }
+
+// ============================================
+// INSURANCE DOCUMENTS
+// ============================================
+
+/**
+ * Upload an insurance document
+ * @param {File} file - The document file to upload
+ * @param {string} policyId - Insurance policy ID
+ * @returns {Promise<{url: string, path: string, name: string, size: number, type: string}>}
+ */
+export async function uploadInsuranceDocument(file, policyId) {
+  if (!file) throw new Error('No file provided')
+  if (!policyId) throw new Error('Policy ID required')
+
+  // Validate file type
+  const validTypes = [
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]
+  if (!validTypes.includes(file.type)) {
+    throw new Error('Invalid file type. Please upload PDF, JPEG, PNG, or Word documents.')
+  }
+
+  // Validate file size (max 20MB)
+  const maxSize = 20 * 1024 * 1024
+  if (file.size > maxSize) {
+    throw new Error('File too large. Maximum size is 20MB.')
+  }
+
+  // Generate unique filename
+  const timestamp = Date.now()
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filename = `${timestamp}_${safeName}`
+
+  // Create storage path
+  const storagePath = `insurance/${policyId}/${filename}`
+  const storageRef = ref(storage, storagePath)
+
+  // Upload file
+  const snapshot = await uploadBytes(storageRef, file, {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name,
+      uploadedAt: new Date().toISOString(),
+      policyId
+    }
+  })
+
+  // Get download URL
+  const url = await getDownloadURL(snapshot.ref)
+
+  return {
+    url,
+    path: storagePath,
+    name: file.name,
+    size: file.size,
+    type: file.type
+  }
+}
+
+/**
+ * Delete an insurance document from Firebase Storage
+ * @param {string} storagePath - The storage path of the file to delete
+ */
+export async function deleteInsuranceDocument(storagePath) {
+  if (!storagePath) throw new Error('Storage path required')
+
+  const storageRef = ref(storage, storagePath)
+  await deleteObject(storageRef)
+}
