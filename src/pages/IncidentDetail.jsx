@@ -20,7 +20,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { 
+import {
   ArrowLeft,
   Edit,
   Trash2,
@@ -47,7 +47,8 @@ import {
   Target,
   ClipboardCheck,
   ExternalLink,
-  Phone
+  Phone,
+  Download
 } from 'lucide-react'
 import { format } from 'date-fns'
 import {
@@ -63,6 +64,7 @@ import {
   REGULATORY_TRIGGERS
 } from '../lib/firestoreSafety'
 import { getCapas } from '../lib/firestoreSafety'
+import { exportIncidentReport } from '../lib/safetyExportService'
 import {
   SUBSTANDARD_ACTS,
   SUBSTANDARD_CONDITIONS,
@@ -247,6 +249,7 @@ export default function IncidentDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
   
   // Investigation form state
   const [showInvestigationForm, setShowInvestigationForm] = useState(false)
@@ -382,13 +385,26 @@ export default function IncidentDetail() {
 
   const handleDelete = async () => {
     if (!confirm(`Delete incident ${incident.incidentNumber}? This cannot be undone.`)) return
-    
+
     try {
       await deleteIncident(id)
       navigate('/incidents')
     } catch (err) {
       logger.error('Error deleting incident:', err)
       alert('Failed to delete incident')
+    }
+  }
+
+  const handleExport = async () => {
+    if (!incident) return
+    setExporting(true)
+    try {
+      await exportIncidentReport(incident)
+    } catch (err) {
+      logger.error('Error exporting incident:', err)
+      alert('Failed to export incident report')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -477,6 +493,15 @@ export default function IncidentDetail() {
         </div>
         
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="btn-secondary inline-flex items-center gap-2"
+            title="Export as PDF"
+          >
+            <Download className="w-4 h-4" />
+            {exporting ? 'Exporting...' : 'Export PDF'}
+          </button>
           {incident.status !== 'closed' && (
             <>
               <Link

@@ -16,7 +16,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
-import { 
+import {
   ArrowLeft,
   Edit,
   Trash2,
@@ -39,7 +39,8 @@ import {
   Upload,
   ExternalLink,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Download
 } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import {
@@ -55,6 +56,7 @@ import {
   CAPA_TYPES,
   PRIORITY_LEVELS
 } from '../lib/firestoreSafety'
+import { exportCapaReport } from '../lib/safetyExportService'
 import { logger } from '../lib/logger'
 
 // Collapsible section component
@@ -189,6 +191,7 @@ export default function CapaDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
   
   // Form states
   const [showImplementationForm, setShowImplementationForm] = useState(false)
@@ -382,13 +385,26 @@ export default function CapaDetail() {
 
   const handleDelete = async () => {
     if (!confirm(`Delete CAPA ${capa.capaNumber}? This cannot be undone.`)) return
-    
+
     try {
       await deleteCapa(id)
       navigate('/capas')
     } catch (err) {
       logger.error('Error deleting CAPA:', err)
       alert('Failed to delete CAPA')
+    }
+  }
+
+  const handleExport = async () => {
+    if (!capa) return
+    setExporting(true)
+    try {
+      await exportCapaReport(capa)
+    } catch (err) {
+      logger.error('Error exporting CAPA:', err)
+      alert('Failed to export CAPA report')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -498,6 +514,15 @@ export default function CapaDetail() {
         </div>
         
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="btn-secondary inline-flex items-center gap-2"
+            title="Export as PDF"
+          >
+            <Download className="w-4 h-4" />
+            {exporting ? 'Exporting...' : 'Export PDF'}
+          </button>
           {!isComplete && !isIneffective && (
             <Link
               to={`/capas/${id}/edit`}
