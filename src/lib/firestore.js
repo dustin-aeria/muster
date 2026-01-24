@@ -957,6 +957,11 @@ export async function createEquipment(data) {
     lastServiceDate: data.lastServiceDate || null,
     nextServiceDate: data.nextServiceDate || null,
 
+    // Cost rates for estimating
+    hourlyRate: data.hourlyRate || null,
+    dailyRate: data.dailyRate || null,
+    weeklyRate: data.weeklyRate || null,
+
     // Category-specific custom fields
     customFields: data.customFields || {},
 
