@@ -101,6 +101,24 @@ function formatDate(dateString) {
   })
 }
 
+// Calculate review due date (1 year from effective date if not explicitly set)
+function getReviewDueDate(policy) {
+  if (policy.reviewDate) return policy.reviewDate
+  if (policy.effectiveDate) {
+    const effective = new Date(policy.effectiveDate)
+    effective.setFullYear(effective.getFullYear() + 1)
+    return effective.toISOString()
+  }
+  return null
+}
+
+// Check if review is overdue
+function isReviewOverdue(policy) {
+  const reviewDate = getReviewDueDate(policy)
+  if (!reviewDate) return false
+  return new Date(reviewDate) < new Date()
+}
+
 export default function PolicyDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -328,23 +346,35 @@ export default function PolicyDetail() {
         </div>
 
         {/* Metadata bar */}
-        <div className="px-6 py-3 bg-white border-t border-gray-100 flex items-center gap-6 text-sm">
+        <div className="px-6 py-3 bg-white border-t border-gray-100 flex flex-wrap items-center gap-4 text-sm">
           <span className="flex items-center gap-1.5 text-gray-600">
             <GitBranch className="w-4 h-4 text-gray-400" />
             v{policy.version}
           </span>
-          <span className="flex items-center gap-1.5 text-gray-600">
-            <Calendar className="w-4 h-4 text-gray-400" />
-            Effective: {formatDate(policy.effectiveDate)}
-          </span>
-          <span className="flex items-center gap-1.5 text-gray-600">
-            <Clock className="w-4 h-4 text-gray-400" />
-            Review: {formatDate(policy.reviewDate)}
-          </span>
-          <span className="flex items-center gap-1.5 text-gray-600">
-            <User className="w-4 h-4 text-gray-400" />
-            {policy.owner || 'Unassigned'}
-          </span>
+          {policy.effectiveDate && (
+            <span className="flex items-center gap-1.5 text-gray-600">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              Effective: {formatDate(policy.effectiveDate)}
+            </span>
+          )}
+          {(() => {
+            const reviewDue = getReviewDueDate(policy)
+            const overdue = isReviewOverdue(policy)
+            if (!reviewDue) return null
+            return (
+              <span className={`flex items-center gap-1.5 ${overdue ? 'text-red-600' : 'text-gray-600'}`}>
+                <Clock className={`w-4 h-4 ${overdue ? 'text-red-500' : 'text-gray-400'}`} />
+                Review Due: {formatDate(reviewDue)}
+                {overdue && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs ml-1">Overdue</span>}
+              </span>
+            )
+          })()}
+          {policy.owner && (
+            <span className="flex items-center gap-1.5 text-gray-600">
+              <User className="w-4 h-4 text-gray-400" />
+              {policy.owner}
+            </span>
+          )}
           {policy.acknowledgmentSettings?.required && (
             <span className="flex items-center gap-1.5 text-green-600">
               <CheckCircle2 className="w-4 h-4" />
