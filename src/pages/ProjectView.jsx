@@ -20,9 +20,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { 
-  ArrowLeft, 
-  FolderKanban, 
+import {
+  ArrowLeft,
+  FolderKanban,
   Save,
   Settings2,
   Users,
@@ -46,7 +46,8 @@ import {
   AlertCircle,
   Cloud,
   CloudOff,
-  Target
+  Target,
+  MessageSquare
 } from 'lucide-react'
 import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
@@ -64,6 +65,8 @@ import ProjectTailgate from '../components/projects/ProjectTailgate'
 import ProjectForms from '../components/projects/ProjectForms'
 import ProjectExport from '../components/projects/ProjectExport'
 import ProjectNeedsAnalysis from '../components/projects/ProjectNeedsAnalysis'
+import ProjectComments from '../components/projects/ProjectComments'
+import { useAuth } from '../contexts/AuthContext'
 import { logger } from '../lib/logger'
 
 const tabs = [
@@ -71,6 +74,7 @@ const tabs = [
   { id: 'needs', label: 'Needs Analysis', icon: Target },
   { id: 'sections', label: 'Sections', icon: Settings2 },
   { id: 'crew', label: 'Crew', icon: Users },
+  { id: 'team', label: 'Team', icon: MessageSquare },
   { id: 'site', label: 'Site Survey', icon: MapPin, toggleable: true, sectionKey: 'siteSurvey' },
   { id: 'flight', label: 'Flight Plan', icon: Plane, toggleable: true, sectionKey: 'flightPlan' },
   { id: 'hseRisk', label: 'HSE Risk', icon: AlertTriangle },
@@ -105,6 +109,7 @@ export default function ProjectView() {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useAuth()
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -597,6 +602,9 @@ export default function ProjectView() {
         )}
         {activeTab === 'crew' && (
           <ProjectCrew project={project} onUpdate={handleUpdate} />
+        )}
+        {activeTab === 'team' && (
+          <ProjectComments project={project} operatorId={user?.uid} />
         )}
         {activeTab === 'site' && (
           <ProjectSiteSurvey project={project} onUpdate={handleUpdate} />
