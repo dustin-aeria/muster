@@ -77,26 +77,33 @@ function SourceBadge({ source }) {
   )
 }
 
-// Category icon component
-function CategoryIcon({ category, className = 'w-5 h-5' }) {
+// Category badge component (simplified - no emojis)
+function CategoryBadge({ category }) {
   const categoryData = FHA_CATEGORIES.find(c => c.id === category)
 
-  // Map category icons
-  const iconMap = {
-    flight_ops: '✈️',
-    equipment: '🔧',
-    environmental: '🌡️',
-    site_hazards: '📍',
-    emergency: '⚠️',
-    personnel: '👥',
-    specialized: '🎯'
+  // Category color mapping
+  const colorMap = {
+    flight_ops: 'bg-blue-50 text-blue-700 border-blue-200',
+    equipment: 'bg-gray-50 text-gray-700 border-gray-200',
+    environmental: 'bg-teal-50 text-teal-700 border-teal-200',
+    site_hazards: 'bg-amber-50 text-amber-700 border-amber-200',
+    emergency: 'bg-red-50 text-red-700 border-red-200',
+    personnel: 'bg-purple-50 text-purple-700 border-purple-200',
+    specialized: 'bg-indigo-50 text-indigo-700 border-indigo-200'
   }
 
+  const colors = colorMap[category] || 'bg-gray-50 text-gray-700 border-gray-200'
+
   return (
-    <span className={className} title={categoryData?.name || category}>
-      {iconMap[category] || '📋'}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${colors}`}>
+      {categoryData?.name || category}
     </span>
   )
+}
+
+// Legacy CategoryIcon for backwards compatibility
+function CategoryIcon({ category, className = 'w-5 h-5' }) {
+  return <CategoryBadge category={category} />
 }
 
 export default function FHACard({
