@@ -35,6 +35,7 @@ import {
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { deleteEquipment, EQUIPMENT_CATEGORIES, EQUIPMENT_STATUS } from '../lib/firestore'
+import { subscribeToActivityLog } from '../lib/firestoreComments'
 import MaintenanceTracker from '../components/equipment/MaintenanceTracker'
 import EquipmentModal from '../components/EquipmentModal'
 import { generateEquipmentSpecPDF } from '../components/EquipmentSpecSheet'
@@ -90,9 +91,24 @@ export default function EquipmentView() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [showEditModal, setShowEditModal] = useState(false)
+  const [activities, setActivities] = useState([])
+  const [activitiesLoading, setActivitiesLoading] = useState(true)
 
   useEffect(() => {
     loadEquipment()
+  }, [equipmentId])
+
+  // Subscribe to activity log
+  useEffect(() => {
+    if (!equipmentId) return
+
+    setActivitiesLoading(true)
+    const unsubscribe = subscribeToActivityLog('equipment', equipmentId, (data) => {
+      setActivities(data)
+      setActivitiesLoading(false)
+    })
+
+    return () => unsubscribe()
   }, [equipmentId])
 
   const loadEquipment = async () => {
@@ -415,11 +431,45 @@ export default function EquipmentView() {
       {activeTab === 'history' && (
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity Log</h2>
-          <div className="text-center py-8 text-gray-500">
-            <Activity className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p>Activity tracking coming soon</p>
-            <p className="text-sm mt-1">View maintenance history in the Maintenance tab</p>
-          </div>
+          {activitiesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-aeria-navy border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : activities.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Activity className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>No activity recorded yet</p>
+              <p className="text-sm mt-1">Activities will appear here as equipment is used</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="p-2 bg-white rounded-full shadow-sm">
+                    <Activity className="w-4 h-4 text-gray-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">{activity.description}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-500">
+                        {activity.actorName || 'System'}
+                      </span>
+                      <span className="text-xs text-gray-400">•</span>
+                      <span className="text-xs text-gray-500">
+                        {activity.createdAt
+                          ? new Date(activity.createdAt).toLocaleDateString() + ' ' +
+                            new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : 'Just now'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
