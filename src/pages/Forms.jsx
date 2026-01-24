@@ -741,15 +741,20 @@ function FormField({ field, value, onChange, formData, formId }) {
       )
 
     case 'risk_matrix':
-      const severity = formData?.[field.id.replace('_risk', '_severity')] || formData?.severity || 1
-      const probability = formData?.[field.id.replace('_risk', '_probability')] || formData?.probability || 1
-      // calculateRiskScore expects (likelihood, severity) - probability is the same as likelihood
-      const riskResult = calculateRiskScore(probability, severity)
+      const severity = formData?.[field.id.replace('_risk', '_severity')] || formData?.severity || '1'
+      const probability = formData?.[field.id.replace('_risk', '_probability')] || formData?.probability || 'A'
+      // calculateRiskScore expects (severity, probability) and returns a string like 'critical', 'high', 'medium', 'low'
+      const riskLevel = calculateRiskScore(severity, probability)
+      // Calculate a numeric score based on severity and probability
+      const severityNum = parseInt(severity) || 1
+      const probMap = { 'A': 4, 'B': 3, 'C': 2, 'D': 1 }
+      const probNum = probMap[probability] || 1
+      const riskScore = severityNum * probNum
       return (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
-          <RiskBadge level={riskResult.level.toLowerCase()} />
-          <span className="ml-2 text-sm text-gray-500">Score: {riskResult.score}</span>
+          <RiskBadge level={riskLevel} />
+          <span className="ml-2 text-sm text-gray-500">Score: {riskScore}</span>
         </div>
       )
 
