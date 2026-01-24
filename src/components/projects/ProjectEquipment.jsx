@@ -95,7 +95,9 @@ const categoryIcons = {
   vehicles: Truck,
   power: Zap,
   communication: Radio,
-  support: Briefcase
+  support: Briefcase,
+  rpas: Plane,
+  other: Package
 }
 
 // ============================================

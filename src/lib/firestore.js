@@ -873,6 +873,16 @@ export const EQUIPMENT_CATEGORIES = {
     label: 'Support',
     description: 'Tripods, cases, tools, cables',
     fields: ['dimensions', 'weight', 'compatibility', 'material']
+  },
+  rpas: {
+    label: 'RPAS Accessories',
+    description: 'Batteries, propellers, controllers, spare parts',
+    fields: ['compatibleAircraft', 'partNumber', 'cycles', 'condition']
+  },
+  other: {
+    label: 'Other Equipment',
+    description: 'Miscellaneous items',
+    fields: ['notes']
   }
 }
 
