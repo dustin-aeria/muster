@@ -53,7 +53,8 @@ import {
   createDefaultSite,
   getSiteStats,
   calculatePolygonArea,
-  POPULATION_CATEGORIES
+  POPULATION_CATEGORIES,
+  generateSORAVolumes
 } from '../../lib/mapDataStructures'
 import NoAircraftAssignedModal from '../NoAircraftAssignedModal'
 
@@ -873,6 +874,49 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
     updateSiteFlightPlan({ primaryAircraftId: aircraftId })
   }, [updateSiteFlightPlan])
 
+  // Generate SORA volumes (contingency volume and ground risk buffer)
+  const handleGenerateSORAVolumes = useCallback(() => {
+    if (!activeSite || !activeSiteId) return
+
+    const flightGeography = activeSite.mapData?.flightPlan?.flightGeography
+    if (!flightGeography?.geometry?.coordinates?.[0]) {
+      alert('Please draw a flight geography first before generating SORA volumes.')
+      return
+    }
+
+    // Get buffer distances from site flight plan, or use defaults
+    const contingencyBuffer = siteFlightPlan.contingencyBuffer || 50 // Default 50m
+    const groundRiskBuffer = siteFlightPlan.groundRiskBuffer || siteFlightPlan.maxAltitudeAGL || 120 // Default to altitude or 120m
+
+    // Generate the volumes
+    const volumes = generateSORAVolumes(flightGeography, contingencyBuffer, groundRiskBuffer)
+
+    if (!volumes.contingencyVolume && !volumes.groundRiskBuffer) {
+      alert('Failed to generate SORA volumes. Please check the flight geography.')
+      return
+    }
+
+    // Update the map data with the generated volumes
+    const updatedSites = sites.map(site => {
+      if (site.id !== activeSiteId) return site
+
+      return {
+        ...site,
+        mapData: {
+          ...site.mapData,
+          flightPlan: {
+            ...site.mapData?.flightPlan,
+            contingencyVolume: volumes.contingencyVolume,
+            groundRiskBuffer: volumes.groundRiskBuffer
+          }
+        },
+        updatedAt: new Date().toISOString()
+      }
+    })
+
+    onUpdate({ sites: updatedSites })
+  }, [activeSite, activeSiteId, siteFlightPlan, sites, onUpdate])
+
   // Handle aircraft selected from modal (new or existing)
   const handleAircraftFromModal = useCallback((aircraft) => {
     // Add to project aircraft list
@@ -1360,6 +1404,26 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
                   (siteFlightPlan.contingencyBuffer || 50) + (siteFlightPlan.groundRiskBuffer || siteFlightPlan.maxAltitudeAGL || 120)
                 }m per side
               </p>
+
+              {/* Generate Volumes Button */}
+              {activeSite?.mapData?.flightPlan?.flightGeography && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={handleGenerateSORAVolumes}
+                    className="w-full btn-primary flex items-center justify-center gap-2"
+                  >
+                    <Square className="w-4 h-4" />
+                    Generate SORA Volumes on Map
+                  </button>
+                  {activeSite?.mapData?.flightPlan?.contingencyVolume && (
+                    <p className="text-xs text-green-600 mt-2 text-center">
+                      <CheckCircle2 className="w-3 h-3 inline mr-1" />
+                      Volumes generated and displayed on map
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

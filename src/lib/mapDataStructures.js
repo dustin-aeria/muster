@@ -1,13 +1,16 @@
 /**
  * mapDataStructures.js
  * Core data structures for the unified multi-site map system
- * 
+ *
  * Defines map element types, site structures, and helper functions
  * for GeoJSON-compatible coordinate storage and manipulation.
- * 
+ *
  * @location src/lib/mapDataStructures.js
  * @action NEW
  */
+
+import buffer from '@turf/buffer'
+import { polygon as turfPolygon } from '@turf/helpers'
 
 // ============================================
 // CONSTANTS
@@ -910,6 +913,91 @@ export const getSiteStats = (site) => {
   }
 }
 
+/**
+ * Generate a buffer polygon around a source polygon
+ * @param {Object} sourcePolygon - The source polygon with geometry.coordinates
+ * @param {number} bufferDistance - Buffer distance in meters
+ * @param {string} elementType - The element type for the new polygon (e.g., 'contingencyVolume', 'groundRiskBuffer')
+ * @returns {Object|null} - New polygon object or null if generation fails
+ */
+export const generateBufferPolygon = (sourcePolygon, bufferDistance, elementType) => {
+  if (!sourcePolygon?.geometry?.coordinates?.[0] || bufferDistance <= 0) {
+    return null
+  }
+
+  try {
+    // Create turf polygon from source
+    const turfPoly = turfPolygon(sourcePolygon.geometry.coordinates)
+
+    // Generate buffer (turf uses kilometers, so convert from meters)
+    const buffered = buffer(turfPoly, bufferDistance / 1000, { units: 'kilometers' })
+
+    if (!buffered?.geometry?.coordinates) {
+      return null
+    }
+
+    // Create the new polygon element
+    const now = new Date().toISOString()
+    return {
+      id: `polygon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      elementType,
+      geometry: buffered.geometry,
+      properties: {
+        label: MAP_ELEMENT_STYLES[elementType]?.label || elementType,
+        bufferDistance,
+        sourcePolygonId: sourcePolygon.id,
+        generatedAt: now
+      },
+      createdAt: now,
+      updatedAt: now
+    }
+  } catch (err) {
+    console.error('Error generating buffer polygon:', err)
+    return null
+  }
+}
+
+/**
+ * Generate contingency volume from flight geography
+ * @param {Object} flightGeography - The flight geography polygon
+ * @param {number} bufferDistance - Buffer distance in meters (typically maxSpeed × 15s)
+ * @returns {Object|null} - Contingency volume polygon or null
+ */
+export const generateContingencyVolume = (flightGeography, bufferDistance) => {
+  return generateBufferPolygon(flightGeography, bufferDistance, 'contingencyVolume')
+}
+
+/**
+ * Generate ground risk buffer from contingency volume (or flight geography if CV not available)
+ * @param {Object} sourcePolygon - The contingency volume or flight geography polygon
+ * @param {number} bufferDistance - Buffer distance in meters (typically max altitude for 1:1)
+ * @returns {Object|null} - Ground risk buffer polygon or null
+ */
+export const generateGroundRiskBuffer = (sourcePolygon, bufferDistance) => {
+  return generateBufferPolygon(sourcePolygon, bufferDistance, 'groundRiskBuffer')
+}
+
+/**
+ * Generate both SORA volumes from flight geography
+ * @param {Object} flightGeography - The flight geography polygon
+ * @param {number} contingencyBuffer - Contingency buffer distance in meters
+ * @param {number} groundRiskBuffer - Ground risk buffer distance in meters
+ * @returns {Object} - Object with contingencyVolume and groundRiskBuffer polygons
+ */
+export const generateSORAVolumes = (flightGeography, contingencyBuffer, groundRiskBuffer) => {
+  const contingencyVolume = generateContingencyVolume(flightGeography, contingencyBuffer)
+
+  // Ground risk buffer is added to the contingency volume (not flight geography)
+  // If contingency volume generation failed, fall back to flight geography
+  const sourceForGRB = contingencyVolume || flightGeography
+  const grb = generateGroundRiskBuffer(sourceForGRB, groundRiskBuffer)
+
+  return {
+    contingencyVolume,
+    groundRiskBuffer: grb
+  }
+}
+
 export default {
   MAX_SITES_PER_PROJECT,
   SITE_STATUS,
@@ -939,5 +1027,9 @@ export default {
   calculateDistance,
   calculatePolygonArea,
   validateSiteCompleteness,
-  getSiteStats
+  getSiteStats,
+  generateBufferPolygon,
+  generateContingencyVolume,
+  generateGroundRiskBuffer,
+  generateSORAVolumes
 }
