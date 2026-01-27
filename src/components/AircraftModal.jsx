@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Modal, { ModalFooter } from './Modal'
 import { createAircraft, updateAircraft } from '../lib/firestore'
-import { AlertCircle, Plane, Info } from 'lucide-react'
+import { AlertCircle, Plane, Info, DollarSign } from 'lucide-react'
 
 const categoryOptions = [
   { value: 'multirotor', label: 'Multirotor' },
@@ -38,6 +38,8 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
     endurance: '',
     sensors: '',
     status: 'airworthy',
+    hourlyRate: '',
+    dailyRate: '',
     notes: ''
   })
 
@@ -57,6 +59,8 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
         endurance: aircraft.endurance || '',
         sensors: aircraft.sensors || '',
         status: aircraft.status || 'airworthy',
+        hourlyRate: aircraft.hourlyRate || '',
+        dailyRate: aircraft.dailyRate || '',
         notes: aircraft.notes || ''
       })
     } else {
@@ -78,6 +82,8 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
       endurance: '',
       sensors: '',
       status: 'airworthy',
+      hourlyRate: '',
+      dailyRate: '',
       notes: ''
     })
     setError('')
@@ -105,7 +111,9 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
         mtow: formData.mtow ? parseFloat(formData.mtow) : null,
         maxSpeed: formData.maxSpeed ? parseFloat(formData.maxSpeed) : null,
         maxAltitude: formData.maxAltitude ? parseFloat(formData.maxAltitude) : null,
-        endurance: formData.endurance ? parseFloat(formData.endurance) : null
+        endurance: formData.endurance ? parseFloat(formData.endurance) : null,
+        hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
+        dailyRate: formData.dailyRate ? parseFloat(formData.dailyRate) : null
       }
 
       if (isEditing) {
@@ -312,6 +320,42 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+        </div>
+
+        {/* Rates */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <DollarSign className="w-4 h-4" />
+            Billing Rates
+          </h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Hourly Rate ($)</label>
+              <input
+                type="number"
+                name="hourlyRate"
+                value={formData.hourlyRate}
+                onChange={handleChange}
+                className="input"
+                placeholder="e.g., 150"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <div>
+              <label className="label">Daily Rate ($)</label>
+              <input
+                type="number"
+                name="dailyRate"
+                value={formData.dailyRate}
+                onChange={handleChange}
+                className="input"
+                placeholder="e.g., 1200"
+                step="0.01"
+                min="0"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Notes */}

@@ -4,10 +4,10 @@
 // ============================================
 
 import { useState, useEffect } from 'react'
-import { 
-  Plus, 
-  Search, 
-  Plane, 
+import {
+  Plus,
+  Search,
+  Plane,
   Filter,
   MoreVertical,
   Trash2,
@@ -22,13 +22,15 @@ import {
   Clock,
   Eye,
   Download,
-  FileText
+  FileText,
+  DollarSign
 } from 'lucide-react'
 import { getAircraft, deleteAircraft } from '../lib/firestore'
 import AircraftModal from '../components/AircraftModal'
 import AircraftSpecSheet, { generateAircraftSpecPDF } from '../components/AircraftSpecSheet'
 import { useBranding } from '../components/BrandingSettings'
 import { logger } from '../lib/logger'
+import { formatCurrency } from '../lib/costEstimator'
 
 // ============================================
 // STATUS CONFIGURATION
@@ -360,7 +362,24 @@ export default function Aircraft() {
                     </div>
                   )}
                 </div>
-                
+
+                {/* Rates */}
+                {(ac.hourlyRate > 0 || ac.dailyRate > 0) && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+                      <div className="flex gap-3 text-gray-600">
+                        {ac.hourlyRate > 0 && (
+                          <span>{formatCurrency(ac.hourlyRate)}/hr</span>
+                        )}
+                        {ac.dailyRate > 0 && (
+                          <span>{formatCurrency(ac.dailyRate)}/day</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Serial number */}
                 {ac.serialNumber && (
                   <p className="text-xs text-gray-400 font-mono mt-3 pt-3 border-t border-gray-100">
