@@ -459,6 +459,11 @@ export async function createProject(data) {
     tailgate: null,
 
     // ============================================
+    // PROJECT SERVICES
+    // ============================================
+    projectServices: [],
+
+    // ============================================
     // PRE-FIELD AND POST-FIELD PHASES
     // ============================================
     preFieldPhase: {
@@ -1698,6 +1703,11 @@ function ensureProjectDefaults(project) {
       firstAid: null,
       procedures: {}
     }
+  }
+
+  // Ensure project services array exists
+  if (!project.projectServices) {
+    project.projectServices = []
   }
 
   // Ensure pre-field and post-field phases exist

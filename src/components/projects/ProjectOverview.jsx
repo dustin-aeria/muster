@@ -49,6 +49,7 @@ import {
   calculateResidualARC,
   getSAIL
 } from '../../lib/soraConfig'
+import ProjectServicesSection from './ProjectServicesSection'
 
 // ============================================
 // SITE STATUS CARD
@@ -875,6 +876,12 @@ export default function ProjectOverview({
       
       {/* Project Details - Author, Authorities, Deliverables, Scope */}
       <ProjectDetails
+        project={project}
+        onUpdate={onUpdate}
+      />
+
+      {/* Project Services */}
+      <ProjectServicesSection
         project={project}
         onUpdate={onUpdate}
       />
