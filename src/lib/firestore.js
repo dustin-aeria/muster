@@ -457,7 +457,19 @@ export async function createProject(data) {
     
     // Tailgate
     tailgate: null,
-    
+
+    // ============================================
+    // PRE-FIELD AND POST-FIELD PHASES
+    // ============================================
+    preFieldPhase: {
+      tasks: [],
+      notes: ''
+    },
+    postFieldPhase: {
+      tasks: [],
+      notes: ''
+    },
+
     // ============================================
     // LEGACY FIELDS (for backward compatibility)
     // These are null for new projects
@@ -465,7 +477,7 @@ export async function createProject(data) {
     siteSurvey: null,
     soraAssessment: null,
     riskAssessment: null,
-    
+
     // Timestamps
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -1672,11 +1684,11 @@ function ensureProjectDefaults(project) {
   if (!project.flightPlan) {
     project.flightPlan = getDefaultFlightPlanStructure()
   }
-  
+
   if (!project.hseRiskAssessment) {
     project.hseRiskAssessment = getDefaultHSERiskStructure()
   }
-  
+
   if (!project.emergencyPlan) {
     project.emergencyPlan = {
       contacts: [
@@ -1687,7 +1699,15 @@ function ensureProjectDefaults(project) {
       procedures: {}
     }
   }
-  
+
+  // Ensure pre-field and post-field phases exist
+  if (!project.preFieldPhase) {
+    project.preFieldPhase = { tasks: [], notes: '' }
+  }
+  if (!project.postFieldPhase) {
+    project.postFieldPhase = { tasks: [], notes: '' }
+  }
+
   return project
 }
 

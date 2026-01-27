@@ -50,7 +50,9 @@ import {
   MessageSquare,
   FileEdit,
   Layers,
-  Bell
+  Bell,
+  ClipboardCheck,
+  PackageCheck
 } from 'lucide-react'
 import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
@@ -72,6 +74,8 @@ import ProjectComments from '../components/projects/ProjectComments'
 import ProjectProposal from '../components/projects/ProjectProposal'
 import ProjectTemplates from '../components/projects/ProjectTemplates'
 import ProjectTeam from '../components/projects/ProjectTeam'
+import ProjectPreField from '../components/projects/ProjectPreField'
+import ProjectPostField from '../components/projects/ProjectPostField'
 import { useAuth } from '../contexts/AuthContext'
 import { logger } from '../lib/logger'
 
@@ -80,6 +84,7 @@ const tabs = [
   { id: 'needs', label: 'Needs Analysis', icon: Target },
   { id: 'sections', label: 'Sections', icon: Settings2 },
   { id: 'templates', label: 'Templates', icon: Layers },
+  { id: 'preField', label: 'Pre-Field', icon: ClipboardCheck },
   { id: 'crew', label: 'Crew', icon: Users },
   { id: 'team', label: 'Team', icon: MessageSquare },
   { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -92,6 +97,7 @@ const tabs = [
   { id: 'comms', label: 'Communications', icon: Radio },
   { id: 'review', label: 'Review', icon: FileCheck },
   { id: 'tailgate', label: 'Tailgate', icon: FileText },
+  { id: 'postField', label: 'Post-Field', icon: PackageCheck },
   { id: 'forms', label: 'Forms', icon: ClipboardList },
   { id: 'proposal', label: 'Proposal', icon: FileEdit },
   { id: 'export', label: 'Export', icon: Download },
@@ -612,6 +618,9 @@ export default function ProjectView() {
         {activeTab === 'templates' && (
           <ProjectTemplates project={project} mode="manage" />
         )}
+        {activeTab === 'preField' && (
+          <ProjectPreField project={project} onUpdate={handleUpdate} />
+        )}
         {activeTab === 'crew' && (
           <ProjectCrew project={project} onUpdate={handleUpdate} />
         )}
@@ -662,6 +671,9 @@ export default function ProjectView() {
         )}
         {activeTab === 'tailgate' && (
           <ProjectTailgate project={project} onUpdate={handleUpdate} />
+        )}
+        {activeTab === 'postField' && (
+          <ProjectPostField project={project} onUpdate={handleUpdate} />
         )}
         {activeTab === 'forms' && (
           <ProjectForms project={project} onUpdate={handleUpdate} />

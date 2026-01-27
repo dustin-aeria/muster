@@ -253,12 +253,142 @@ export function formatCurrency(amount, currency = 'CAD') {
   }).format(amount)
 }
 
+// ============================================
+// PHASE COST CALCULATIONS
+// ============================================
+
+/**
+ * Calculate total cost for a single task
+ * @param {Object} task - Task with costItems array
+ * @returns {number} Total cost of all cost items in task
+ */
+export function calculateTaskCost(task) {
+  if (!task || !Array.isArray(task.costItems)) return 0
+  return task.costItems.reduce((sum, item) => sum + (item.total || 0), 0)
+}
+
+/**
+ * Calculate total cost for a phase (pre-field or post-field)
+ * @param {Object} phase - Phase with tasks array
+ * @returns {number} Total cost of all tasks in phase
+ */
+export function calculatePhaseCost(phase) {
+  if (!phase || !Array.isArray(phase.tasks)) return 0
+  return phase.tasks.reduce((sum, task) => sum + calculateTaskCost(task), 0)
+}
+
+/**
+ * Calculate full project cost including pre-field, field work, and post-field
+ * @param {Object} project - Project document
+ * @param {Array} equipment - Equipment list with rates
+ * @param {Array} crew - Crew list with rates
+ * @param {Object} options - Options for field cost calculation
+ * @returns {Object} Complete cost breakdown
+ */
+export function calculateFullProjectCost(project, equipment = [], crew = [], options = {}) {
+  // Pre-field costs
+  const preFieldCost = calculatePhaseCost(project?.preFieldPhase)
+
+  // Field costs (existing calculation)
+  const fieldBreakdown = calculateProjectCost(project, equipment, crew, options)
+  const fieldCost = fieldBreakdown.total
+
+  // Post-field costs
+  const postFieldCost = calculatePhaseCost(project?.postFieldPhase)
+
+  // Grand total
+  const grandTotal = preFieldCost + fieldCost + postFieldCost
+
+  return {
+    preField: {
+      total: preFieldCost,
+      tasks: project?.preFieldPhase?.tasks?.length || 0
+    },
+    field: {
+      total: fieldCost,
+      breakdown: fieldBreakdown
+    },
+    postField: {
+      total: postFieldCost,
+      tasks: project?.postFieldPhase?.tasks?.length || 0
+    },
+    grandTotal
+  }
+}
+
+/**
+ * Calculate cost item total based on hours/quantity and rate
+ * @param {number} hours - Hours or quantity
+ * @param {number} rate - Rate per unit
+ * @param {string} rateType - 'hourly' or 'daily'
+ * @returns {number} Calculated total
+ */
+export function calculateCostItemTotal(hours, rate, rateType = 'hourly') {
+  if (!hours || !rate) return 0
+
+  if (rateType === 'daily') {
+    // For daily rates, hours represents days
+    return hours * rate
+  }
+
+  // Default to hourly
+  return hours * rate
+}
+
+/**
+ * Get phase cost summary with breakdown by cost type
+ * @param {Object} phase - Phase with tasks array
+ * @returns {Object} Summary with totals by type
+ */
+export function getPhaseCostSummary(phase) {
+  const summary = {
+    total: 0,
+    byType: {
+      personnel: 0,
+      service: 0,
+      equipment: 0,
+      fleet: 0,
+      fixed: 0
+    },
+    taskCount: 0,
+    completedTasks: 0
+  }
+
+  if (!phase || !Array.isArray(phase.tasks)) return summary
+
+  summary.taskCount = phase.tasks.length
+  summary.completedTasks = phase.tasks.filter(t => t.status === 'completed').length
+
+  phase.tasks.forEach(task => {
+    if (Array.isArray(task.costItems)) {
+      task.costItems.forEach(item => {
+        const cost = item.total || 0
+        summary.total += cost
+
+        const type = item.type || 'fixed'
+        if (summary.byType[type] !== undefined) {
+          summary.byType[type] += cost
+        } else {
+          summary.byType.fixed += cost
+        }
+      })
+    }
+  })
+
+  return summary
+}
+
 export default {
   calculateEquipmentCost,
   calculatePersonnelCost,
   calculateProjectCost,
   generateCostSummary,
   formatCurrency,
+  calculateTaskCost,
+  calculatePhaseCost,
+  calculateFullProjectCost,
+  calculateCostItemTotal,
+  getPhaseCostSummary,
   RATE_TYPES,
   COST_CATEGORIES
 }
