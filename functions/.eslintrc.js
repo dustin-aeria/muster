@@ -1,0 +1,35 @@
+module.exports = {
+  env: {
+    es6: true,
+    node: true,
+  },
+  parserOptions: {
+    ecmaVersion: 2020,
+  },
+  extends: [
+    'eslint:recommended',
+    'google',
+  ],
+  rules: {
+    'no-restricted-globals': ['error', 'name', 'length'],
+    'prefer-arrow-callback': 'error',
+    'quotes': ['error', 'single', { 'allowTemplateLiterals': true }],
+    'semi': ['error', 'never'],
+    'max-len': ['warn', { 'code': 120 }],
+    'require-jsdoc': 'off',
+    'valid-jsdoc': 'off',
+    'comma-dangle': ['error', 'never'],
+    'object-curly-spacing': ['error', 'always'],
+    'indent': ['error', 2],
+  },
+  overrides: [
+    {
+      files: ['**/*.spec.*'],
+      env: {
+        mocha: true,
+      },
+      rules: {},
+    },
+  ],
+  globals: {},
+}
