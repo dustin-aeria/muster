@@ -38,8 +38,11 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
     endurance: '',
     sensors: '',
     status: 'airworthy',
+    purchaseDate: '',
+    purchasePrice: '',
     hourlyRate: '',
     dailyRate: '',
+    weeklyRate: '',
     notes: ''
   })
 
@@ -59,8 +62,11 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
         endurance: aircraft.endurance || '',
         sensors: aircraft.sensors || '',
         status: aircraft.status || 'airworthy',
+        purchaseDate: aircraft.purchaseDate || '',
+        purchasePrice: aircraft.purchasePrice || '',
         hourlyRate: aircraft.hourlyRate || '',
         dailyRate: aircraft.dailyRate || '',
+        weeklyRate: aircraft.weeklyRate || '',
         notes: aircraft.notes || ''
       })
     } else {
@@ -82,8 +88,11 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
       endurance: '',
       sensors: '',
       status: 'airworthy',
+      purchaseDate: '',
+      purchasePrice: '',
       hourlyRate: '',
       dailyRate: '',
+      weeklyRate: '',
       notes: ''
     })
     setError('')
@@ -112,8 +121,10 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
         maxSpeed: formData.maxSpeed ? parseFloat(formData.maxSpeed) : null,
         maxAltitude: formData.maxAltitude ? parseFloat(formData.maxAltitude) : null,
         endurance: formData.endurance ? parseFloat(formData.endurance) : null,
+        purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
         hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
-        dailyRate: formData.dailyRate ? parseFloat(formData.dailyRate) : null
+        dailyRate: formData.dailyRate ? parseFloat(formData.dailyRate) : null,
+        weeklyRate: formData.weeklyRate ? parseFloat(formData.weeklyRate) : null
       }
 
       if (isEditing) {
@@ -322,13 +333,47 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
           </select>
         </div>
 
-        {/* Rates */}
+        {/* Purchase Information */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <DollarSign className="w-4 h-4" />
+            Purchase Information
+          </h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Purchase Date</label>
+              <input
+                type="date"
+                name="purchaseDate"
+                value={formData.purchaseDate}
+                onChange={handleChange}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="label">Purchase Price ($)</label>
+              <input
+                type="number"
+                name="purchasePrice"
+                value={formData.purchasePrice}
+                onChange={handleChange}
+                className="input"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Billing Rates */}
         <div>
           <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <DollarSign className="w-4 h-4" />
             Billing Rates
+            <span className="text-xs font-normal text-gray-500">(for cost estimation)</span>
           </h3>
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4">
             <div>
               <label className="label">Hourly Rate ($)</label>
               <input
@@ -337,7 +382,7 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
                 value={formData.hourlyRate}
                 onChange={handleChange}
                 className="input"
-                placeholder="e.g., 150"
+                placeholder="0.00"
                 step="0.01"
                 min="0"
               />
@@ -350,7 +395,20 @@ export default function AircraftModal({ isOpen, onClose, aircraft }) {
                 value={formData.dailyRate}
                 onChange={handleChange}
                 className="input"
-                placeholder="e.g., 1200"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <div>
+              <label className="label">Weekly Rate ($)</label>
+              <input
+                type="number"
+                name="weeklyRate"
+                value={formData.weeklyRate}
+                onChange={handleChange}
+                className="input"
+                placeholder="0.00"
                 step="0.01"
                 min="0"
               />

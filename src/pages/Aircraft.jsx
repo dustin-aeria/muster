@@ -364,16 +364,19 @@ export default function Aircraft() {
                 </div>
 
                 {/* Rates */}
-                {(ac.hourlyRate > 0 || ac.dailyRate > 0) && (
+                {(ac.hourlyRate > 0 || ac.dailyRate > 0 || ac.weeklyRate > 0) && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
                     <div className="flex items-center gap-1.5 text-sm">
                       <DollarSign className="w-3.5 h-3.5 text-gray-400" />
-                      <div className="flex gap-3 text-gray-600">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-gray-600">
                         {ac.hourlyRate > 0 && (
                           <span>{formatCurrency(ac.hourlyRate)}/hr</span>
                         )}
                         {ac.dailyRate > 0 && (
                           <span>{formatCurrency(ac.dailyRate)}/day</span>
+                        )}
+                        {ac.weeklyRate > 0 && (
+                          <span>{formatCurrency(ac.weeklyRate)}/wk</span>
                         )}
                       </div>
                     </div>
