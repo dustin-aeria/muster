@@ -31,33 +31,40 @@ export default function TaskCostItems({
             return (
               <div
                 key={item.id}
-                className="flex items-center justify-between py-1.5 px-2 bg-gray-50 rounded text-sm"
+                className="py-2 px-2 bg-gray-50 rounded text-sm"
               >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <TypeIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <span className="text-gray-700 truncate">
-                    {item.referenceName || 'Unnamed'}
-                  </span>
-                  {item.hours > 0 && (
-                    <span className="text-gray-400 text-xs flex-shrink-0">
-                      ({item.hours}{item.rateType === 'daily' ? 'd' : 'h'} @ {formatCurrency(item.rate)}/{item.rateType === 'daily' ? 'day' : 'hr'})
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <TypeIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span className="text-gray-700 truncate font-medium">
+                      {item.referenceName || 'Unnamed'}
                     </span>
-                  )}
+                    {item.hours > 0 && (
+                      <span className="text-gray-400 text-xs flex-shrink-0">
+                        ({item.hours}{item.rateType === 'daily' ? 'd' : 'h'} @ {formatCurrency(item.rate)}/{item.rateType === 'daily' ? 'day' : 'hr'})
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="font-medium text-gray-900">
+                      {formatCurrency(item.total)}
+                    </span>
+                    {!readOnly && onRemove && (
+                      <button
+                        onClick={() => onRemove(item.id)}
+                        className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                        title="Remove cost item"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="font-medium text-gray-900">
-                    {formatCurrency(item.total)}
-                  </span>
-                  {!readOnly && onRemove && (
-                    <button
-                      onClick={() => onRemove(item.id)}
-                      className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
-                      title="Remove cost item"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
+                {item.description && (
+                  <p className="text-xs text-gray-500 mt-1 ml-6 line-clamp-2">
+                    {item.description}
+                  </p>
+                )}
               </div>
             )
           })}

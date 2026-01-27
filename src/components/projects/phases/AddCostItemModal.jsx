@@ -1,19 +1,20 @@
 /**
  * AddCostItemModal.jsx
  * Modal for adding cost items to tasks with resource picker
+ * Auto-populates description and rates from Services library
  *
  * @location src/components/projects/phases/AddCostItemModal.jsx
  */
 
 import { useState, useEffect } from 'react'
-import { X, Search, Users, Settings, Wrench, Truck, DollarSign, Loader2 } from 'lucide-react'
+import { X, Search, Users, Settings, Wrench, Truck, DollarSign, Loader2, FileText } from 'lucide-react'
 import { getOperators, getServices, getEquipment } from '../../../lib/firestore'
 import { formatCurrency, calculateCostItemTotal } from '../../../lib/costEstimator'
 import { COST_ITEM_TYPES, createCostItem } from './phaseConstants'
 
 const TABS = [
-  { id: 'personnel', label: 'Personnel', icon: Users },
   { id: 'service', label: 'Services', icon: Settings },
+  { id: 'personnel', label: 'Personnel', icon: Users },
   { id: 'equipment', label: 'Equipment', icon: Wrench },
   { id: 'fleet', label: 'Fleet', icon: Truck },
   { id: 'fixed', label: 'Fixed Cost', icon: DollarSign }
@@ -25,7 +26,7 @@ export default function AddCostItemModal({
   onSave,
   taskName = ''
 }) {
-  const [activeTab, setActiveTab] = useState('personnel')
+  const [activeTab, setActiveTab] = useState('service')
   const [searchQuery, setSearchQuery] = useState('')
   const [resources, setResources] = useState({
     personnel: [],
@@ -38,6 +39,8 @@ export default function AddCostItemModal({
   const [hours, setHours] = useState('')
   const [customRate, setCustomRate] = useState('')
   const [rateType, setRateType] = useState('hourly')
+  const [description, setDescription] = useState('')
+  const [customName, setCustomName] = useState('')
   const [fixedName, setFixedName] = useState('')
   const [fixedAmount, setFixedAmount] = useState('')
   const [notes, setNotes] = useState('')
@@ -55,9 +58,19 @@ export default function AddCostItemModal({
     setHours('')
     setCustomRate('')
     setSearchQuery('')
+    setDescription('')
+    setCustomName('')
     setNotes('')
     setRateType(activeTab === 'fleet' ? 'daily' : 'hourly')
   }, [activeTab])
+
+  // Auto-populate description when resource is selected
+  useEffect(() => {
+    if (selectedResource) {
+      setDescription(selectedResource.description || '')
+      setCustomName(selectedResource.name || '')
+    }
+  }, [selectedResource])
 
   const loadResources = async () => {
     setLoading(true)
@@ -77,6 +90,7 @@ export default function AddCostItemModal({
           id: o.id,
           name: `${o.firstName} ${o.lastName}`,
           subtitle: o.role || 'Operator',
+          description: o.notes || '',
           hourlyRate: o.hourlyRate || 0,
           dailyRate: o.dailyRate || (o.hourlyRate ? o.hourlyRate * 8 : 0)
         })),
@@ -84,13 +98,16 @@ export default function AddCostItemModal({
           id: s.id,
           name: s.name,
           subtitle: s.category || 'Service',
+          description: s.description || '',
           hourlyRate: s.hourlyRate || 0,
-          dailyRate: s.dailyRate || (s.hourlyRate ? s.hourlyRate * 8 : 0)
+          dailyRate: s.dailyRate || (s.hourlyRate ? s.hourlyRate * 8 : 0),
+          unit: s.unit || 'hour'
         })),
         equipment: otherEquipment.map(e => ({
           id: e.id,
           name: e.name,
           subtitle: e.category || 'Equipment',
+          description: e.notes || '',
           hourlyRate: e.hourlyRate || 0,
           dailyRate: e.dailyRate || (e.hourlyRate ? e.hourlyRate * 8 : 0)
         })),
@@ -98,6 +115,7 @@ export default function AddCostItemModal({
           id: f.id,
           name: f.name,
           subtitle: f.model || 'Vehicle',
+          description: f.notes || '',
           hourlyRate: f.hourlyRate || 0,
           dailyRate: f.dailyRate || 0
         }))
@@ -116,7 +134,8 @@ export default function AddCostItemModal({
     const query = searchQuery.toLowerCase()
     return list.filter(r =>
       r.name.toLowerCase().includes(query) ||
-      (r.subtitle && r.subtitle.toLowerCase().includes(query))
+      (r.subtitle && r.subtitle.toLowerCase().includes(query)) ||
+      (r.description && r.description.toLowerCase().includes(query))
     )
   }
 
@@ -148,6 +167,7 @@ export default function AddCostItemModal({
         type: 'fixed',
         referenceId: '',
         referenceName: fixedName.trim(),
+        description: description.trim(),
         hours: 0,
         rate: parseFloat(fixedAmount) || 0,
         rateType: 'fixed',
@@ -171,7 +191,8 @@ export default function AddCostItemModal({
     const costItem = createCostItem({
       type: activeTab,
       referenceId: selectedResource.id,
-      referenceName: selectedResource.name,
+      referenceName: customName.trim() || selectedResource.name,
+      description: description.trim(),
       hours: parseFloat(hours) || 0,
       rate,
       rateType,
@@ -195,9 +216,9 @@ export default function AddCostItemModal({
         />
 
         {/* Modal */}
-        <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl mx-auto z-10">
+        <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl mx-auto z-10 max-h-[90vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Add Cost Item</h2>
               {taskName && (
@@ -213,7 +234,7 @@ export default function AddCostItemModal({
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-200">
+          <div className="flex border-b border-gray-200 flex-shrink-0">
             {TABS.map(tab => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
@@ -236,13 +257,13 @@ export default function AddCostItemModal({
           </div>
 
           {/* Content */}
-          <div className="p-4">
+          <div className="p-4 overflow-y-auto flex-1">
             {activeTab === 'fixed' ? (
               /* Fixed Cost Form */
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Cost Description
+                    Cost Name
                   </label>
                   <input
                     type="text"
@@ -270,6 +291,19 @@ export default function AddCostItemModal({
                       className="input pl-7"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Add details about this cost..."
+                    rows={2}
+                    className="input resize-none"
+                  />
                 </div>
 
                 <div>
@@ -319,15 +353,20 @@ export default function AddCostItemModal({
                         <button
                           key={resource.id}
                           onClick={() => setSelectedResource(resource)}
-                          className={`w-full flex items-center justify-between p-3 text-left border-b border-gray-100 last:border-b-0 transition-colors ${
+                          className={`w-full flex items-start justify-between p-3 text-left border-b border-gray-100 last:border-b-0 transition-colors ${
                             isSelected ? 'bg-aeria-navy/5' : 'hover:bg-gray-50'
                           }`}
                         >
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900">{resource.name}</p>
                             <p className="text-sm text-gray-500">{resource.subtitle}</p>
+                            {resource.description && (
+                              <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                                {resource.description}
+                              </p>
+                            )}
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex-shrink-0 ml-3">
                             {rate > 0 ? (
                               <p className="text-sm font-medium text-gray-700">
                                 {formatCurrency(rate)}/{rateType === 'daily' ? 'day' : 'hr'}
@@ -345,9 +384,37 @@ export default function AddCostItemModal({
                 {/* Selected Resource Config */}
                 {selectedResource && (
                   <div className="space-y-4 border-t border-gray-200 pt-4">
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <p className="font-medium text-gray-900">{selectedResource.name}</p>
-                      <p className="text-sm text-gray-500">{selectedResource.subtitle}</p>
+                    {/* Editable Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Display Name
+                        <span className="ml-1 text-xs text-gray-400 font-normal">(editable)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={customName}
+                        onChange={(e) => setCustomName(e.target.value)}
+                        placeholder={selectedResource.name}
+                        className="input"
+                      />
+                    </div>
+
+                    {/* Editable Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <span className="flex items-center gap-1">
+                          <FileText className="w-4 h-4" />
+                          Description
+                        </span>
+                        <span className="ml-1 text-xs text-gray-400 font-normal">(auto-populated, editable)</span>
+                      </label>
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Add or edit description..."
+                        rows={2}
+                        className="input resize-none"
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -387,7 +454,8 @@ export default function AddCostItemModal({
                       {/* Rate */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Rate (override)
+                          Rate
+                          <span className="ml-1 text-xs text-gray-400 font-normal">(override)</span>
                         </label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
@@ -434,7 +502,7 @@ export default function AddCostItemModal({
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
+          <div className="flex justify-end gap-3 p-4 border-t border-gray-200 flex-shrink-0">
             <button
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"

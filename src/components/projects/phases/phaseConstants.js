@@ -256,6 +256,7 @@ export function createCostItem(overrides = {}) {
     type: 'personnel',
     referenceId: '',
     referenceName: '',
+    description: '',
     hours: 0,
     rate: 0,
     rateType: 'hourly',
