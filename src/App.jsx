@@ -69,7 +69,7 @@ const MaintenanceDashboard = lazy(() => import('./pages/MaintenanceDashboard'))
 const MaintenanceItemList = lazy(() => import('./pages/MaintenanceItemList'))
 const MaintenanceSchedulesPage = lazy(() => import('./pages/MaintenanceSchedulesPage'))
 const MaintenanceItemDetail = lazy(() => import('./pages/MaintenanceItemDetail'))
-const MaintenanceCalendar = lazy(() => import('./pages/MaintenanceCalendar'))
+// MaintenanceCalendar removed - now redirects to unified Calendar
 
 // Suspense fallback component
 function PageLoader() {
@@ -179,7 +179,8 @@ function App() {
           <Route path="maintenance" element={<Suspense fallback={<PageLoader />}><MaintenanceDashboard /></Suspense>} />
           <Route path="maintenance/items" element={<Suspense fallback={<PageLoader />}><MaintenanceItemList /></Suspense>} />
           <Route path="maintenance/schedules" element={<Suspense fallback={<PageLoader />}><MaintenanceSchedulesPage /></Suspense>} />
-          <Route path="maintenance/calendar" element={<Suspense fallback={<PageLoader />}><MaintenanceCalendar /></Suspense>} />
+          {/* Maintenance calendar now redirects to unified calendar */}
+          <Route path="maintenance/calendar" element={<Navigate to="/calendar" replace />} />
           <Route path="maintenance/item/:itemType/:itemId" element={<Suspense fallback={<PageLoader />}><MaintenanceItemDetail /></Suspense>} />
         </Route>
 

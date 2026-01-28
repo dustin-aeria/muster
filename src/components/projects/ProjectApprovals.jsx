@@ -207,6 +207,40 @@ export default function ProjectApprovals({ project, onUpdate }) {
     }
   }
 
+  // Quick approve - bypass formal workflow
+  const handleQuickApprove = async () => {
+    const approverName = prompt('Enter your name for approval:')
+    if (!approverName) return
+
+    const reviewDate = new Date().toISOString().split('T')[0]
+
+    updateApprovals({
+      status: 'approved',
+      submittedBy: approverName,
+      submittedDate: reviewDate,
+      reviewer: {
+        name: approverName,
+        role: 'operations_manager',
+        email: ''
+      },
+      reviewDate,
+      reviewNotes: 'Quick approval - formal review bypassed'
+    })
+
+    // Send notification
+    if (project.id) {
+      try {
+        await sendTeamNotification(project.id, 'planApproved', {
+          approver: approverName,
+          date: reviewDate,
+          conditions: null
+        })
+      } catch (error) {
+        console.error('Failed to send approval notification:', error)
+      }
+    }
+  }
+
   // Crew acknowledgment
   const handleCrewAcknowledge = (crewMemberId, crewMemberName) => {
     const existing = approvals.crewAcknowledgments || []
@@ -446,14 +480,24 @@ export default function ProjectApprovals({ project, onUpdate }) {
             </div>
 
             {approvals.status === 'pending' && (
-              <button
-                onClick={handleSubmit}
-                disabled={readinessIssues.length > 0}
-                className="btn-primary inline-flex items-center gap-2"
-              >
-                <Send className="w-4 h-4" />
-                Submit for Approval
-              </button>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handleSubmit}
+                  disabled={readinessIssues.length > 0}
+                  className="btn-primary inline-flex items-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  Submit for Approval
+                </button>
+                <button
+                  onClick={handleQuickApprove}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 inline-flex items-center gap-2"
+                  title="Bypass the formal review process"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Quick Approve
+                </button>
+              </div>
             )}
 
             {approvals.status === 'rejected' && (

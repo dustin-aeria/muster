@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@mapbox/mapbox-gl-draw": "^1.4.3",
-    "@turf/buffer": "^7.3.2",
+    "@turf/buffer": "^7.3.3",
     "@turf/helpers": "^7.3.2",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",

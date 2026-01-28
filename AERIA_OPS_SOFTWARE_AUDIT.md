@@ -173,12 +173,12 @@ Current features:
 - Submission tracking and review
 
 ### 2.11 Calendar
-**Files:** `src/pages/Calendar.jsx`, `src/pages/MaintenanceCalendar.jsx`
+**Files:** `src/pages/Calendar.jsx`
 
 Current state:
-- Two separate calendars exist (maintenance and general)
-- Maintenance calendar in separate module
-- General calendar for projects and events
+- Unified calendar for all events (maintenance, projects, training, permits)
+- Maintenance calendar route now redirects to unified calendar
+- Event types: projects, training, maintenance, inspections, insurance, permits
 
 ---
 
@@ -201,15 +201,15 @@ Current state:
 ### 3.3 Project Planning Bugs
 | Issue | Description | Priority | Status |
 |-------|-------------|----------|--------|
-| Review section broken | Review section doesn't function well, needs approval workflow | High | Open |
+| Review section broken | Review section doesn't function well, needs approval workflow | High | **FIXED** (Batch 2) |
 | Coverage requirements limited | Can only select 1 coverage requirement | Medium | **FIXED** (Batch 1) |
-| Sections incomplete | "Sections" don't include all tabs of project planning | Medium | Open |
-| Templates placement wrong | Templates should be at end after export tab | Low | Open |
+| Sections incomplete | "Sections" don't include all tabs of project planning | Medium | **FIXED** (Batch 2) |
+| Templates placement wrong | Templates should be at end after export tab | Low | **FIXED** (Batch 2) |
 
 ### 3.4 Calendar Redundancy
 | Issue | Description | Priority | Status |
 |-------|-------------|----------|--------|
-| Two calendars | Maintenance and general calendars are separate (should be unified) | Medium | Open |
+| Two calendars | Maintenance and general calendars are separate (should be unified) | Medium | **FIXED** (Batch 2) |
 
 ---
 
@@ -953,13 +953,14 @@ VITE_MAPBOX_ACCESS_TOKEN=
 - [x] Fix map point editing *(Completed - MapboxDraw integration)*
 - [x] Implement user-based policy tracking *(Completed - 1-year expiry)*
 - [x] Fix coverage requirements multi-select *(Completed - array-based)*
-- [ ] Calendar unification
 
-### High Priority
+### High Priority - **BATCH 2 COMPLETE (Jan 28, 2026)**
+- [x] Calendar unification *(Completed - maintenance calendar redirects to unified calendar)*
+- [x] Project section navigation & templates placement *(Completed - templates moved to end, all tabs toggleable)*
+- [x] Project review/approval workflow *(Completed - Quick Approve button added)*
+- [x] Preflight checklist auto-population *(Already complete - Tailgate pulls hazards, PPE, emergency, etc.)*
 - [ ] Policy/procedure library selection & editing
 - [ ] Document upload/conversion
-- [ ] Project review/approval workflow
-- [ ] Preflight checklist auto-population
 - [ ] Operation types alignment with CARs
 
 ### Medium Priority

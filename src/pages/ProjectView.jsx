@@ -80,16 +80,18 @@ import { useAuth } from '../contexts/AuthContext'
 import { logger } from '../lib/logger'
 
 const tabs = [
+  // Core tabs - always visible
   { id: 'overview', label: 'Overview', icon: FolderKanban },
   { id: 'needs', label: 'Needs Analysis', icon: Target },
   { id: 'sections', label: 'Sections', icon: Settings2 },
-  { id: 'templates', label: 'Templates', icon: Layers },
-  { id: 'preField', label: 'Pre-Field', icon: ClipboardCheck },
+  // Optional tabs - toggled via Sections page
+  { id: 'preField', label: 'Pre-Field', icon: ClipboardCheck, toggleable: true, sectionKey: 'preField' },
+  // Core tabs continued
   { id: 'crew', label: 'Crew', icon: Users },
-  { id: 'team', label: 'Team', icon: MessageSquare },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'site', label: 'Site Survey', icon: MapPin, toggleable: true, sectionKey: 'siteSurvey' },
-  { id: 'flight', label: 'Flight Plan', icon: Plane, toggleable: true, sectionKey: 'flightPlan' },
+  { id: 'team', label: 'Team', icon: MessageSquare, toggleable: true, sectionKey: 'team' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, toggleable: true, sectionKey: 'notifications' },
+  { id: 'site', label: 'Site Survey', icon: MapPin },
+  { id: 'flight', label: 'Flight Plan', icon: Plane },
   { id: 'hseRisk', label: 'HSE Risk', icon: AlertTriangle },
   { id: 'sora', label: 'SORA', icon: Shield },
   { id: 'emergency', label: 'Emergency', icon: ShieldAlert },
@@ -97,10 +99,11 @@ const tabs = [
   { id: 'comms', label: 'Communications', icon: Radio },
   { id: 'review', label: 'Review', icon: FileCheck },
   { id: 'tailgate', label: 'Tailgate', icon: FileText },
-  { id: 'postField', label: 'Post-Field', icon: PackageCheck },
-  { id: 'forms', label: 'Forms', icon: ClipboardList },
-  { id: 'proposal', label: 'Proposal', icon: FileEdit },
+  { id: 'postField', label: 'Post-Field', icon: PackageCheck, toggleable: true, sectionKey: 'postField' },
+  { id: 'forms', label: 'Forms', icon: ClipboardList, toggleable: true, sectionKey: 'forms' },
+  { id: 'proposal', label: 'Proposal', icon: FileEdit, toggleable: true, sectionKey: 'proposal' },
   { id: 'export', label: 'Export', icon: Download },
+  { id: 'templates', label: 'Templates', icon: Layers, toggleable: true, sectionKey: 'templates' },
 ]
 
 const statusColors = {
