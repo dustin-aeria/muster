@@ -38,12 +38,14 @@ import {
   DollarSign
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { Link } from 'react-router-dom'
 import {
   getEquipment,
   deleteEquipment,
   EQUIPMENT_CATEGORIES,
   EQUIPMENT_STATUS
 } from '../lib/firestore'
+import { calculateOverallMaintenanceStatus } from '../lib/firestoreMaintenance'
 import { formatCurrency } from '../lib/costEstimator'
 import EquipmentModal from '../components/EquipmentModal'
 import EquipmentSpecSheet, { generateEquipmentSpecPDF } from '../components/EquipmentSpecSheet'
@@ -92,6 +94,15 @@ const statusConfig = {
     color: 'bg-gray-100 text-gray-500',
     icon: Archive
   }
+}
+
+// Maintenance status from new system
+const maintenanceStatusConfig = {
+  ok: { label: 'Maint. Current', color: 'text-green-600' },
+  due_soon: { label: 'Maint. Due Soon', color: 'text-amber-600', bgColor: 'bg-amber-50' },
+  overdue: { label: 'Maint. Overdue', color: 'text-red-600', bgColor: 'bg-red-50' },
+  grounded: { label: 'Grounded', color: 'text-red-700', bgColor: 'bg-red-100' },
+  no_schedule: { label: 'No Schedule', color: 'text-gray-400' }
 }
 
 // ============================================
@@ -178,7 +189,10 @@ export default function Equipment() {
     total: equipment.length,
     available: equipment.filter(e => e.status === 'available').length,
     assigned: equipment.filter(e => e.status === 'assigned').length,
-    maintenance: equipment.filter(e => e.status === 'maintenance').length
+    maintenance: equipment.filter(e => e.status === 'maintenance').length,
+    maintenanceOverdue: equipment.filter(e => calculateOverallMaintenanceStatus(e) === 'overdue').length,
+    maintenanceDueSoon: equipment.filter(e => calculateOverallMaintenanceStatus(e) === 'due_soon').length,
+    grounded: equipment.filter(e => e.isGrounded).length
   }
 
   // Category counts
@@ -459,7 +473,7 @@ export default function Equipment() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
         <div className="card bg-gray-50">
           <p className="text-sm text-gray-500">Total Items</p>
           <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
@@ -476,6 +490,14 @@ export default function Equipment() {
           <p className="text-sm text-amber-600">In Maintenance</p>
           <p className="text-2xl font-bold text-amber-700">{stats.maintenance}</p>
         </div>
+        <Link to="/maintenance/items?type=equipment&status=overdue" className="card bg-red-50 hover:bg-red-100 transition-colors">
+          <p className="text-sm text-red-600">Maint. Overdue</p>
+          <p className="text-2xl font-bold text-red-700">{stats.maintenanceOverdue}</p>
+        </Link>
+        <Link to="/maintenance/items?type=equipment&status=due_soon" className="card bg-amber-50 hover:bg-amber-100 transition-colors">
+          <p className="text-sm text-amber-600">Maint. Due Soon</p>
+          <p className="text-2xl font-bold text-amber-700">{stats.maintenanceDueSoon}</p>
+        </Link>
       </div>
 
       {/* Category Tabs */}
@@ -590,8 +612,11 @@ export default function Equipment() {
             const status = statusConfig[item.status] || statusConfig.available
             const StatusIcon = status.icon
             const CategoryIcon = categoryIcons[item.category] || Package
-            const maintenanceOverdue = isMaintenanceOverdue(item)
-            const maintenanceSoon = isMaintenanceDueSoon(item)
+            const maintStatus = calculateOverallMaintenanceStatus(item)
+            const maintenanceOverdue = maintStatus === 'overdue'
+            const maintenanceSoon = maintStatus === 'due_soon'
+            const isGrounded = maintStatus === 'grounded' || item.isGrounded
+            const hasUsageData = item.currentHours || item.currentCycles
 
             return (
               <div
@@ -614,10 +639,11 @@ export default function Equipment() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      isGrounded ? 'bg-red-200' :
                       maintenanceOverdue ? 'bg-red-100' : 'bg-aeria-sky'
                     }`}>
                       <CategoryIcon className={`w-5 h-5 ${
-                        maintenanceOverdue ? 'text-red-600' : 'text-aeria-navy'
+                        isGrounded || maintenanceOverdue ? 'text-red-600' : 'text-aeria-navy'
                       }`} />
                     </div>
                     <div>
@@ -668,6 +694,15 @@ export default function Equipment() {
                             <Download className="w-4 h-4" />
                             Download PDF
                           </button>
+                          <Link
+                            to={`/maintenance/item/equipment/${item.id}`}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            onClick={() => setMenuOpen(null)}
+                          >
+                            <Wrench className="w-4 h-4" />
+                            Maintenance
+                          </Link>
+                          <hr className="my-1 border-gray-100" />
                           <button
                             onClick={() => handleEdit(item)}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -701,14 +736,40 @@ export default function Equipment() {
                 </div>
 
                 {/* Maintenance warning */}
-                {(maintenanceOverdue || maintenanceSoon) && (
-                  <div className={`flex items-center gap-2 p-2 rounded-lg mb-3 ${
-                    maintenanceOverdue ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
-                  }`}>
+                {(isGrounded || maintenanceOverdue || maintenanceSoon) && (
+                  <Link
+                    to={`/maintenance/item/equipment/${item.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className={`flex items-center gap-2 p-2 rounded-lg mb-3 hover:opacity-80 transition-opacity ${
+                      isGrounded ? 'bg-red-100 text-red-800' :
+                      maintenanceOverdue ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+                    }`}
+                  >
                     <AlertTriangle className="w-4 h-4" />
                     <span className="text-xs font-medium">
-                      {maintenanceOverdue ? 'Maintenance overdue' : 'Maintenance due soon'}
+                      {isGrounded ? 'Equipment Grounded' :
+                       maintenanceOverdue ? 'Maintenance overdue' : 'Maintenance due soon'}
                     </span>
+                  </Link>
+                )}
+
+                {/* Usage data (hours/cycles) */}
+                {hasUsageData && (
+                  <div className="flex items-center gap-4 mb-3 p-2 bg-gray-50 rounded-lg text-sm">
+                    {item.currentHours > 0 && (
+                      <div className="flex items-center gap-1.5 text-gray-700">
+                        <Clock className="w-4 h-4 text-gray-500" />
+                        <span className="font-medium">{item.currentHours}</span>
+                        <span className="text-gray-500">hrs</span>
+                      </div>
+                    )}
+                    {item.currentCycles > 0 && (
+                      <div className="flex items-center gap-1.5 text-gray-700">
+                        <Package className="w-4 h-4 text-gray-500" />
+                        <span className="font-medium">{item.currentCycles}</span>
+                        <span className="text-gray-500">cycles</span>
+                      </div>
+                    )}
                   </div>
                 )}
 

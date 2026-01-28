@@ -23,9 +23,14 @@ import {
   Eye,
   Download,
   FileText,
-  DollarSign
+  DollarSign,
+  RotateCcw,
+  Calendar,
+  XOctagon
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { getAircraft, deleteAircraft } from '../lib/firestore'
+import { calculateOverallMaintenanceStatus } from '../lib/firestoreMaintenance'
 import AircraftModal from '../components/AircraftModal'
 import AircraftSpecSheet, { generateAircraftSpecPDF } from '../components/AircraftSpecSheet'
 import { useBranding } from '../components/BrandingSettings'
@@ -36,26 +41,35 @@ import { formatCurrency } from '../lib/costEstimator'
 // STATUS CONFIGURATION
 // ============================================
 const statusConfig = {
-  airworthy: { 
-    label: 'Airworthy', 
+  airworthy: {
+    label: 'Airworthy',
     color: 'bg-green-100 text-green-700',
     icon: CheckCircle2
   },
-  maintenance: { 
-    label: 'In Maintenance', 
+  maintenance: {
+    label: 'In Maintenance',
     color: 'bg-amber-100 text-amber-700',
     icon: Wrench
   },
-  grounded: { 
-    label: 'Grounded', 
+  grounded: {
+    label: 'Grounded',
     color: 'bg-red-100 text-red-700',
     icon: AlertTriangle
   },
-  retired: { 
-    label: 'Retired', 
+  retired: {
+    label: 'Retired',
     color: 'bg-gray-100 text-gray-500',
     icon: Archive
   }
+}
+
+// Maintenance status configuration
+const maintenanceStatusConfig = {
+  ok: { label: 'Maintenance Current', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
+  due_soon: { label: 'Maintenance Due Soon', color: 'bg-amber-100 text-amber-700', icon: Clock },
+  overdue: { label: 'Maintenance Overdue', color: 'bg-red-100 text-red-700', icon: AlertTriangle },
+  grounded: { label: 'Grounded', color: 'bg-red-200 text-red-800', icon: XOctagon },
+  no_schedule: { label: 'No Schedule', color: 'bg-gray-100 text-gray-500', icon: Calendar }
 }
 
 const categoryLabels = {
@@ -157,7 +171,9 @@ export default function Aircraft() {
     total: aircraft.length,
     airworthy: aircraft.filter(a => a.status === 'airworthy').length,
     maintenance: aircraft.filter(a => a.status === 'maintenance').length,
-    grounded: aircraft.filter(a => a.status === 'grounded').length
+    grounded: aircraft.filter(a => a.status === 'grounded' || a.isGrounded).length,
+    maintenanceOverdue: aircraft.filter(a => calculateOverallMaintenanceStatus(a) === 'overdue').length,
+    maintenanceDueSoon: aircraft.filter(a => calculateOverallMaintenanceStatus(a) === 'due_soon').length
   }
 
   return (
@@ -178,7 +194,7 @@ export default function Aircraft() {
       </div>
 
       {/* Fleet Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
         <div className="card bg-gray-50">
           <p className="text-sm text-gray-500">Total Fleet</p>
           <p className="text-2xl font-bold text-gray-900">{fleetStats.total}</p>
@@ -195,6 +211,14 @@ export default function Aircraft() {
           <p className="text-sm text-red-600">Grounded</p>
           <p className="text-2xl font-bold text-red-700">{fleetStats.grounded}</p>
         </div>
+        <Link to="/maintenance?type=aircraft&status=overdue" className="card bg-red-50 hover:bg-red-100 transition-colors">
+          <p className="text-sm text-red-600">Maint. Overdue</p>
+          <p className="text-2xl font-bold text-red-700">{fleetStats.maintenanceOverdue}</p>
+        </Link>
+        <Link to="/maintenance?type=aircraft&status=due_soon" className="card bg-amber-50 hover:bg-amber-100 transition-colors">
+          <p className="text-sm text-amber-600">Maint. Due Soon</p>
+          <p className="text-2xl font-bold text-amber-700">{fleetStats.maintenanceDueSoon}</p>
+        </Link>
       </div>
 
       {/* Filters and search */}
@@ -261,21 +285,31 @@ export default function Aircraft() {
           {filteredAircraft.map((ac) => {
             const status = statusConfig[ac.status] || statusConfig.airworthy
             const StatusIcon = status.icon
-            
+            const maintStatus = calculateOverallMaintenanceStatus(ac)
+            const maintConfig = maintenanceStatusConfig[maintStatus] || maintenanceStatusConfig.no_schedule
+            const MaintIcon = maintConfig.icon
+            const hasFlightData = ac.totalFlightHours || ac.totalCycles || ac.totalFlights
+
             return (
               <div key={ac.id} className="card hover:shadow-md transition-shadow">
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-aeria-sky rounded-lg flex items-center justify-center">
-                      <Plane className="w-5 h-5 text-aeria-navy" />
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      maintStatus === 'overdue' ? 'bg-red-100' :
+                      maintStatus === 'grounded' ? 'bg-red-200' :
+                      'bg-aeria-sky'
+                    }`}>
+                      <Plane className={`w-5 h-5 ${
+                        maintStatus === 'overdue' || maintStatus === 'grounded' ? 'text-red-600' : 'text-aeria-navy'
+                      }`} />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">{ac.nickname}</h3>
                       <p className="text-sm text-gray-500">{ac.make} {ac.model}</p>
                     </div>
                   </div>
-                  
+
                   {/* More menu */}
                   <div className="relative">
                     <button
@@ -284,10 +318,10 @@ export default function Aircraft() {
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
-                    
+
                     {menuOpen === ac.id && (
                       <>
-                        <div 
+                        <div
                           className="fixed inset-0 z-10"
                           onClick={() => setMenuOpen(null)}
                         />
@@ -306,6 +340,14 @@ export default function Aircraft() {
                             <Download className="w-4 h-4" />
                             Export Spec PDF
                           </button>
+                          <Link
+                            to={`/maintenance/item/aircraft/${ac.id}`}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            onClick={() => setMenuOpen(null)}
+                          >
+                            <Wrench className="w-4 h-4" />
+                            Maintenance Details
+                          </Link>
                           <hr className="my-1 border-gray-200" />
                           <button
                             onClick={() => handleEdit(ac)}
@@ -326,15 +368,77 @@ export default function Aircraft() {
                     )}
                   </div>
                 </div>
-                
-                {/* Status badge */}
-                <div className="mb-3">
+
+                {/* Status badges */}
+                <div className="flex flex-wrap gap-2 mb-3">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${status.color}`}>
                     <StatusIcon className="w-3.5 h-3.5" />
                     {status.label}
                   </span>
+                  {maintStatus !== 'no_schedule' && (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${maintConfig.color}`}>
+                      <MaintIcon className="w-3.5 h-3.5" />
+                      {maintConfig.label}
+                    </span>
+                  )}
                 </div>
-                
+
+                {/* Maintenance warning */}
+                {(maintStatus === 'overdue' || maintStatus === 'grounded') && (
+                  <Link
+                    to={`/maintenance/item/aircraft/${ac.id}`}
+                    className={`flex items-center gap-2 p-2 rounded-lg mb-3 ${
+                      maintStatus === 'grounded' ? 'bg-red-100 text-red-800' : 'bg-red-50 text-red-700'
+                    } hover:opacity-80 transition-opacity`}
+                  >
+                    {maintStatus === 'grounded' ? (
+                      <XOctagon className="w-4 h-4" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4" />
+                    )}
+                    <span className="text-xs font-medium">
+                      {maintStatus === 'grounded' ? 'Aircraft Grounded' : 'Maintenance Overdue'}
+                    </span>
+                  </Link>
+                )}
+
+                {maintStatus === 'due_soon' && (
+                  <Link
+                    to={`/maintenance/item/aircraft/${ac.id}`}
+                    className="flex items-center gap-2 p-2 rounded-lg mb-3 bg-amber-50 text-amber-700 hover:opacity-80 transition-opacity"
+                  >
+                    <Clock className="w-4 h-4" />
+                    <span className="text-xs font-medium">Maintenance Due Soon</span>
+                  </Link>
+                )}
+
+                {/* Flight hours and cycles */}
+                {hasFlightData && (
+                  <div className="flex items-center gap-4 mb-3 p-2 bg-gray-50 rounded-lg text-sm">
+                    {ac.totalFlightHours > 0 && (
+                      <div className="flex items-center gap-1.5 text-gray-700">
+                        <Gauge className="w-4 h-4 text-gray-500" />
+                        <span className="font-medium">{ac.totalFlightHours}</span>
+                        <span className="text-gray-500">hrs</span>
+                      </div>
+                    )}
+                    {ac.totalCycles > 0 && (
+                      <div className="flex items-center gap-1.5 text-gray-700">
+                        <RotateCcw className="w-4 h-4 text-gray-500" />
+                        <span className="font-medium">{ac.totalCycles}</span>
+                        <span className="text-gray-500">cycles</span>
+                      </div>
+                    )}
+                    {ac.totalFlights > 0 && (
+                      <div className="flex items-center gap-1.5 text-gray-700">
+                        <Plane className="w-4 h-4 text-gray-500" />
+                        <span className="font-medium">{ac.totalFlights}</span>
+                        <span className="text-gray-500">flights</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Specs grid */}
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   {ac.mtow && (
@@ -363,6 +467,26 @@ export default function Aircraft() {
                   )}
                 </div>
 
+                {/* Inspection dates */}
+                {(ac.lastInspection || ac.nextInspectionDue) && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2 text-xs">
+                    {ac.lastInspection && (
+                      <div className="text-gray-500">
+                        <span className="block text-gray-400">Last Inspection</span>
+                        {new Date(ac.lastInspection).toLocaleDateString()}
+                      </div>
+                    )}
+                    {ac.nextInspectionDue && (
+                      <div className="text-gray-500">
+                        <span className="block text-gray-400">Next Due</span>
+                        <span className={new Date(ac.nextInspectionDue) < new Date() ? 'text-red-600 font-medium' : ''}>
+                          {new Date(ac.nextInspectionDue).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Rates */}
                 {(ac.hourlyRate > 0 || ac.dailyRate > 0 || ac.weeklyRate > 0) && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
@@ -389,15 +513,24 @@ export default function Aircraft() {
                     S/N: {ac.serialNumber}
                   </p>
                 )}
-                
-                {/* Quick action */}
-                <button
-                  onClick={() => handleViewSpec(ac)}
-                  className="w-full mt-3 pt-3 border-t border-gray-100 text-sm text-aeria-blue hover:text-aeria-navy flex items-center justify-center gap-1"
-                >
-                  <FileText className="w-4 h-4" />
-                  View Full Specifications
-                </button>
+
+                {/* Quick actions */}
+                <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+                  <button
+                    onClick={() => handleViewSpec(ac)}
+                    className="flex-1 text-sm text-aeria-blue hover:text-aeria-navy flex items-center justify-center gap-1"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Specs
+                  </button>
+                  <Link
+                    to={`/maintenance/item/aircraft/${ac.id}`}
+                    className="flex-1 text-sm text-aeria-blue hover:text-aeria-navy flex items-center justify-center gap-1"
+                  >
+                    <Wrench className="w-4 h-4" />
+                    Maintenance
+                  </Link>
+                </div>
               </div>
             )
           })}
