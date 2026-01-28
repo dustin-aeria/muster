@@ -60,7 +60,9 @@ const complianceNavigation = [
 ]
 
 const maintenanceNavigation = [
-  { name: 'Maintenance', href: '/maintenance', icon: Wrench },
+  { name: 'Dashboard', href: '/maintenance', icon: Wrench },
+  { name: 'All Items', href: '/maintenance/items', icon: Package },
+  { name: 'Schedules', href: '/maintenance/schedules', icon: Settings },
 ]
 
 const libraries = [
