@@ -48,12 +48,13 @@ import { LayerToggles, DrawingTools } from '../map/MapControls'
 import { useMapData } from '../../hooks/useMapData'
 import PhotoUpload, { PhotoCountBadge } from '../PhotoUpload'
 import { ObstacleLabelPrompt } from '../map/SiteSurveyMapTools'
-import { 
-  POPULATION_CATEGORIES, 
+import {
+  POPULATION_CATEGORIES,
   createDefaultSite,
   getSiteStats,
   validateSiteCompleteness
 } from '../../lib/mapDataStructures'
+import { WeatherWidget } from '../weather'
 
 // ============================================
 // CONSTANTS
@@ -864,7 +865,19 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                 </p>
               </div>
             )}
-            
+
+            {/* Site Weather */}
+            {mapData.siteLocation && (
+              <div className="mt-4">
+                <WeatherWidget
+                  lat={mapData.siteLocation.geometry.coordinates[1]}
+                  lon={mapData.siteLocation.geometry.coordinates[0]}
+                  siteName={currentSite?.name || 'Site'}
+                  compact={true}
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Access Instructions

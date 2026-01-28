@@ -994,8 +994,9 @@ VITE_MAPBOX_ACCESS_TOKEN=
 - [x] Dashboard expiry reminders *(Completed - ExpiryRemindersWidget consolidates permits, insurance, and certifications expiring within 30 days)*
 - [x] Loading states and error handling improvements *(Completed - Components already have good loading/error states; widget includes loading, error, and empty states)*
 
-### Lower Priority
-- [ ] API integrations (Weather, NOTAMs, etc.)
+### Lower Priority - **BATCH 10 COMPLETE**
+- [x] Weather API integration *(Completed - Open-Meteo API with current conditions, 5-day forecast, VFR/IFR flight conditions, drone flight assessment, integrated into Site Survey)*
+- [ ] NOTAMs integration *(Future)*
 - [ ] Platform migration (Firebase to Supabase)
 
 ---
