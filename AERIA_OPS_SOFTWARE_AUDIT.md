@@ -981,6 +981,11 @@ VITE_MAPBOX_ACCESS_TOKEN=
 - [x] International regulatory frameworks (EASA, FAA) *(Completed - regulatoryFrameworks.js with TC/EASA/FAA configs, RegulatoryFrameworkSelector component, Settings integration)*
 - [x] Policy header simplification *(Reviewed - current header is functional with useful metadata)*
 
+### Medium Priority - **BATCH 7 COMPLETE (Jan 28, 2026)**
+- [x] Emergency contacts management *(Completed - EmergencyContactsManager component with company-wide contacts, default emergency numbers, role-based categorization, Settings integration)*
+- [x] Policy category management *(Completed - CategoryManager component already existed, integrated into Settings with new Policies tab)*
+- [x] Additional form templates *(Completed - Added site_survey and flight_plan templates to formDefinitions.js with comprehensive RPAS-specific fields)*
+
 ### Lower Priority
 - [ ] API integrations (Weather, NOTAMs, etc.)
 - [ ] Platform migration (Firebase to Supabase)

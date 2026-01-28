@@ -8,7 +8,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2, Globe } from 'lucide-react'
+import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2, Globe, Phone, FolderOpen } from 'lucide-react'
 import { updateOperator } from '../lib/firestore'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
@@ -17,6 +17,8 @@ import { auth } from '../lib/firebase'
 import BrandingSettings from '../components/BrandingSettings'
 import InsuranceManager from '../components/insurance/InsuranceManager'
 import RegulatoryFrameworkSelector from '../components/settings/RegulatoryFrameworkSelector'
+import EmergencyContactsManager from '../components/settings/EmergencyContactsManager'
+import CategoryManager from '../components/policies/CategoryManager'
 import { seedPolicies, isPoliciesSeeded } from '../lib/seedPolicies'
 import { logger } from '../lib/logger'
 
@@ -241,6 +243,8 @@ export default function Settings() {
     { id: 'profile', label: 'Profile', icon: User, description: 'Your personal information' },
     { id: 'company', label: 'Company', icon: Building, description: 'Organization settings' },
     { id: 'regulatory', label: 'Regulatory', icon: Globe, description: 'Aviation authority & regulations' },
+    { id: 'emergency', label: 'Emergency', icon: Phone, description: 'Emergency contacts' },
+    { id: 'policies', label: 'Policy Categories', icon: FolderOpen, description: 'Manage policy categories' },
     { id: 'insurance', label: 'Insurance', icon: Shield, description: 'Insurance policies & documents' },
     { id: 'branding', label: 'Branding', icon: Palette, description: 'PDF export branding' },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alert preferences' },
@@ -468,6 +472,20 @@ export default function Settings() {
               }}
               showDetails={true}
             />
+          </div>
+        )}
+
+        {/* Emergency Contacts Tab */}
+        {activeTab === 'emergency' && (
+          <div className="card">
+            <EmergencyContactsManager />
+          </div>
+        )}
+
+        {/* Policy Categories Tab */}
+        {activeTab === 'policies' && (
+          <div className="card">
+            <CategoryManager />
           </div>
         )}
 

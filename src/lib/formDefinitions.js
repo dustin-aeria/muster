@@ -1912,6 +1912,401 @@ export const FORM_TEMPLATES = {
       }
     ]
   },
+
+  // ========================================
+  // SITE SURVEY
+  // ========================================
+  site_survey: {
+    id: 'site_survey',
+    name: 'Site Survey & Assessment',
+    shortName: 'Site Survey',
+    category: 'pre_operation',
+    description: 'Pre-operation site assessment for RPAS operations',
+    icon: 'MapPin',
+    version: '1.0',
+    sections: [
+      {
+        id: 'header',
+        title: 'Survey Information',
+        fields: [
+          { id: 'form_id', type: 'auto_id', label: 'Form ID', required: true },
+          { id: 'project', type: 'project_select', label: 'Project', required: true },
+          { id: 'survey_date', type: 'date', label: 'Survey Date', required: true, defaultToday: true },
+          { id: 'surveyor', type: 'user_auto', label: 'Surveyor', required: true },
+          { id: 'client_contact', type: 'text', label: 'Client Contact (if present)', required: false },
+        ]
+      },
+      {
+        id: 'location',
+        title: 'Location Details',
+        fields: [
+          { id: 'site_name', type: 'text', label: 'Site Name', required: true },
+          { id: 'address', type: 'address', label: 'Address', required: true },
+          { id: 'gps_coordinates', type: 'gps', label: 'GPS Coordinates', required: true },
+          { id: 'site_access', type: 'textarea', label: 'Site Access Instructions', required: true, helpText: 'Gate codes, parking, walking distance, etc.' },
+          { id: 'site_contact', type: 'text', label: 'On-Site Contact Name', required: false },
+          { id: 'site_contact_phone', type: 'phone', label: 'On-Site Contact Phone', required: false },
+        ]
+      },
+      {
+        id: 'airspace',
+        title: 'Airspace Assessment',
+        fields: [
+          { id: 'airspace_class', type: 'select', label: 'Airspace Class', required: true, options: [
+            { value: 'class_c', label: 'Class C (Controlled)' },
+            { value: 'class_d', label: 'Class D (Controlled)' },
+            { value: 'class_e', label: 'Class E (Controlled)' },
+            { value: 'class_f', label: 'Class F (Special Use)' },
+            { value: 'class_g', label: 'Class G (Uncontrolled)' },
+          ]},
+          { id: 'nearest_airport', type: 'text', label: 'Nearest Airport/Heliport', required: true },
+          { id: 'airport_distance', type: 'number', label: 'Distance (NM)', required: true },
+          { id: 'authorization_required', type: 'yesno', label: 'NAV CANADA Authorization Required?', required: true },
+          { id: 'authorization_notes', type: 'textarea', label: 'Authorization Notes', required: false },
+          { id: 'notams_checked', type: 'yesno', label: 'NOTAMs Checked?', required: true },
+          { id: 'tfr_present', type: 'yesno', label: 'Any TFRs in Area?', required: true },
+        ]
+      },
+      {
+        id: 'obstacles',
+        title: 'Obstacle Assessment',
+        fields: [
+          { id: 'powerlines', type: 'yesno', label: 'Power Lines Present?', required: true },
+          { id: 'powerlines_notes', type: 'text', label: 'Power Lines Details', required: false, showIf: 'powerlines === true' },
+          { id: 'towers', type: 'yesno', label: 'Towers/Antennas Present?', required: true },
+          { id: 'towers_notes', type: 'text', label: 'Tower Details', required: false, showIf: 'towers === true' },
+          { id: 'trees', type: 'yesno', label: 'Tall Trees/Vegetation?', required: true },
+          { id: 'trees_height', type: 'number', label: 'Estimated Height (ft)', required: false, showIf: 'trees === true' },
+          { id: 'buildings', type: 'yesno', label: 'Buildings/Structures?', required: true },
+          { id: 'buildings_notes', type: 'text', label: 'Building Details', required: false, showIf: 'buildings === true' },
+          { id: 'guy_wires', type: 'yesno', label: 'Guy Wires Present?', required: true },
+          { id: 'other_obstacles', type: 'textarea', label: 'Other Obstacles', required: false },
+          { id: 'obstacle_map', type: 'file_upload', label: 'Obstacle Map/Photo', required: false, accept: 'image/*' },
+        ]
+      },
+      {
+        id: 'ground_hazards',
+        title: 'Ground Hazards',
+        fields: [
+          { id: 'terrain_type', type: 'select', label: 'Terrain Type', required: true, options: [
+            { value: 'flat', label: 'Flat/Level' },
+            { value: 'rolling', label: 'Rolling Hills' },
+            { value: 'steep', label: 'Steep/Mountainous' },
+            { value: 'mixed', label: 'Mixed Terrain' },
+          ]},
+          { id: 'ground_cover', type: 'select', label: 'Ground Cover', required: true, options: [
+            { value: 'paved', label: 'Paved/Concrete' },
+            { value: 'gravel', label: 'Gravel' },
+            { value: 'grass', label: 'Grass' },
+            { value: 'brush', label: 'Brush/Vegetation' },
+            { value: 'water', label: 'Water/Wetland' },
+            { value: 'snow', label: 'Snow/Ice' },
+          ]},
+          { id: 'water_hazards', type: 'yesno', label: 'Water Hazards Present?', required: true },
+          { id: 'water_details', type: 'text', label: 'Water Hazard Details', required: false, showIf: 'water_hazards === true' },
+          { id: 'wildlife', type: 'yesno', label: 'Wildlife Concerns?', required: true },
+          { id: 'wildlife_details', type: 'text', label: 'Wildlife Details', required: false, showIf: 'wildlife === true' },
+          { id: 'public_access', type: 'yesno', label: 'Public Access to Area?', required: true },
+          { id: 'public_notes', type: 'textarea', label: 'Public Access Notes', required: false, showIf: 'public_access === true' },
+        ]
+      },
+      {
+        id: 'launch_recovery',
+        title: 'Launch & Recovery Zones',
+        fields: [
+          { id: 'launch_zone_gps', type: 'gps', label: 'Primary Launch Zone GPS', required: true },
+          { id: 'launch_zone_description', type: 'textarea', label: 'Launch Zone Description', required: true },
+          { id: 'launch_zone_size', type: 'text', label: 'Launch Zone Size (approx)', required: true },
+          { id: 'alternate_launch', type: 'gps', label: 'Alternate Launch Zone GPS', required: false },
+          { id: 'emergency_landing_zones', type: 'textarea', label: 'Emergency Landing Zones', required: true, helpText: 'Identify safe areas for emergency landings' },
+          { id: 'recovery_zone_gps', type: 'gps', label: 'Recovery Zone GPS', required: false },
+          { id: 'zone_photos', type: 'file_upload', label: 'Zone Photos', required: false, multiple: true, accept: 'image/*' },
+        ]
+      },
+      {
+        id: 'rf_assessment',
+        title: 'RF/EMI Assessment',
+        fields: [
+          { id: 'cell_towers', type: 'yesno', label: 'Cell Towers Nearby?', required: true },
+          { id: 'radio_transmitters', type: 'yesno', label: 'Radio Transmitters Nearby?', required: true },
+          { id: 'high_voltage', type: 'yesno', label: 'High Voltage Lines Nearby?', required: true },
+          { id: 'magnetic_interference', type: 'yesno', label: 'Known Magnetic Interference?', required: true },
+          { id: 'gps_quality', type: 'select', label: 'GPS Quality (if tested)', required: false, options: [
+            { value: 'excellent', label: 'Excellent (10+ satellites)' },
+            { value: 'good', label: 'Good (7-10 satellites)' },
+            { value: 'marginal', label: 'Marginal (5-7 satellites)' },
+            { value: 'poor', label: 'Poor (<5 satellites)' },
+            { value: 'not_tested', label: 'Not Tested' },
+          ]},
+          { id: 'rf_notes', type: 'textarea', label: 'RF/EMI Notes', required: false },
+        ]
+      },
+      {
+        id: 'operational',
+        title: 'Operational Considerations',
+        fields: [
+          { id: 'recommended_altitude', type: 'number', label: 'Recommended Max Altitude (ft AGL)', required: true },
+          { id: 'recommended_boundary', type: 'textarea', label: 'Recommended Operating Boundary', required: true },
+          { id: 'flight_restrictions', type: 'textarea', label: 'Site-Specific Flight Restrictions', required: false },
+          { id: 'time_restrictions', type: 'textarea', label: 'Time Restrictions (if any)', required: false },
+          { id: 'noise_sensitive', type: 'yesno', label: 'Noise Sensitive Area?', required: true },
+          { id: 'recommended_crew_size', type: 'number', label: 'Recommended Crew Size', required: true },
+          { id: 'vo_required', type: 'yesno', label: 'Visual Observer Required?', required: true },
+        ]
+      },
+      {
+        id: 'emergency',
+        title: 'Emergency Planning',
+        fields: [
+          { id: 'nearest_hospital', type: 'text', label: 'Nearest Hospital', required: true },
+          { id: 'hospital_distance', type: 'text', label: 'Hospital Distance/Time', required: true },
+          { id: 'cell_coverage', type: 'select', label: 'Cell Phone Coverage', required: true, options: [
+            { value: 'excellent', label: 'Excellent' },
+            { value: 'good', label: 'Good' },
+            { value: 'poor', label: 'Poor' },
+            { value: 'none', label: 'No Coverage' },
+          ]},
+          { id: 'emergency_access', type: 'textarea', label: 'Emergency Vehicle Access', required: true },
+          { id: 'evacuation_route', type: 'textarea', label: 'Evacuation Route', required: false },
+          { id: 'muster_point', type: 'gps', label: 'Muster Point GPS', required: true },
+        ]
+      },
+      {
+        id: 'assessment',
+        title: 'Overall Assessment',
+        fields: [
+          { id: 'site_suitability', type: 'select', label: 'Site Suitability', required: true, options: [
+            { value: 'suitable', label: 'Suitable for Operations' },
+            { value: 'suitable_conditions', label: 'Suitable with Conditions' },
+            { value: 'marginal', label: 'Marginal - Additional Planning Required' },
+            { value: 'not_suitable', label: 'Not Suitable' },
+          ]},
+          { id: 'conditions_required', type: 'textarea', label: 'Conditions/Requirements', required: false, showIf: 'site_suitability === suitable_conditions' },
+          { id: 'key_risks', type: 'textarea', label: 'Key Risks Identified', required: true },
+          { id: 'mitigation_summary', type: 'textarea', label: 'Mitigation Summary', required: true },
+          { id: 'additional_notes', type: 'textarea', label: 'Additional Notes', required: false },
+        ]
+      },
+      {
+        id: 'signoff',
+        title: 'Sign-Off',
+        fields: [
+          { id: 'surveyor_signature', type: 'signature', label: 'Surveyor Signature', required: true },
+          { id: 'review_date', type: 'date', label: 'Next Review Date', required: false },
+          { id: 'attachments', type: 'file_upload', label: 'Additional Attachments', required: false, multiple: true },
+        ]
+      }
+    ]
+  },
+
+  // ========================================
+  // FLIGHT PLAN
+  // ========================================
+  flight_plan: {
+    id: 'flight_plan',
+    name: 'RPAS Flight Plan',
+    shortName: 'Flight Plan',
+    category: 'pre_operation',
+    description: 'Pre-flight planning document for RPAS operations',
+    icon: 'Navigation',
+    version: '1.0',
+    sections: [
+      {
+        id: 'header',
+        title: 'Flight Plan Information',
+        fields: [
+          { id: 'form_id', type: 'auto_id', label: 'Form ID', required: true },
+          { id: 'project', type: 'project_select', label: 'Project', required: true },
+          { id: 'plan_date', type: 'date', label: 'Plan Date', required: true, defaultToday: true },
+          { id: 'planned_flight_date', type: 'date', label: 'Planned Flight Date', required: true },
+          { id: 'planned_by', type: 'user_auto', label: 'Planned By', required: true },
+          { id: 'approved_by', type: 'operator_select', label: 'Approved By', required: false },
+        ]
+      },
+      {
+        id: 'mission',
+        title: 'Mission Details',
+        fields: [
+          { id: 'mission_type', type: 'select', label: 'Mission Type', required: true, options: [
+            { value: 'survey', label: 'Aerial Survey/Mapping' },
+            { value: 'inspection', label: 'Infrastructure Inspection' },
+            { value: 'photography', label: 'Photography/Videography' },
+            { value: 'lidar', label: 'LiDAR Scanning' },
+            { value: 'thermal', label: 'Thermal Imaging' },
+            { value: 'delivery', label: 'Payload Delivery' },
+            { value: 'training', label: 'Training Flight' },
+            { value: 'other', label: 'Other' },
+          ]},
+          { id: 'mission_objective', type: 'textarea', label: 'Mission Objective', required: true, helpText: 'Describe what needs to be accomplished' },
+          { id: 'deliverables', type: 'textarea', label: 'Expected Deliverables', required: false },
+          { id: 'client_requirements', type: 'textarea', label: 'Client-Specific Requirements', required: false },
+        ]
+      },
+      {
+        id: 'aircraft',
+        title: 'Aircraft & Equipment',
+        fields: [
+          { id: 'primary_aircraft', type: 'aircraft_select', label: 'Primary Aircraft', required: true },
+          { id: 'backup_aircraft', type: 'aircraft_select', label: 'Backup Aircraft', required: false },
+          { id: 'payload', type: 'text', label: 'Payload/Sensor', required: true },
+          { id: 'payload_weight', type: 'number', label: 'Payload Weight (g)', required: false },
+          { id: 'batteries_required', type: 'number', label: 'Batteries Required', required: true },
+          { id: 'sd_cards', type: 'number', label: 'SD Cards Required', required: false },
+          { id: 'additional_equipment', type: 'textarea', label: 'Additional Equipment', required: false },
+        ]
+      },
+      {
+        id: 'crew',
+        title: 'Crew Assignment',
+        fields: [
+          { id: 'pic', type: 'operator_select', label: 'Pilot in Command', required: true },
+          { id: 'backup_pic', type: 'operator_select', label: 'Backup PIC', required: false },
+          { id: 'visual_observers', type: 'crew_multi_select', label: 'Visual Observer(s)', required: false },
+          { id: 'payload_operator', type: 'crew_multi_select', label: 'Payload Operator', required: false },
+          { id: 'ground_crew', type: 'crew_multi_select', label: 'Ground Crew', required: false },
+          { id: 'crew_briefing_time', type: 'time', label: 'Crew Briefing Time', required: true },
+        ]
+      },
+      {
+        id: 'location',
+        title: 'Location & Airspace',
+        fields: [
+          { id: 'site_survey_ref', type: 'text', label: 'Site Survey Reference', required: false, helpText: 'Link to completed site survey' },
+          { id: 'launch_location', type: 'gps', label: 'Launch Location', required: true },
+          { id: 'operating_area', type: 'textarea', label: 'Operating Area Description', required: true },
+          { id: 'max_altitude', type: 'number', label: 'Maximum Altitude (ft AGL)', required: true },
+          { id: 'max_distance', type: 'number', label: 'Maximum Distance from Pilot (m)', required: true },
+          { id: 'airspace_class', type: 'select', label: 'Airspace Class', required: true, options: [
+            { value: 'class_c', label: 'Class C' },
+            { value: 'class_d', label: 'Class D' },
+            { value: 'class_e', label: 'Class E' },
+            { value: 'class_f', label: 'Class F' },
+            { value: 'class_g', label: 'Class G' },
+          ]},
+          { id: 'authorization_required', type: 'yesno', label: 'Airspace Authorization Required?', required: true },
+          { id: 'authorization_status', type: 'select', label: 'Authorization Status', required: false, showIf: 'authorization_required === true', options: [
+            { value: 'not_submitted', label: 'Not Submitted' },
+            { value: 'pending', label: 'Pending' },
+            { value: 'approved', label: 'Approved' },
+            { value: 'denied', label: 'Denied' },
+          ]},
+          { id: 'authorization_ref', type: 'text', label: 'Authorization Reference #', required: false, showIf: 'authorization_status === approved' },
+        ]
+      },
+      {
+        id: 'timing',
+        title: 'Timing & Schedule',
+        fields: [
+          { id: 'arrival_time', type: 'time', label: 'Arrival On-Site', required: true },
+          { id: 'setup_time', type: 'time', label: 'Setup Complete', required: true },
+          { id: 'first_flight', type: 'time', label: 'First Flight', required: true },
+          { id: 'last_flight', type: 'time', label: 'Last Flight', required: true },
+          { id: 'departure_time', type: 'time', label: 'Departure', required: true },
+          { id: 'total_flight_time', type: 'number', label: 'Estimated Total Flight Time (min)', required: true },
+          { id: 'number_of_flights', type: 'number', label: 'Number of Flights', required: true },
+        ]
+      },
+      {
+        id: 'weather',
+        title: 'Weather Requirements',
+        fields: [
+          { id: 'min_visibility', type: 'number', label: 'Minimum Visibility (SM)', required: true },
+          { id: 'max_wind', type: 'number', label: 'Maximum Wind Speed (km/h)', required: true },
+          { id: 'max_gusts', type: 'number', label: 'Maximum Gusts (km/h)', required: true },
+          { id: 'min_ceiling', type: 'number', label: 'Minimum Ceiling (ft)', required: true },
+          { id: 'precipitation', type: 'select', label: 'Precipitation Tolerance', required: true, options: [
+            { value: 'none', label: 'No Precipitation' },
+            { value: 'light', label: 'Light Rain OK' },
+            { value: 'moderate', label: 'Moderate Rain OK' },
+          ]},
+          { id: 'temperature_min', type: 'number', label: 'Minimum Temperature (°C)', required: false },
+          { id: 'temperature_max', type: 'number', label: 'Maximum Temperature (°C)', required: false },
+          { id: 'weather_source', type: 'text', label: 'Weather Source', required: true, helpText: 'e.g., NAV CANADA METAR, Environment Canada' },
+        ]
+      },
+      {
+        id: 'flight_profile',
+        title: 'Flight Profile',
+        fields: [
+          { id: 'flight_mode', type: 'select', label: 'Primary Flight Mode', required: true, options: [
+            { value: 'manual', label: 'Manual' },
+            { value: 'automated', label: 'Automated/Waypoint' },
+            { value: 'hybrid', label: 'Hybrid (Both)' },
+          ]},
+          { id: 'mission_planning_software', type: 'text', label: 'Mission Planning Software', required: false, showIf: 'flight_mode !== manual' },
+          { id: 'flight_pattern', type: 'textarea', label: 'Flight Pattern Description', required: true },
+          { id: 'altitude_profile', type: 'textarea', label: 'Altitude Profile', required: true, helpText: 'Describe altitude changes during flight' },
+          { id: 'ground_sample_distance', type: 'text', label: 'GSD / Resolution Required', required: false },
+          { id: 'overlap_settings', type: 'text', label: 'Overlap Settings', required: false },
+          { id: 'mission_file', type: 'file_upload', label: 'Mission File', required: false, accept: '.kmz,.kml,.plan,.waypoints' },
+        ]
+      },
+      {
+        id: 'communications',
+        title: 'Communications Plan',
+        fields: [
+          { id: 'primary_comm', type: 'select', label: 'Primary Communication', required: true, options: [
+            { value: 'verbal', label: 'Verbal (Direct)' },
+            { value: 'radio', label: 'Two-Way Radio' },
+            { value: 'headset', label: 'Headset/Intercom' },
+            { value: 'phone', label: 'Cell Phone' },
+          ]},
+          { id: 'backup_comm', type: 'select', label: 'Backup Communication', required: true, options: [
+            { value: 'verbal', label: 'Verbal (Direct)' },
+            { value: 'radio', label: 'Two-Way Radio' },
+            { value: 'phone', label: 'Cell Phone' },
+            { value: 'hand_signals', label: 'Hand Signals' },
+          ]},
+          { id: 'radio_frequency', type: 'text', label: 'Radio Frequency/Channel', required: false },
+          { id: 'emergency_frequency', type: 'text', label: 'Emergency Frequency', required: false },
+          { id: 'atc_contact', type: 'yesno', label: 'ATC Contact Required?', required: true },
+          { id: 'atc_frequency', type: 'text', label: 'ATC Frequency', required: false, showIf: 'atc_contact === true' },
+        ]
+      },
+      {
+        id: 'emergency',
+        title: 'Emergency Procedures',
+        fields: [
+          { id: 'lost_link', type: 'textarea', label: 'Lost Link Procedure', required: true },
+          { id: 'flyaway', type: 'textarea', label: 'Flyaway Procedure', required: true },
+          { id: 'emergency_landing_zones', type: 'textarea', label: 'Emergency Landing Zones', required: true },
+          { id: 'battery_failure', type: 'textarea', label: 'Low Battery Procedure', required: true },
+          { id: 'medical_emergency', type: 'textarea', label: 'Medical Emergency Procedure', required: true },
+          { id: 'manned_aircraft', type: 'textarea', label: 'Manned Aircraft Procedure', required: true },
+          { id: 'emergency_contacts', type: 'textarea', label: 'Emergency Contacts', required: true },
+        ]
+      },
+      {
+        id: 'go_no_go',
+        title: 'Go/No-Go Checklist',
+        fields: [
+          { id: 'weather_acceptable', type: 'yesno', label: 'Weather within limits?', required: true },
+          { id: 'airspace_clear', type: 'yesno', label: 'Airspace authorization confirmed?', required: true },
+          { id: 'crew_rested', type: 'yesno', label: 'Crew rested and fit for duty?', required: true },
+          { id: 'equipment_ready', type: 'yesno', label: 'Equipment checked and ready?', required: true },
+          { id: 'site_survey_current', type: 'yesno', label: 'Site survey current?', required: true },
+          { id: 'notams_checked', type: 'yesno', label: 'NOTAMs checked?', required: true },
+          { id: 'client_notified', type: 'yesno', label: 'Client notified?', required: false },
+          { id: 'go_decision', type: 'select', label: 'Go/No-Go Decision', required: true, options: [
+            { value: 'go', label: 'GO - All criteria met' },
+            { value: 'conditional', label: 'CONDITIONAL - Proceed with caution' },
+            { value: 'no_go', label: 'NO-GO - Do not proceed' },
+          ]},
+          { id: 'no_go_reason', type: 'textarea', label: 'No-Go Reason', required: false, showIf: 'go_decision === no_go' },
+        ]
+      },
+      {
+        id: 'signoff',
+        title: 'Sign-Off',
+        fields: [
+          { id: 'planner_signature', type: 'signature', label: 'Planner Signature', required: true },
+          { id: 'pic_signature', type: 'signature', label: 'PIC Acknowledgment', required: true },
+          { id: 'approval_signature', type: 'signature', label: 'Operations Approval', required: false },
+          { id: 'notes', type: 'textarea', label: 'Additional Notes', required: false },
+        ]
+      }
+    ]
+  },
 }
 
 export default FORM_TEMPLATES
