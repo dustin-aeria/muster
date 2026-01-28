@@ -1,427 +1,527 @@
 /**
  * PermitDetailPanel.jsx
- * Full detail view for a permit
+ * Slide-out panel for viewing full permit details
+ *
+ * Features:
+ * - Full permit information display
+ * - Privileges and conditions sections
+ * - Document list with upload capability
+ * - Edit and delete actions
  *
  * @location src/components/permits/PermitDetailPanel.jsx
  */
 
-import React, { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
+import PropTypes from 'prop-types'
 import {
   X,
-  Edit3,
+  Pencil,
+  Trash2,
   Calendar,
   Building2,
   MapPin,
-  Clock,
-  FileCheck,
-  Award,
-  Navigation,
-  UserCheck,
-  FileText,
   Plane,
-  Bell,
+  Check,
+  AlertCircle,
+  FileText,
+  Upload,
+  Download,
   ExternalLink,
-  Loader2
+  Loader2,
+  Clock,
+  Tag
 } from 'lucide-react'
-import PermitStatusBadge from './PermitStatusBadge'
-import PermitPrivilegesSection from './PermitPrivilegesSection'
-import PermitConditionsSection from './PermitConditionsSection'
-import PermitDocumentUpload from './PermitDocumentUpload'
+import { Timestamp } from 'firebase/firestore'
 import {
   PERMIT_TYPES,
   OPERATION_TYPES,
   getDaysUntilExpiry,
-  getPermit,
-  updatePermit,
+  deletePermit,
   addPermitDocument,
-  removePermitDocument,
-  addPermitPrivilege,
-  updatePermitPrivilege,
-  removePermitPrivilege,
-  addPermitCondition,
-  updatePermitCondition,
-  removePermitCondition
+  removePermitDocument
 } from '../../lib/firestorePermits'
+import PermitStatusBadge from './PermitStatusBadge'
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+import { storage } from '../../lib/firebase'
+import { logger } from '../../lib/logger'
 
-const TYPE_ICONS = {
-  sfoc: FileCheck,
-  cor: Award,
-  land_access: MapPin,
-  airspace_auth: Navigation,
-  client_approval: UserCheck,
-  other: FileText
+function formatDate(date) {
+  if (!date) return '—'
+  const d = date instanceof Timestamp ? date.toDate() : new Date(date)
+  return d.toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-function formatDate(dateValue) {
-  if (!dateValue) return 'N/A'
-  const date = dateValue?.toDate?.() || new Date(dateValue)
-  return date.toLocaleDateString('en-CA', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function formatDaysRemaining(days) {
-  if (days === null) return 'No expiry date'
-  if (days < 0) return `Expired ${Math.abs(days)} days ago`
-  if (days === 0) return 'Expires today'
-  if (days === 1) return 'Expires tomorrow'
-  return `${days} days remaining`
-}
+export default function PermitDetailPanel({ permit, isOpen, onClose, onEdit, onDelete, onUpdate }) {
+  const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [deletingDoc, setDeletingDoc] = useState(null)
+  const fileInputRef = useRef(null)
 
-export default function PermitDetailPanel({
-  permitId,
-  onClose,
-  onEdit,
-  onUpdate
-}) {
-  const [permit, setPermit] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (permitId) {
-      loadPermit()
-    }
-  }, [permitId])
-
-  const loadPermit = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const data = await getPermit(permitId)
-      setPermit(data)
-    } catch (err) {
-      console.error('Error loading permit:', err)
-      setError('Failed to load permit details')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Document handlers
-  const handleUploadDocument = async (file) => {
-    await addPermitDocument(permitId, file)
-    await loadPermit()
-    onUpdate?.()
-  }
-
-  const handleRemoveDocument = async (path) => {
-    await removePermitDocument(permitId, path)
-    await loadPermit()
-    onUpdate?.()
-  }
-
-  // Privilege handlers
-  const handleAddPrivilege = async (privilege) => {
-    await addPermitPrivilege(permitId, privilege)
-    await loadPermit()
-    onUpdate?.()
-  }
-
-  const handleUpdatePrivilege = async (privilegeId, updates) => {
-    await updatePermitPrivilege(permitId, privilegeId, updates)
-    await loadPermit()
-    onUpdate?.()
-  }
-
-  const handleRemovePrivilege = async (privilegeId) => {
-    await removePermitPrivilege(permitId, privilegeId)
-    await loadPermit()
-    onUpdate?.()
-  }
-
-  // Condition handlers
-  const handleAddCondition = async (condition) => {
-    await addPermitCondition(permitId, condition)
-    await loadPermit()
-    onUpdate?.()
-  }
-
-  const handleUpdateCondition = async (conditionId, updates) => {
-    await updatePermitCondition(permitId, conditionId, updates)
-    await loadPermit()
-    onUpdate?.()
-  }
-
-  const handleRemoveCondition = async (conditionId) => {
-    await removePermitCondition(permitId, conditionId)
-    await loadPermit()
-    onUpdate?.()
-  }
-
-  if (loading) {
-    return (
-      <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-xl z-40 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-600" />
-      </div>
-    )
-  }
-
-  if (error || !permit) {
-    return (
-      <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-xl z-40 flex flex-col">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Permit Details</h2>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="flex-1 flex items-center justify-center p-6">
-          <p className="text-red-600">{error || 'Permit not found'}</p>
-        </div>
-      </div>
-    )
-  }
+  if (!isOpen || !permit) return null
 
   const permitType = PERMIT_TYPES[permit.type] || PERMIT_TYPES.other
-  const TypeIcon = TYPE_ICONS[permit.type] || FileText
-  const daysRemaining = getDaysUntilExpiry(permit)
+  const daysUntilExpiry = getDaysUntilExpiry(permit)
+
+  const handleDelete = async () => {
+    try {
+      setDeleting(true)
+
+      // Delete all documents from storage first
+      for (const doc of (permit.documents || [])) {
+        if (doc.path) {
+          try {
+            const storageRef = ref(storage, doc.path)
+            await deleteObject(storageRef)
+          } catch (err) {
+            logger.warn('Failed to delete document from storage:', err)
+          }
+        }
+      }
+
+      await deletePermit(permit.id)
+      onDelete?.()
+      onClose()
+    } catch (error) {
+      logger.error('Error deleting permit:', error)
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      setUploading(true)
+
+      // Upload to Firebase Storage
+      const storagePath = `permits/${permit.id}/${Date.now()}_${file.name}`
+      const storageRef = ref(storage, storagePath)
+      await uploadBytes(storageRef, file)
+      const downloadUrl = await getDownloadURL(storageRef)
+
+      // Add document reference to permit
+      await addPermitDocument(permit.id, {
+        name: file.name,
+        path: storagePath,
+        url: downloadUrl,
+        type: file.type,
+        size: file.size
+      })
+
+      onUpdate?.()
+    } catch (error) {
+      logger.error('Error uploading document:', error)
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleDeleteDocument = async (doc) => {
+    try {
+      setDeletingDoc(doc.id)
+
+      // Delete from storage
+      if (doc.path) {
+        const storageRef = ref(storage, doc.path)
+        await deleteObject(storageRef)
+      }
+
+      // Remove reference from permit
+      await removePermitDocument(permit.id, doc.id)
+      onUpdate?.()
+    } catch (error) {
+      logger.error('Error deleting document:', error)
+    } finally {
+      setDeletingDoc(null)
+    }
+  }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-xl z-40 flex flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-cyan-50 to-white">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-cyan-100">
-              <TypeIcon className="w-6 h-6 text-cyan-700" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">{permit.name}</h2>
-              <div className="flex items-center gap-2 mt-1">
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/30 z-40"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div className="fixed right-0 top-0 h-full w-full max-w-xl bg-white shadow-xl z-50 overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
                 <PermitStatusBadge status={permit.status} />
-                <span className="text-sm text-gray-500">{permitType.label}</span>
+                <span className="text-sm text-gray-500">{permitType.shortName}</span>
               </div>
+              <h2 className="text-xl font-semibold text-gray-900">{permit.name}</h2>
+              {permit.permitNumber && (
+                <p className="text-sm text-gray-500 font-mono mt-1">{permit.permitNumber}</p>
+              )}
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onEdit?.(permit)}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-              title="Edit"
-            >
-              <Edit3 className="w-5 h-5" />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onEdit?.(permit)}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Edit permit"
+              >
+                <Pencil className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete permit"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Key Info */}
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          {permit.permitNumber && (
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Key Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 text-gray-500 mb-1">
+                <Building2 className="w-4 h-4" />
+                <span className="text-xs font-medium">Authority</span>
+              </div>
+              <p className="text-sm text-gray-900">{permit.issuingAuthority || permitType.authority}</p>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 text-gray-500 mb-1">
+                <Calendar className="w-4 h-4" />
+                <span className="text-xs font-medium">Expiry</span>
+              </div>
+              <p className="text-sm text-gray-900">{formatDate(permit.expiryDate)}</p>
+              {daysUntilExpiry !== null && (
+                <p className={`text-xs mt-0.5 ${
+                  daysUntilExpiry < 0 ? 'text-red-600' :
+                  daysUntilExpiry <= 30 ? 'text-amber-600' : 'text-gray-500'
+                }`}>
+                  {daysUntilExpiry < 0
+                    ? `Expired ${Math.abs(daysUntilExpiry)} days ago`
+                    : `${daysUntilExpiry} days remaining`
+                  }
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Dates */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Validity Period
+            </h3>
+            <div className="grid grid-cols-3 gap-3 text-sm">
+              <div>
+                <p className="text-gray-500">Issue Date</p>
+                <p className="font-medium">{formatDate(permit.issueDate)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Effective</p>
+                <p className="font-medium">{formatDate(permit.effectiveDate)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Expiry</p>
+                <p className="font-medium">{formatDate(permit.expiryDate)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Geographic Area */}
+          {permit.geographicArea && (
             <div>
-              <span className="text-gray-500">Permit #:</span>
-              <span className="ml-2 font-medium text-gray-900">{permit.permitNumber}</span>
+              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Geographic Area
+              </h3>
+              <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                {permit.geographicArea}
+              </p>
             </div>
           )}
-          <div>
-            <span className="text-gray-500">Authority:</span>
-            <span className="ml-2 font-medium text-gray-900">{permit.issuingAuthority || 'N/A'}</span>
-          </div>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Dates Section */}
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
-            Validity Period
-          </h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
-                <Calendar className="w-3.5 h-3.5" />
-                Issued
-              </div>
-              <p className="font-medium text-gray-900">{formatDate(permit.issueDate)}</p>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
-                <Calendar className="w-3.5 h-3.5" />
-                Effective
-              </div>
-              <p className="font-medium text-gray-900">{formatDate(permit.effectiveDate)}</p>
-            </div>
-            <div className={`p-3 rounded-lg ${
-              permit.status === 'expired' ? 'bg-red-50' :
-              permit.status === 'expiring_soon' ? 'bg-yellow-50' : 'bg-gray-50'
-            }`}>
-              <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
-                <Clock className="w-3.5 h-3.5" />
-                Expires
-              </div>
-              <p className={`font-medium ${
-                permit.status === 'expired' ? 'text-red-700' :
-                permit.status === 'expiring_soon' ? 'text-yellow-700' : 'text-gray-900'
-              }`}>
-                {formatDate(permit.expiryDate)}
-              </p>
-              <p className={`text-xs mt-1 ${
-                daysRemaining !== null && daysRemaining < 0 ? 'text-red-600' :
-                daysRemaining !== null && daysRemaining <= 30 ? 'text-yellow-600' : 'text-gray-500'
-              }`}>
-                {formatDaysRemaining(daysRemaining)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Scope Section */}
-        {(permit.geographicArea || permit.operationTypes?.length > 0 || permit.aircraftRegistrations?.length > 0) && (
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
-              Scope
-            </h3>
-
-            {permit.geographicArea && (
-              <div className="mb-4">
-                <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
-                  <MapPin className="w-3.5 h-3.5" />
-                  Geographic Area
-                </div>
-                <p className="text-sm text-gray-900">{permit.geographicArea}</p>
-              </div>
-            )}
-
-            {permit.operationTypes?.length > 0 && (
-              <div className="mb-4">
-                <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                  Operation Types
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {permit.operationTypes.map(opType => (
+          {/* Operation Types */}
+          {permit.operationTypes?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <Plane className="w-4 h-4" />
+                Authorized Operations
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {permit.operationTypes.map(typeId => {
+                  const opType = OPERATION_TYPES.find(t => t.id === typeId)
+                  return (
                     <span
-                      key={opType}
-                      className="px-2 py-1 bg-cyan-50 text-cyan-700 text-sm rounded-lg"
+                      key={typeId}
+                      className="px-2 py-1 bg-blue-50 text-blue-700 text-sm rounded-lg"
                     >
-                      {OPERATION_TYPES[opType]?.label || opType}
+                      {opType?.label || typeId}
                     </span>
-                  ))}
-                </div>
+                  )
+                })}
               </div>
-            )}
+            </div>
+          )}
 
-            {permit.aircraftRegistrations?.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                  <Plane className="w-3.5 h-3.5" />
-                  Aircraft
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {permit.aircraftRegistrations.map(reg => (
-                    <span
-                      key={reg}
-                      className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-lg font-mono"
-                    >
-                      {reg}
-                    </span>
-                  ))}
-                </div>
+          {/* Aircraft */}
+          {permit.aircraftRegistrations?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Aircraft Registrations</h3>
+              <div className="flex flex-wrap gap-2">
+                {permit.aircraftRegistrations.map(reg => (
+                  <span
+                    key={reg}
+                    className="px-2 py-1 bg-gray-100 text-gray-700 text-sm font-mono rounded"
+                  >
+                    {reg}
+                  </span>
+                ))}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* Privileges Section */}
-        <div className="p-6 border-b border-gray-200">
-          <PermitPrivilegesSection
-            privileges={permit.privileges || []}
-            onAdd={handleAddPrivilege}
-            onUpdate={handleUpdatePrivilege}
-            onRemove={handleRemovePrivilege}
-          />
-        </div>
-
-        {/* Conditions Section */}
-        <div className="p-6 border-b border-gray-200">
-          <PermitConditionsSection
-            conditions={permit.conditions || []}
-            onAdd={handleAddCondition}
-            onUpdate={handleUpdateCondition}
-            onRemove={handleRemoveCondition}
-          />
-        </div>
-
-        {/* Notification Requirements */}
-        {permit.notificationRequirements?.length > 0 && (
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">
-              Notification Requirements
-            </h3>
-            <div className="space-y-2">
-              {permit.notificationRequirements.map(req => (
-                <div key={req.id} className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <Bell className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-purple-900">{req.agency}</p>
-                      <p className="text-xs text-purple-700">{req.timing} via {req.method}</p>
-                      {req.contactInfo && (
-                        <p className="text-xs text-purple-600 mt-1">{req.contactInfo}</p>
-                      )}
+          {/* Privileges */}
+          {permit.privileges?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                Privileges
+              </h3>
+              <div className="space-y-2">
+                {permit.privileges.map(priv => (
+                  <div key={priv.id} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-900">{priv.description}</p>
+                        {priv.conditions && (
+                          <p className="text-xs text-gray-500 mt-1">Conditions: {priv.conditions}</p>
+                        )}
+                        {priv.reference && (
+                          <p className="text-xs text-gray-400 mt-0.5">Ref: {priv.reference}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Documents Section */}
-        <div className="p-6 border-b border-gray-200">
-          <PermitDocumentUpload
-            documents={permit.documents || []}
-            onUpload={handleUploadDocument}
-            onRemove={handleRemoveDocument}
-          />
-        </div>
-
-        {/* Notes */}
-        {permit.notes && (
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">
-              Notes
-            </h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{permit.notes}</p>
-          </div>
-        )}
-
-        {/* Contact Info */}
-        {(permit.issuingOffice || permit.contactEmail) && (
-          <div className="p-6">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">
-              Contact Information
-            </h3>
-            <div className="space-y-2 text-sm">
-              {permit.issuingOffice && (
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-900">{permit.issuingOffice}</span>
-                </div>
-              )}
-              {permit.contactEmail && (
-                <div className="flex items-center gap-2">
-                  <ExternalLink className="w-4 h-4 text-gray-400" />
-                  <a
-                    href={`mailto:${permit.contactEmail}`}
-                    className="text-cyan-600 hover:text-cyan-700 hover:underline"
+          {/* Conditions */}
+          {permit.conditions?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+                Conditions & Restrictions
+              </h3>
+              <div className="space-y-2">
+                {permit.conditions.map(cond => (
+                  <div
+                    key={cond.id}
+                    className={`p-3 rounded-lg border ${
+                      cond.isCritical
+                        ? 'bg-red-50 border-red-200'
+                        : 'bg-amber-50 border-amber-200'
+                    }`}
                   >
-                    {permit.contactEmail}
-                  </a>
-                </div>
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                        cond.isCritical ? 'text-red-600' : 'text-amber-600'
+                      }`} />
+                      <div>
+                        {cond.isCritical && (
+                          <span className="inline-block text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded mb-1">
+                            CRITICAL
+                          </span>
+                        )}
+                        <p className="text-sm text-gray-900">{cond.description}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 uppercase">{cond.category}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Documents */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Documents
+            </h3>
+
+            {permit.documents?.length > 0 ? (
+              <div className="space-y-2 mb-3">
+                {permit.documents.map(doc => (
+                  <div key={doc.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <FileText className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{doc.name}</p>
+                      <p className="text-xs text-gray-500">{formatFileSize(doc.size)}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="View"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                      <a
+                        href={doc.url}
+                        download={doc.name}
+                        className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                        title="Download"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                      <button
+                        onClick={() => handleDeleteDocument(doc)}
+                        disabled={deletingDoc === doc.id}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                        title="Delete"
+                      >
+                        {deletingDoc === doc.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 mb-3">No documents uploaded</p>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileUpload}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Upload Document
+                </>
               )}
+            </button>
+          </div>
+
+          {/* Tags */}
+          {permit.tags?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Tags
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {permit.tags.map(tag => (
+                  <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          {permit.notes && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Notes</h3>
+              <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg whitespace-pre-wrap">
+                {permit.notes}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Delete Confirmation */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-full">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete Permit</h3>
+            </div>
+
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete <strong>{permit.name}</strong>?
+              This will also delete all uploaded documents. This action cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                Delete Permit
+              </button>
             </div>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   )
+}
+
+PermitDetailPanel.propTypes = {
+  permit: PropTypes.object,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onEdit: PropTypes.func,
+  onDelete: PropTypes.func,
+  onUpdate: PropTypes.func
 }

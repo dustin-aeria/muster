@@ -2,25 +2,34 @@
  * AddPermitModal.jsx
  * Multi-step modal for creating and editing permits
  *
+ * Steps:
+ * 1. Basic info (type, name, number, authority, dates)
+ * 2. Scope (geographic area, operation types, aircraft)
+ * 3. Privileges & Conditions
+ * 4. Documents & Notes
+ *
  * @location src/components/permits/AddPermitModal.jsx
  */
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
 import {
   X,
   ChevronRight,
   ChevronLeft,
-  Check,
-  FileCheck,
-  Calendar,
-  MapPin,
-  Shield,
-  FileText,
   Loader2,
+  Check,
   Plus,
   Trash2,
+  FileCheck,
+  Award,
+  MapPin,
+  Radio,
+  UserCheck,
+  FileText,
   AlertCircle
 } from 'lucide-react'
+import { Timestamp } from 'firebase/firestore'
 import {
   PERMIT_TYPES,
   OPERATION_TYPES,
@@ -28,35 +37,40 @@ import {
   createPermit,
   updatePermit
 } from '../../lib/firestorePermits'
-import PermitDocumentUpload from './PermitDocumentUpload'
 
-const STEPS = [
-  { id: 1, name: 'Basic Info', icon: FileCheck },
-  { id: 2, name: 'Scope', icon: MapPin },
-  { id: 3, name: 'Privileges & Conditions', icon: Shield },
-  { id: 4, name: 'Documents', icon: FileText }
-]
-
-function generateId() {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+const TYPE_ICONS = {
+  sfoc: FileCheck,
+  cor: Award,
+  land_access: MapPin,
+  airspace_auth: Radio,
+  client_approval: UserCheck,
+  other: FileText
 }
 
-export default function AddPermitModal({
-  isOpen,
-  onClose,
-  onSave,
-  operatorId,
-  editPermit = null
-}) {
-  const [currentStep, setCurrentStep] = useState(1)
-  const [saving, setSaving] = useState(false)
+const STEPS = [
+  { id: 'basic', label: 'Basic Info' },
+  { id: 'scope', label: 'Scope' },
+  { id: 'privileges', label: 'Privileges & Conditions' },
+  { id: 'documents', label: 'Notes' }
+]
+
+function formatDateForInput(date) {
+  if (!date) return ''
+  const d = date instanceof Timestamp ? date.toDate() : new Date(date)
+  return d.toISOString().split('T')[0]
+}
+
+export default function AddPermitModal({ isOpen, onClose, onSave, permit = null }) {
+  const [currentStep, setCurrentStep] = useState(0)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Form state
+  const isEditing = !!permit
+
   const [formData, setFormData] = useState({
-    // Step 1: Basic Info
-    name: '',
+    // Basic info
     type: 'sfoc',
+    name: '',
     permitNumber: '',
     issuingAuthority: '',
     issuingOffice: '',
@@ -65,368 +79,286 @@ export default function AddPermitModal({
     effectiveDate: '',
     expiryDate: '',
 
-    // Step 2: Scope
+    // Scope
     geographicArea: '',
     operationTypes: [],
     aircraftRegistrations: [],
 
-    // Step 3: Privileges & Conditions
+    // Privileges & Conditions
     privileges: [],
     conditions: [],
     notificationRequirements: [],
 
-    // Step 4: Documents & Notes
+    // Notes
     notes: '',
-    tags: [],
-
-    // Renewal
-    renewalInfo: {
-      isRenewalRequired: true,
-      renewalLeadDays: 60,
-      renewalStatus: null
-    }
+    tags: []
   })
 
-  // Reset form when modal opens/closes or when editing
+  // New privilege/condition form state
+  const [newPrivilege, setNewPrivilege] = useState({ description: '', conditions: '', reference: '' })
+  const [newCondition, setNewCondition] = useState({ category: 'operational', description: '', isCritical: false })
+
   useEffect(() => {
-    if (isOpen) {
-      if (editPermit) {
-        // Populate form with existing permit data
-        setFormData({
-          name: editPermit.name || '',
-          type: editPermit.type || 'sfoc',
-          permitNumber: editPermit.permitNumber || '',
-          issuingAuthority: editPermit.issuingAuthority || '',
-          issuingOffice: editPermit.issuingOffice || '',
-          contactEmail: editPermit.contactEmail || '',
-          issueDate: formatDateForInput(editPermit.issueDate),
-          effectiveDate: formatDateForInput(editPermit.effectiveDate),
-          expiryDate: formatDateForInput(editPermit.expiryDate),
-          geographicArea: editPermit.geographicArea || '',
-          operationTypes: editPermit.operationTypes || [],
-          aircraftRegistrations: editPermit.aircraftRegistrations || [],
-          privileges: editPermit.privileges || [],
-          conditions: editPermit.conditions || [],
-          notificationRequirements: editPermit.notificationRequirements || [],
-          notes: editPermit.notes || '',
-          tags: editPermit.tags || [],
-          renewalInfo: editPermit.renewalInfo || {
-            isRenewalRequired: true,
-            renewalLeadDays: 60,
-            renewalStatus: null
-          }
-        })
-      } else {
-        // Reset to defaults
-        setFormData({
-          name: '',
-          type: 'sfoc',
-          permitNumber: '',
-          issuingAuthority: PERMIT_TYPES.sfoc.authority,
-          issuingOffice: '',
-          contactEmail: '',
-          issueDate: '',
-          effectiveDate: '',
-          expiryDate: '',
-          geographicArea: '',
-          operationTypes: [],
-          aircraftRegistrations: [],
-          privileges: [],
-          conditions: [],
-          notificationRequirements: [],
-          notes: '',
-          tags: [],
-          renewalInfo: {
-            isRenewalRequired: true,
-            renewalLeadDays: 60,
-            renewalStatus: null
-          }
-        })
-      }
-      setCurrentStep(1)
-      setError('')
+    if (permit) {
+      setFormData({
+        type: permit.type || 'sfoc',
+        name: permit.name || '',
+        permitNumber: permit.permitNumber || '',
+        issuingAuthority: permit.issuingAuthority || '',
+        issuingOffice: permit.issuingOffice || '',
+        contactEmail: permit.contactEmail || '',
+        issueDate: formatDateForInput(permit.issueDate),
+        effectiveDate: formatDateForInput(permit.effectiveDate),
+        expiryDate: formatDateForInput(permit.expiryDate),
+        geographicArea: permit.geographicArea || '',
+        operationTypes: permit.operationTypes || [],
+        aircraftRegistrations: permit.aircraftRegistrations || [],
+        privileges: permit.privileges || [],
+        conditions: permit.conditions || [],
+        notificationRequirements: permit.notificationRequirements || [],
+        notes: permit.notes || '',
+        tags: permit.tags || []
+      })
+    } else {
+      // Reset form for new permit
+      setFormData({
+        type: 'sfoc',
+        name: '',
+        permitNumber: '',
+        issuingAuthority: '',
+        issuingOffice: '',
+        contactEmail: '',
+        issueDate: '',
+        effectiveDate: '',
+        expiryDate: '',
+        geographicArea: '',
+        operationTypes: [],
+        aircraftRegistrations: [],
+        privileges: [],
+        conditions: [],
+        notificationRequirements: [],
+        notes: '',
+        tags: []
+      })
     }
-  }, [isOpen, editPermit])
+    setCurrentStep(0)
+    setError('')
+  }, [permit, isOpen])
 
-  function formatDateForInput(dateValue) {
-    if (!dateValue) return ''
-    const date = dateValue?.toDate?.() || new Date(dateValue)
-    return date.toISOString().split('T')[0]
+  const updateField = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleTypeChange = (type) => {
+  const toggleOperationType = (typeId) => {
     setFormData(prev => ({
       ...prev,
-      type,
-      issuingAuthority: PERMIT_TYPES[type]?.authority || prev.issuingAuthority
+      operationTypes: prev.operationTypes.includes(typeId)
+        ? prev.operationTypes.filter(t => t !== typeId)
+        : [...prev.operationTypes, typeId]
     }))
   }
 
-  const handleOperationTypeToggle = (opType) => {
+  const addPrivilege = () => {
+    if (!newPrivilege.description.trim()) return
     setFormData(prev => ({
       ...prev,
-      operationTypes: prev.operationTypes.includes(opType)
-        ? prev.operationTypes.filter(t => t !== opType)
-        : [...prev.operationTypes, opType]
+      privileges: [...prev.privileges, { ...newPrivilege, id: `priv_${Date.now()}` }]
     }))
+    setNewPrivilege({ description: '', conditions: '', reference: '' })
   }
 
-  const handleAddAircraft = () => {
-    const registration = prompt('Enter aircraft registration:')
-    if (registration?.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        aircraftRegistrations: [...prev.aircraftRegistrations, registration.trim().toUpperCase()]
-      }))
-    }
-  }
-
-  const handleRemoveAircraft = (registration) => {
-    setFormData(prev => ({
-      ...prev,
-      aircraftRegistrations: prev.aircraftRegistrations.filter(r => r !== registration)
-    }))
-  }
-
-  // Privilege management
-  const handleAddPrivilege = () => {
-    setFormData(prev => ({
-      ...prev,
-      privileges: [...prev.privileges, {
-        id: generateId(),
-        description: '',
-        conditions: '',
-        reference: ''
-      }]
-    }))
-  }
-
-  const handleUpdatePrivilege = (id, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      privileges: prev.privileges.map(p =>
-        p.id === id ? { ...p, [field]: value } : p
-      )
-    }))
-  }
-
-  const handleRemovePrivilege = (id) => {
+  const removePrivilege = (id) => {
     setFormData(prev => ({
       ...prev,
       privileges: prev.privileges.filter(p => p.id !== id)
     }))
   }
 
-  // Condition management
-  const handleAddCondition = () => {
+  const addCondition = () => {
+    if (!newCondition.description.trim()) return
     setFormData(prev => ({
       ...prev,
-      conditions: [...prev.conditions, {
-        id: generateId(),
-        category: 'operational',
-        description: '',
-        isCritical: false
-      }]
+      conditions: [...prev.conditions, { ...newCondition, id: `cond_${Date.now()}` }]
     }))
+    setNewCondition({ category: 'operational', description: '', isCritical: false })
   }
 
-  const handleUpdateCondition = (id, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      conditions: prev.conditions.map(c =>
-        c.id === id ? { ...c, [field]: value } : c
-      )
-    }))
-  }
-
-  const handleRemoveCondition = (id) => {
+  const removeCondition = (id) => {
     setFormData(prev => ({
       ...prev,
       conditions: prev.conditions.filter(c => c.id !== id)
     }))
   }
 
-  const validateStep = (step) => {
-    switch (step) {
-      case 1:
-        if (!formData.name.trim()) return 'Permit name is required'
-        if (!formData.type) return 'Permit type is required'
-        if (!formData.effectiveDate) return 'Effective date is required'
-        return null
-      case 2:
-        return null // Scope is optional
-      case 3:
-        // Check that all privileges have descriptions
-        for (const p of formData.privileges) {
-          if (!p.description.trim()) return 'All privileges must have descriptions'
-        }
-        // Check that all conditions have descriptions
-        for (const c of formData.conditions) {
-          if (!c.description.trim()) return 'All conditions must have descriptions'
-        }
-        return null
-      case 4:
-        return null // Documents are optional
-      default:
-        return null
+  const validateStep = () => {
+    setError('')
+
+    if (currentStep === 0) {
+      if (!formData.name.trim()) {
+        setError('Permit name is required')
+        return false
+      }
+      if (!formData.issueDate) {
+        setError('Issue date is required')
+        return false
+      }
     }
+
+    return true
   }
 
   const handleNext = () => {
-    const error = validateStep(currentStep)
-    if (error) {
-      setError(error)
-      return
-    }
-    setError('')
-    setCurrentStep(prev => Math.min(prev + 1, STEPS.length))
+    if (!validateStep()) return
+    setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1))
   }
 
-  const handlePrevious = () => {
-    setError('')
-    setCurrentStep(prev => Math.max(prev - 1, 1))
+  const handleBack = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 0))
   }
 
-  const handleSave = async () => {
-    const error = validateStep(currentStep)
-    if (error) {
-      setError(error)
-      return
-    }
-
-    setSaving(true)
-    setError('')
+  const handleSubmit = async () => {
+    if (!validateStep()) return
 
     try {
-      // Filter out empty privileges and conditions
-      const cleanedData = {
+      setLoading(true)
+      setError('')
+
+      const permitData = {
         ...formData,
-        operatorId,
-        privileges: formData.privileges.filter(p => p.description.trim()),
-        conditions: formData.conditions.filter(c => c.description.trim()),
-        issueDate: formData.issueDate ? new Date(formData.issueDate) : null,
-        effectiveDate: formData.effectiveDate ? new Date(formData.effectiveDate) : null,
-        expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : null
+        issueDate: formData.issueDate ? Timestamp.fromDate(new Date(formData.issueDate)) : null,
+        effectiveDate: formData.effectiveDate ? Timestamp.fromDate(new Date(formData.effectiveDate)) : null,
+        expiryDate: formData.expiryDate ? Timestamp.fromDate(new Date(formData.expiryDate)) : null
       }
 
-      if (editPermit) {
-        await updatePermit(editPermit.id, cleanedData)
+      if (isEditing) {
+        await updatePermit(permit.id, permitData)
       } else {
-        await createPermit(cleanedData)
+        await createPermit(permitData)
       }
 
       onSave?.()
       onClose()
     } catch (err) {
-      console.error('Error saving permit:', err)
       setError(err.message || 'Failed to save permit')
     } finally {
-      setSaving(false)
+      setLoading(false)
     }
   }
 
   if (!isOpen) return null
 
+  const permitType = PERMIT_TYPES[formData.type]
+  const TypeIcon = TYPE_ICONS[formData.type] || FileText
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {editPermit ? 'Edit Permit' : 'Add New Permit'}
-            </h2>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <TypeIcon className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {isEditing ? 'Edit Permit' : 'Add Permit'}
+                </h2>
+                <p className="text-sm text-gray-500">{permitType?.name}</p>
+              </div>
+            </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
 
-          {/* Steps indicator */}
+          {/* Step indicator */}
           <div className="flex items-center gap-2 mt-4">
-            {STEPS.map((step, index) => {
-              const StepIcon = step.icon
-              const isActive = step.id === currentStep
-              const isComplete = step.id < currentStep
-
-              return (
-                <React.Fragment key={step.id}>
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
-                    isActive
-                      ? 'bg-cyan-100 text-cyan-700'
-                      : isComplete
-                        ? 'bg-green-100 text-green-700'
-                        : 'text-gray-400'
-                  }`}>
-                    {isComplete ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <StepIcon className="w-4 h-4" />
-                    )}
-                    <span className="text-sm font-medium hidden sm:inline">{step.name}</span>
-                  </div>
-                  {index < STEPS.length - 1 && (
-                    <ChevronRight className="w-4 h-4 text-gray-300" />
+            {STEPS.map((step, index) => (
+              <div key={step.id} className="flex items-center">
+                <button
+                  onClick={() => index < currentStep && setCurrentStep(index)}
+                  disabled={index > currentStep}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                    index === currentStep
+                      ? 'bg-blue-100 text-blue-700'
+                      : index < currentStep
+                      ? 'bg-green-100 text-green-700 cursor-pointer'
+                      : 'bg-gray-100 text-gray-400'
+                  }`}
+                >
+                  {index < currentStep ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <span className="w-4 h-4 flex items-center justify-center text-xs font-medium">
+                      {index + 1}
+                    </span>
                   )}
-                </React.Fragment>
-              )
-            })}
+                  <span className="hidden sm:inline">{step.label}</span>
+                </button>
+                {index < STEPS.length - 1 && (
+                  <ChevronRight className="w-4 h-4 text-gray-300 mx-1" />
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-sm text-red-700">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            {error}
-          </div>
-        )}
-
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              {/* Permit Type */}
+          {error && (
+            <div className="mb-4 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Step 1: Basic Info */}
+          {currentStep === 0 && (
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Permit Type *
+                  Permit Type
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {Object.entries(PERMIT_TYPES).map(([key, type]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => handleTypeChange(key)}
-                      className={`p-3 text-left rounded-lg border transition-colors ${
-                        formData.type === key
-                          ? 'border-cyan-500 bg-cyan-50 ring-2 ring-cyan-200'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <span className="font-medium text-gray-900 text-sm">{type.shortLabel}</span>
-                      <p className="text-xs text-gray-500 mt-0.5">{type.authority}</p>
-                    </button>
-                  ))}
+                  {Object.values(PERMIT_TYPES).map(type => {
+                    const Icon = TYPE_ICONS[type.id] || FileText
+                    return (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => updateField('type', type.id)}
+                        className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          formData.type === type.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <Icon className={`w-5 h-5 mb-1 ${formData.type === type.id ? 'text-blue-600' : 'text-gray-400'}`} />
+                        <p className="text-sm font-medium text-gray-900">{type.shortName}</p>
+                        <p className="text-xs text-gray-500">{type.authority}</p>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
-              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Permit Name *
+                  Permit Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => updateField('name', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., BVLOS Pipeline Inspection SFOC"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Permit Number */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -435,9 +367,9 @@ export default function AddPermitModal({
                   <input
                     type="text"
                     value={formData.permitNumber}
-                    onChange={(e) => setFormData(prev => ({ ...prev, permitNumber: e.target.value }))}
+                    onChange={(e) => updateField('permitNumber', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g., SFOC-2024-12345"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -447,63 +379,34 @@ export default function AddPermitModal({
                   <input
                     type="text"
                     value={formData.issuingAuthority}
-                    onChange={(e) => setFormData(prev => ({ ...prev, issuingAuthority: e.target.value }))}
-                    placeholder="e.g., Transport Canada"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    onChange={(e) => updateField('issuingAuthority', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={permitType?.authority || 'e.g., Transport Canada'}
                   />
                 </div>
               </div>
 
-              {/* Office and Contact */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Issuing Office
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.issuingOffice}
-                    onChange={(e) => setFormData(prev => ({ ...prev, issuingOffice: e.target.value }))}
-                    placeholder="e.g., Prairie & Northern Region"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contact Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
-                    placeholder="e.g., sfoc@tc.gc.ca"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              {/* Dates */}
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Issue Date
+                    Issue Date <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
                     value={formData.issueDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, issueDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    onChange={(e) => updateField('issueDate', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Effective Date *
+                    Effective Date
                   </label>
                   <input
                     type="date"
                     value={formData.effectiveDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, effectiveDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    onChange={(e) => updateField('effectiveDate', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -513,329 +416,286 @@ export default function AddPermitModal({
                   <input
                     type="date"
                     value={formData.expiryDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    onChange={(e) => updateField('expiryDate', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Leave blank for no expiry</p>
                 </div>
               </div>
             </div>
           )}
 
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              {/* Geographic Area */}
+          {/* Step 2: Scope */}
+          {currentStep === 1 && (
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Geographic Area
                 </label>
                 <textarea
                   value={formData.geographicArea}
-                  onChange={(e) => setFormData(prev => ({ ...prev, geographicArea: e.target.value }))}
-                  placeholder="Describe the geographic area covered by this permit..."
+                  onChange={(e) => updateField('geographicArea', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Describe the authorized operating area..."
                 />
               </div>
 
-              {/* Operation Types */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Operation Types Permitted
+                  Operation Types
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(OPERATION_TYPES).map(([key, type]) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {OPERATION_TYPES.map(type => (
                     <button
-                      key={key}
+                      key={type.id}
                       type="button"
-                      onClick={() => handleOperationTypeToggle(key)}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                        formData.operationTypes.includes(key)
-                          ? 'bg-cyan-100 text-cyan-700 border border-cyan-300'
-                          : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                      onClick={() => toggleOperationType(type.id)}
+                      className={`p-2 text-left rounded-lg border transition-colors ${
+                        formData.operationTypes.includes(type.id)
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
                       }`}
                     >
-                      {type.label}
+                      <span className="text-sm">{type.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Aircraft Registrations */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Aircraft Registrations
                 </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {formData.aircraftRegistrations.map(reg => (
-                    <span
-                      key={reg}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm"
-                    >
-                      {reg}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveAircraft(reg)}
-                        className="p-0.5 hover:text-red-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAddAircraft}
-                  className="text-sm text-cyan-600 hover:text-cyan-700 flex items-center gap-1"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Aircraft
-                </button>
+                <input
+                  type="text"
+                  value={formData.aircraftRegistrations.join(', ')}
+                  onChange={(e) => updateField('aircraftRegistrations', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="C-XXXX, C-YYYY (comma separated)"
+                />
               </div>
             </div>
           )}
 
-          {currentStep === 3 && (
-            <div className="space-y-8">
+          {/* Step 3: Privileges & Conditions */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
               {/* Privileges */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Privileges
-                  </label>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Privileges</h3>
+                <p className="text-xs text-gray-500 mb-3">What operations does this permit authorize?</p>
+
+                {formData.privileges.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {formData.privileges.map(priv => (
+                      <div key={priv.id} className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900">{priv.description}</p>
+                          {priv.conditions && (
+                            <p className="text-xs text-gray-500 mt-0.5">Conditions: {priv.conditions}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => removePrivilege(priv.id)}
+                          className="p-1 text-gray-400 hover:text-red-500"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="p-3 bg-gray-50 rounded-lg space-y-2">
+                  <input
+                    type="text"
+                    value={newPrivilege.description}
+                    onChange={(e) => setNewPrivilege(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="Privilege description..."
+                  />
+                  <input
+                    type="text"
+                    value={newPrivilege.conditions}
+                    onChange={(e) => setNewPrivilege(prev => ({ ...prev, conditions: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="Conditions (optional)..."
+                  />
                   <button
                     type="button"
-                    onClick={handleAddPrivilege}
-                    className="text-sm text-cyan-600 hover:text-cyan-700 flex items-center gap-1"
+                    onClick={addPrivilege}
+                    disabled={!newPrivilege.description.trim()}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" />
                     Add Privilege
                   </button>
                 </div>
-                <div className="space-y-3">
-                  {formData.privileges.map((privilege, index) => (
-                    <div key={privilege.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-start gap-3">
-                        <span className="text-sm font-medium text-gray-500 mt-2">{index + 1}.</span>
-                        <div className="flex-1 space-y-3">
-                          <input
-                            type="text"
-                            value={privilege.description}
-                            onChange={(e) => handleUpdatePrivilege(privilege.id, 'description', e.target.value)}
-                            placeholder="Privilege description (e.g., BVLOS operations up to 2km)"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                          />
-                          <div className="grid grid-cols-2 gap-3">
-                            <input
-                              type="text"
-                              value={privilege.conditions}
-                              onChange={(e) => handleUpdatePrivilege(privilege.id, 'conditions', e.target.value)}
-                              placeholder="Conditions (optional)"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                            />
-                            <input
-                              type="text"
-                              value={privilege.reference}
-                              onChange={(e) => handleUpdatePrivilege(privilege.id, 'reference', e.target.value)}
-                              placeholder="Reference (optional)"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                            />
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemovePrivilege(privilege.id)}
-                          className="p-1 text-gray-400 hover:text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {formData.privileges.length === 0 && (
-                    <p className="text-sm text-gray-500 italic text-center py-4">
-                      No privileges added yet
-                    </p>
-                  )}
-                </div>
               </div>
 
               {/* Conditions */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Conditions & Restrictions
-                  </label>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Conditions & Restrictions</h3>
+                <p className="text-xs text-gray-500 mb-3">What restrictions or requirements apply?</p>
+
+                {formData.conditions.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {formData.conditions.map(cond => (
+                      <div
+                        key={cond.id}
+                        className={`flex items-start gap-2 p-3 rounded-lg border ${
+                          cond.isCritical ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'
+                        }`}
+                      >
+                        <AlertCircle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${cond.isCritical ? 'text-red-600' : 'text-amber-600'}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            {cond.isCritical && (
+                              <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded">CRITICAL</span>
+                            )}
+                            <span className="text-xs text-gray-500 uppercase">{cond.category}</span>
+                          </div>
+                          <p className="text-sm text-gray-900 mt-0.5">{cond.description}</p>
+                        </div>
+                        <button
+                          onClick={() => removeCondition(cond.id)}
+                          className="p-1 text-gray-400 hover:text-red-500"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="p-3 bg-gray-50 rounded-lg space-y-2">
+                  <div className="flex gap-2">
+                    <select
+                      value={newCondition.category}
+                      onChange={(e) => setNewCondition(prev => ({ ...prev, category: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      {CONDITION_CATEGORIES.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.label}</option>
+                      ))}
+                    </select>
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={newCondition.isCritical}
+                        onChange={(e) => setNewCondition(prev => ({ ...prev, isCritical: e.target.checked }))}
+                        className="rounded border-gray-300"
+                      />
+                      Critical
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    value={newCondition.description}
+                    onChange={(e) => setNewCondition(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="Condition description..."
+                  />
                   <button
                     type="button"
-                    onClick={handleAddCondition}
-                    className="text-sm text-cyan-600 hover:text-cyan-700 flex items-center gap-1"
+                    onClick={addCondition}
+                    disabled={!newCondition.description.trim()}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" />
                     Add Condition
                   </button>
                 </div>
-                <div className="space-y-3">
-                  {formData.conditions.map((condition, index) => (
-                    <div key={condition.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-start gap-3">
-                        <span className="text-sm font-medium text-gray-500 mt-2">{index + 1}.</span>
-                        <div className="flex-1 space-y-3">
-                          <input
-                            type="text"
-                            value={condition.description}
-                            onChange={(e) => handleUpdateCondition(condition.id, 'description', e.target.value)}
-                            placeholder="Condition description (e.g., Maximum altitude 400ft AGL)"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                          />
-                          <div className="flex items-center gap-4">
-                            <select
-                              value={condition.category}
-                              onChange={(e) => handleUpdateCondition(condition.id, 'category', e.target.value)}
-                              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                            >
-                              {Object.entries(CONDITION_CATEGORIES).map(([key, cat]) => (
-                                <option key={key} value={key}>{cat.label}</option>
-                              ))}
-                            </select>
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={condition.isCritical}
-                                onChange={(e) => handleUpdateCondition(condition.id, 'isCritical', e.target.checked)}
-                                className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                              />
-                              <span className="text-sm text-gray-700">Critical</span>
-                            </label>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveCondition(condition.id)}
-                          className="p-1 text-gray-400 hover:text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {formData.conditions.length === 0 && (
-                    <p className="text-sm text-gray-500 italic text-center py-4">
-                      No conditions added yet
-                    </p>
-                  )}
-                </div>
               </div>
             </div>
           )}
 
-          {currentStep === 4 && (
-            <div className="space-y-6">
-              {/* Documents info */}
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-sm text-amber-800">
-                  <strong>Note:</strong> Documents can be uploaded after saving the permit.
-                  Complete the basic information first, then add documents from the permit detail view.
-                </p>
-              </div>
-
-              {/* Notes */}
+          {/* Step 4: Notes */}
+          {currentStep === 3 && (
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Notes
                 </label>
                 <textarea
                   value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Any additional notes about this permit..."
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  onChange={(e) => updateField('notes', e.target.value)}
+                  rows={6}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Additional notes about this permit..."
                 />
               </div>
 
-              {/* Renewal Settings */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Renewal Settings
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tags
                 </label>
-                <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.renewalInfo.isRenewalRequired}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        renewalInfo: { ...prev.renewalInfo, isRenewalRequired: e.target.checked }
-                      }))}
-                      className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
-                    />
-                    <span className="text-sm text-gray-700">Renewal required</span>
-                  </label>
-                  {formData.renewalInfo.isRenewalRequired && (
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">
-                        Start renewal process (days before expiry)
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.renewalInfo.renewalLeadDays}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          renewalInfo: { ...prev.renewalInfo, renewalLeadDays: parseInt(e.target.value) || 60 }
-                        }))}
-                        min="0"
-                        max="365"
-                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                      />
-                    </div>
-                  )}
-                </div>
+                <input
+                  type="text"
+                  value={formData.tags.join(', ')}
+                  onChange={(e) => updateField('tags', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="pipeline, bvlos, client-xyz (comma separated)"
+                />
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> You can upload documents after creating the permit from the permit detail view.
+                </p>
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 flex justify-between">
+        <div className="p-6 border-t border-gray-200 flex items-center justify-between">
           <button
-            onClick={currentStep === 1 ? onClose : handlePrevious}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+            onClick={currentStep === 0 ? onClose : handleBack}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            {currentStep === 1 ? 'Cancel' : 'Previous'}
+            {currentStep === 0 ? 'Cancel' : 'Back'}
           </button>
 
-          <div className="flex items-center gap-3">
-            {currentStep < STEPS.length ? (
-              <button
-                onClick={handleNext}
-                className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2"
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 transition-colors flex items-center gap-2"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4" />
-                    {editPermit ? 'Save Changes' : 'Create Permit'}
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+          {currentStep < STEPS.length - 1 ? (
+            <button
+              onClick={handleNext}
+              className="flex items-center gap-2 btn-primary"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex items-center gap-2 btn-primary"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  {isEditing ? 'Save Changes' : 'Create Permit'}
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
   )
+}
+
+AddPermitModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSave: PropTypes.func,
+  permit: PropTypes.object
 }

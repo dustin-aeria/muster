@@ -986,6 +986,9 @@ VITE_MAPBOX_ACCESS_TOKEN=
 - [x] Policy category management *(Completed - CategoryManager component already existed, integrated into Settings with new Policies tab)*
 - [x] Additional form templates *(Completed - Added site_survey and flight_plan templates to formDefinitions.js with comprehensive RPAS-specific fields)*
 
+### Medium Priority - **BATCH 8 COMPLETE (Jan 28, 2026)**
+- [x] Permits & Certificates feature *(Completed - Full CRUD for permits/certificates with types: SFOC, COR, Land Access, Airspace Auth, Client Approval. Features: status badges, expiry tracking, privileges & conditions, document upload, Calendar integration, ComplianceHub tab)*
+
 ### Lower Priority
 - [ ] API integrations (Weather, NOTAMs, etc.)
 - [ ] Platform migration (Firebase to Supabase)
