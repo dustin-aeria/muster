@@ -86,7 +86,8 @@ const OPERATION_TYPES = [
 const FLIGHT_GEOGRAPHY_METHODS = [
   { value: 'inside-out', label: 'Inside-Out', description: 'Start with flight path, add buffers outward' },
   { value: 'reverse', label: 'Reverse', description: 'Start with available ground, determine max flight area' },
-  { value: 'manual', label: 'Manual', description: 'Draw flight geography directly on map' }
+  { value: 'manual', label: 'Manual', description: 'Draw flight geography directly on map' },
+  { value: 'sameAsBoundary', label: 'Same as Boundary', description: 'Use the operations boundary as flight geography' }
 ]
 
 const AREA_TYPES = [
@@ -1266,7 +1267,31 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
               </label>
               <select
                 value={siteFlightPlan.flightGeographyMethod || 'manual'}
-                onChange={(e) => updateSiteFlightPlan({ flightGeographyMethod: e.target.value })}
+                onChange={(e) => {
+                  const method = e.target.value
+                  updateSiteFlightPlan({ flightGeographyMethod: method })
+
+                  // If "Same as Boundary" selected, copy the operations boundary to flight geography
+                  if (method === 'sameAsBoundary' && activeSite?.mapData?.siteSurvey?.operationsBoundary) {
+                    const boundary = activeSite.mapData.siteSurvey.operationsBoundary
+                    // Copy boundary to flight geography
+                    const updatedSites = sites.map(site => {
+                      if (site.id !== activeSiteId) return site
+                      return {
+                        ...site,
+                        mapData: {
+                          ...site.mapData,
+                          flightPlan: {
+                            ...(site.mapData?.flightPlan || {}),
+                            flightGeography: JSON.parse(JSON.stringify(boundary)) // Deep copy
+                          }
+                        },
+                        updatedAt: new Date().toISOString()
+                      }
+                    })
+                    onUpdate({ sites: updatedSites })
+                  }
+                }}
                 className="input"
               >
                 {FLIGHT_GEOGRAPHY_METHODS.map(method => (
@@ -1275,6 +1300,18 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
                   </option>
                 ))}
               </select>
+              {siteFlightPlan.flightGeographyMethod === 'sameAsBoundary' && !activeSite?.mapData?.siteSurvey?.operationsBoundary && (
+                <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+                  <AlertTriangle className="w-4 h-4" />
+                  Draw an operations boundary in Site Survey first
+                </p>
+              )}
+              {siteFlightPlan.flightGeographyMethod === 'sameAsBoundary' && activeSite?.mapData?.siteSurvey?.operationsBoundary && (
+                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Flight geography copied from operations boundary
+                </p>
+              )}
             </div>
             
             <div>

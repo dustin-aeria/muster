@@ -349,6 +349,114 @@ export function AreaMeasurement({ polygon, label = "Operations Boundary Area" })
 }
 
 // ============================================
+// DISTANCE MEASUREMENT TOOL
+// ============================================
+
+/**
+ * Calculate distance between two points using Haversine formula
+ * @param {number} lat1 - First point latitude
+ * @param {number} lon1 - First point longitude
+ * @param {number} lat2 - Second point latitude
+ * @param {number} lon2 - Second point longitude
+ * @returns {number} Distance in meters
+ */
+export function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000 // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+/**
+ * Format distance for display
+ * @param {number} meters - Distance in meters
+ * @returns {string} Formatted distance string
+ */
+export function formatDistance(meters) {
+  if (meters >= 1000) {
+    return `${(meters / 1000).toFixed(2)} km`
+  }
+  return `${Math.round(meters)} m`
+}
+
+export function DistanceMeasurement({
+  points = [],
+  onClear,
+  label = "Distance Measurement"
+}) {
+  if (points.length === 0) {
+    return (
+      <div className="bg-gray-50 rounded-lg p-4 text-center">
+        <Ruler className="w-6 h-6 mx-auto text-gray-400 mb-2" />
+        <p className="text-sm text-gray-500">Click "Measure" tool then click two points on the map</p>
+      </div>
+    )
+  }
+
+  if (points.length === 1) {
+    return (
+      <div className="bg-blue-50 rounded-lg p-4">
+        <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+          <Ruler className="w-4 h-4" />
+          {label}
+        </h4>
+        <p className="text-sm text-blue-700">
+          Point 1 set. Click second point to measure distance.
+        </p>
+        <p className="text-xs text-blue-600 mt-1">
+          {points[0].lat.toFixed(6)}, {points[0].lng.toFixed(6)}
+        </p>
+      </div>
+    )
+  }
+
+  const distance = calculateDistance(
+    points[0].lat, points[0].lng,
+    points[1].lat, points[1].lng
+  )
+
+  return (
+    <div className="bg-blue-50 rounded-lg p-4">
+      <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+        <Ruler className="w-4 h-4" />
+        {label}
+      </h4>
+
+      <div className="text-2xl font-bold text-blue-700 mb-2">
+        {formatDistance(distance)}
+      </div>
+
+      <div className="text-sm text-blue-600 space-y-1">
+        <p>From: {points[0].lat.toFixed(6)}, {points[0].lng.toFixed(6)}</p>
+        <p>To: {points[1].lat.toFixed(6)}, {points[1].lng.toFixed(6)}</p>
+      </div>
+
+      <div className="mt-3 text-xs text-blue-600 space-y-0.5">
+        <p><strong>Distance:</strong> {Math.round(distance)} meters</p>
+        <p><strong>Distance:</strong> {(distance / 1000).toFixed(3)} km</p>
+        <p><strong>Distance:</strong> {(distance * 3.28084).toFixed(0)} feet</p>
+        <p><strong>Distance:</strong> {(distance / 1852).toFixed(2)} NM</p>
+      </div>
+
+      {onClear && (
+        <button
+          onClick={onClear}
+          className="mt-3 w-full px-3 py-2 text-sm bg-white text-blue-700 border border-blue-200 rounded hover:bg-blue-100 flex items-center justify-center gap-2"
+        >
+          <RotateCcw className="w-3 h-3" />
+          Clear Measurement
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ============================================
 // POPULATION DENSITY HELPER
 // ============================================
 
@@ -727,9 +835,12 @@ export default {
   CoordinateInput,
   LocationSearch,
   AreaMeasurement,
+  DistanceMeasurement,
   PopulationDensityHelper,
   SiteSurveyQuickActions,
   SiteSurveyInstructions,
   ObstacleLabelPrompt,
-  reverseGeocode
+  reverseGeocode,
+  calculateDistance,
+  formatDistance
 }

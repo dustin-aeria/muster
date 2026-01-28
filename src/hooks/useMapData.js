@@ -119,21 +119,32 @@ export const DRAWING_MODES = {
   },
   
   // Emergency drawing modes
-  musterPoint: { 
-    id: 'musterPoint', 
-    label: 'Add Muster Point', 
+  musterPoint: {
+    id: 'musterPoint',
+    label: 'Add Muster Point',
     cursor: 'crosshair',
     type: 'marker',
     layer: 'emergency',
     single: false
   },
-  evacuationRoute: { 
-    id: 'evacuationRoute', 
-    label: 'Draw Evacuation Route', 
+  evacuationRoute: {
+    id: 'evacuationRoute',
+    label: 'Draw Evacuation Route',
     cursor: 'crosshair',
     type: 'line',
     layer: 'emergency',
     single: false
+  },
+
+  // Measurement tool (read-only, doesn't save to project)
+  measureDistance: {
+    id: 'measureDistance',
+    label: 'Measure Distance',
+    cursor: 'crosshair',
+    type: 'measurement',
+    layer: null, // Not tied to a specific layer
+    single: false,
+    readOnly: true // Doesn't save to project data
   }
 }
 
