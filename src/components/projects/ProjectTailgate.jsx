@@ -103,6 +103,11 @@ export default function ProjectTailgate({ project, onUpdate }) {
     weather: true
   })
 
+  // Site selection for multi-site projects
+  const sites = project.sites || []
+  const [activeSiteId, setActiveSiteId] = useState(project.activeSiteId || sites[0]?.id || null)
+  const activeSite = sites.find(s => s.id === activeSiteId) || sites[0] || null
+
   // Initialize tailgate data - support both single day and multi-day
   useEffect(() => {
     if (!project.tailgate) {
@@ -509,6 +514,68 @@ export default function ProjectTailgate({ project, onUpdate }) {
 
   return (
     <div className="space-y-6">
+      {/* Site Selector for Multi-Site Projects */}
+      {sites.length > 1 && (
+        <div className="card bg-gradient-to-r from-aeria-navy/5 to-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MapPin className="w-5 h-5 text-aeria-navy" />
+              <div>
+                <h3 className="font-semibold text-gray-900">Active Site</h3>
+                <p className="text-sm text-gray-600">Select the site for this tailgate briefing</p>
+              </div>
+            </div>
+            <select
+              value={activeSiteId || ''}
+              onChange={(e) => setActiveSiteId(e.target.value)}
+              className="input w-auto min-w-[200px]"
+            >
+              {sites.map(site => (
+                <option key={site.id} value={site.id}>
+                  {site.name || `Site ${sites.indexOf(site) + 1}`}
+                </option>
+              ))}
+            </select>
+          </div>
+          {activeSite && (
+            <div className="mt-3 pt-3 border-t border-gray-200 flex items-center gap-4 text-sm text-gray-600">
+              {activeSite.mapData?.siteSurvey?.siteLocation && (
+                <span className="flex items-center gap-1">
+                  <Check className="w-4 h-4 text-green-500" />
+                  Location set
+                </span>
+              )}
+              {activeSite.mapData?.siteSurvey?.operationsBoundary && (
+                <span className="flex items-center gap-1">
+                  <Check className="w-4 h-4 text-green-500" />
+                  Boundary defined
+                </span>
+              )}
+              {activeSite.siteSurvey?.weatherPlanning?.assumedConditions && (
+                <span className="flex items-center gap-1">
+                  <Check className="w-4 h-4 text-green-500" />
+                  Weather planned
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Single Site Info Banner */}
+      {sites.length === 1 && activeSite && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-3">
+          <MapPin className="w-5 h-5 text-gray-500" />
+          <span className="font-medium text-gray-700">{activeSite.name || 'Site 1'}</span>
+          {activeSite.mapData?.siteSurvey?.siteLocation && (
+            <span className="text-sm text-green-600 flex items-center gap-1">
+              <Check className="w-4 h-4" />
+              Location set
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Multi-Day Header */}
       {isMultiDay && (
         <div className="card bg-gradient-to-r from-blue-50 to-white">
@@ -756,21 +823,35 @@ export default function ProjectTailgate({ project, onUpdate }) {
           <div className="mt-4 space-y-4">
             {/* Live Weather Widget */}
             {(() => {
+              if (!activeSite) {
+                return (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-800">No site available</p>
+                      <p className="text-sm text-amber-700">
+                        Add a site in the <strong>Site Survey</strong> tab first.
+                      </p>
+                    </div>
+                  </div>
+                )
+              }
+
               // Get coordinates from mapData siteLocation (GeoJSON format [lng, lat])
-              const siteLocation = project.sites?.[0]?.mapData?.siteSurvey?.siteLocation
+              const siteLocation = activeSite.mapData?.siteSurvey?.siteLocation
               const coords = siteLocation?.geometry?.coordinates
               if (coords && coords.length >= 2) {
                 return (
                   <WeatherWidget
                     latitude={coords[1]}
                     longitude={coords[0]}
-                    siteName={project.sites[0]?.name || 'Operation Site'}
+                    siteName={activeSite.name || 'Operation Site'}
                     compact={false}
                   />
                 )
               }
               // Fallback: check for legacy string coordinates format
-              const legacyCoords = project.sites?.[0]?.coordinates
+              const legacyCoords = activeSite.coordinates
               if (legacyCoords && typeof legacyCoords === 'string') {
                 const [lat, lng] = legacyCoords.split(',').map(c => parseFloat(c?.trim()))
                 if (!isNaN(lat) && !isNaN(lng)) {
@@ -778,20 +859,20 @@ export default function ProjectTailgate({ project, onUpdate }) {
                     <WeatherWidget
                       latitude={lat}
                       longitude={lng}
-                      siteName={project.sites[0]?.name || 'Operation Site'}
+                      siteName={activeSite.name || 'Operation Site'}
                       compact={false}
                     />
                   )
                 }
               }
-              // No coordinates available
+              // No coordinates available for this site
               return (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-amber-800">Site location not set</p>
                     <p className="text-sm text-amber-700">
-                      Set a site location in the <strong>Site Survey</strong> tab to see live weather data.
+                      Set a site location for <strong>{activeSite.name || 'this site'}</strong> in the Site Survey tab to see live weather data.
                     </p>
                   </div>
                 </div>
@@ -1112,16 +1193,32 @@ export default function ProjectTailgate({ project, onUpdate }) {
             )}
 
             {/* Site Information */}
-            {includedSections.siteInfo && project.sites?.[0] && (
+            {includedSections.siteInfo && activeSite && (
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-gray-600" />
                   Site Details
                 </h4>
-                <div className="text-sm text-gray-700">
-                  {project.sites[0].name && <p><span className="font-medium">Site:</span> {project.sites[0].name}</p>}
-                  {project.sites[0].address && <p><span className="font-medium">Address:</span> {project.sites[0].address}</p>}
-                  {project.sites[0].coordinates && <p><span className="font-medium">Coordinates:</span> {project.sites[0].coordinates}</p>}
+                <div className="text-sm text-gray-700 space-y-1">
+                  {activeSite.name && <p><span className="font-medium">Site:</span> {activeSite.name}</p>}
+                  {activeSite.address && <p><span className="font-medium">Address:</span> {activeSite.address}</p>}
+                  {(() => {
+                    const siteLocation = activeSite.mapData?.siteSurvey?.siteLocation
+                    const coords = siteLocation?.geometry?.coordinates
+                    if (coords && coords.length >= 2) {
+                      return <p><span className="font-medium">Coordinates:</span> {coords[1].toFixed(6)}, {coords[0].toFixed(6)}</p>
+                    }
+                    if (activeSite.coordinates) {
+                      return <p><span className="font-medium">Coordinates:</span> {activeSite.coordinates}</p>
+                    }
+                    return null
+                  })()}
+                  {activeSite.siteSurvey?.access?.landOwner && (
+                    <p><span className="font-medium">Land Owner:</span> {activeSite.siteSurvey.access.landOwner}</p>
+                  )}
+                  {activeSite.siteSurvey?.access?.accessNotes && (
+                    <p><span className="font-medium">Access Notes:</span> {activeSite.siteSurvey.access.accessNotes}</p>
+                  )}
                 </div>
               </div>
             )}
