@@ -8,7 +8,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2, Globe } from 'lucide-react'
 import { updateOperator } from '../lib/firestore'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
@@ -16,6 +16,7 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 
 import { auth } from '../lib/firebase'
 import BrandingSettings from '../components/BrandingSettings'
 import InsuranceManager from '../components/insurance/InsuranceManager'
+import RegulatoryFrameworkSelector from '../components/settings/RegulatoryFrameworkSelector'
 import { seedPolicies, isPoliciesSeeded } from '../lib/seedPolicies'
 import { logger } from '../lib/logger'
 
@@ -39,7 +40,8 @@ export default function Settings() {
     operatorNumber: '',
     email: '',
     phone: '',
-    address: ''
+    address: '',
+    regulatoryAuthority: 'tc' // Default to Transport Canada
   })
   const [companySaving, setCompanySaving] = useState(false)
   const [companySaved, setCompanySaved] = useState(false)
@@ -161,12 +163,13 @@ export default function Settings() {
     }
   }
 
-  const handleSaveCompany = async () => {
+  const handleSaveCompany = async (data = null) => {
     setCompanySaving(true)
     setCompanySaved(false)
     try {
       const docRef = doc(db, 'settings', 'company')
-      await setDoc(docRef, companyData, { merge: true })
+      const dataToSave = data || companyData
+      await setDoc(docRef, dataToSave, { merge: true })
       setCompanySaved(true)
       setTimeout(() => setCompanySaved(false), 3000)
     } catch (err) {
@@ -237,6 +240,7 @@ export default function Settings() {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User, description: 'Your personal information' },
     { id: 'company', label: 'Company', icon: Building, description: 'Organization settings' },
+    { id: 'regulatory', label: 'Regulatory', icon: Globe, description: 'Aviation authority & regulations' },
     { id: 'insurance', label: 'Insurance', icon: Shield, description: 'Insurance policies & documents' },
     { id: 'branding', label: 'Branding', icon: Palette, description: 'PDF export branding' },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alert preferences' },
@@ -449,6 +453,21 @@ export default function Settings() {
         {activeTab === 'insurance' && (
           <div className="card">
             <InsuranceManager operatorId={user?.uid} />
+          </div>
+        )}
+
+        {/* Regulatory Tab */}
+        {activeTab === 'regulatory' && (
+          <div className="card">
+            <RegulatoryFrameworkSelector
+              value={companyData.regulatoryAuthority}
+              onChange={(value) => {
+                setCompanyData({ ...companyData, regulatoryAuthority: value })
+                // Auto-save regulatory selection
+                handleSaveCompany({ ...companyData, regulatoryAuthority: value })
+              }}
+              showDetails={true}
+            />
           </div>
         )}
 

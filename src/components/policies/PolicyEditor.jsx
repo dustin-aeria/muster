@@ -781,6 +781,15 @@ export default function PolicyEditor({ isOpen, onClose, policy, onSaved }) {
     }
   }
 
+  // Check for duplicate policy number
+  const checkDuplicateNumber = async (number) => {
+    const policies = await getPolicies()
+    const existing = policies.find(p =>
+      p.number === number && (!isEditing || p.id !== policy?.id)
+    )
+    return existing
+  }
+
   // Save handlers
   const handleSave = async (createNewVersion = false, versionType = 'minor', versionNotes = '') => {
     setError('')
@@ -790,6 +799,12 @@ export default function PolicyEditor({ isOpen, onClose, policy, onSaved }) {
       if (!formData.title.trim()) throw new Error('Title is required')
       if (!formData.number.trim()) throw new Error('Policy number is required')
       if (!formData.reviewDate) throw new Error('Review date is required')
+
+      // Check for duplicate policy number
+      const duplicate = await checkDuplicateNumber(formData.number)
+      if (duplicate) {
+        throw new Error(`Policy number ${formData.number} is already in use by "${duplicate.title}". Please use a different number or click "Auto" to generate the next available number.`)
+      }
 
       if (isEditing) {
         await updatePolicyEnhanced(policy.id, formData, {
@@ -844,13 +859,28 @@ export default function PolicyEditor({ isOpen, onClose, policy, onSaved }) {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label">Policy Number <span className="text-red-500">*</span></label>
-                  <input
-                    name="number"
-                    value={formData.number}
-                    onChange={handleChange}
-                    className="input"
-                    placeholder="e.g., 1001"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      name="number"
+                      value={formData.number}
+                      onChange={handleChange}
+                      className="input flex-1"
+                      placeholder="Auto-generated"
+                    />
+                    {!isEditing && (
+                      <button
+                        type="button"
+                        onClick={generateNumber}
+                        className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700"
+                        title="Generate next available number"
+                      >
+                        Auto
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Auto-generated based on category. Manual override allowed.
+                  </p>
                 </div>
                 <div>
                   <label className="label">Category <span className="text-red-500">*</span></label>

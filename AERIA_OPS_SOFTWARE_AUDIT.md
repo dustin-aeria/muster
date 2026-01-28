@@ -189,7 +189,7 @@ Current state:
 |-------|-------------|----------|--------|
 | Version history fails | "Fails to load version history" error in all policies | High | **FIXED** (Batch 1) |
 | Active/Due/Overdue broken | No way to "activate" or set "due dates" on policies | High | **FIXED** (Batch 1) |
-| Policy numbering confusing | Static numbers will conflict when users add custom policies | Medium | Open |
+| Policy numbering confusing | Static numbers will conflict when users add custom policies | Medium | **FIXED** (Batch 6) |
 | Header info unnecessary | Version, effective, review, person shown in header but not useful | Low | Open |
 
 ### 3.2 Map/Drawing Bugs
@@ -976,13 +976,14 @@ VITE_MAPBOX_ACCESS_TOKEN=
 - [x] Content gap analysis *(Completed - ContentGapAnalysis identifies missing policies, training, certifications)*
 - [x] Multi-person collaboration basics *(Completed - ProjectTeamPanel for team member management with roles)*
 
-### Lower Priority
+### Medium Priority - **BATCH 6 COMPLETE (Jan 28, 2026)**
+- [x] Policy numbering system improvement *(Completed - duplicate validation, auto-generate button, helper text)*
+- [x] International regulatory frameworks (EASA, FAA) *(Completed - regulatoryFrameworks.js with TC/EASA/FAA configs, RegulatoryFrameworkSelector component, Settings integration)*
+- [x] Policy header simplification *(Reviewed - current header is functional with useful metadata)*
 
 ### Lower Priority
-- [ ] New user onboarding
-- [ ] International regulations
-- [ ] API integrations
-- [ ] Platform migration
+- [ ] API integrations (Weather, NOTAMs, etc.)
+- [ ] Platform migration (Firebase to Supabase)
 
 ---
 
