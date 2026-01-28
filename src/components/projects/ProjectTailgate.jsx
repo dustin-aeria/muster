@@ -755,14 +755,48 @@ export default function ProjectTailgate({ project, onUpdate }) {
         {expandedSections.weather && (
           <div className="mt-4 space-y-4">
             {/* Live Weather Widget */}
-            {project.sites?.[0]?.coordinates && (
-              <WeatherWidget
-                latitude={parseFloat(project.sites[0].coordinates.split(',')[0]?.trim())}
-                longitude={parseFloat(project.sites[0].coordinates.split(',')[1]?.trim())}
-                siteName={project.sites[0].name || 'Operation Site'}
-                compact={false}
-              />
-            )}
+            {(() => {
+              // Get coordinates from mapData siteLocation (GeoJSON format [lng, lat])
+              const siteLocation = project.sites?.[0]?.mapData?.siteSurvey?.siteLocation
+              const coords = siteLocation?.geometry?.coordinates
+              if (coords && coords.length >= 2) {
+                return (
+                  <WeatherWidget
+                    latitude={coords[1]}
+                    longitude={coords[0]}
+                    siteName={project.sites[0]?.name || 'Operation Site'}
+                    compact={false}
+                  />
+                )
+              }
+              // Fallback: check for legacy string coordinates format
+              const legacyCoords = project.sites?.[0]?.coordinates
+              if (legacyCoords && typeof legacyCoords === 'string') {
+                const [lat, lng] = legacyCoords.split(',').map(c => parseFloat(c?.trim()))
+                if (!isNaN(lat) && !isNaN(lng)) {
+                  return (
+                    <WeatherWidget
+                      latitude={lat}
+                      longitude={lng}
+                      siteName={project.sites[0]?.name || 'Operation Site'}
+                      compact={false}
+                    />
+                  )
+                }
+              }
+              // No coordinates available
+              return (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-800">Site location not set</p>
+                    <p className="text-sm text-amber-700">
+                      Set a site location in the <strong>Site Survey</strong> tab to see live weather data.
+                    </p>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Manual Weather Entry (for overrides or when no site coordinates) */}
             <div className="border-t border-gray-200 pt-4">
