@@ -185,31 +185,31 @@ Current state:
 ## 3. Known Bugs & Issues
 
 ### 3.1 Policies Module Bugs
-| Issue | Description | Priority |
-|-------|-------------|----------|
-| Version history fails | "Fails to load version history" error in all policies | High |
-| Active/Due/Overdue broken | No way to "activate" or set "due dates" on policies | High |
-| Policy numbering confusing | Static numbers will conflict when users add custom policies | Medium |
-| Header info unnecessary | Version, effective, review, person shown in header but not useful | Low |
+| Issue | Description | Priority | Status |
+|-------|-------------|----------|--------|
+| Version history fails | "Fails to load version history" error in all policies | High | **FIXED** (Batch 1) |
+| Active/Due/Overdue broken | No way to "activate" or set "due dates" on policies | High | **FIXED** (Batch 1) |
+| Policy numbering confusing | Static numbers will conflict when users add custom policies | Medium | Open |
+| Header info unnecessary | Version, effective, review, person shown in header but not useful | Low | Open |
 
 ### 3.2 Map/Drawing Bugs
-| Issue | Description | Priority |
-|-------|-------------|----------|
-| Cannot edit boundary points | Cannot manually edit or manipulate points of a boundary once laid | High |
-| Cannot edit evac route points | Cannot manipulate evac route points after initial creation | High |
+| Issue | Description | Priority | Status |
+|-------|-------------|----------|--------|
+| Cannot edit boundary points | Cannot manually edit or manipulate points of a boundary once laid | High | **FIXED** (Batch 1) |
+| Cannot edit evac route points | Cannot manipulate evac route points after initial creation | High | **FIXED** (Batch 1) |
 
 ### 3.3 Project Planning Bugs
-| Issue | Description | Priority |
-|-------|-------------|----------|
-| Review section broken | Review section doesn't function well, needs approval workflow | High |
-| Coverage requirements limited | Can only select 1 coverage requirement | Medium |
-| Sections incomplete | "Sections" don't include all tabs of project planning | Medium |
-| Templates placement wrong | Templates should be at end after export tab | Low |
+| Issue | Description | Priority | Status |
+|-------|-------------|----------|--------|
+| Review section broken | Review section doesn't function well, needs approval workflow | High | Open |
+| Coverage requirements limited | Can only select 1 coverage requirement | Medium | **FIXED** (Batch 1) |
+| Sections incomplete | "Sections" don't include all tabs of project planning | Medium | Open |
+| Templates placement wrong | Templates should be at end after export tab | Low | Open |
 
 ### 3.4 Calendar Redundancy
-| Issue | Description | Priority |
-|-------|-------------|----------|
-| Two calendars | Maintenance and general calendars are separate (should be unified) | Medium |
+| Issue | Description | Priority | Status |
+|-------|-------------|----------|--------|
+| Two calendars | Maintenance and general calendars are separate (should be unified) | Medium | Open |
 
 ---
 
@@ -948,11 +948,11 @@ VITE_MAPBOX_ACCESS_TOKEN=
 
 ## Appendix C: Priority Matrix
 
-### Critical (Do First) - **BATCH 1 IN PROGRESS**
-- [ ] Fix policy version history bug *(In Progress)*
-- [ ] Fix map point editing *(In Progress)*
-- [ ] Implement user-based policy tracking *(In Progress)*
-- [ ] Fix coverage requirements multi-select *(In Progress)*
+### Critical (Do First) - **BATCH 1 COMPLETE (Jan 28, 2026)**
+- [x] Fix policy version history bug *(Completed - in-memory sort)*
+- [x] Fix map point editing *(Completed - MapboxDraw integration)*
+- [x] Implement user-based policy tracking *(Completed - 1-year expiry)*
+- [x] Fix coverage requirements multi-select *(Completed - array-based)*
 - [ ] Calendar unification
 
 ### High Priority
