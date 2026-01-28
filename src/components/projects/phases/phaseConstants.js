@@ -23,7 +23,8 @@ import {
   Users,
   Truck,
   Settings,
-  DollarSign
+  DollarSign,
+  ShieldAlert
 } from 'lucide-react'
 
 // ============================================
@@ -41,6 +42,12 @@ export const PRE_FIELD_TASK_TYPES = {
     description: 'SFOC, airspace authorization',
     icon: FileCheck,
     color: 'bg-purple-100 text-purple-700 border-purple-200'
+  },
+  safety: {
+    label: 'Safety',
+    description: 'Safety planning, risk assessments, briefings',
+    icon: ShieldAlert,
+    color: 'bg-red-100 text-red-700 border-red-200'
   },
   site_recon: {
     label: 'Site Survey/Reconnaissance',
@@ -241,6 +248,9 @@ export function createTask(overrides = {}) {
     dueDate: null,
     completedAt: null,
     costItems: [],
+    estimatedHours: 0,
+    assignedOperators: [],
+    estimatedCost: 0,
     ...overrides
   }
 }

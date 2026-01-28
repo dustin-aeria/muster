@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { X, ListTodo, Calendar } from 'lucide-react'
+import { X, ListTodo, Calendar, Clock, Users, DollarSign } from 'lucide-react'
 import {
   PRE_FIELD_TASK_TYPES,
   POST_FIELD_TASK_TYPES,
@@ -18,13 +18,16 @@ export default function AddTaskModal({
   onClose,
   onSave,
   task = null,
-  isPreField = true
+  isPreField = true,
+  operators = []
 }) {
   const [formData, setFormData] = useState({
     name: '',
     type: 'other',
     description: '',
-    dueDate: ''
+    dueDate: '',
+    estimatedHours: '',
+    assignedOperators: []
   })
 
   const taskTypes = isPreField ? PRE_FIELD_TASK_TYPES : POST_FIELD_TASK_TYPES
@@ -36,17 +39,29 @@ export default function AddTaskModal({
         name: task.name || '',
         type: task.type || 'other',
         description: task.description || '',
-        dueDate: task.dueDate ? task.dueDate.split('T')[0] : ''
+        dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+        estimatedHours: task.estimatedHours || '',
+        assignedOperators: task.assignedOperators || []
       })
     } else {
       setFormData({
         name: '',
         type: 'other',
         description: '',
-        dueDate: ''
+        dueDate: '',
+        estimatedHours: '',
+        assignedOperators: []
       })
     }
   }, [task, isOpen])
+
+  // Calculate estimated cost based on assigned operators and hours
+  const estimatedCost = formData.assignedOperators.reduce((total, opId) => {
+    const operator = operators.find(o => o.id === opId || o.operatorId === opId)
+    const hours = parseFloat(formData.estimatedHours) || 0
+    const rate = operator?.hourlyRate || 0
+    return total + (hours * rate)
+  }, 0)
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -60,15 +75,28 @@ export default function AddTaskModal({
       ? {
           ...task,
           ...formData,
-          dueDate: formData.dueDate || null
+          dueDate: formData.dueDate || null,
+          estimatedHours: parseFloat(formData.estimatedHours) || 0,
+          estimatedCost
         }
       : createTask({
           ...formData,
-          dueDate: formData.dueDate || null
+          dueDate: formData.dueDate || null,
+          estimatedHours: parseFloat(formData.estimatedHours) || 0,
+          estimatedCost
         })
 
     onSave(taskData)
     onClose()
+  }
+
+  const handleToggleOperator = (operatorId) => {
+    setFormData(prev => ({
+      ...prev,
+      assignedOperators: prev.assignedOperators.includes(operatorId)
+        ? prev.assignedOperators.filter(id => id !== operatorId)
+        : [...prev.assignedOperators, operatorId]
+    }))
   }
 
   if (!isOpen) return null
@@ -161,6 +189,77 @@ export default function AddTaskModal({
                 className="input"
               />
             </div>
+
+            {/* Estimated Hours */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  Estimated Hours
+                </span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={formData.estimatedHours}
+                onChange={(e) => setFormData(prev => ({ ...prev, estimatedHours: e.target.value }))}
+                className="input"
+                placeholder="e.g., 2.5"
+              />
+            </div>
+
+            {/* Assigned Operators */}
+            {operators.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <span className="flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    Assigned Operators
+                  </span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {operators.map(op => {
+                    const opId = op.id || op.operatorId
+                    const isSelected = formData.assignedOperators.includes(opId)
+                    return (
+                      <button
+                        key={opId}
+                        type="button"
+                        onClick={() => handleToggleOperator(opId)}
+                        className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                          isSelected
+                            ? 'bg-aeria-navy text-white border-aeria-navy'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                        }`}
+                      >
+                        {op.name || op.operatorName || op.firstName}
+                        {op.hourlyRate > 0 && (
+                          <span className="ml-1 text-xs opacity-75">
+                            (${op.hourlyRate}/hr)
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Estimated Cost */}
+            {estimatedCost > 0 && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                  <span className="text-sm text-green-800">
+                    Estimated Cost: <strong>${estimatedCost.toFixed(2)}</strong>
+                  </span>
+                  <span className="text-xs text-green-600">
+                    ({formData.assignedOperators.length} operator{formData.assignedOperators.length !== 1 ? 's' : ''} × {formData.estimatedHours || 0}h)
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Description */}
             <div>

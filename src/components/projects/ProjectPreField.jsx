@@ -198,6 +198,7 @@ export default function ProjectPreField({ project, onUpdate }) {
         onSave={handleSaveTask}
         task={editingTask}
         isPreField={true}
+        operators={project?.crew || []}
       />
 
       {/* Add Cost Item Modal */}

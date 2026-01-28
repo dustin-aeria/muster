@@ -198,6 +198,7 @@ export default function ProjectPostField({ project, onUpdate }) {
         onSave={handleSaveTask}
         task={editingTask}
         isPreField={false}
+        operators={project?.crew || []}
       />
 
       {/* Add Cost Item Modal */}

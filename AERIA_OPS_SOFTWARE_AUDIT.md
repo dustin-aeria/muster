@@ -190,13 +190,14 @@ Current state:
 | Version history fails | "Fails to load version history" error in all policies | High | **FIXED** (Batch 1) |
 | Active/Due/Overdue broken | No way to "activate" or set "due dates" on policies | High | **FIXED** (Batch 1) |
 | Policy numbering confusing | Static numbers will conflict when users add custom policies | Medium | **FIXED** (Batch 6) |
-| Header info unnecessary | Version, effective, review, person shown in header but not useful | Low | Open |
+| Header info unnecessary | Version, effective, review, person shown in header but not useful | Low | **FIXED** (Batch 9) |
 
 ### 3.2 Map/Drawing Bugs
 | Issue | Description | Priority | Status |
 |-------|-------------|----------|--------|
 | Cannot edit boundary points | Cannot manually edit or manipulate points of a boundary once laid | High | **FIXED** (Batch 1) |
 | Cannot edit evac route points | Cannot manipulate evac route points after initial creation | High | **FIXED** (Batch 1) |
+| Spacebar not working in Site Access | In Site Survey > Site Access text field, spacebar doesn't input a space | Medium | Open |
 
 ### 3.3 Project Planning Bugs
 | Issue | Description | Priority | Status |
@@ -210,6 +211,16 @@ Current state:
 | Issue | Description | Priority | Status |
 |-------|-------------|----------|--------|
 | Two calendars | Maintenance and general calendars are separate (should be unified) | Medium | **FIXED** (Batch 2) |
+
+### 3.5 Notifications & Team Bugs
+| Issue | Description | Priority | Status |
+|-------|-------------|----------|--------|
+| Notification list creation broken | When clicking to create a notification list, nothing happens | High | Open |
+
+### 3.6 SORA Module Bugs
+| Issue | Description | Priority | Status |
+|-------|-------------|----------|--------|
+| SAIL score requires mitigation | Cannot get SAIL score without selecting a ground risk mitigation (should calculate with or without) | Medium | **Verified Working** - SAIL calculates with defaults (population, UA characteristics) even without mitigations |
 
 ---
 
@@ -994,10 +1005,62 @@ VITE_MAPBOX_ACCESS_TOKEN=
 - [x] Dashboard expiry reminders *(Completed - ExpiryRemindersWidget consolidates permits, insurance, and certifications expiring within 30 days)*
 - [x] Loading states and error handling improvements *(Completed - Components already have good loading/error states; widget includes loading, error, and empty states)*
 
+### Lower Priority - **BATCH 11 PARTIAL**
+- [ ] Bug: Notification list creation broken *(Needs investigation - code looks correct, may be UI state issue)*
+- [ ] Bug: Spacebar in Site Access field *(Needs investigation - no blocking keyhandler found)*
+- [x] Bug: SORA SAIL score without mitigation *(Verified working - SAIL calculates with defaults when no mitigations selected)*
+- [x] Pre-field "Safety" task type *(Completed - Added safety task type with ShieldAlert icon)*
+- [x] Hours & operators on pre-field/post-field tasks *(Completed - Tasks now support hours, assigned operators, and auto cost calculation)*
+- [ ] Map distance measurement tool *(Deferred to next batch)*
+- [ ] "Same as boundary" flight area option *(Deferred to next batch)*
+- [ ] Mapbox airspace integration *(Deferred - requires Mapbox API configuration)*
+- [ ] Mapbox municipality borders *(Deferred - requires Mapbox API configuration)*
+- [ ] Mapbox population density *(Deferred - requires Mapbox API configuration)*
+
 ### Lower Priority - **BATCH 10 COMPLETE**
 - [x] Weather API integration *(Completed - Open-Meteo API with current conditions, 5-day forecast, VFR/IFR flight conditions, drone flight assessment, integrated into Site Survey)*
 - [ ] NOTAMs integration *(Future)*
 - [ ] Platform migration (Firebase to Supabase)
+
+---
+
+## 10. Feature Backlog
+
+Items considered but not yet implemented. Prioritize from this list for future batches.
+
+### Pre-Field & Post-Field Tasks
+- [ ] **Add "Safety" task type** - Add "safety" as an option in pre-field task types
+- [ ] **Hours & Operators on tasks** - Allow assigning hours and operators to pre-field/post-field tasks so costs auto-calculate based on rates and time input
+
+### Map & Flight Planning
+- [ ] **Distance Measurement Tool** - Ability to measure distance within the map for operation parameters (max distance from pilot)
+- [ ] **"Same as Boundary" for Flight Area** - Option to set flight area equal to operations boundary
+- [ ] **Mapbox Airspace Integration** - Pull airspace data from Mapbox, auto-update flight airspace classification (account for altitude - flights may be under/above one airspace and in another)
+- [ ] **Mapbox Municipality Borders** - Integrate municipal boundaries for BVLOS flight planning considerations
+- [ ] **Mapbox Population Density** - Incorporate population density layers, allow users to query Mapbox for population density during flight planning
+
+### Data & Reporting
+- [ ] **Enhanced Reporting** - Comprehensive PDF/Excel reports for projects, safety metrics, compliance status
+- [ ] **Data Export** - Bulk CSV/Excel export for projects, safety records, maintenance logs
+- [ ] **Audit Trail & Activity Logging** - Track changes to critical records, user activity history, compliance audit trail
+
+### Search & Navigation
+- [ ] **Global Search** - Search across all modules (projects, policies, permits, equipment, etc.)
+- [ ] **Advanced Filtering** - Saved filters, filter presets, search history
+- [ ] **Quick Navigation** - Keyboard shortcuts, command palette
+
+### Integrations
+- [ ] **NOTAMs Integration** - Notices to Airmen for airspace restrictions and TFRs
+- [ ] **Document Import** - Bulk import existing documents with metadata extraction
+
+### User Experience
+- [ ] **Mobile Responsiveness** - Improved mobile experience for field use
+- [ ] **Offline Capability** - Cache critical data for field operations without connectivity
+- [ ] **Email Notifications** - Automated alerts for expiring items, assignments, approvals
+
+### Infrastructure
+- [ ] **Platform Migration** - Firebase to Supabase (PostgreSQL) for enterprise features
+- [ ] **Performance Optimization** - Code splitting, lazy loading, bundle size reduction
 
 ---
 
