@@ -160,33 +160,33 @@ export const RPAS_INCIDENT_TRIGGERS = {
 
 // Form categories
 export const FORM_CATEGORIES = [
-  { 
-    id: 'pre_operation', 
-    name: 'Pre-Operation', 
+  {
+    id: 'pre_operation',
+    name: 'Pre-Operation',
     description: 'Planning and assessment forms',
     icon: 'ClipboardCheck',
-    forms: ['site_survey', 'flight_plan', 'formal_hazard_assessment', 'first_aid_assessment']
+    forms: ['site_survey', 'flight_plan', 'formal_hazard_assessment', 'first_aid_assessment', 'client_orientation']
   },
-  { 
-    id: 'daily_field', 
-    name: 'Daily/Field', 
+  {
+    id: 'daily_field',
+    name: 'Daily/Field',
     description: 'Daily operations forms',
     icon: 'Calendar',
-    forms: ['tailgate_briefing', 'flha', 'preflight_checklist', 'daily_flight_log']
+    forms: ['tailgate_briefing', 'flha', 'preflight_checklist', 'daily_flight_log', 'post_flight_report']
   },
-  { 
-    id: 'incident', 
-    name: 'Incident', 
+  {
+    id: 'incident',
+    name: 'Incident',
     description: 'Incident and investigation forms',
     icon: 'AlertTriangle',
     forms: ['near_miss', 'incident_report', 'investigation_report']
   },
-  { 
-    id: 'tracking', 
-    name: 'Tracking/Admin', 
+  {
+    id: 'tracking',
+    name: 'Tracking/Admin',
     description: 'Administrative tracking forms',
     icon: 'FileText',
-    forms: ['safety_meeting_log', 'training_record', 'equipment_inspection', 'ppe_inspection', 'vehicle_inspection']
+    forms: ['safety_meeting_log', 'training_record', 'equipment_inspection', 'ppe_inspection', 'vehicle_inspection', 'battery_cycle_log', 'crew_competency_check']
   },
 ]
 
@@ -1505,6 +1505,409 @@ export const FORM_TEMPLATES = {
           { id: 'assessor_signature', type: 'signature', label: 'Assessor Signature', required: true },
           { id: 'supervisor_signature', type: 'signature', label: 'Supervisor Approval', required: true },
           { id: 'assessment_notes', type: 'textarea', label: 'Additional Notes', required: false },
+        ]
+      }
+    ]
+  },
+
+  // ========================================
+  // POST-FLIGHT REPORT
+  // ========================================
+  post_flight_report: {
+    id: 'post_flight_report',
+    name: 'Post-Flight Report',
+    shortName: 'PFR',
+    category: 'daily_field',
+    description: 'Document flight outcomes, issues, and recommendations after operations',
+    icon: 'FileText',
+    version: '1.0',
+    sections: [
+      {
+        id: 'header',
+        title: 'Flight Information',
+        fields: [
+          { id: 'form_id', type: 'auto_id', label: 'Report ID', required: true },
+          { id: 'project', type: 'project_select', label: 'Project', required: true },
+          { id: 'date', type: 'date', label: 'Flight Date', required: true, defaultToday: true },
+          { id: 'aircraft', type: 'aircraft_select', label: 'Aircraft', required: true },
+          { id: 'pilot_name', type: 'operator_select', label: 'Pilot in Command', required: true },
+          { id: 'flight_number', type: 'text', label: 'Flight Number', required: false },
+          { id: 'total_flight_time', type: 'number', label: 'Total Flight Time (minutes)', required: true },
+          { id: 'total_flights', type: 'number', label: 'Number of Flights', required: true },
+        ]
+      },
+      {
+        id: 'mission_summary',
+        title: 'Mission Summary',
+        fields: [
+          { id: 'mission_objectives', type: 'textarea', label: 'Mission Objectives', required: true },
+          { id: 'objectives_met', type: 'select', label: 'Objectives Met?', required: true, options: [
+            { value: 'fully', label: 'Fully Achieved' },
+            { value: 'partially', label: 'Partially Achieved' },
+            { value: 'not_met', label: 'Not Achieved' },
+            { value: 'exceeded', label: 'Exceeded Expectations' },
+          ]},
+          { id: 'coverage_area', type: 'text', label: 'Coverage Area (acres/km)', required: false },
+          { id: 'data_collected', type: 'multiselect', label: 'Data Collected', required: false, options: [
+            { value: 'rgb', label: 'RGB Imagery' },
+            { value: 'thermal', label: 'Thermal Imagery' },
+            { value: 'multispectral', label: 'Multispectral' },
+            { value: 'lidar', label: 'LiDAR Point Cloud' },
+            { value: 'video', label: 'Video Recording' },
+            { value: 'other', label: 'Other' },
+          ]},
+        ]
+      },
+      {
+        id: 'conditions',
+        title: 'Operating Conditions',
+        fields: [
+          { id: 'weather_actual', type: 'textarea', label: 'Actual Weather Conditions', required: true },
+          { id: 'wind_speed', type: 'text', label: 'Wind Speed (km/h)', required: true },
+          { id: 'visibility', type: 'select', label: 'Visibility', required: true, options: [
+            { value: 'excellent', label: 'Excellent (>10 km)' },
+            { value: 'good', label: 'Good (5-10 km)' },
+            { value: 'moderate', label: 'Moderate (2-5 km)' },
+            { value: 'poor', label: 'Poor (<2 km)' },
+          ]},
+          { id: 'airspace_issues', type: 'yesno', label: 'Any Airspace Issues?', required: true },
+          { id: 'airspace_details', type: 'textarea', label: 'Airspace Issue Details', required: false, showIf: 'airspace_issues === true' },
+        ]
+      },
+      {
+        id: 'aircraft_performance',
+        title: 'Aircraft Performance',
+        fields: [
+          { id: 'performance_rating', type: 'select', label: 'Overall Aircraft Performance', required: true, options: [
+            { value: 'excellent', label: 'Excellent - No issues' },
+            { value: 'good', label: 'Good - Minor issues' },
+            { value: 'fair', label: 'Fair - Some concerns' },
+            { value: 'poor', label: 'Poor - Significant issues' },
+          ]},
+          { id: 'battery_performance', type: 'textarea', label: 'Battery Performance Notes', required: false },
+          { id: 'batteries_used', type: 'number', label: 'Number of Batteries Used', required: true },
+          { id: 'any_warnings', type: 'yesno', label: 'Any Aircraft Warnings/Errors?', required: true },
+          { id: 'warning_details', type: 'textarea', label: 'Warning/Error Details', required: false, showIf: 'any_warnings === true' },
+          { id: 'maintenance_required', type: 'yesno', label: 'Maintenance Required?', required: true },
+          { id: 'maintenance_notes', type: 'textarea', label: 'Maintenance Notes', required: false, showIf: 'maintenance_required === true' },
+        ]
+      },
+      {
+        id: 'safety',
+        title: 'Safety Review',
+        fields: [
+          { id: 'incidents_occurred', type: 'yesno', label: 'Any Incidents or Near Misses?', required: true },
+          { id: 'incident_description', type: 'textarea', label: 'Incident/Near Miss Description', required: false, showIf: 'incidents_occurred === true' },
+          { id: 'hazards_encountered', type: 'textarea', label: 'Hazards Encountered', required: false },
+          { id: 'safety_observations', type: 'textarea', label: 'Safety Observations', required: false },
+        ]
+      },
+      {
+        id: 'recommendations',
+        title: 'Recommendations',
+        fields: [
+          { id: 'lessons_learned', type: 'textarea', label: 'Lessons Learned', required: false },
+          { id: 'recommendations', type: 'textarea', label: 'Recommendations for Future Ops', required: false },
+          { id: 'client_feedback', type: 'textarea', label: 'Client Feedback (if any)', required: false },
+        ]
+      },
+      {
+        id: 'signoff',
+        title: 'Sign-Off',
+        fields: [
+          { id: 'pilot_signature', type: 'signature', label: 'Pilot Signature', required: true },
+          { id: 'reviewer_signature', type: 'signature', label: 'Operations Review', required: false },
+          { id: 'additional_notes', type: 'textarea', label: 'Additional Notes', required: false },
+        ]
+      }
+    ]
+  },
+
+  // ========================================
+  // BATTERY CYCLE LOG
+  // ========================================
+  battery_cycle_log: {
+    id: 'battery_cycle_log',
+    name: 'Battery Cycle Log',
+    shortName: 'BCL',
+    category: 'tracking',
+    description: 'Track battery usage, cycles, and health status',
+    icon: 'Battery',
+    version: '1.0',
+    sections: [
+      {
+        id: 'header',
+        title: 'Battery Information',
+        fields: [
+          { id: 'form_id', type: 'auto_id', label: 'Log ID', required: true },
+          { id: 'date', type: 'date', label: 'Date', required: true, defaultToday: true },
+          { id: 'battery_id', type: 'text', label: 'Battery ID/Serial', required: true },
+          { id: 'battery_model', type: 'text', label: 'Battery Model', required: true },
+          { id: 'aircraft', type: 'aircraft_select', label: 'Aircraft Used With', required: false },
+          { id: 'operator', type: 'operator_select', label: 'Logged By', required: true },
+        ]
+      },
+      {
+        id: 'usage',
+        title: 'Usage Details',
+        fields: [
+          { id: 'cycle_number', type: 'number', label: 'Cycle Number', required: true },
+          { id: 'flight_time', type: 'number', label: 'Flight Time (minutes)', required: true },
+          { id: 'pre_flight_voltage', type: 'number', label: 'Pre-Flight Voltage (V)', required: true },
+          { id: 'post_flight_voltage', type: 'number', label: 'Post-Flight Voltage (V)', required: true },
+          { id: 'percent_used', type: 'number', label: 'Percentage Used (%)', required: true },
+          { id: 'ambient_temp', type: 'number', label: 'Ambient Temperature (C)', required: false },
+          { id: 'max_temp_flight', type: 'number', label: 'Max Temperature During Flight (C)', required: false },
+        ]
+      },
+      {
+        id: 'health',
+        title: 'Battery Health',
+        fields: [
+          { id: 'physical_condition', type: 'select', label: 'Physical Condition', required: true, options: [
+            { value: 'excellent', label: 'Excellent - No damage' },
+            { value: 'good', label: 'Good - Minor wear' },
+            { value: 'fair', label: 'Fair - Visible wear' },
+            { value: 'poor', label: 'Poor - Damage present' },
+            { value: 'retired', label: 'Retired - Do not use' },
+          ]},
+          { id: 'swelling', type: 'yesno', label: 'Any Swelling?', required: true },
+          { id: 'damage_notes', type: 'textarea', label: 'Damage/Issue Notes', required: false },
+          { id: 'cells_balanced', type: 'yesno', label: 'Cells Balanced?', required: false },
+          { id: 'storage_voltage', type: 'yesno', label: 'Set to Storage Voltage?', required: true },
+        ]
+      },
+      {
+        id: 'signoff',
+        title: 'Sign-Off',
+        fields: [
+          { id: 'logged_by_signature', type: 'signature', label: 'Logged By', required: true },
+          { id: 'notes', type: 'textarea', label: 'Additional Notes', required: false },
+        ]
+      }
+    ]
+  },
+
+  // ========================================
+  // CLIENT SITE ORIENTATION
+  // ========================================
+  client_orientation: {
+    id: 'client_orientation',
+    name: 'Client Site Orientation',
+    shortName: 'CSO',
+    category: 'pre_operation',
+    description: 'Document client site-specific safety requirements and protocols',
+    icon: 'Building',
+    version: '1.0',
+    sections: [
+      {
+        id: 'header',
+        title: 'Orientation Details',
+        fields: [
+          { id: 'form_id', type: 'auto_id', label: 'Orientation ID', required: true },
+          { id: 'date', type: 'date', label: 'Date', required: true, defaultToday: true },
+          { id: 'client_name', type: 'client_select', label: 'Client', required: true },
+          { id: 'site_name', type: 'text', label: 'Site Name', required: true },
+          { id: 'site_address', type: 'textarea', label: 'Site Address', required: true },
+          { id: 'client_contact', type: 'text', label: 'Client Contact Name', required: true },
+          { id: 'client_phone', type: 'phone', label: 'Client Contact Phone', required: true },
+          { id: 'crew_attending', type: 'crew_multi_select', label: 'Crew Attending', required: true },
+        ]
+      },
+      {
+        id: 'site_requirements',
+        title: 'Site Requirements',
+        fields: [
+          { id: 'ppe_required', type: 'multiselect', label: 'PPE Required', required: true, options: [
+            { value: 'hard_hat', label: 'Hard Hat' },
+            { value: 'safety_vest', label: 'High-Vis Vest' },
+            { value: 'safety_glasses', label: 'Safety Glasses' },
+            { value: 'steel_toe', label: 'Steel-Toe Boots' },
+            { value: 'hearing', label: 'Hearing Protection' },
+            { value: 'gloves', label: 'Work Gloves' },
+            { value: 'fr_clothing', label: 'FR Clothing' },
+            { value: 'h2s_monitor', label: 'H2S Monitor' },
+            { value: 'other', label: 'Other' },
+          ]},
+          { id: 'other_ppe', type: 'text', label: 'Other PPE Required', required: false, showIf: 'ppe_required includes other' },
+          { id: 'site_induction', type: 'yesno', label: 'Site Induction Required?', required: true },
+          { id: 'induction_completed', type: 'yesno', label: 'Induction Completed?', required: false, showIf: 'site_induction === true' },
+          { id: 'security_clearance', type: 'yesno', label: 'Security Clearance Required?', required: true },
+          { id: 'vehicle_requirements', type: 'textarea', label: 'Vehicle Requirements', required: false },
+        ]
+      },
+      {
+        id: 'hazards',
+        title: 'Site-Specific Hazards',
+        fields: [
+          { id: 'site_hazards', type: 'multiselect', label: 'Site Hazards Identified', required: true, options: [
+            { value: 'heavy_equipment', label: 'Heavy Equipment Operations' },
+            { value: 'overhead', label: 'Overhead Work' },
+            { value: 'excavation', label: 'Excavations/Trenches' },
+            { value: 'confined_space', label: 'Confined Spaces' },
+            { value: 'hazardous_materials', label: 'Hazardous Materials' },
+            { value: 'high_voltage', label: 'High Voltage' },
+            { value: 'wildlife', label: 'Wildlife' },
+            { value: 'traffic', label: 'Vehicle Traffic' },
+            { value: 'other', label: 'Other' },
+          ]},
+          { id: 'hazard_details', type: 'textarea', label: 'Hazard Details', required: false },
+          { id: 'restricted_areas', type: 'textarea', label: 'Restricted Areas', required: false },
+          { id: 'emergency_assembly', type: 'text', label: 'Emergency Assembly Point', required: true },
+        ]
+      },
+      {
+        id: 'flight_restrictions',
+        title: 'Flight Restrictions',
+        fields: [
+          { id: 'no_fly_zones', type: 'textarea', label: 'No-Fly Zones on Site', required: false },
+          { id: 'altitude_restrictions', type: 'textarea', label: 'Altitude Restrictions', required: false },
+          { id: 'timing_restrictions', type: 'textarea', label: 'Timing Restrictions', required: false },
+          { id: 'approval_required', type: 'yesno', label: 'Client Approval Required Before Each Flight?', required: true },
+          { id: 'radio_channel', type: 'text', label: 'Site Radio Channel', required: false },
+        ]
+      },
+      {
+        id: 'signoff',
+        title: 'Sign-Off',
+        fields: [
+          { id: 'crew_acknowledgment', type: 'signature', label: 'Crew Acknowledgment', required: true },
+          { id: 'client_signature', type: 'signature', label: 'Client Representative Signature', required: false },
+          { id: 'notes', type: 'textarea', label: 'Additional Notes', required: false },
+        ]
+      }
+    ]
+  },
+
+  // ========================================
+  // CREW COMPETENCY CHECK
+  // ========================================
+  crew_competency_check: {
+    id: 'crew_competency_check',
+    name: 'Crew Competency Check',
+    shortName: 'CCC',
+    category: 'tracking',
+    description: 'Document crew competency assessments and proficiency checks',
+    icon: 'UserCheck',
+    version: '1.0',
+    sections: [
+      {
+        id: 'header',
+        title: 'Assessment Information',
+        fields: [
+          { id: 'form_id', type: 'auto_id', label: 'Assessment ID', required: true },
+          { id: 'date', type: 'date', label: 'Date', required: true, defaultToday: true },
+          { id: 'crew_member', type: 'operator_select', label: 'Crew Member Being Assessed', required: true },
+          { id: 'assessor', type: 'operator_select', label: 'Assessor', required: true },
+          { id: 'role_assessed', type: 'select', label: 'Role Being Assessed', required: true, options: [
+            { value: 'pic', label: 'Pilot in Command' },
+            { value: 'pilot', label: 'Pilot' },
+            { value: 'vo', label: 'Visual Observer' },
+            { value: 'payload_op', label: 'Payload Operator' },
+            { value: 'gcs_op', label: 'Ground Control Station Operator' },
+          ]},
+          { id: 'aircraft_type', type: 'text', label: 'Aircraft Type', required: true },
+        ]
+      },
+      {
+        id: 'knowledge',
+        title: 'Knowledge Assessment',
+        fields: [
+          { id: 'regulations_knowledge', type: 'select', label: 'Regulations Knowledge', required: true, options: [
+            { value: '5', label: '5 - Excellent' },
+            { value: '4', label: '4 - Good' },
+            { value: '3', label: '3 - Satisfactory' },
+            { value: '2', label: '2 - Needs Improvement' },
+            { value: '1', label: '1 - Unsatisfactory' },
+          ]},
+          { id: 'sop_knowledge', type: 'select', label: 'SOP Knowledge', required: true, options: [
+            { value: '5', label: '5 - Excellent' },
+            { value: '4', label: '4 - Good' },
+            { value: '3', label: '3 - Satisfactory' },
+            { value: '2', label: '2 - Needs Improvement' },
+            { value: '1', label: '1 - Unsatisfactory' },
+          ]},
+          { id: 'emergency_procedures', type: 'select', label: 'Emergency Procedures', required: true, options: [
+            { value: '5', label: '5 - Excellent' },
+            { value: '4', label: '4 - Good' },
+            { value: '3', label: '3 - Satisfactory' },
+            { value: '2', label: '2 - Needs Improvement' },
+            { value: '1', label: '1 - Unsatisfactory' },
+          ]},
+          { id: 'airspace_knowledge', type: 'select', label: 'Airspace Knowledge', required: true, options: [
+            { value: '5', label: '5 - Excellent' },
+            { value: '4', label: '4 - Good' },
+            { value: '3', label: '3 - Satisfactory' },
+            { value: '2', label: '2 - Needs Improvement' },
+            { value: '1', label: '1 - Unsatisfactory' },
+          ]},
+          { id: 'knowledge_notes', type: 'textarea', label: 'Knowledge Assessment Notes', required: false },
+        ]
+      },
+      {
+        id: 'practical',
+        title: 'Practical Skills Assessment',
+        fields: [
+          { id: 'preflight_inspection', type: 'select', label: 'Pre-Flight Inspection', required: true, options: [
+            { value: '5', label: '5 - Excellent' },
+            { value: '4', label: '4 - Good' },
+            { value: '3', label: '3 - Satisfactory' },
+            { value: '2', label: '2 - Needs Improvement' },
+            { value: '1', label: '1 - Unsatisfactory' },
+          ]},
+          { id: 'flight_control', type: 'select', label: 'Flight Control Proficiency', required: true, options: [
+            { value: '5', label: '5 - Excellent' },
+            { value: '4', label: '4 - Good' },
+            { value: '3', label: '3 - Satisfactory' },
+            { value: '2', label: '2 - Needs Improvement' },
+            { value: '1', label: '1 - Unsatisfactory' },
+          ]},
+          { id: 'situational_awareness', type: 'select', label: 'Situational Awareness', required: true, options: [
+            { value: '5', label: '5 - Excellent' },
+            { value: '4', label: '4 - Good' },
+            { value: '3', label: '3 - Satisfactory' },
+            { value: '2', label: '2 - Needs Improvement' },
+            { value: '1', label: '1 - Unsatisfactory' },
+          ]},
+          { id: 'communication', type: 'select', label: 'Communication', required: true, options: [
+            { value: '5', label: '5 - Excellent' },
+            { value: '4', label: '4 - Good' },
+            { value: '3', label: '3 - Satisfactory' },
+            { value: '2', label: '2 - Needs Improvement' },
+            { value: '1', label: '1 - Unsatisfactory' },
+          ]},
+          { id: 'decision_making', type: 'select', label: 'Decision Making', required: true, options: [
+            { value: '5', label: '5 - Excellent' },
+            { value: '4', label: '4 - Good' },
+            { value: '3', label: '3 - Satisfactory' },
+            { value: '2', label: '2 - Needs Improvement' },
+            { value: '1', label: '1 - Unsatisfactory' },
+          ]},
+          { id: 'practical_notes', type: 'textarea', label: 'Practical Skills Notes', required: false },
+        ]
+      },
+      {
+        id: 'overall',
+        title: 'Overall Assessment',
+        fields: [
+          { id: 'overall_rating', type: 'select', label: 'Overall Rating', required: true, options: [
+            { value: 'competent', label: 'Competent' },
+            { value: 'competent_with_conditions', label: 'Competent with Conditions' },
+            { value: 'not_yet_competent', label: 'Not Yet Competent' },
+          ]},
+          { id: 'conditions', type: 'textarea', label: 'Conditions (if applicable)', required: false, showIf: 'overall_rating === competent_with_conditions' },
+          { id: 'areas_for_improvement', type: 'textarea', label: 'Areas for Improvement', required: false },
+          { id: 'training_recommendations', type: 'textarea', label: 'Training Recommendations', required: false },
+          { id: 'next_assessment_date', type: 'date', label: 'Next Assessment Due', required: true },
+        ]
+      },
+      {
+        id: 'signoff',
+        title: 'Sign-Off',
+        fields: [
+          { id: 'crew_signature', type: 'signature', label: 'Crew Member Signature', required: true },
+          { id: 'assessor_signature', type: 'signature', label: 'Assessor Signature', required: true },
+          { id: 'additional_notes', type: 'textarea', label: 'Additional Notes', required: false },
         ]
       }
     ]

@@ -965,6 +965,12 @@ VITE_MAPBOX_ACCESS_TOKEN=
 - [x] Document upload/conversion *(Completed - PDF upload with text extraction)*
 - [x] Operation types alignment with CARs *(Already aligned - VLOS/EVLOS/BVLOS/Night with CARs Part IX)*
 
+### Medium Priority - **BATCH 4 COMPLETE (Jan 28, 2026)**
+- [x] Training module separation *(Completed - renamed to "Training & Competency", standalone module)*
+- [x] User roles & permissions *(Completed - userRoles.js with role hierarchy and permissions)*
+- [x] Forms library expansion *(Completed - 4 new forms: Post-Flight Report, Battery Cycle Log, Client Orientation, Crew Competency Check)*
+- [x] Cost of Safety dashboard widget *(Completed - CostOfSafetyWidget on SafetyDashboard)*
+
 ### Medium Priority
 - [ ] Training module separation
 - [ ] User roles & permissions

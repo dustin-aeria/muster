@@ -201,8 +201,8 @@ export default function Training() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Training Management</h1>
-          <p className="text-gray-600 mt-1">COR Element 3 - Training & Instruction</p>
+          <h1 className="text-2xl font-bold text-gray-900">Training & Competency</h1>
+          <p className="text-gray-600 mt-1">Crew certifications, courses, and compliance tracking</p>
         </div>
         <div className="flex items-center gap-3">
           <button

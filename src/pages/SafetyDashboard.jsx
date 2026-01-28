@@ -28,6 +28,7 @@ import {
   FileDown
 } from 'lucide-react'
 import { logger } from '../lib/logger'
+import CostOfSafetyWidget from '../components/safety/CostOfSafetyWidget'
 
 // Stat card component
 function StatCard({ title, value, subtitle, icon: Icon, color = 'bg-white', link }) {
@@ -123,6 +124,11 @@ export default function SafetyDashboard() {
     pendingNotifications: 0
   })
 
+  // Raw data for Cost of Safety widget
+  const [rawIncidents, setRawIncidents] = useState([])
+  const [rawTraining, setRawTraining] = useState([])
+  const [rawInsurance, setRawInsurance] = useState([])
+
   useEffect(() => {
     loadDashboardData()
   }, [])
@@ -200,7 +206,25 @@ export default function SafetyDashboard() {
         capaOnTimeRate: capas.length > 0 ? Math.round((capas.filter(c => c.metrics?.onTime).length / capas.length) * 100) : 100,
         pendingNotifications: pendingNotifications.length
       })
-      
+
+      // Store raw data for Cost of Safety widget
+      setRawIncidents(incidents)
+
+      // Try to load training and insurance data
+      try {
+        const { getAllTrainingRecords } = await import('../lib/firestoreTraining')
+        const { getInsurancePolicies } = await import('../lib/firestore')
+        const [trainingData, insuranceData] = await Promise.all([
+          getAllTrainingRecords().catch(() => []),
+          getInsurancePolicies().catch(() => [])
+        ])
+        setRawTraining(trainingData)
+        setRawInsurance(insuranceData)
+      } catch (err) {
+        // Non-critical - Cost of Safety widget will work with partial data
+        logger.warn('Could not load training/insurance data for Cost of Safety widget:', err)
+      }
+
       setLastRefresh(new Date())
     } catch (err) {
       logger.error('Error loading safety dashboard:', err)
@@ -416,51 +440,71 @@ export default function SafetyDashboard() {
         />
       </div>
 
-      {/* Action Items */}
-      {(stats.overdueCapas > 0 || stats.pendingNotifications > 0) && (
-        <div className="card border-orange-200 bg-orange-50">
-          <h2 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
-            <Bell className="w-5 h-5" />
-            Action Items Requiring Attention
-          </h2>
-          <div className="space-y-2">
-            {stats.pendingNotifications > 0 && (
-              <Link 
-                to="/incidents?filter=pending_notification"
-                className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-orange-100 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <Bell className="w-4 h-4 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Pending Regulatory Notifications</p>
-                    <p className="text-sm text-gray-500">{stats.pendingNotifications} incident(s) require notification</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
-              </Link>
-            )}
-            {stats.overdueCapas > 0 && (
-              <Link 
-                to="/capas?filter=overdue"
-                className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-orange-100 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <Clock className="w-4 h-4 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Overdue CAPAs</p>
-                    <p className="text-sm text-gray-500">{stats.overdueCapas} CAPA(s) past target date</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
-              </Link>
-            )}
-          </div>
+      {/* Cost of Safety & Action Items Row */}
+      <div className="grid lg:grid-cols-3 gap-4">
+        {/* Action Items */}
+        <div className="lg:col-span-2">
+          {(stats.overdueCapas > 0 || stats.pendingNotifications > 0) ? (
+            <div className="card border-orange-200 bg-orange-50 h-full">
+              <h2 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                Action Items Requiring Attention
+              </h2>
+              <div className="space-y-2">
+                {stats.pendingNotifications > 0 && (
+                  <Link
+                    to="/incidents?filter=pending_notification"
+                    className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-orange-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <Bell className="w-4 h-4 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Pending Regulatory Notifications</p>
+                        <p className="text-sm text-gray-500">{stats.pendingNotifications} incident(s) require notification</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </Link>
+                )}
+                {stats.overdueCapas > 0 && (
+                  <Link
+                    to="/capas?filter=overdue"
+                    className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-orange-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <Clock className="w-4 h-4 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Overdue CAPAs</p>
+                        <p className="text-sm text-gray-500">{stats.overdueCapas} CAPA(s) past target date</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="card border-green-200 bg-green-50 h-full">
+              <h2 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5" />
+                All Clear
+              </h2>
+              <p className="text-green-700">No pending action items. Keep up the great safety culture!</p>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Cost of Safety Widget */}
+        <CostOfSafetyWidget
+          incidents={rawIncidents}
+          training={rawTraining}
+          insurance={rawInsurance}
+        />
+      </div>
 
       {/* Quick Links */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
