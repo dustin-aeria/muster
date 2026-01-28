@@ -872,7 +872,7 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                 <WeatherWidget
                   lat={mapData.siteLocation.geometry.coordinates[1]}
                   lon={mapData.siteLocation.geometry.coordinates[0]}
-                  siteName={currentSite?.name || 'Site'}
+                  siteName={activeSite?.name || 'Site'}
                   compact={true}
                 />
               </div>
