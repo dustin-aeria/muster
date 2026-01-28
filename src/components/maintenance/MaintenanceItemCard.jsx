@@ -15,7 +15,8 @@ import {
   XOctagon,
   Calendar,
   ChevronRight,
-  Gauge
+  Gauge,
+  Wrench
 } from 'lucide-react'
 import { calculateOverallMaintenanceStatus, getMostUrgentMaintenance } from '../../lib/firestoreMaintenance'
 
@@ -80,7 +81,7 @@ function formatRemaining(urgentMaint) {
   return null
 }
 
-export default function MaintenanceItemCard({ item, compact = false }) {
+export default function MaintenanceItemCard({ item, compact = false, onLogService }) {
   const status = calculateOverallMaintenanceStatus(item)
   const config = statusConfig[status] || statusConfig.no_schedule
   const StatusIcon = config.icon
@@ -95,6 +96,14 @@ export default function MaintenanceItemCard({ item, compact = false }) {
   const linkPath = item.itemType === 'aircraft'
     ? `/aircraft/${item.id}`
     : `/equipment/${item.id}`
+
+  const handleLogService = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (onLogService) {
+      onLogService(item)
+    }
+  }
 
   if (compact) {
     return (
@@ -116,7 +125,18 @@ export default function MaintenanceItemCard({ item, compact = false }) {
               </div>
             </div>
           </div>
-          <ChevronRight className="w-5 h-5 text-gray-400" />
+          <div className="flex items-center gap-2">
+            {onLogService && (
+              <button
+                onClick={handleLogService}
+                className="p-1.5 text-gray-500 hover:text-aeria-navy hover:bg-white rounded"
+                title="Log Service"
+              >
+                <Wrench className="w-4 h-4" />
+              </button>
+            )}
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </div>
         </div>
       </Link>
     )
@@ -187,7 +207,18 @@ export default function MaintenanceItemCard({ item, compact = false }) {
           </div>
         </div>
 
-        <ChevronRight className="w-5 h-5 text-gray-400 mt-2" />
+        <div className="flex flex-col items-end gap-2">
+          {onLogService && !item.isGrounded && (
+            <button
+              onClick={handleLogService}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-aeria-navy bg-white hover:bg-gray-50 rounded-lg border border-gray-200 shadow-sm"
+            >
+              <Wrench className="w-4 h-4" />
+              Log Service
+            </button>
+          )}
+          <ChevronRight className="w-5 h-5 text-gray-400" />
+        </div>
       </div>
 
       {/* Grounded reason */}

@@ -32,6 +32,8 @@ import {
 } from '../lib/firestoreMaintenance'
 import MaintenanceFilters from '../components/maintenance/MaintenanceFilters'
 import MaintenanceItemCard from '../components/maintenance/MaintenanceItemCard'
+import SelectScheduleModal from '../components/maintenance/SelectScheduleModal'
+import LogMaintenanceModal from '../components/maintenance/LogMaintenanceModal'
 
 const sortOptions = [
   { value: 'name', label: 'Name' },
@@ -64,6 +66,12 @@ export default function MaintenanceItemList() {
     itemType: searchParams.get('type') || '',
     category: searchParams.get('category') || ''
   })
+
+  // Log service modal state
+  const [selectedItem, setSelectedItem] = useState(null)
+  const [showSelectSchedule, setShowSelectSchedule] = useState(false)
+  const [showLogMaintenance, setShowLogMaintenance] = useState(false)
+  const [selectedSchedule, setSelectedSchedule] = useState(null)
 
   useEffect(() => {
     loadItems()
@@ -198,6 +206,41 @@ export default function MaintenanceItemList() {
     }
   }
 
+  // Log service handlers
+  const handleLogService = (item) => {
+    setSelectedItem(item)
+    setShowSelectSchedule(true)
+  }
+
+  const handleSelectSchedule = (schedule) => {
+    setSelectedSchedule(schedule)
+    setShowSelectSchedule(false)
+    // If schedule requires form, we would launch form here
+    // For now, open manual log modal
+    setShowLogMaintenance(true)
+  }
+
+  const handleSelectAdHoc = () => {
+    setSelectedSchedule(null)
+    setShowSelectSchedule(false)
+    setShowLogMaintenance(true)
+  }
+
+  const handleLogSuccess = async () => {
+    setShowLogMaintenance(false)
+    setSelectedItem(null)
+    setSelectedSchedule(null)
+    // Refresh the list
+    await loadItems()
+  }
+
+  const handleCloseModals = () => {
+    setShowSelectSchedule(false)
+    setShowLogMaintenance(false)
+    setSelectedItem(null)
+    setSelectedSchedule(null)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -321,16 +364,42 @@ export default function MaintenanceItemList() {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredItems.map(item => (
-            <MaintenanceItemCard key={item.id} item={item} />
+            <MaintenanceItemCard
+              key={item.id}
+              item={item}
+              onLogService={handleLogService}
+            />
           ))}
         </div>
       ) : (
         <div className="space-y-3">
           {filteredItems.map(item => (
-            <MaintenanceItemCard key={item.id} item={item} compact />
+            <MaintenanceItemCard
+              key={item.id}
+              item={item}
+              compact
+              onLogService={handleLogService}
+            />
           ))}
         </div>
       )}
+
+      {/* Log Service Modals */}
+      <SelectScheduleModal
+        isOpen={showSelectSchedule}
+        onClose={handleCloseModals}
+        item={selectedItem}
+        onSelectSchedule={handleSelectSchedule}
+        onSelectAdHoc={handleSelectAdHoc}
+      />
+
+      <LogMaintenanceModal
+        isOpen={showLogMaintenance}
+        onClose={handleCloseModals}
+        item={selectedItem}
+        schedule={selectedSchedule}
+        onSuccess={handleLogSuccess}
+      />
     </div>
   )
 }
