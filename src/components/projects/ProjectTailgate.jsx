@@ -837,43 +837,83 @@ export default function ProjectTailgate({ project, onUpdate }) {
                 )
               }
 
-              // Get coordinates from mapData siteLocation (GeoJSON format [lng, lat])
+              // Try multiple paths to find coordinates
+              let lat = null
+              let lng = null
+
+              // Path 1: mapData.siteSurvey.siteLocation (GeoJSON format [lng, lat])
               const siteLocation = activeSite.mapData?.siteSurvey?.siteLocation
-              const coords = siteLocation?.geometry?.coordinates
-              if (coords && coords.length >= 2) {
+              if (siteLocation?.geometry?.coordinates?.length >= 2) {
+                lng = siteLocation.geometry.coordinates[0]
+                lat = siteLocation.geometry.coordinates[1]
+              }
+
+              // Path 2: Direct on siteLocation (older format)
+              if (!lat && siteLocation?.coordinates?.length >= 2) {
+                lng = siteLocation.coordinates[0]
+                lat = siteLocation.coordinates[1]
+              }
+
+              // Path 3: siteSurvey.location (legacy)
+              if (!lat && activeSite.siteSurvey?.location) {
+                const loc = activeSite.siteSurvey.location
+                if (loc.lat && loc.lng) {
+                  lat = loc.lat
+                  lng = loc.lng
+                } else if (loc.latitude && loc.longitude) {
+                  lat = loc.latitude
+                  lng = loc.longitude
+                }
+              }
+
+              // Path 4: Legacy string coordinates "lat, lng"
+              if (!lat && activeSite.coordinates && typeof activeSite.coordinates === 'string') {
+                const parts = activeSite.coordinates.split(',').map(c => parseFloat(c?.trim()))
+                if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                  lat = parts[0]
+                  lng = parts[1]
+                }
+              }
+
+              // Path 5: Direct lat/lng on site
+              if (!lat && activeSite.latitude && activeSite.longitude) {
+                lat = activeSite.latitude
+                lng = activeSite.longitude
+              }
+
+              // If we found coordinates, show the widget
+              if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
                 return (
                   <WeatherWidget
-                    latitude={coords[1]}
-                    longitude={coords[0]}
+                    latitude={lat}
+                    longitude={lng}
                     siteName={activeSite.name || 'Operation Site'}
                     compact={false}
                   />
                 )
               }
-              // Fallback: check for legacy string coordinates format
-              const legacyCoords = activeSite.coordinates
-              if (legacyCoords && typeof legacyCoords === 'string') {
-                const [lat, lng] = legacyCoords.split(',').map(c => parseFloat(c?.trim()))
-                if (!isNaN(lat) && !isNaN(lng)) {
-                  return (
-                    <WeatherWidget
-                      latitude={lat}
-                      longitude={lng}
-                      siteName={activeSite.name || 'Operation Site'}
-                      compact={false}
-                    />
-                  )
-                }
-              }
-              // No coordinates available for this site
+
+              // No coordinates found - show debug info
               return (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-amber-800">Site location not set</p>
                     <p className="text-sm text-amber-700">
-                      Set a site location for <strong>{activeSite.name || 'this site'}</strong> in the Site Survey tab to see live weather data.
+                      Set a site location for <strong>{activeSite.name || 'this site'}</strong> in the Site Survey tab using the map drawing tools.
                     </p>
+                    <details className="mt-2 text-xs text-amber-600">
+                      <summary className="cursor-pointer">Debug info</summary>
+                      <pre className="mt-1 p-2 bg-amber-100 rounded overflow-auto max-h-32">
+                        {JSON.stringify({
+                          hasMapData: !!activeSite.mapData,
+                          hasSiteSurvey: !!activeSite.mapData?.siteSurvey,
+                          hasSiteLocation: !!activeSite.mapData?.siteSurvey?.siteLocation,
+                          siteLocationKeys: activeSite.mapData?.siteSurvey?.siteLocation ? Object.keys(activeSite.mapData.siteSurvey.siteLocation) : [],
+                          geometry: activeSite.mapData?.siteSurvey?.siteLocation?.geometry
+                        }, null, 2)}
+                      </pre>
+                    </details>
                   </div>
                 </div>
               )
