@@ -15,10 +15,10 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { 
-  FolderKanban, 
-  ClipboardList, 
-  AlertTriangle, 
+import {
+  FolderKanban,
+  ClipboardList,
+  AlertTriangle,
   CheckCircle2,
   Plus,
   ArrowRight,
@@ -34,7 +34,8 @@ import {
   Plane,
   AlertCircle,
   TrendingUp,
-  Layers
+  Layers,
+  Wrench
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getProjects, getClients, getForms, getOperators, getPolicies } from '../lib/firestore'
@@ -50,6 +51,7 @@ import { getStatusInfo } from '../components/PolicyLibrary'
 import { logger } from '../lib/logger'
 import ActivityFeed from '../components/dashboard/ActivityFeed'
 import UpcomingEvents from '../components/dashboard/UpcomingEvents'
+import MaintenanceAlertWidget from '../components/maintenance/MaintenanceAlertWidget'
 
 // ============================================
 // SAIL CALCULATION HELPER
@@ -644,53 +646,61 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Certification alerts */}
-      {!loading && expiringOperators.length > 0 ? (
-        <div className="card border-amber-200 bg-amber-50">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="font-medium text-amber-900">Certification Alerts</h3>
-              <p className="text-sm text-amber-700 mt-1">
-                {expiringOperators.length} operator{expiringOperators.length > 1 ? 's have' : ' has'} certifications expiring within 30 days.
-              </p>
-              <div className="mt-3 space-y-2">
-                {expiringOperators.slice(0, 3).map((op) => (
-                  <div key={op.id} className="flex items-center gap-2 text-sm text-amber-800">
-                    <Users className="w-4 h-4" />
-                    <span className="font-medium">{op.firstName} {op.lastName}</span>
-                    <span className="text-amber-600">
-                      - {op.certifications?.filter(c => {
-                        if (!c.expiryDate) return false
-                        const expiry = new Date(c.expiryDate)
-                        return isBefore(expiry, addDays(new Date(), 30))
-                      }).map(c => c.type || c.name).join(', ')}
-                    </span>
+      {/* Alerts Section */}
+      {!loading && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Certification alerts */}
+          {expiringOperators.length > 0 ? (
+            <div className="card border-amber-200 bg-amber-50">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-medium text-amber-900">Certification Alerts</h3>
+                  <p className="text-sm text-amber-700 mt-1">
+                    {expiringOperators.length} operator{expiringOperators.length > 1 ? 's have' : ' has'} certifications expiring within 30 days.
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {expiringOperators.slice(0, 3).map((op) => (
+                      <div key={op.id} className="flex items-center gap-2 text-sm text-amber-800">
+                        <Users className="w-4 h-4" />
+                        <span className="font-medium">{op.firstName} {op.lastName}</span>
+                        <span className="text-amber-600">
+                          - {op.certifications?.filter(c => {
+                            if (!c.expiryDate) return false
+                            const expiry = new Date(c.expiryDate)
+                            return isBefore(expiry, addDays(new Date(), 30))
+                          }).map(c => c.type || c.name).join(', ')}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                  <Link to="/operators" className="text-sm text-amber-800 font-medium hover:underline mt-3 inline-block">
+                    View all operators →
+                  </Link>
+                </div>
               </div>
-              <Link to="/operators" className="text-sm text-amber-800 font-medium hover:underline mt-3 inline-block">
-                View all operators →
-              </Link>
             </div>
-          </div>
-        </div>
-      ) : !loading ? (
-        <div className="card border-green-200 bg-green-50">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-medium text-green-900">All Certifications Current</h3>
-              <p className="text-sm text-green-700 mt-1">
-                No certifications are expiring in the next 30 days.
-              </p>
-              <Link to="/operators" className="text-sm text-green-800 font-medium hover:underline mt-2 inline-block">
-                Manage operators →
-              </Link>
+          ) : (
+            <div className="card border-green-200 bg-green-50">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-green-900">All Certifications Current</h3>
+                  <p className="text-sm text-green-700 mt-1">
+                    No certifications are expiring in the next 30 days.
+                  </p>
+                  <Link to="/operators" className="text-sm text-green-800 font-medium hover:underline mt-2 inline-block">
+                    Manage operators →
+                  </Link>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Maintenance alerts */}
+          <MaintenanceAlertWidget compact />
         </div>
-      ) : null}
+      )}
 
       {/* Activity & Upcoming Events */}
       {!loading && (
