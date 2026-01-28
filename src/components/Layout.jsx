@@ -63,6 +63,7 @@ const maintenanceNavigation = [
   { name: 'Dashboard', href: '/maintenance', icon: Wrench },
   { name: 'All Items', href: '/maintenance/items', icon: Package },
   { name: 'Schedules', href: '/maintenance/schedules', icon: Settings },
+  { name: 'Calendar', href: '/maintenance/calendar', icon: CalendarDays },
 ]
 
 const libraries = [

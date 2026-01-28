@@ -32,6 +32,7 @@ import { getProjects } from '../lib/firestore'
 import { getAllTrainingRecords, getTrainingMetrics } from '../lib/firestoreTraining'
 import { getInsurancePolicies } from '../lib/firestoreInsurance'
 import { getInspections } from '../lib/firestoreInspections'
+import { getUpcomingMaintenance, getAllMaintainableItems } from '../lib/firestoreMaintenance'
 
 // Event types with colors
 const EVENT_TYPES = {
@@ -175,6 +176,28 @@ export default function Calendar() {
             details: {
               location: inspection.location,
               inspector: inspection.inspectorName
+            }
+          })
+        }
+      })
+
+      // Load maintenance due dates
+      const maintenanceEvents = await getUpcomingMaintenance(365).catch(() => [])
+      maintenanceEvents.forEach(maint => {
+        if (maint.dueDate) {
+          const dueDate = new Date(maint.dueDate)
+          allEvents.push({
+            id: `maintenance-${maint.itemId}-${maint.scheduleId}`,
+            title: `${maint.itemName} maintenance due`,
+            subtitle: maint.scheduleName || 'Scheduled maintenance',
+            date: dueDate,
+            type: 'maintenance',
+            source: 'maintenance',
+            sourceId: maint.itemId,
+            status: maint.status,
+            details: {
+              itemType: maint.itemType,
+              daysUntil: maint.daysUntil
             }
           })
         }
