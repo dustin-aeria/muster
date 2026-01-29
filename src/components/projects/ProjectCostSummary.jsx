@@ -67,39 +67,31 @@ export default function ProjectCostSummary({ project }) {
     // Pre-field costs
     const preFieldCost = calculatePhaseCost(project?.preFieldPhase)
 
-    // Services costs - smarter rate detection
-    // If rateType is set, use that. Otherwise, auto-detect: fixed > daily > hourly > weekly
+    // Services costs - smart calculation
+    // Priority: 1) Fixed rate (no quantity needed), 2) Rate × quantity, 3) Rate × 1 (default)
     let servicesWithCost = 0
     const servicesCost = services.reduce((sum, s) => {
-      const sRateType = s.rateType || 'daily'
       const sQuantity = parseFloat(s.quantity) || 0
 
-      // First try the selected rate type
-      const sRateConfig = RATE_TYPE_OPTIONS[sRateType]
-      let sRate = s[sRateConfig.rateField] || 0
-
-      // If selected rate type has no rate, try to find any available rate
-      if (sRate === 0) {
-        // Check for fixed rate first (doesn't need quantity)
-        if (s.fixedRate > 0) {
-          servicesWithCost++
-          return sum + s.fixedRate
-        }
-        // Then check other rates with quantity
-        if (sQuantity > 0) {
-          if (s.dailyRate > 0) sRate = s.dailyRate
-          else if (s.hourlyRate > 0) sRate = s.hourlyRate
-          else if (s.weeklyRate > 0) sRate = s.weeklyRate
-        }
+      // 1) Check for fixed rate first (doesn't need quantity)
+      if (s.fixedRate > 0) {
+        servicesWithCost++
+        return sum + s.fixedRate
       }
 
-      if (sRateType === 'fixed' && sRate > 0) {
+      // 2) Find the best available rate
+      let sRate = 0
+      if (s.dailyRate > 0) sRate = s.dailyRate
+      else if (s.hourlyRate > 0) sRate = s.hourlyRate
+      else if (s.weeklyRate > 0) sRate = s.weeklyRate
+
+      // 3) Calculate: rate × quantity, or rate × 1 if no quantity set
+      if (sRate > 0) {
+        const effectiveQuantity = sQuantity > 0 ? sQuantity : 1
         servicesWithCost++
-        return sum + sRate
-      } else if (sQuantity > 0 && sRate > 0) {
-        servicesWithCost++
-        return sum + (sQuantity * sRate)
+        return sum + (sRate * effectiveQuantity)
       }
+
       return sum
     }, 0)
     const servicesIncomplete = services.length - servicesWithCost
