@@ -242,6 +242,7 @@ export default function ProjectEquipment({ project, onUpdate }) {
         manufacturer: equipment.manufacturer,
         model: equipment.model,
         serialNumber: equipment.serialNumber,
+        dailyRate: equipment.dailyRate || 0,  // Include for cost calculation
         assignedAt: new Date().toISOString()
       }
     ]
@@ -517,6 +518,11 @@ export default function ProjectEquipment({ project, onUpdate }) {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                  {item.dailyRate > 0 && (
+                                    <span className="text-xs text-green-600 font-medium">
+                                      ${item.dailyRate}/day
+                                    </span>
+                                  )}
                                   <span className={`px-2 py-0.5 text-xs rounded-full ${status.color}`}>
                                     {status.label}
                                   </span>
@@ -756,9 +762,16 @@ export default function ProjectEquipment({ project, onUpdate }) {
                                 {eq.manufacturer} {eq.model}
                               </p>
                             </div>
-                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                              {EQUIPMENT_CATEGORIES[eq.category]?.label || eq.category}
-                            </span>
+                            <div className="text-right">
+                              {eq.dailyRate > 0 && (
+                                <span className="text-xs text-green-600 font-medium block">
+                                  ${eq.dailyRate}/day
+                                </span>
+                              )}
+                              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+                                {EQUIPMENT_CATEGORIES[eq.category]?.label || eq.category}
+                              </span>
+                            </div>
                           </div>
                         </button>
                       )

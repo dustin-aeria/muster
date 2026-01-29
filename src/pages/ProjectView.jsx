@@ -52,7 +52,8 @@ import {
   Layers,
   Bell,
   ClipboardCheck,
-  PackageCheck
+  PackageCheck,
+  Package
 } from 'lucide-react'
 import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
@@ -77,6 +78,7 @@ import ProjectTeam from '../components/projects/ProjectTeam'
 import ProjectPreField from '../components/projects/ProjectPreField'
 import ProjectPostField from '../components/projects/ProjectPostField'
 import ProjectTeamPanel from '../components/projects/ProjectTeamPanel'
+import ProjectEquipment from '../components/projects/ProjectEquipment'
 import PhaseNavigator, { PHASES, getPhaseForTab, getTabsForPhase } from '../components/projects/PhaseNavigator'
 import { useAuth } from '../contexts/AuthContext'
 import { logger } from '../lib/logger'
@@ -90,6 +92,7 @@ const tabs = [
   { id: 'preField', label: 'Pre-Field', icon: ClipboardCheck, toggleable: true, sectionKey: 'preField' },
   // Core tabs continued
   { id: 'crew', label: 'Crew', icon: Users },
+  { id: 'equipment', label: 'Equipment', icon: Package },
   { id: 'team', label: 'Team', icon: MessageSquare, toggleable: true, sectionKey: 'team' },
   { id: 'notifications', label: 'Notifications', icon: Bell, toggleable: true, sectionKey: 'notifications' },
   { id: 'site', label: 'Site Survey', icon: MapPin },
@@ -666,6 +669,9 @@ export default function ProjectView() {
             <ProjectCrew project={project} onUpdate={handleUpdate} />
             <ProjectTeamPanel project={project} onUpdate={handleUpdate} />
           </div>
+        )}
+        {activeTab === 'equipment' && (
+          <ProjectEquipment project={project} onUpdate={handleUpdate} />
         )}
         {activeTab === 'team' && (
           <ProjectComments project={project} operatorId={user?.uid} />

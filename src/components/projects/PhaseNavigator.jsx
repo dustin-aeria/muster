@@ -43,8 +43,8 @@ export const PHASES = [
     id: 'field',
     label: 'Field',
     icon: Plane,
-    description: 'Crew, briefings & operations',
-    tabs: ['crew', 'team', 'notifications', 'review', 'tailgate', 'forms']
+    description: 'Crew, equipment & operations',
+    tabs: ['crew', 'equipment', 'team', 'notifications', 'review', 'tailgate', 'forms']
   },
   {
     id: 'deliver',
