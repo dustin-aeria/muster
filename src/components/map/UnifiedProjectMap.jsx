@@ -647,9 +647,23 @@ export function UnifiedProjectMap({
         // Add the layer if it doesn't exist
         if (!map.getLayer(mapLayerId)) {
           if (layerId === 'adminBoundaries') {
-            // Debug: Log available sources
+            // Debug: Log available sources and layers
             const style = map.getStyle()
             console.log('Available sources:', Object.keys(style?.sources || {}))
+
+            // Log all layers that use composite source to find the right source-layer name
+            const compositeLayers = style.layers.filter(l => l.source === 'composite')
+            const sourceLayerNames = [...new Set(compositeLayers.map(l => l['source-layer']).filter(Boolean))]
+            console.log('Source-layers in composite:', sourceLayerNames)
+
+            // Find any admin-related layers
+            const adminLayers = compositeLayers.filter(l =>
+              l['source-layer']?.includes('admin') ||
+              l['source-layer']?.includes('boundary') ||
+              l.id?.includes('admin') ||
+              l.id?.includes('boundary')
+            )
+            console.log('Admin/boundary layers found:', adminLayers.map(l => ({ id: l.id, sourceLayer: l['source-layer'] })))
 
             // Try to add admin boundaries layer
             // Mapbox Streets v12 uses 'composite' source with 'admin' source-layer
