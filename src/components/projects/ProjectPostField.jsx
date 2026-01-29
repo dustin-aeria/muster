@@ -5,20 +5,48 @@
  * @location src/components/projects/ProjectPostField.jsx
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { PackageCheck, FileText, Info } from 'lucide-react'
 import PhaseTaskList from './phases/PhaseTaskList'
 import PhaseCostSummary from './phases/PhaseCostSummary'
 import AddTaskModal from './phases/AddTaskModal'
 import AddCostItemModal from './phases/AddCostItemModal'
+import { getOperators } from '../../lib/firestore'
 
 export default function ProjectPostField({ project, onUpdate }) {
   const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
   const [costModalOpen, setCostModalOpen] = useState(false)
   const [costModalTask, setCostModalTask] = useState(null)
+  const [freshOperators, setFreshOperators] = useState([])
 
   const phase = project?.postFieldPhase || { tasks: [], notes: '' }
+
+  // Fetch fresh operator data to get current rates
+  useEffect(() => {
+    const loadOperators = async () => {
+      try {
+        const ops = await getOperators()
+        setFreshOperators(ops)
+      } catch (err) {
+        console.error('Error loading operators:', err)
+      }
+    }
+    loadOperators()
+  }, [])
+
+  // Merge crew assignments with fresh operator rates
+  const crewWithFreshRates = (project?.crew || []).map(crewMember => {
+    const freshOp = freshOperators.find(op => op.id === crewMember.operatorId)
+    if (freshOp) {
+      return {
+        ...crewMember,
+        hourlyRate: freshOp.hourlyRate || 0,
+        dailyRate: freshOp.dailyRate || 0
+      }
+    }
+    return crewMember
+  })
 
   // Update phase data
   const updatePhase = useCallback((updates) => {
@@ -198,7 +226,7 @@ export default function ProjectPostField({ project, onUpdate }) {
         onSave={handleSaveTask}
         task={editingTask}
         isPreField={false}
-        operators={project?.crew || []}
+        operators={crewWithFreshRates}
       />
 
       {/* Add Cost Item Modal */}
