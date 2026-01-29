@@ -6,12 +6,18 @@
  */
 
 import { useState, useEffect } from 'react'
-import { X, ListTodo, Calendar, Clock, Users, DollarSign } from 'lucide-react'
+import { X, ListTodo, Calendar, Clock, Users, DollarSign, Trash2 } from 'lucide-react'
 import {
   PRE_FIELD_TASK_TYPES,
   POST_FIELD_TASK_TYPES,
   createTask
 } from './phaseConstants'
+
+const RATE_TYPE_OPTIONS = {
+  hourly: { label: 'Hours', rateField: 'hourlyRate', unitLabel: 'hr' },
+  daily: { label: 'Days', rateField: 'dailyRate', unitLabel: 'day' },
+  weekly: { label: 'Weeks', rateField: 'weeklyRate', unitLabel: 'wk' }
+}
 
 export default function AddTaskModal({
   isOpen,
@@ -26,12 +32,14 @@ export default function AddTaskModal({
     type: 'other',
     description: '',
     dueDate: '',
-    estimatedHours: '',
+    rateType: 'hourly',
+    estimatedDuration: '',
     assignedOperators: []
   })
 
   const taskTypes = isPreField ? PRE_FIELD_TASK_TYPES : POST_FIELD_TASK_TYPES
   const isEditing = !!task
+  const rateConfig = RATE_TYPE_OPTIONS[formData.rateType]
 
   useEffect(() => {
     if (task) {
@@ -40,7 +48,8 @@ export default function AddTaskModal({
         type: task.type || 'other',
         description: task.description || '',
         dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
-        estimatedHours: task.estimatedHours || '',
+        rateType: task.rateType || 'hourly',
+        estimatedDuration: task.estimatedDuration || task.estimatedHours || '',
         assignedOperators: task.assignedOperators || []
       })
     } else {
@@ -49,18 +58,25 @@ export default function AddTaskModal({
         type: 'other',
         description: '',
         dueDate: '',
-        estimatedHours: '',
+        rateType: 'hourly',
+        estimatedDuration: '',
         assignedOperators: []
       })
     }
   }, [task, isOpen])
 
-  // Calculate estimated cost based on assigned operators and hours
+  // Get the rate for an operator based on current rate type
+  const getOperatorRate = (operator) => {
+    const rateField = rateConfig.rateField
+    return operator?.[rateField] || 0
+  }
+
+  // Calculate estimated cost based on assigned operators, duration, and rate type
   const estimatedCost = formData.assignedOperators.reduce((total, opId) => {
     const operator = operators.find(o => o.id === opId || o.operatorId === opId)
-    const hours = parseFloat(formData.estimatedHours) || 0
-    const rate = operator?.hourlyRate || 0
-    return total + (hours * rate)
+    const duration = parseFloat(formData.estimatedDuration) || 0
+    const rate = getOperatorRate(operator)
+    return total + (duration * rate)
   }, 0)
 
   const handleSubmit = (e) => {
@@ -76,13 +92,23 @@ export default function AddTaskModal({
           ...task,
           ...formData,
           dueDate: formData.dueDate || null,
-          estimatedHours: parseFloat(formData.estimatedHours) || 0,
+          estimatedDuration: parseFloat(formData.estimatedDuration) || 0,
+          estimatedHours: formData.rateType === 'hourly'
+            ? parseFloat(formData.estimatedDuration) || 0
+            : formData.rateType === 'daily'
+              ? (parseFloat(formData.estimatedDuration) || 0) * 8
+              : (parseFloat(formData.estimatedDuration) || 0) * 40,
           estimatedCost
         }
       : createTask({
           ...formData,
           dueDate: formData.dueDate || null,
-          estimatedHours: parseFloat(formData.estimatedHours) || 0,
+          estimatedDuration: parseFloat(formData.estimatedDuration) || 0,
+          estimatedHours: formData.rateType === 'hourly'
+            ? parseFloat(formData.estimatedDuration) || 0
+            : formData.rateType === 'daily'
+              ? (parseFloat(formData.estimatedDuration) || 0) * 8
+              : (parseFloat(formData.estimatedDuration) || 0) * 40,
           estimatedCost
         })
 
@@ -90,14 +116,26 @@ export default function AddTaskModal({
     onClose()
   }
 
-  const handleToggleOperator = (operatorId) => {
+  const handleAddOperator = (operatorId) => {
+    if (!operatorId || formData.assignedOperators.includes(operatorId)) return
     setFormData(prev => ({
       ...prev,
-      assignedOperators: prev.assignedOperators.includes(operatorId)
-        ? prev.assignedOperators.filter(id => id !== operatorId)
-        : [...prev.assignedOperators, operatorId]
+      assignedOperators: [...prev.assignedOperators, operatorId]
     }))
   }
+
+  const handleRemoveOperator = (operatorId) => {
+    setFormData(prev => ({
+      ...prev,
+      assignedOperators: prev.assignedOperators.filter(id => id !== operatorId)
+    }))
+  }
+
+  // Get available operators (not yet assigned)
+  const availableOperators = operators.filter(op => {
+    const opId = op.id || op.operatorId
+    return !formData.assignedOperators.includes(opId)
+  })
 
   if (!isOpen) return null
 
@@ -190,23 +228,34 @@ export default function AddTaskModal({
               />
             </div>
 
-            {/* Estimated Hours */}
+            {/* Duration & Rate Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <span className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  Estimated Hours
+                  Estimated Duration
                 </span>
               </label>
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                value={formData.estimatedHours}
-                onChange={(e) => setFormData(prev => ({ ...prev, estimatedHours: e.target.value }))}
-                className="input"
-                placeholder="e.g., 2.5"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={formData.estimatedDuration}
+                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedDuration: e.target.value }))}
+                  className="input flex-1"
+                  placeholder="e.g., 2.5"
+                />
+                <select
+                  value={formData.rateType}
+                  onChange={(e) => setFormData(prev => ({ ...prev, rateType: e.target.value }))}
+                  className="input w-28"
+                >
+                  {Object.entries(RATE_TYPE_OPTIONS).map(([key, config]) => (
+                    <option key={key} value={key}>{config.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Assigned Operators */}
@@ -218,39 +267,81 @@ export default function AddTaskModal({
                     Assigned Operators
                   </span>
                 </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {operators.map(op => {
-                    const opId = op.id || op.operatorId
-                    const isSelected = formData.assignedOperators.includes(opId)
-                    const hasRate = op.hourlyRate > 0
-                    return (
-                      <button
-                        key={opId}
-                        type="button"
-                        onClick={() => handleToggleOperator(opId)}
-                        className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
-                          isSelected
-                            ? 'bg-aeria-navy text-white border-aeria-navy'
-                            : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                        }`}
-                      >
-                        {op.name || op.operatorName || op.firstName}
-                        {hasRate ? (
-                          <span className="ml-1 text-xs opacity-75">
-                            (${op.hourlyRate}/hr)
-                          </span>
-                        ) : (
-                          <span className="ml-1 text-xs text-amber-600">
-                            (no rate)
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-                {operators.some(op => !op.hourlyRate || op.hourlyRate === 0) && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    Operators showing "no rate" need hourly rates set in the Operators page, or re-add them to the crew.
+
+                {/* Dropdown to add operators */}
+                {availableOperators.length > 0 && (
+                  <select
+                    value=""
+                    onChange={(e) => handleAddOperator(e.target.value)}
+                    className="input mb-2"
+                  >
+                    <option value="">Select operator to add...</option>
+                    {availableOperators.map(op => {
+                      const opId = op.id || op.operatorId
+                      const rate = getOperatorRate(op)
+                      const opName = op.name || op.operatorName || `${op.firstName || ''} ${op.lastName || ''}`.trim()
+                      return (
+                        <option key={opId} value={opId}>
+                          {opName} {rate > 0 ? `($${rate}/${rateConfig.unitLabel})` : '(no rate)'}
+                        </option>
+                      )
+                    })}
+                  </select>
+                )}
+
+                {/* List of assigned operators */}
+                {formData.assignedOperators.length > 0 ? (
+                  <div className="space-y-2">
+                    {formData.assignedOperators.map(opId => {
+                      const op = operators.find(o => (o.id || o.operatorId) === opId)
+                      if (!op) return null
+                      const rate = getOperatorRate(op)
+                      const opName = op.name || op.operatorName || `${op.firstName || ''} ${op.lastName || ''}`.trim()
+                      const duration = parseFloat(formData.estimatedDuration) || 0
+                      const opCost = duration * rate
+
+                      return (
+                        <div
+                          key={opId}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200"
+                        >
+                          <div className="flex-1">
+                            <span className="font-medium text-gray-900">{opName}</span>
+                            {rate > 0 ? (
+                              <span className="ml-2 text-sm text-gray-500">
+                                ${rate}/{rateConfig.unitLabel}
+                                {duration > 0 && (
+                                  <span className="text-green-600 ml-1">
+                                    = ${opCost.toFixed(2)}
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="ml-2 text-sm text-amber-600">(no {rateConfig.label.toLowerCase()} rate)</span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOperator(opId)}
+                            className="p-1 text-gray-400 hover:text-red-500 rounded"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">No operators assigned</p>
+                )}
+
+                {/* Warning for missing rates */}
+                {formData.assignedOperators.some(opId => {
+                  const op = operators.find(o => (o.id || o.operatorId) === opId)
+                  return !getOperatorRate(op)
+                }) && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    Some operators don't have a {rateConfig.label.toLowerCase()} rate set. Update their rates in the Operators page.
                   </p>
                 )}
               </div>
@@ -265,7 +356,7 @@ export default function AddTaskModal({
                     Estimated Cost: <strong>${estimatedCost.toFixed(2)}</strong>
                   </span>
                   <span className="text-xs text-green-600">
-                    ({formData.assignedOperators.length} operator{formData.assignedOperators.length !== 1 ? 's' : ''} × {formData.estimatedHours || 0}h)
+                    ({formData.assignedOperators.length} operator{formData.assignedOperators.length !== 1 ? 's' : ''} × {formData.estimatedDuration || 0} {rateConfig.label.toLowerCase()})
                   </span>
                 </div>
               </div>
