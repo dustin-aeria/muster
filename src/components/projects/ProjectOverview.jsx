@@ -50,8 +50,6 @@ import {
   getSAIL
 } from '../../lib/soraConfig'
 import ProjectServicesSection from './ProjectServicesSection'
-import FieldCostCalculator from './FieldCostCalculator'
-import ProjectCostSummary from './ProjectCostSummary'
 
 // ============================================
 // SITE STATUS CARD
@@ -898,9 +896,6 @@ export default function ProjectOverview({
         onExport={onExport}
       />
 
-      {/* Project Cost Summary - Aggregate all costs */}
-      <ProjectCostSummary project={project} />
-
       {/* Project Details - Author, Authorities, Deliverables, Scope */}
       <ProjectDetails
         project={project}
@@ -909,12 +904,6 @@ export default function ProjectOverview({
 
       {/* Project Services */}
       <ProjectServicesSection
-        project={project}
-        onUpdate={onUpdate}
-      />
-
-      {/* Field Cost Calculator */}
-      <FieldCostCalculator
         project={project}
         onUpdate={onUpdate}
       />

@@ -53,7 +53,8 @@ import {
   Bell,
   ClipboardCheck,
   PackageCheck,
-  Package
+  Package,
+  Calculator
 } from 'lucide-react'
 import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
@@ -79,6 +80,7 @@ import ProjectPreField from '../components/projects/ProjectPreField'
 import ProjectPostField from '../components/projects/ProjectPostField'
 import ProjectTeamPanel from '../components/projects/ProjectTeamPanel'
 import ProjectEquipment from '../components/projects/ProjectEquipment'
+import ProjectCosts from '../components/projects/ProjectCosts'
 import PhaseNavigator, { PHASES, getPhaseForTab, getTabsForPhase } from '../components/projects/PhaseNavigator'
 import { useAuth } from '../contexts/AuthContext'
 import { logger } from '../lib/logger'
@@ -87,6 +89,7 @@ const tabs = [
   // Core tabs - always visible
   { id: 'overview', label: 'Overview', icon: FolderKanban },
   { id: 'needs', label: 'Needs Analysis', icon: Target },
+  { id: 'costs', label: 'Costs', icon: Calculator },
   { id: 'sections', label: 'Sections', icon: Settings2 },
   // Optional tabs - toggled via Sections page
   { id: 'preField', label: 'Pre-Field', icon: ClipboardCheck, toggleable: true, sectionKey: 'preField' },
@@ -654,6 +657,9 @@ export default function ProjectView() {
         )}
         {activeTab === 'needs' && (
           <ProjectNeedsAnalysis project={project} onUpdate={handleUpdate} />
+        )}
+        {activeTab === 'costs' && (
+          <ProjectCosts project={project} />
         )}
         {activeTab === 'sections' && (
           <ProjectSections project={project} onUpdate={handleUpdate} />
