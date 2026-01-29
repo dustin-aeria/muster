@@ -77,6 +77,7 @@ import ProjectTeam from '../components/projects/ProjectTeam'
 import ProjectPreField from '../components/projects/ProjectPreField'
 import ProjectPostField from '../components/projects/ProjectPostField'
 import ProjectTeamPanel from '../components/projects/ProjectTeamPanel'
+import PhaseNavigator, { PHASES, getPhaseForTab, getTabsForPhase } from '../components/projects/PhaseNavigator'
 import { useAuth } from '../contexts/AuthContext'
 import { logger } from '../lib/logger'
 
@@ -133,6 +134,7 @@ export default function ProjectView() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('overview')
+  const [activePhase, setActivePhase] = useState('plan')
   const [menuOpen, setMenuOpen] = useState(false)
   
   // Improved save state management
@@ -337,6 +339,30 @@ export default function ProjectView() {
     if (!tab.toggleable) return true
     return project?.sections?.[tab.sectionKey]
   })
+
+  // Get tabs for the current phase
+  const phaseTabs = getTabsForPhase(activePhase)
+  const visiblePhaseTabs = visibleTabs.filter(tab => phaseTabs.includes(tab.id))
+
+  // Handle phase change
+  const handlePhaseChange = (phaseId) => {
+    setActivePhase(phaseId)
+    // Set active tab to first visible tab in the new phase
+    const newPhaseTabs = getTabsForPhase(phaseId)
+    const firstVisibleTab = visibleTabs.find(tab => newPhaseTabs.includes(tab.id))
+    if (firstVisibleTab) {
+      setActiveTab(firstVisibleTab.id)
+    }
+  }
+
+  // Sync phase when tab changes
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId)
+    const newPhase = getPhaseForTab(tabId)
+    if (newPhase !== activePhase) {
+      setActivePhase(newPhase)
+    }
+  }
 
   // ============================================
   // RENDER: Loading State
@@ -546,62 +572,72 @@ export default function ProjectView() {
         </div>
       </div>
 
-      {/* Tabs - Accessible with keyboard navigation */}
-      <div className="border-b border-gray-200">
-        <nav 
-          className="flex gap-1 overflow-x-auto pb-px"
-          role="tablist"
-          aria-label="Project sections"
-          onKeyDown={(e) => {
-            const tabs = visibleTabs
-            const currentIndex = tabs.findIndex(t => t.id === activeTab)
-            
-            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-              e.preventDefault()
-              const nextIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0
-              setActiveTab(tabs[nextIndex].id)
-              document.getElementById(`tab-${tabs[nextIndex].id}`)?.focus()
-            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-              e.preventDefault()
-              const prevIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1
-              setActiveTab(tabs[prevIndex].id)
-              document.getElementById(`tab-${tabs[prevIndex].id}`)?.focus()
-            } else if (e.key === 'Home') {
-              e.preventDefault()
-              setActiveTab(tabs[0].id)
-              document.getElementById(`tab-${tabs[0].id}`)?.focus()
-            } else if (e.key === 'End') {
-              e.preventDefault()
-              setActiveTab(tabs[tabs.length - 1].id)
-              document.getElementById(`tab-${tabs[tabs.length - 1].id}`)?.focus()
-            }
-          }}
-        >
-          {visibleTabs.map((tab, index) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                id={`tab-${tab.id}`}
-                role="tab"
-                aria-selected={isActive}
-                aria-controls={`tabpanel-${tab.id}`}
-                tabIndex={isActive ? 0 : -1}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  isActive
-                    ? 'border-aeria-navy text-aeria-navy'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Icon className="w-4 h-4" aria-hidden="true" />
-                {tab.label}
-              </button>
-            )
-          })}
-        </nav>
-      </div>
+      {/* Phase Navigator */}
+      <PhaseNavigator
+        activePhase={activePhase}
+        onPhaseChange={handlePhaseChange}
+        project={project}
+        visibleTabs={visibleTabs}
+      />
+
+      {/* Sub-tabs within phase */}
+      {visiblePhaseTabs.length > 1 && (
+        <div className="border-b border-gray-200 bg-gray-50">
+          <nav
+            className="flex gap-1 overflow-x-auto px-4 py-1"
+            role="tablist"
+            aria-label="Phase sections"
+            onKeyDown={(e) => {
+              const currentTabs = visiblePhaseTabs
+              const currentIndex = currentTabs.findIndex(t => t.id === activeTab)
+
+              if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault()
+                const nextIndex = currentIndex < currentTabs.length - 1 ? currentIndex + 1 : 0
+                handleTabChange(currentTabs[nextIndex].id)
+                document.getElementById(`tab-${currentTabs[nextIndex].id}`)?.focus()
+              } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault()
+                const prevIndex = currentIndex > 0 ? currentIndex - 1 : currentTabs.length - 1
+                handleTabChange(currentTabs[prevIndex].id)
+                document.getElementById(`tab-${currentTabs[prevIndex].id}`)?.focus()
+              } else if (e.key === 'Home') {
+                e.preventDefault()
+                handleTabChange(currentTabs[0].id)
+                document.getElementById(`tab-${currentTabs[0].id}`)?.focus()
+              } else if (e.key === 'End') {
+                e.preventDefault()
+                handleTabChange(currentTabs[currentTabs.length - 1].id)
+                document.getElementById(`tab-${currentTabs[currentTabs.length - 1].id}`)?.focus()
+              }
+            }}
+          >
+            {visiblePhaseTabs.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  id={`tab-${tab.id}`}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`tabpanel-${tab.id}`}
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium whitespace-nowrap rounded-md transition-colors ${
+                    isActive
+                      ? 'bg-white text-aeria-navy shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" aria-hidden="true" />
+                  {tab.label}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+      )}
 
       {/* Tab Content */}
       <div 
