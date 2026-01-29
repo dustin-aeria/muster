@@ -1038,13 +1038,71 @@ Items considered but not yet implemented. Prioritize from this list for future b
 - [x] **Add "Safety" task type** - *(Completed Batch 11)*
 - [x] **Hours & Operators on tasks** - *(Completed Batch 11)*
 
-### Map & Flight Planning
-- [x] **Distance Measurement Tool** - *(Completed Batch 12)* Haversine formula, displays in m/km/ft/NM
-- [x] **"Same as Boundary" for Flight Area** - *(Completed Batch 12)* Option to copy operations boundary to flight geography
-- [x] **Province/State Borders Layer** - *(Completed Batch 13)* Toggleable overlay showing country and province/state boundaries
-- [ ] **Municipal Boundaries Layer** - City/town boundaries from Statistics Canada census subdivision data
-- [ ] **Airspace Integration** - Pull airspace data from NAV CANADA or OpenAIP, show controlled/restricted zones
-- [ ] **Population Density Layer** - Incorporate population density data from Statistics Canada or WorldPop
+### Unified Project Map - Comprehensive Feature Roadmap
+
+**Current Implementation:**
+- Mapbox GL JS with MapboxDraw for drawing/editing
+- Multi-site support with color coding
+- Three layer groups: Site Survey, Flight Plan, Emergency
+- Basemap switching (Streets, Satellite, Outdoors)
+- Fullscreen mode, zoom controls, fit-to-bounds
+
+#### Drawing & Measurement Tools
+- [x] **Polygon Drawing** - Operations boundary, flight geography, contingency volume
+- [x] **Line Drawing** - Evacuation routes
+- [x] **Marker Placement** - Site location, obstacles, launch/recovery points, muster points
+- [x] **Vertex Editing** - Edit polygon/line points after creation
+- [x] **Distance Measurement** - *(Batch 12)* Haversine formula, displays in m/km/ft/NM
+- [x] **"Same as Boundary"** - *(Batch 12)* Copy operations boundary to flight geography
+- [ ] **Area Measurement** - Calculate and display polygon area in m²/km²/acres
+- [ ] **Coordinate Display** - Show lat/lng on hover or click
+- [ ] **Bearing/Heading Tool** - Measure direction between two points
+
+#### Reference Overlay Layers
+- [x] **Province/State Borders** - *(Batch 13)* Toggleable admin boundaries, purple dashed lines
+- [x] **Overlay Layer UI** - *(Batch 13)* "Layers" button with toggle panel
+- [ ] **Municipal Boundaries** - Statistics Canada census subdivision data (requires Mapbox tileset upload)
+- [ ] **Airspace Zones** - NAV CANADA or OpenAIP controlled/restricted airspace
+- [ ] **Population Density** - Statistics Canada or WorldPop density heatmap
+- [ ] **Terrain/Elevation** - Hillshade, contour lines, elevation data
+- [ ] **Land Use/Zoning** - Parks, industrial, residential, agricultural areas
+- [ ] **Infrastructure** - Power lines, pipelines, railways, highways
+
+#### Airspace Intelligence
+- [ ] **Controlled Airspace Display** - Class A/B/C/D/E/F zones with altitude info
+- [ ] **Control Zone Boundaries** - Airport CTR boundaries
+- [ ] **Restricted/Prohibited Areas** - CYR/CYA zones
+- [ ] **Altitude-Aware Airspace** - Show which airspace applies at flight altitude
+- [ ] **Airspace Click-to-Query** - Click map to get airspace classification at that point
+- [ ] **NAV CANADA RPAS Integration** - Link to notification requirements
+
+#### Flight Planning Aids
+- [ ] **NOTAMs Display** - Active NOTAMs affecting flight area
+- [ ] **TFRs (Temporary Flight Restrictions)** - Display active TFRs
+- [ ] **Weather Overlay** - Radar, cloud cover, wind direction on map
+- [ ] **Sun Position** - Sunrise/sunset direction, shadow calculation
+- [ ] **Magnetic Declination** - Show magnetic vs true north
+
+#### Data Export & Sharing
+- [ ] **Screenshot/Image Export** - Export map view as PNG/JPEG
+- [ ] **KML/KMZ Export** - Export flight plan for Google Earth
+- [ ] **GPX Export** - Export waypoints for GPS devices
+- [ ] **PDF Map Insert** - Auto-generate map images for PDF exports
+- [ ] **Share Map Link** - Generate shareable link to current map view
+
+#### Performance & Offline
+- [ ] **Offline Tile Caching** - Cache map tiles for field use (partial implementation exists)
+- [ ] **Vector Tile Optimization** - Efficient rendering for large datasets
+- [ ] **Lazy Loading** - Load overlay data only when enabled
+
+#### Data Sources to Integrate
+| Layer | Source | Format | Notes |
+|-------|--------|--------|-------|
+| Municipal Boundaries | Statistics Canada | Shapefile → Mapbox Tileset | Census Subdivision (CSD) |
+| Airspace | NAV CANADA / OpenAIP | GeoJSON / API | Requires data agreement or API |
+| Population Density | Statistics Canada / WorldPop | Raster / Vector | Census data by dissemination area |
+| NOTAMs | NAV CANADA | API | Real-time feed |
+| Weather Radar | Environment Canada | WMS / Tiles | Radar imagery overlay |
 
 ### Data & Reporting
 - [ ] **Enhanced Reporting** - Comprehensive PDF/Excel reports for projects, safety metrics, compliance status
@@ -1071,5 +1129,5 @@ Items considered but not yet implemented. Prioritize from this list for future b
 
 ---
 
-*Document Version 2.0 - Updated January 28, 2026*
-*Includes feature requirements, bug tracking, and updated roadmap*
+*Document Version 2.1 - Updated January 29, 2026*
+*Includes feature requirements, bug tracking, updated roadmap, and comprehensive Mapbox feature plan*
