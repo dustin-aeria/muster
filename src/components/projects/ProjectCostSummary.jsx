@@ -63,7 +63,8 @@ export default function ProjectCostSummary({ project }) {
     // Pre-field costs
     const preFieldCost = calculatePhaseCost(project?.preFieldPhase)
 
-    // Services costs
+    // Services costs - also track incomplete
+    let servicesWithCost = 0
     const servicesCost = services.reduce((sum, s) => {
       const sRateType = s.rateType || 'daily'
       const sRateConfig = RATE_TYPE_OPTIONS[sRateType]
@@ -71,26 +72,35 @@ export default function ProjectCostSummary({ project }) {
       const sQuantity = parseFloat(s.quantity) || 0
 
       if (sRateType === 'fixed' && sRate > 0) {
+        servicesWithCost++
         return sum + sRate
       } else if (sQuantity > 0 && sRate > 0) {
+        servicesWithCost++
         return sum + (sQuantity * sRate)
       }
       return sum
     }, 0)
+    const servicesIncomplete = services.length - servicesWithCost
 
-    // Field crew costs
+    // Field crew costs - track missing rates
+    let crewWithRates = 0
     const crewCost = crew.reduce((sum, member) => {
       const freshOp = freshOperators.find(op => op.id === member.operatorId)
       const dailyRate = freshOp?.dailyRate || member.dailyRate || 0
+      if (dailyRate > 0) crewWithRates++
       return sum + (dailyRate * estimatedFieldDays)
     }, 0)
+    const crewMissingRates = crew.length - crewWithRates
 
-    // Field equipment costs
+    // Field equipment costs - track missing rates
+    let equipmentWithRates = 0
     const equipmentCost = assignedEquipment.reduce((sum, item) => {
       const freshItem = freshEquipment.find(e => e.id === item.id)
       const dailyRate = freshItem?.dailyRate || item.dailyRate || 0
+      if (dailyRate > 0) equipmentWithRates++
       return sum + (dailyRate * estimatedFieldDays)
     }, 0)
+    const equipmentMissingRates = assignedEquipment.length - equipmentWithRates
 
     const fieldCost = crewCost + equipmentCost
 
@@ -100,17 +110,28 @@ export default function ProjectCostSummary({ project }) {
     // Grand total
     const total = preFieldCost + servicesCost + fieldCost + postFieldCost
 
+    // Check for incomplete data
+    const hasIncompleteData = servicesIncomplete > 0 || crewMissingRates > 0 ||
+      equipmentMissingRates > 0 || (estimatedFieldDays === 0 && (crew.length > 0 || assignedEquipment.length > 0))
+
     return {
       preField: preFieldCost,
       services: servicesCost,
+      servicesCount: services.length,
+      servicesIncomplete,
       field: fieldCost,
       fieldBreakdown: {
         crew: crewCost,
-        equipment: equipmentCost
+        equipment: equipmentCost,
+        crewCount: crew.length,
+        crewMissingRates,
+        equipmentCount: assignedEquipment.length,
+        equipmentMissingRates
       },
       postField: postFieldCost,
       total,
-      estimatedFieldDays
+      estimatedFieldDays,
+      hasIncompleteData
     }
   }, [project, freshOperators, freshEquipment])
 
@@ -165,7 +186,17 @@ export default function ProjectCostSummary({ project }) {
           <div className="flex items-center justify-between text-white">
             <div className="flex items-center gap-2">
               <Briefcase className="w-4 h-4 text-white/70" />
-              <span className="text-sm">Services</span>
+              <span className="text-sm">
+                Services
+                {costs.servicesCount > 0 && (
+                  <span className="text-white/60 ml-1">({costs.servicesCount})</span>
+                )}
+              </span>
+              {costs.servicesIncomplete > 0 && (
+                <span className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded">
+                  {costs.servicesIncomplete} need rates
+                </span>
+              )}
             </div>
             <span className="font-medium">
               {costs.services > 0 ? formatCurrency(costs.services) : '—'}
@@ -191,16 +222,35 @@ export default function ProjectCostSummary({ project }) {
           </div>
 
           {/* Field breakdown (indented) */}
-          {costs.field > 0 && (
+          {(costs.fieldBreakdown.crewCount > 0 || costs.fieldBreakdown.equipmentCount > 0) && (
             <div className="ml-6 space-y-1 text-white/80 text-xs">
-              <div className="flex justify-between">
-                <span>Crew</span>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1">
+                  Crew ({costs.fieldBreakdown.crewCount})
+                  {costs.fieldBreakdown.crewMissingRates > 0 && (
+                    <span className="text-amber-300">
+                      · {costs.fieldBreakdown.crewMissingRates} no rate
+                    </span>
+                  )}
+                </span>
                 <span>{formatCurrency(costs.fieldBreakdown.crew)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Equipment</span>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1">
+                  Equipment ({costs.fieldBreakdown.equipmentCount})
+                  {costs.fieldBreakdown.equipmentMissingRates > 0 && (
+                    <span className="text-amber-300">
+                      · {costs.fieldBreakdown.equipmentMissingRates} no rate
+                    </span>
+                  )}
+                </span>
                 <span>{formatCurrency(costs.fieldBreakdown.equipment)}</span>
               </div>
+              {costs.estimatedFieldDays === 0 && (costs.fieldBreakdown.crewCount > 0 || costs.fieldBreakdown.equipmentCount > 0) && (
+                <div className="text-amber-300 mt-1">
+                  Set field days in Project Details to calculate costs
+                </div>
+              )}
             </div>
           )}
 
