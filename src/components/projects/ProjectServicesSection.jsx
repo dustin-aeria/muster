@@ -771,7 +771,15 @@ function ServiceCard({ service, onUpdate, onDelete, isExpanded, onToggle }) {
   const selectedRateType = service.selectedRateType || 'fixed'
   const unitTypeInfo = UNIT_TYPES?.find(u => u.value === service.unitType)
   const quantity = parseFloat(service.quantity) || 0
-  const availableRates = service.availableRates || []
+
+  // Dynamically detect available rates from service data
+  const parseRate = (val) => parseFloat(val) || 0
+  const availableRates = []
+  if (parseRate(service.fixedRate) > 0) availableRates.push('fixed')
+  if (parseRate(service.hourlyRate) > 0) availableRates.push('hourly')
+  if (parseRate(service.dailyRate) > 0) availableRates.push('daily')
+  if (parseRate(service.weeklyRate) > 0) availableRates.push('weekly')
+  if (parseRate(service.unitRate) > 0) availableRates.push('per_unit')
 
   // Get rate config for display
   const rateConfig = RATE_TYPE_OPTIONS[selectedRateType]
@@ -875,36 +883,47 @@ function ServiceCard({ service, onUpdate, onDelete, isExpanded, onToggle }) {
                   Pricing Method
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {/* Show all available rates from the service library */}
-                  {(editForm.availableRates || []).map(rateType => {
-                    const isSelected = editForm.selectedRateType === rateType
-                    const rateValue = rateType === 'per_unit'
-                      ? editForm.unitRate
-                      : editForm[RATE_TYPE_OPTIONS[rateType]?.rateField]
+                  {/* Show all available rates - dynamically detect from service data */}
+                  {(() => {
+                    const parseRate = (val) => parseFloat(val) || 0
+                    const editAvailableRates = []
+                    if (parseRate(editForm.fixedRate) > 0) editAvailableRates.push('fixed')
+                    if (parseRate(editForm.hourlyRate) > 0) editAvailableRates.push('hourly')
+                    if (parseRate(editForm.dailyRate) > 0) editAvailableRates.push('daily')
+                    if (parseRate(editForm.weeklyRate) > 0) editAvailableRates.push('weekly')
+                    if (parseRate(editForm.unitRate) > 0) editAvailableRates.push('per_unit')
                     const unitInfo = UNIT_TYPES?.find(u => u.value === editForm.unitType)
 
-                    return (
-                      <button
-                        key={rateType}
-                        type="button"
-                        onClick={() => setEditForm(prev => ({ ...prev, selectedRateType: rateType }))}
-                        className={`px-3 py-2 text-sm rounded-lg border transition-all ${
-                          isSelected
-                            ? 'bg-aeria-navy text-white border-aeria-navy'
-                            : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                        }`}
-                      >
-                        {rateType === 'fixed' && `Fixed: ${formatCurrency(rateValue || 0)}`}
-                        {rateType === 'hourly' && `Hourly: ${formatCurrency(rateValue || 0)}/hr`}
-                        {rateType === 'daily' && `Daily: ${formatCurrency(rateValue || 0)}/day`}
-                        {rateType === 'weekly' && `Weekly: ${formatCurrency(rateValue || 0)}/wk`}
-                        {rateType === 'per_unit' && `${unitInfo?.label || 'Per Unit'}: ${formatCurrency(rateValue || 0)}/${unitInfo?.plural || 'unit'}`}
-                      </button>
-                    )
-                  })}
-                  {(editForm.availableRates || []).length === 0 && (
-                    <p className="text-sm text-gray-500">No rates defined in service library</p>
-                  )}
+                    if (editAvailableRates.length === 0) {
+                      return <p className="text-sm text-gray-500">No rates defined for this service</p>
+                    }
+
+                    return editAvailableRates.map(rateType => {
+                      const isSelected = editForm.selectedRateType === rateType
+                      const rateValue = rateType === 'per_unit'
+                        ? editForm.unitRate
+                        : editForm[RATE_TYPE_OPTIONS[rateType]?.rateField]
+
+                      return (
+                        <button
+                          key={rateType}
+                          type="button"
+                          onClick={() => setEditForm(prev => ({ ...prev, selectedRateType: rateType }))}
+                          className={`px-3 py-2 text-sm rounded-lg border transition-all ${
+                            isSelected
+                              ? 'bg-aeria-navy text-white border-aeria-navy'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                          }`}
+                        >
+                          {rateType === 'fixed' && `Fixed: ${formatCurrency(rateValue || 0)}`}
+                          {rateType === 'hourly' && `Hourly: ${formatCurrency(rateValue || 0)}/hr`}
+                          {rateType === 'daily' && `Daily: ${formatCurrency(rateValue || 0)}/day`}
+                          {rateType === 'weekly' && `Weekly: ${formatCurrency(rateValue || 0)}/wk`}
+                          {rateType === 'per_unit' && `${unitInfo?.label || 'Per Unit'}: ${formatCurrency(rateValue || 0)}/${unitInfo?.plural || 'unit'}`}
+                        </button>
+                      )
+                    })
+                  })()}
                 </div>
               </div>
 
