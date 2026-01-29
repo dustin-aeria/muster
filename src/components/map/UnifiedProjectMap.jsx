@@ -674,41 +674,21 @@ export function UnifiedProjectMap({
                 return
               }
 
-              // Find a good layer to insert before (we want admin boundaries above base map but below our project layers)
-              // Look for the first symbol layer or use undefined to add on top
-              const layers = map.getStyle().layers
-              let firstSymbolId
-              for (const layer of layers) {
-                if (layer.type === 'symbol') {
-                  firstSymbolId = layer.id
-                  break
-                }
-              }
-
+              // Add layer on TOP of everything (no beforeId) so it's definitely visible
               map.addLayer({
                 id: mapLayerId,
                 type: 'line',
                 source: 'composite',
                 'source-layer': 'admin',
-                minzoom: 2,
+                minzoom: 0,
                 maxzoom: 22,
-                filter: ['all',
-                  ['>=', ['get', 'admin_level'], 2],
-                  ['<=', ['get', 'admin_level'], 8]
-                ],
                 paint: {
-                  'line-color': '#DC2626', // Bright red for visibility
-                  'line-width': [
-                    'interpolate', ['linear'], ['zoom'],
-                    2, 1,
-                    6, 2,
-                    10, 3,
-                    14, 4
-                  ],
-                  'line-opacity': 0.9
+                  'line-color': '#FF0000', // Pure red for maximum visibility
+                  'line-width': 5, // Thick line
+                  'line-opacity': 1
                 }
-              }, firstSymbolId) // Insert before symbol layers so it's visible
-              console.log('Admin boundaries layer added successfully, before layer:', firstSymbolId)
+              }) // No beforeId = adds on top
+              console.log('Admin boundaries layer added on TOP of all layers')
             } catch (err) {
               console.error('Could not add admin boundaries layer:', err)
             }
