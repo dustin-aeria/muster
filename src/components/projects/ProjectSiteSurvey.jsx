@@ -1158,29 +1158,31 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
                   type="text"
                   value={surveyData.access?.landOwner || ''}
                   onChange={(e) => updateNestedSurveyData('access', { landOwner: e.target.value })}
+                  onKeyDown={(e) => e.stopPropagation()}
                   placeholder="e.g., ABC Corp - John Smith"
                   className="input"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Permissions Required
                 </label>
                 <input
                   type="text"
-                  value={Array.isArray(surveyData.access?.permissionsRequired) 
-                    ? surveyData.access.permissionsRequired.join(', ') 
+                  value={Array.isArray(surveyData.access?.permissionsRequired)
+                    ? surveyData.access.permissionsRequired.join(', ')
                     : ''}
-                  onChange={(e) => updateNestedSurveyData('access', { 
+                  onChange={(e) => updateNestedSurveyData('access', {
                     permissionsRequired: e.target.value.split(',').map(p => p.trim()).filter(Boolean)
                   })}
+                  onKeyDown={(e) => e.stopPropagation()}
                   placeholder="e.g., Land access permit, Site induction"
                   className="input"
                 />
               </div>
             </div>
-            
+
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Access Notes
@@ -1188,6 +1190,7 @@ export default function ProjectSiteSurvey({ project, onUpdate }) {
               <textarea
                 value={surveyData.access?.accessNotes || ''}
                 onChange={(e) => updateNestedSurveyData('access', { accessNotes: e.target.value })}
+                onKeyDown={(e) => e.stopPropagation()}
                 placeholder="Gate codes, special access requirements, timing restrictions..."
                 rows={2}
                 className="input"
