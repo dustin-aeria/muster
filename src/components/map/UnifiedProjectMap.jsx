@@ -641,24 +641,52 @@ export function UnifiedProjectMap({
       const isEnabled = overlayLayers[layerId]
       const mapLayerId = `overlay-${layerId}`
 
+      console.log(`Overlay layer ${layerId}: enabled=${isEnabled}, exists=${!!map.getLayer(mapLayerId)}`)
+
       if (isEnabled) {
         // Add the layer if it doesn't exist
         if (!map.getLayer(mapLayerId)) {
-          // For admin boundaries, use the composite source that's already in Mapbox styles
           if (layerId === 'adminBoundaries') {
-            // Check if we have the admin source (from Mapbox Streets style)
-            // The source 'composite' contains admin boundaries in streets/outdoors styles
+            // Debug: Log available sources
+            const style = map.getStyle()
+            console.log('Available sources:', Object.keys(style?.sources || {}))
+
+            // Try to add admin boundaries layer
+            // Mapbox Streets v12 uses 'composite' source with 'admin' source-layer
             try {
+              // First check if composite source exists
+              if (!map.getSource('composite')) {
+                console.warn('Composite source not found in current style')
+                return
+              }
+
               map.addLayer({
                 id: mapLayerId,
-                type: config.type,
+                type: 'line',
                 source: 'composite',
-                'source-layer': config.sourceLayer,
-                filter: config.filter,
-                paint: config.paint
+                'source-layer': 'admin',
+                filter: ['>=', ['get', 'admin_level'], 2],
+                paint: {
+                  'line-color': [
+                    'match',
+                    ['get', 'admin_level'],
+                    2, '#6366F1',
+                    4, '#8B5CF6',
+                    '#A855F7'
+                  ],
+                  'line-width': [
+                    'match',
+                    ['get', 'admin_level'],
+                    2, 3,
+                    4, 2,
+                    1.5
+                  ],
+                  'line-opacity': 0.8
+                }
               })
+              console.log('Admin boundaries layer added successfully')
             } catch (err) {
-              console.warn('Could not add admin boundaries layer:', err.message)
+              console.error('Could not add admin boundaries layer:', err)
             }
           }
         }
@@ -666,6 +694,7 @@ export function UnifiedProjectMap({
         // Remove the layer if it exists
         if (map.getLayer(mapLayerId)) {
           map.removeLayer(mapLayerId)
+          console.log(`Removed overlay layer: ${mapLayerId}`)
         }
       }
     })
