@@ -19,14 +19,7 @@ import {
 } from 'lucide-react'
 import { getOperators, getEquipment, getAircraft } from '../../lib/firestore'
 import { formatCurrency, calculatePhaseCost } from '../../lib/costEstimator'
-
-// Rate type config (same as services)
-const RATE_TYPE_OPTIONS = {
-  hourly: { label: 'Hours', rateField: 'hourlyRate', unitLabel: 'hr' },
-  daily: { label: 'Days', rateField: 'dailyRate', unitLabel: 'day' },
-  weekly: { label: 'Weeks', rateField: 'weeklyRate', unitLabel: 'wk' },
-  fixed: { label: 'Fixed', rateField: 'fixedRate', unitLabel: 'fixed' }
-}
+import { calculateServiceCost } from './ProjectServicesSection'
 
 export default function ProjectCostSummary({ project }) {
   const [freshOperators, setFreshOperators] = useState([])
@@ -67,32 +60,12 @@ export default function ProjectCostSummary({ project }) {
     // Pre-field costs
     const preFieldCost = calculatePhaseCost(project?.preFieldPhase)
 
-    // Services costs - smart calculation
-    // Priority: 1) Fixed rate (no quantity needed), 2) Rate × quantity, 3) Rate × 1 (default)
+    // Services costs - using enhanced pricing model
     let servicesWithCost = 0
     const servicesCost = services.reduce((sum, s) => {
-      const sQuantity = parseFloat(s.quantity) || 0
-
-      // 1) Check for fixed rate first (doesn't need quantity)
-      if (s.fixedRate > 0) {
-        servicesWithCost++
-        return sum + s.fixedRate
-      }
-
-      // 2) Find the best available rate
-      let sRate = 0
-      if (s.dailyRate > 0) sRate = s.dailyRate
-      else if (s.hourlyRate > 0) sRate = s.hourlyRate
-      else if (s.weeklyRate > 0) sRate = s.weeklyRate
-
-      // 3) Calculate: rate × quantity, or rate × 1 if no quantity set
-      if (sRate > 0) {
-        const effectiveQuantity = sQuantity > 0 ? sQuantity : 1
-        servicesWithCost++
-        return sum + (sRate * effectiveQuantity)
-      }
-
-      return sum
+      const cost = calculateServiceCost(s)
+      if (cost > 0) servicesWithCost++
+      return sum + cost
     }, 0)
     const servicesIncomplete = services.length - servicesWithCost
 

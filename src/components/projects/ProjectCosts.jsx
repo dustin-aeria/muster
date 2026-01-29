@@ -20,10 +20,15 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  Calculator
+  Calculator,
+  Layers,
+  Clock,
+  Percent
 } from 'lucide-react'
 import { getOperators, getEquipment, getAircraft } from '../../lib/firestore'
 import { formatCurrency, calculatePhaseCost } from '../../lib/costEstimator'
+import { calculateServiceCost } from './ProjectServicesSection'
+import { UNIT_TYPES } from '../../pages/Services'
 
 export default function ProjectCosts({ project }) {
   const [freshOperators, setFreshOperators] = useState([])
@@ -70,34 +75,58 @@ export default function ProjectCosts({ project }) {
     const preFieldTasks = project?.preFieldPhase?.tasks || []
     const preFieldCost = calculatePhaseCost(project?.preFieldPhase)
 
-    // Services costs
+    // Services costs - using enhanced pricing model
     let servicesDetails = []
     const servicesCost = services.reduce((sum, s) => {
-      const sQuantity = parseFloat(s.quantity) || 0
-      let cost = 0
-      let rateInfo = ''
+      const cost = calculateServiceCost(s)
+      const pricingType = s.pricingType || 'time_based'
+      const quantity = parseFloat(s.quantity) || 0
+      const unitTypeInfo = UNIT_TYPES?.find(u => u.value === s.unitType)
 
-      if (s.fixedRate > 0) {
-        cost = s.fixedRate
-        rateInfo = 'Fixed'
-      } else if (s.dailyRate > 0) {
-        const qty = sQuantity > 0 ? sQuantity : 1
-        cost = s.dailyRate * qty
-        rateInfo = `${formatCurrency(s.dailyRate)}/day × ${qty}`
-      } else if (s.hourlyRate > 0) {
-        const qty = sQuantity > 0 ? sQuantity : 1
-        cost = s.hourlyRate * qty
-        rateInfo = `${formatCurrency(s.hourlyRate)}/hr × ${qty}`
-      } else if (s.weeklyRate > 0) {
-        const qty = sQuantity > 0 ? sQuantity : 1
-        cost = s.weeklyRate * qty
-        rateInfo = `${formatCurrency(s.weeklyRate)}/wk × ${qty}`
+      let rateInfo = ''
+      if (pricingType === 'fixed') {
+        rateInfo = 'Fixed price'
+      } else if (pricingType === 'per_unit') {
+        rateInfo = quantity > 0
+          ? `${quantity} ${unitTypeInfo?.plural || 'units'} × ${formatCurrency(s.unitRate || 0)}`
+          : `${unitTypeInfo?.label || 'Per unit'} pricing`
+      } else {
+        // time_based
+        const rateType = s.rateType || 'daily'
+        if (rateType === 'fixed' && s.fixedRate > 0) {
+          rateInfo = 'Fixed'
+        } else if (s.dailyRate > 0) {
+          const qty = quantity > 0 ? quantity : 1
+          rateInfo = `${formatCurrency(s.dailyRate)}/day × ${qty}`
+        } else if (s.hourlyRate > 0) {
+          const qty = quantity > 0 ? quantity : 1
+          rateInfo = `${formatCurrency(s.hourlyRate)}/hr × ${qty}`
+        } else if (s.weeklyRate > 0) {
+          const qty = quantity > 0 ? quantity : 1
+          rateInfo = `${formatCurrency(s.weeklyRate)}/wk × ${qty}`
+        }
+      }
+
+      // Add extra info
+      let extras = []
+      if (s.baseFee > 0) extras.push(`+${formatCurrency(s.baseFee)} base`)
+      if ((s.selectedDeliverables || []).length > 0) {
+        const addOnCount = s.selectedDeliverables.filter(dId => {
+          const d = s.deliverables?.find(del => del.id === dId)
+          return d && !d.included && d.price > 0
+        }).length
+        if (addOnCount > 0) extras.push(`+${addOnCount} add-on${addOnCount > 1 ? 's' : ''}`)
+      }
+      if ((s.selectedModifiers || []).length > 0) {
+        extras.push(`${s.selectedModifiers.length} modifier${s.selectedModifiers.length > 1 ? 's' : ''}`)
       }
 
       servicesDetails.push({
         name: s.name,
         cost,
         rateInfo,
+        extras: extras.join(', '),
+        pricingType,
         hasCost: cost > 0
       })
 
@@ -339,11 +368,27 @@ export default function ProjectCosts({ project }) {
                   key={idx}
                   className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-b-0"
                 >
-                  <div>
-                    <p className="font-medium text-gray-900">{service.name}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900">{service.name}</p>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                        service.pricingType === 'time_based' ? 'bg-blue-100 text-blue-700' :
+                        service.pricingType === 'per_unit' ? 'bg-purple-100 text-purple-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {service.pricingType === 'time_based' && <Clock className="w-3 h-3 inline mr-0.5" />}
+                        {service.pricingType === 'per_unit' && <Layers className="w-3 h-3 inline mr-0.5" />}
+                        {service.pricingType === 'fixed' && <DollarSign className="w-3 h-3 inline mr-0.5" />}
+                        {service.pricingType === 'time_based' ? 'Time' :
+                         service.pricingType === 'per_unit' ? 'Unit' : 'Fixed'}
+                      </span>
+                    </div>
                     <p className="text-sm text-gray-500">{service.rateInfo || 'No rate set'}</p>
+                    {service.extras && (
+                      <p className="text-xs text-gray-400">{service.extras}</p>
+                    )}
                   </div>
-                  <span className={`font-semibold ${service.hasCost ? 'text-gray-900' : 'text-gray-400'}`}>
+                  <span className={`font-semibold flex-shrink-0 ml-4 ${service.hasCost ? 'text-gray-900' : 'text-gray-400'}`}>
                     {service.hasCost ? formatCurrency(service.cost) : '—'}
                   </span>
                 </div>

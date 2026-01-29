@@ -2,8 +2,12 @@
  * ProjectServicesSection.jsx
  * Project services selection and customization for Project Overview
  *
- * Allows selecting services from the library with auto-population,
- * plus custom services. All fields are editable per-project.
+ * Supports flexible pricing models:
+ * - Time-based (hourly/daily/weekly)
+ * - Per-unit (acre, mile, structure, etc.) with volume tiers
+ * - Fixed fee
+ * - Deliverable add-ons
+ * - Modifiers/multipliers
  *
  * @location src/components/projects/ProjectServicesSection.jsx
  */
@@ -23,10 +27,15 @@ import {
   FileText,
   Loader2,
   Check,
-  AlertCircle
+  AlertCircle,
+  Layers,
+  Package,
+  Percent,
+  TrendingDown
 } from 'lucide-react'
 import { getServices } from '../../lib/firestore'
 import { formatCurrency } from '../../lib/costEstimator'
+import { PRICING_TYPES, UNIT_TYPES } from '../../pages/Services'
 
 // Service categories for display
 const SERVICE_CATEGORIES = {
@@ -44,12 +53,93 @@ const SERVICE_CATEGORIES = {
   other: 'Other'
 }
 
-// Rate type options for services
+// Legacy rate type options (for backwards compatibility)
 const RATE_TYPE_OPTIONS = {
   hourly: { label: 'Hours', rateField: 'hourlyRate', unitLabel: 'hr' },
   daily: { label: 'Days', rateField: 'dailyRate', unitLabel: 'day' },
   weekly: { label: 'Weeks', rateField: 'weeklyRate', unitLabel: 'wk' },
   fixed: { label: 'Fixed', rateField: 'fixedRate', unitLabel: 'fixed' }
+}
+
+// Calculate service cost with new pricing model
+export function calculateServiceCost(service) {
+  const pricingType = service.pricingType || 'time_based'
+  let baseCost = 0
+
+  // Calculate base cost based on pricing type
+  if (pricingType === 'fixed') {
+    baseCost = service.fixedRate || 0
+  } else if (pricingType === 'per_unit') {
+    const quantity = parseFloat(service.quantity) || 0
+    const unitRate = service.unitRate || 0
+
+    // Check for volume tier pricing
+    if (service.volumeTiers?.length > 0 && quantity > 0) {
+      // Sort tiers by upTo value
+      const sortedTiers = [...service.volumeTiers].sort((a, b) => (a.upTo || Infinity) - (b.upTo || Infinity))
+      let remainingQty = quantity
+      let tierCost = 0
+
+      for (const tier of sortedTiers) {
+        const tierMax = tier.upTo || Infinity
+        const prevMax = sortedTiers[sortedTiers.indexOf(tier) - 1]?.upTo || 0
+        const tierQty = Math.min(remainingQty, tierMax - prevMax)
+
+        if (tierQty > 0) {
+          tierCost += tierQty * (tier.rate || 0)
+          remainingQty -= tierQty
+        }
+        if (remainingQty <= 0) break
+      }
+      baseCost = tierCost
+    } else {
+      baseCost = quantity * unitRate
+    }
+  } else {
+    // time_based - legacy calculation
+    const rateType = service.rateType || 'daily'
+    const rateConfig = RATE_TYPE_OPTIONS[rateType]
+    const rate = service[rateConfig?.rateField] || 0
+    const quantity = parseFloat(service.quantity) || 0
+
+    if (rateType === 'fixed') {
+      baseCost = rate
+    } else {
+      baseCost = quantity * rate
+    }
+  }
+
+  // Add base/mobilization fee
+  baseCost += service.baseFee || 0
+
+  // Add selected deliverables
+  const selectedDeliverables = service.selectedDeliverables || []
+  const deliverablesCost = selectedDeliverables.reduce((sum, dId) => {
+    const d = service.deliverables?.find(del => del.id === dId)
+    if (d && !d.included) {
+      return sum + (d.price || 0)
+    }
+    return sum
+  }, 0)
+  baseCost += deliverablesCost
+
+  // Apply modifiers (multipliers)
+  const selectedModifiers = service.selectedModifiers || []
+  let totalMultiplier = 1
+  for (const mId of selectedModifiers) {
+    const m = service.modifiers?.find(mod => mod.id === mId)
+    if (m) {
+      totalMultiplier *= (m.multiplier || 1)
+    }
+  }
+  baseCost *= totalMultiplier
+
+  // Apply minimum charge
+  if (service.minimumCharge && baseCost > 0 && baseCost < service.minimumCharge) {
+    baseCost = service.minimumCharge
+  }
+
+  return baseCost
 }
 
 // Generate unique ID
@@ -119,23 +209,34 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
   const handleAddFromLibrary = () => {
     if (!selectedService) return
 
-    // Auto-detect best rate type based on what's available
+    const pricingType = selectedService.pricingType || 'time_based'
+
+    // Auto-detect best rate type based on what's available (for time_based)
     let rateType = 'daily'
     let quantity = ''
 
-    if (selectedService.fixedRate > 0) {
-      rateType = 'fixed'
-      quantity = '' // Fixed doesn't need quantity
-    } else if (selectedService.dailyRate > 0) {
-      rateType = 'daily'
-      quantity = '1' // Default to 1 day
-    } else if (selectedService.hourlyRate > 0) {
-      rateType = 'hourly'
-      quantity = '1' // Default to 1 hour
-    } else if (selectedService.weeklyRate > 0) {
-      rateType = 'weekly'
-      quantity = '1' // Default to 1 week
+    if (pricingType === 'time_based') {
+      if (selectedService.fixedRate > 0) {
+        rateType = 'fixed'
+        quantity = ''
+      } else if (selectedService.dailyRate > 0) {
+        rateType = 'daily'
+        quantity = '1'
+      } else if (selectedService.hourlyRate > 0) {
+        rateType = 'hourly'
+        quantity = '1'
+      } else if (selectedService.weeklyRate > 0) {
+        rateType = 'weekly'
+        quantity = '1'
+      }
+    } else if (pricingType === 'per_unit') {
+      quantity = '' // User needs to enter quantity
     }
+
+    // Include deliverables that are marked as "included" by default
+    const defaultDeliverables = (selectedService.deliverables || [])
+      .filter(d => d.included)
+      .map(d => d.id)
 
     const projectService = {
       id: generateId(),
@@ -144,12 +245,29 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
       name: selectedService.name,
       category: selectedService.category,
       description: selectedService.description || '',
+      // Pricing type
+      pricingType,
       rateType,
       quantity,
+      // Time-based rates
       hourlyRate: selectedService.hourlyRate || 0,
       dailyRate: selectedService.dailyRate || 0,
       weeklyRate: selectedService.weeklyRate || 0,
       fixedRate: selectedService.fixedRate || 0,
+      // Per-unit pricing
+      unitType: selectedService.unitType || 'acre',
+      unitRate: selectedService.unitRate || 0,
+      // Volume tiers
+      volumeTiers: selectedService.volumeTiers || [],
+      // Base fee & minimum
+      baseFee: selectedService.baseFee || 0,
+      minimumCharge: selectedService.minimumCharge || 0,
+      // Deliverables
+      deliverables: selectedService.deliverables || [],
+      selectedDeliverables: defaultDeliverables,
+      // Modifiers
+      modifiers: selectedService.modifiers || [],
+      selectedModifiers: [],
       notes: ''
     }
 
@@ -461,19 +579,41 @@ function ServiceCard({ service, onUpdate, onDelete, isExpanded, onToggle }) {
       hourlyRate: editForm.hourlyRate ? parseFloat(editForm.hourlyRate) : 0,
       dailyRate: editForm.dailyRate ? parseFloat(editForm.dailyRate) : 0,
       weeklyRate: editForm.weeklyRate ? parseFloat(editForm.weeklyRate) : 0,
-      fixedRate: editForm.fixedRate ? parseFloat(editForm.fixedRate) : 0
+      fixedRate: editForm.fixedRate ? parseFloat(editForm.fixedRate) : 0,
+      unitRate: editForm.unitRate ? parseFloat(editForm.unitRate) : 0,
+      baseFee: editForm.baseFee ? parseFloat(editForm.baseFee) : 0
     })
     setIsEditing(false)
   }
 
-  // Get rate config and calculate cost
+  // Toggle deliverable selection
+  const toggleDeliverable = (deliverableId) => {
+    const currentSelected = editForm.selectedDeliverables || []
+    const newSelected = currentSelected.includes(deliverableId)
+      ? currentSelected.filter(id => id !== deliverableId)
+      : [...currentSelected, deliverableId]
+    setEditForm(prev => ({ ...prev, selectedDeliverables: newSelected }))
+  }
+
+  // Toggle modifier selection
+  const toggleModifier = (modifierId) => {
+    const currentSelected = editForm.selectedModifiers || []
+    const newSelected = currentSelected.includes(modifierId)
+      ? currentSelected.filter(id => id !== modifierId)
+      : [...currentSelected, modifierId]
+    setEditForm(prev => ({ ...prev, selectedModifiers: newSelected }))
+  }
+
+  // Calculate cost using new function
+  const estimatedCost = calculateServiceCost(service)
+  const pricingType = service.pricingType || 'time_based'
+  const unitTypeInfo = UNIT_TYPES?.find(u => u.value === service.unitType)
+
+  // Legacy calculation for display
   const rateType = service.rateType || 'daily'
   const rateConfig = RATE_TYPE_OPTIONS[rateType]
-  const rate = service[rateConfig.rateField] || 0
+  const rate = service[rateConfig?.rateField] || 0
   const quantity = parseFloat(service.quantity) || 0
-  const estimatedCost = rateType === 'fixed'
-    ? rate
-    : (quantity > 0 && rate > 0 ? quantity * rate : null)
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -488,20 +628,39 @@ function ServiceCard({ service, onUpdate, onDelete, isExpanded, onToggle }) {
           }`} />
           <div className="min-w-0">
             <p className="font-medium text-gray-900 truncate">{service.name}</p>
-            <p className="text-xs text-gray-500">
-              {SERVICE_CATEGORIES[service.category] || service.category}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-gray-500">
+                {SERVICE_CATEGORIES[service.category] || service.category}
+              </p>
+              {/* Pricing type badge */}
+              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                pricingType === 'time_based' ? 'bg-blue-100 text-blue-700' :
+                pricingType === 'per_unit' ? 'bg-purple-100 text-purple-700' :
+                'bg-amber-100 text-amber-700'
+              }`}>
+                {pricingType === 'time_based' ? 'Time' :
+                 pricingType === 'per_unit' ? unitTypeInfo?.label?.replace('Per ', '') || 'Unit' :
+                 'Fixed'}
+              </span>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
-          {quantity > 0 && (
+          {/* Quantity display */}
+          {pricingType === 'per_unit' && quantity > 0 && (
             <span className="text-sm text-gray-600 flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
-              {quantity} {rateConfig.label.toLowerCase()}
+              <Layers className="w-3.5 h-3.5" />
+              {quantity} {unitTypeInfo?.plural || 'units'}
             </span>
           )}
-          {estimatedCost && (
+          {pricingType === 'time_based' && quantity > 0 && (
+            <span className="text-sm text-gray-600 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {quantity} {rateConfig?.label?.toLowerCase() || 'days'}
+            </span>
+          )}
+          {estimatedCost > 0 && (
             <span className="text-sm font-medium text-gray-900">
               {formatCurrency(estimatedCost)}
             </span>
@@ -518,127 +677,187 @@ function ServiceCard({ service, onUpdate, onDelete, isExpanded, onToggle }) {
       {isExpanded && (
         <div className="border-t border-gray-100 p-4">
           {isEditing ? (
-            /* Edit Form */
+            /* Edit Form - Enhanced */
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                  className="input"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
-                <select
-                  value={editForm.category}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))}
-                  className="input"
-                >
-                  {Object.entries(SERVICE_CATEGORIES).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
-                <textarea
-                  value={editForm.description}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  className="input resize-none"
-                />
-              </div>
-
-              {/* Rate Type and Quantity */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Rate Type</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
                   <select
-                    value={editForm.rateType || 'daily'}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, rateType: e.target.value }))}
+                    value={editForm.category}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))}
                     className="input"
                   >
-                    {Object.entries(RATE_TYPE_OPTIONS).map(([key, config]) => (
-                      <option key={key} value={key}>{config.label}</option>
+                    {Object.entries(SERVICE_CATEGORIES).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    {editForm.rateType === 'fixed' ? 'Quantity' : `Number of ${RATE_TYPE_OPTIONS[editForm.rateType || 'daily'].label}`}
-                  </label>
-                  <input
-                    type="number"
-                    value={editForm.quantity || ''}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, quantity: e.target.value }))}
-                    min="0"
-                    step="0.5"
-                    className="input"
-                    placeholder={editForm.rateType === 'fixed' ? '1' : '0'}
-                    disabled={editForm.rateType === 'fixed'}
-                  />
-                </div>
               </div>
 
-              {/* Rates */}
-              <div className="grid grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Hourly</label>
-                  <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+              {/* Quantity Input - based on pricing type */}
+              {editForm.pricingType === 'per_unit' && (
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <label className="block text-xs font-medium text-purple-800 mb-2">
+                    Quantity ({UNIT_TYPES?.find(u => u.value === editForm.unitType)?.plural || 'units'})
+                  </label>
+                  <div className="flex items-center gap-3">
                     <input
                       type="number"
-                      value={editForm.hourlyRate || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, hourlyRate: e.target.value }))}
+                      value={editForm.quantity || ''}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, quantity: e.target.value }))}
                       min="0"
-                      className="input pl-5 text-sm"
+                      step="0.1"
+                      className="input w-32"
+                      placeholder="Enter quantity"
                     />
+                    <span className="text-sm text-purple-700">
+                      × ${editForm.unitRate || 0}/{UNIT_TYPES?.find(u => u.value === editForm.unitType)?.plural || 'unit'}
+                    </span>
+                    {editForm.volumeTiers?.length > 0 && (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                        Volume pricing applied
+                      </span>
+                    )}
+                  </div>
+                  {/* Show volume tiers if they exist */}
+                  {editForm.volumeTiers?.length > 0 && (
+                    <div className="mt-2 text-xs text-purple-600">
+                      <TrendingDown className="w-3 h-3 inline mr-1" />
+                      Volume tiers: {editForm.volumeTiers.map((t, i) => (
+                        <span key={t.id}>
+                          {i > 0 && ' → '}
+                          {t.upTo ? `≤${t.upTo}` : '∞'}: ${t.rate}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {editForm.pricingType === 'time_based' && (
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-blue-800 mb-1">Rate Type</label>
+                      <select
+                        value={editForm.rateType || 'daily'}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, rateType: e.target.value }))}
+                        className="input"
+                      >
+                        {Object.entries(RATE_TYPE_OPTIONS).map(([key, config]) => (
+                          <option key={key} value={key}>{config.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-blue-800 mb-1">
+                        {editForm.rateType === 'fixed' ? 'Fixed' : `Number of ${RATE_TYPE_OPTIONS[editForm.rateType || 'daily']?.label || 'Days'}`}
+                      </label>
+                      <input
+                        type="number"
+                        value={editForm.quantity || ''}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, quantity: e.target.value }))}
+                        min="0"
+                        step="0.5"
+                        className="input"
+                        placeholder="0"
+                        disabled={editForm.rateType === 'fixed'}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Daily</label>
-                  <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                    <input
-                      type="number"
-                      value={editForm.dailyRate || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, dailyRate: e.target.value }))}
-                      min="0"
-                      className="input pl-5 text-sm"
-                    />
+              )}
+
+              {editForm.pricingType === 'fixed' && (
+                <div className="p-3 bg-amber-50 rounded-lg">
+                  <p className="text-sm text-amber-800">
+                    Fixed price service: {formatCurrency(editForm.fixedRate || 0)}
+                  </p>
+                </div>
+              )}
+
+              {/* Deliverables Selection */}
+              {editForm.deliverables?.length > 0 && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
+                    <Package className="w-3 h-3" />
+                    Deliverables
+                  </label>
+                  <div className="space-y-2">
+                    {editForm.deliverables.map(d => {
+                      const isSelected = (editForm.selectedDeliverables || []).includes(d.id)
+                      return (
+                        <label
+                          key={d.id}
+                          className={`flex items-center justify-between p-2 rounded cursor-pointer ${
+                            isSelected ? 'bg-white border border-aeria-navy/30' : 'hover:bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleDeliverable(d.id)}
+                              className="rounded border-gray-300 text-aeria-navy focus:ring-aeria-navy"
+                            />
+                            <span className="text-sm">{d.name}</span>
+                            {d.included && (
+                              <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                                Included
+                              </span>
+                            )}
+                          </div>
+                          {!d.included && d.price > 0 && (
+                            <span className="text-sm text-gray-600">+{formatCurrency(d.price)}</span>
+                          )}
+                        </label>
+                      )
+                    })}
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Weekly</label>
-                  <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                    <input
-                      type="number"
-                      value={editForm.weeklyRate || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, weeklyRate: e.target.value }))}
-                      min="0"
-                      className="input pl-5 text-sm"
-                    />
+              )}
+
+              {/* Modifiers Selection */}
+              {editForm.modifiers?.length > 0 && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
+                    <Percent className="w-3 h-3" />
+                    Price Adjustments
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {editForm.modifiers.map(m => {
+                      const isSelected = (editForm.selectedModifiers || []).includes(m.id)
+                      const percentChange = ((m.multiplier - 1) * 100).toFixed(0)
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => toggleModifier(m.id)}
+                          className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                            isSelected
+                              ? 'bg-aeria-navy text-white border-aeria-navy'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                          }`}
+                        >
+                          {m.name}
+                          <span className={`ml-1 ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                            {m.multiplier > 1 ? `+${percentChange}%` : `${percentChange}%`}
+                          </span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Fixed</label>
-                  <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                    <input
-                      type="number"
-                      value={editForm.fixedRate || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, fixedRate: e.target.value }))}
-                      min="0"
-                      className="input pl-5 text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
 
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Project Notes</label>
@@ -670,55 +889,95 @@ function ServiceCard({ service, onUpdate, onDelete, isExpanded, onToggle }) {
               </div>
             </div>
           ) : (
-            /* View Mode */
+            /* View Mode - Enhanced */
             <>
               {service.description && (
                 <p className="text-sm text-gray-600 mb-3">{service.description}</p>
               )}
 
-              {/* Cost Calculation Summary */}
-              {estimatedCost && (
+              {/* Cost Calculation Summary - Enhanced */}
+              {estimatedCost > 0 && (
                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg mb-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-green-800">
-                        {rateType === 'fixed' ? 'Fixed Price' : (
-                          <>{quantity} {rateConfig.label.toLowerCase()} × {formatCurrency(rate)}/{rateConfig.unitLabel}</>
-                        )}
-                      </span>
+                      <span className="text-sm font-medium text-green-800">Cost Breakdown</span>
                     </div>
                     <span className="font-semibold text-green-900">{formatCurrency(estimatedCost)}</span>
+                  </div>
+                  <div className="text-xs text-green-700 space-y-1">
+                    {pricingType === 'fixed' && (
+                      <p>Fixed price: {formatCurrency(service.fixedRate || 0)}</p>
+                    )}
+                    {pricingType === 'per_unit' && quantity > 0 && (
+                      <p>{quantity} {unitTypeInfo?.plural || 'units'} × ${service.unitRate || 0}/{unitTypeInfo?.plural || 'unit'}</p>
+                    )}
+                    {pricingType === 'time_based' && quantity > 0 && (
+                      <p>{quantity} {rateConfig?.label?.toLowerCase() || 'days'} × {formatCurrency(rate)}/{rateConfig?.unitLabel || 'day'}</p>
+                    )}
+                    {service.baseFee > 0 && (
+                      <p>+ Base fee: {formatCurrency(service.baseFee)}</p>
+                    )}
+                    {(service.selectedDeliverables || []).length > 0 && (
+                      <p>
+                        + Deliverables: {service.selectedDeliverables
+                          .map(dId => service.deliverables?.find(d => d.id === dId))
+                          .filter(d => d && !d.included && d.price > 0)
+                          .map(d => `${d.name} (${formatCurrency(d.price)})`)
+                          .join(', ') || 'included items only'}
+                      </p>
+                    )}
+                    {(service.selectedModifiers || []).length > 0 && (
+                      <p>
+                        × Modifiers: {service.selectedModifiers
+                          .map(mId => service.modifiers?.find(m => m.id === mId))
+                          .filter(Boolean)
+                          .map(m => `${m.name} (${m.multiplier}×)`)
+                          .join(', ')}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-4 gap-3 text-sm mb-3">
-                <div>
-                  <span className="text-gray-500 text-xs">Hourly</span>
-                  <p className="font-medium">
-                    {service.hourlyRate ? formatCurrency(service.hourlyRate) : '—'}
-                  </p>
+              {/* Selected Deliverables */}
+              {(service.selectedDeliverables || []).length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs text-gray-500 mb-1">Deliverables:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {service.selectedDeliverables.map(dId => {
+                      const d = service.deliverables?.find(del => del.id === dId)
+                      if (!d) return null
+                      return (
+                        <span key={dId} className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded text-xs">
+                          <Package className="w-3 h-3" />
+                          {d.name}
+                          {d.included && <Check className="w-3 h-3 text-green-600" />}
+                        </span>
+                      )
+                    })}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-500 text-xs">Daily</span>
-                  <p className="font-medium">
-                    {service.dailyRate ? formatCurrency(service.dailyRate) : '—'}
-                  </p>
+              )}
+
+              {/* Selected Modifiers */}
+              {(service.selectedModifiers || []).length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs text-gray-500 mb-1">Applied Adjustments:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {service.selectedModifiers.map(mId => {
+                      const m = service.modifiers?.find(mod => mod.id === mId)
+                      if (!m) return null
+                      return (
+                        <span key={mId} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs">
+                          <Percent className="w-3 h-3" />
+                          {m.name} ({m.multiplier > 1 ? '+' : ''}{((m.multiplier - 1) * 100).toFixed(0)}%)
+                        </span>
+                      )
+                    })}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-500 text-xs">Weekly</span>
-                  <p className="font-medium">
-                    {service.weeklyRate ? formatCurrency(service.weeklyRate) : '—'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500 text-xs">Fixed</span>
-                  <p className="font-medium">
-                    {service.fixedRate ? formatCurrency(service.fixedRate) : '—'}
-                  </p>
-                </div>
-              </div>
+              )}
 
               {service.notes && (
                 <div className="bg-gray-50 rounded p-2 mb-3">
@@ -789,27 +1048,13 @@ export default function ProjectServicesSection({ project, onUpdate }) {
     if (expandedId === serviceId) setExpandedId(null)
   }
 
-  // Calculate totals
+  // Calculate totals using new pricing model
   const totalEstimatedCost = projectServices.reduce((sum, s) => {
-    const sRateType = s.rateType || 'daily'
-    const sRateConfig = RATE_TYPE_OPTIONS[sRateType]
-    const sRate = s[sRateConfig.rateField] || 0
-    const sQuantity = parseFloat(s.quantity) || 0
-
-    if (sRateType === 'fixed' && sRate > 0) {
-      return sum + sRate
-    } else if (sQuantity > 0 && sRate > 0) {
-      return sum + (sQuantity * sRate)
-    }
-    return sum
+    return sum + calculateServiceCost(s)
   }, 0)
 
   const servicesWithCost = projectServices.filter(s => {
-    const sRateType = s.rateType || 'daily'
-    const sRateConfig = RATE_TYPE_OPTIONS[sRateType]
-    const sRate = s[sRateConfig.rateField] || 0
-    const sQuantity = parseFloat(s.quantity) || 0
-    return sRateType === 'fixed' ? sRate > 0 : (sQuantity > 0 && sRate > 0)
+    return calculateServiceCost(s) > 0
   }).length
 
   return (
