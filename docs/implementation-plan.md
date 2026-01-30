@@ -9,6 +9,7 @@
 |------|--------|---------|
 | Jan 30, 2026 | Phase 1, Sprint 1 | Time tracking data layer, entry form, weekly view page, dashboard widget |
 | Jan 30, 2026 | Phase 1, Sprint 2 | Timesheet submission confirmation modal, notes for approver, rejection display |
+| Jan 30, 2026 | Phase 1, Sprint 3 | TimeApproval page for managers, approve/reject workflow, bulk approval |
 
 ---
 
@@ -96,7 +97,7 @@ This plan transforms Aeria Ops from a drone-focused compliance platform into a c
 | `src/pages/TimeTracking.jsx` | Time entry list and weekly view | ✓ Done |
 | `src/components/time/TimeEntryForm.jsx` | Add/edit time entry | ✓ Done |
 | `src/components/time/WeeklyTimesheet.jsx` | Weekly grid view | (merged into TimeTracking.jsx) |
-| `src/components/time/TimeApproval.jsx` | Manager approval interface | Sprint 3 |
+| `src/pages/TimeApproval.jsx` | Manager approval interface | ✓ Done |
 | `src/components/time/TimeSummaryWidget.jsx` | Dashboard widget | ✓ Done |
 | `src/components/projects/ProjectTimeEntries.jsx` | Time entries for a project | Sprint 4 |
 
@@ -144,7 +145,7 @@ This plan transforms Aeria Ops from a drone-focused compliance platform into a c
 - [x] Can log time against projects ✓ (Sprint 1 - Jan 30, 2026)
 - [x] Can view weekly timesheet ✓ (Sprint 1 - Jan 30, 2026)
 - [x] Can submit timesheet for approval ✓ (Sprint 2 - Jan 30, 2026)
-- [ ] Manager can approve/reject timesheets (Sprint 3)
+- [x] Manager can approve/reject timesheets ✓ (Sprint 3 - Jan 30, 2026)
 - [ ] Time entries flow into project costs (Sprint 4)
 - [x] Dashboard shows time summary ✓ (Sprint 1 - Jan 30, 2026)
 
