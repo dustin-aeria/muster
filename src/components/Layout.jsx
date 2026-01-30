@@ -265,26 +265,29 @@ function Sidebar({ mobile, onClose }) {
             </div>
           )}
         </div>
+
+        {/* Settings */}
+        <div className="pt-4">
+          <NavLink
+            to="/settings"
+            onClick={mobile ? onClose : undefined}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-aeria-sky text-aeria-navy'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`
+            }
+          >
+            <Settings className="w-5 h-5" />
+            Settings
+          </NavLink>
+        </div>
       </nav>
 
       {/* User section */}
       <div className="border-t border-gray-200 p-3">
-        <NavLink
-          to="/settings"
-          onClick={mobile ? onClose : undefined}
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isActive
-                ? 'bg-aeria-sky text-aeria-navy'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-            }`
-          }
-        >
-          <Settings className="w-5 h-5" />
-          Settings
-        </NavLink>
-        
-        <div className="flex items-center gap-3 px-3 py-2 mt-1">
+        <div className="flex items-center gap-3 px-3 py-2">
           <div className="w-8 h-8 bg-aeria-blue rounded-full flex items-center justify-center">
             <span className="text-white text-sm font-medium">
               {userProfile?.firstName?.[0] || userProfile?.email?.[0]?.toUpperCase() || '?'}
