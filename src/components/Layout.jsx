@@ -40,7 +40,6 @@ const navigation = [
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Calendar', href: '/calendar', icon: CalendarDays },
   { name: 'Forms', href: '/forms', icon: ClipboardList },
-  { name: 'Policies & Procedures', href: '/policies', icon: BookOpen },
 ]
 
 const safetyNavigation = [
@@ -60,6 +59,7 @@ const trainingNavigation = [
 
 const complianceNavigation = [
   { name: 'Compliance Hub', href: '/compliance', icon: ClipboardCheck },
+  { name: 'Policies & Procedures', href: '/policies', icon: BookOpen },
 ]
 
 const maintenanceNavigation = [
