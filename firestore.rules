@@ -68,13 +68,20 @@ service cloud.firestore {
     // Organization Members Collection
     // ============================================
     match /organizationMembers/{membershipId} {
-      // Members can read their organization's memberships
-      allow read: if isAuthenticated() &&
-        isMemberOf(resource.data.organizationId);
+      // Members can read their organization's memberships, or their own membership
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isMemberOf(resource.data.organizationId)
+      );
 
-      // Owners and admins can create new memberships (invites)
-      allow create: if isAuthenticated() &&
-        canManageTeam(request.resource.data.organizationId);
+      // Allow creating membership if:
+      // 1. User is creating their own owner membership (self-registration), OR
+      // 2. User has team management permission in the org (invites)
+      allow create: if isAuthenticated() && (
+        (request.resource.data.userId == request.auth.uid &&
+         request.resource.data.role == 'owner') ||
+        canManageTeam(request.resource.data.organizationId)
+      );
 
       // Owners and admins can update roles, users can accept their own invite
       allow update: if isAuthenticated() && (
