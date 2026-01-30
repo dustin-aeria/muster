@@ -488,20 +488,27 @@ export async function recalculateTimesheetTotals(operatorId, weekStartDate) {
  */
 export async function submitTimesheet(timesheetId, notes = '') {
   const docRef = doc(db, 'timesheets', timesheetId)
-  await updateDoc(docRef, {
-    status: 'submitted',
-    submittedAt: serverTimestamp(),
-    submissionNotes: notes || null,
-    rejectionReason: null, // Clear any previous rejection reason
-    updatedAt: serverTimestamp()
-  })
 
-  // Also mark all associated entries as submitted
+  // Get the timesheet to find the operator and week
   const timesheet = await getDoc(docRef)
   const data = timesheet.data()
 
+  // Get all entries for this week to calculate totals
   const entries = await getTimeEntriesForWeek(data.operatorId, new Date(data.weekStartDate))
+
+  // Calculate totals from entries
+  let totalHours = 0
+  let billableHours = 0
+  let totalBillingAmount = 0
+
   for (const entry of entries) {
+    totalHours += entry.totalHours || 0
+    if (entry.billable) {
+      billableHours += entry.totalHours || 0
+      totalBillingAmount += entry.billingAmount || 0
+    }
+
+    // Mark entry as submitted if still draft
     if (entry.status === 'draft') {
       await updateDoc(doc(db, 'timeEntries', entry.id), {
         status: 'submitted',
@@ -510,6 +517,19 @@ export async function submitTimesheet(timesheetId, notes = '') {
       })
     }
   }
+
+  // Update timesheet with totals and status
+  await updateDoc(docRef, {
+    status: 'submitted',
+    submittedAt: serverTimestamp(),
+    submissionNotes: notes || null,
+    rejectionReason: null,
+    totalHours,
+    billableHours,
+    totalBillingAmount,
+    entriesCount: entries.length,
+    updatedAt: serverTimestamp()
+  })
 }
 
 /**
