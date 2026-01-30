@@ -17,6 +17,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
+import { PortalAuthProvider, usePortalAuth } from './contexts/PortalAuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
 import Layout from './components/Layout'
@@ -26,6 +27,14 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Projects from './pages/Projects'
 import ProjectView from './pages/ProjectView'
+
+// Client Portal pages - lazy-loaded
+const PortalLogin = lazy(() => import('./pages/portal/PortalLogin'))
+const PortalVerify = lazy(() => import('./pages/portal/PortalVerify'))
+const PortalDashboard = lazy(() => import('./pages/portal/PortalDashboard'))
+const PortalProjects = lazy(() => import('./pages/portal/PortalProjects'))
+const PortalProjectView = lazy(() => import('./pages/portal/PortalProjectView'))
+const PortalDocuments = lazy(() => import('./pages/portal/PortalDocuments'))
 
 // Lazy-loaded pages - secondary features
 const Forms = lazy(() => import('./pages/Forms'))
@@ -108,19 +117,110 @@ function PublicRoute({ children }) {
   return children
 }
 
+// Portal protected route wrapper
+function PortalProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = usePortalAuth()
+
+  if (loading) {
+    return <LoadingSpinner size="lg" message="Loading..." fullScreen />
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/portal/login" replace />
+  }
+
+  return children
+}
+
+// Portal public route wrapper
+function PortalPublicRoute({ children }) {
+  const { isAuthenticated, loading } = usePortalAuth()
+
+  if (loading) {
+    return <LoadingSpinner size="lg" fullScreen />
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/portal" replace />
+  }
+
+  return children
+}
+
 function App() {
   return (
     <ErrorBoundary>
-      <Routes>
-        {/* Public routes */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          }
-        />
+      <PortalAuthProvider>
+        <Routes>
+          {/* Client Portal routes - outside main auth */}
+          <Route
+            path="/portal/login"
+            element={
+              <Suspense fallback={<LoadingSpinner size="lg" fullScreen />}>
+                <PortalPublicRoute>
+                  <PortalLogin />
+                </PortalPublicRoute>
+              </Suspense>
+            }
+          />
+          <Route
+            path="/portal/verify"
+            element={
+              <Suspense fallback={<LoadingSpinner size="lg" fullScreen />}>
+                <PortalVerify />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/portal"
+            element={
+              <Suspense fallback={<LoadingSpinner size="lg" fullScreen />}>
+                <PortalProtectedRoute>
+                  <PortalDashboard />
+                </PortalProtectedRoute>
+              </Suspense>
+            }
+          />
+          <Route
+            path="/portal/projects"
+            element={
+              <Suspense fallback={<LoadingSpinner size="lg" fullScreen />}>
+                <PortalProtectedRoute>
+                  <PortalProjects />
+                </PortalProtectedRoute>
+              </Suspense>
+            }
+          />
+          <Route
+            path="/portal/projects/:projectId"
+            element={
+              <Suspense fallback={<LoadingSpinner size="lg" fullScreen />}>
+                <PortalProtectedRoute>
+                  <PortalProjectView />
+                </PortalProtectedRoute>
+              </Suspense>
+            }
+          />
+          <Route
+            path="/portal/documents"
+            element={
+              <Suspense fallback={<LoadingSpinner size="lg" fullScreen />}>
+                <PortalProtectedRoute>
+                  <PortalDocuments />
+                </PortalProtectedRoute>
+              </Suspense>
+            }
+          />
+
+          {/* Public routes */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
 
         {/* Protected routes */}
         <Route
@@ -191,6 +291,7 @@ function App() {
         {/* Catch all - redirect to dashboard */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </PortalAuthProvider>
     </ErrorBoundary>
   )
 }
