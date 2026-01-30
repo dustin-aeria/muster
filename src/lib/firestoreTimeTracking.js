@@ -205,11 +205,12 @@ export async function getTimeEntryById(id) {
 export async function getTimeEntriesByProject(projectId) {
   const q = query(
     timeEntriesRef,
-    where('projectId', '==', projectId),
-    orderBy('date', 'desc')
+    where('projectId', '==', projectId)
   )
   const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  const entries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  // Sort client-side to avoid needing composite index
+  return entries.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
 }
 
 /**
@@ -246,16 +247,20 @@ export async function getTimeEntriesForWeek(operatorId, weekStartDate) {
   const mondayStr = formatDateString(monday)
   const sundayStr = formatDateString(sunday)
 
+  // Simple query by operatorId only (no composite index needed)
+  // Then filter by date client-side
   const q = query(
     timeEntriesRef,
-    where('operatorId', '==', operatorId),
-    where('date', '>=', mondayStr),
-    where('date', '<=', sundayStr),
-    orderBy('date', 'asc')
+    where('operatorId', '==', operatorId)
   )
 
   const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  const allEntries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+  // Filter by date range client-side and sort
+  return allEntries
+    .filter(entry => entry.date >= mondayStr && entry.date <= sundayStr)
+    .sort((a, b) => a.date.localeCompare(b.date))
 }
 
 /**
@@ -384,22 +389,18 @@ export async function deleteTimeEntry(id) {
  */
 export async function getTimesheetForWeek(operatorId, weekStartDate) {
   const weekId = getWeekId(weekStartDate)
-  const mondayStr = formatDateString(getWeekStart(weekStartDate))
 
-  // Check if timesheet exists
+  // Query by operatorId only, then filter client-side
   const q = query(
     timesheetsRef,
-    where('operatorId', '==', operatorId),
-    where('weekId', '==', weekId)
+    where('operatorId', '==', operatorId)
   )
   const snapshot = await getDocs(q)
+  const timesheets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 
-  if (snapshot.docs.length > 0) {
-    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() }
-  }
-
-  // No timesheet exists - return null (will be created on first entry)
-  return null
+  // Find matching weekId
+  const match = timesheets.find(ts => ts.weekId === weekId)
+  return match || null
 }
 
 /**
@@ -583,11 +584,16 @@ export async function rejectTimesheet(timesheetId, rejectedBy, reason) {
 export async function getPendingTimesheets() {
   const q = query(
     timesheetsRef,
-    where('status', '==', 'submitted'),
-    orderBy('submittedAt', 'asc')
+    where('status', '==', 'submitted')
   )
   const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  const timesheets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  // Sort client-side by submittedAt ascending
+  return timesheets.sort((a, b) => {
+    const aTime = a.submittedAt?.toMillis?.() || 0
+    const bTime = b.submittedAt?.toMillis?.() || 0
+    return aTime - bTime
+  })
 }
 
 /**
@@ -625,18 +631,26 @@ export async function getTimesheetWithEntries(timesheetId) {
  * @returns {Promise<Array>}
  */
 export async function getTimesheetsByStatus(status, options = {}) {
-  let q = query(
+  const q = query(
     timesheetsRef,
-    where('status', '==', status),
-    orderBy('submittedAt', 'desc')
+    where('status', '==', status)
   )
 
+  const snapshot = await getDocs(q)
+  let timesheets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+  // Sort client-side by submittedAt descending
+  timesheets.sort((a, b) => {
+    const aTime = a.submittedAt?.toMillis?.() || 0
+    const bTime = b.submittedAt?.toMillis?.() || 0
+    return bTime - aTime
+  })
+
   if (options.limit) {
-    q = query(q, limit(options.limit))
+    timesheets = timesheets.slice(0, options.limit)
   }
 
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  return timesheets
 }
 
 /**
