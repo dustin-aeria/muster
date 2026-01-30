@@ -17,10 +17,12 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
+import { useOrganization } from './hooks/useOrganization'
 import { PortalAuthProvider, usePortalAuth } from './contexts/PortalAuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
 import Layout from './components/Layout'
+import CreateOrganization from './components/onboarding/CreateOrganization'
 
 // Core pages - keep synchronous for fast initial load
 import Login from './pages/Login'
@@ -89,14 +91,20 @@ function PageLoader() {
 
 // Protected route wrapper
 function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, loading: authLoading } = useAuth()
+  const { hasOrganization, loading: orgLoading } = useOrganization()
 
-  if (loading) {
+  if (authLoading || orgLoading) {
     return <LoadingSpinner size="lg" message="Loading..." fullScreen />
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  // User is authenticated but has no organization - show onboarding
+  if (!hasOrganization) {
+    return <CreateOrganization />
   }
 
   return children
