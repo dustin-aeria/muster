@@ -44,6 +44,7 @@ import { Card } from '../components/ui/Card'
 import Modal from '../components/Modal'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import TimeEntryForm from '../components/time/TimeEntryForm'
+import { AlertCircle, MessageSquare } from 'lucide-react'
 
 /**
  * Format hours for display
@@ -87,6 +88,8 @@ export default function TimeTracking() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingEntry, setDeletingEntry] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
+  const [submitNotes, setSubmitNotes] = useState('')
   const [viewMode, setViewMode] = useState('week') // 'week' | 'list'
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -200,6 +203,15 @@ export default function TimeTracking() {
     }
   }
 
+  // Open submission confirmation
+  const handleOpenSubmitConfirm = () => {
+    if (entries.length === 0) {
+      return // Can't submit empty timesheet
+    }
+    setSubmitNotes('')
+    setShowSubmitConfirm(true)
+  }
+
   // Handle timesheet submission
   const handleSubmitTimesheet = async () => {
     try {
@@ -209,8 +221,10 @@ export default function TimeTracking() {
         : user.email
 
       const timesheet = await getOrCreateTimesheet(user.uid, operatorName, currentWeekStart)
-      await submitTimesheet(timesheet.id)
+      await submitTimesheet(timesheet.id, submitNotes)
       logger.info('Timesheet submitted:', timesheet.id)
+      setShowSubmitConfirm(false)
+      setSubmitNotes('')
       loadData()
     } catch (err) {
       logger.error('Failed to submit timesheet:', err)
@@ -315,18 +329,26 @@ export default function TimeTracking() {
               <Badge variant="secondary" className="mb-2">Draft</Badge>
               <Button
                 size="sm"
-                onClick={handleSubmitTimesheet}
+                onClick={handleOpenSubmitConfirm}
                 disabled={submitting}
                 className="w-full"
               >
                 <Send className="w-4 h-4 mr-1" />
-                {submitting ? 'Submitting...' : 'Submit for Approval'}
+                Submit for Approval
               </Button>
             </div>
           ) : weekSummary?.status === 'submitted' ? (
             <div>
-              <Badge className="bg-blue-100 text-blue-700">Submitted</Badge>
+              <Badge className="bg-blue-100 text-blue-700">
+                <Send className="w-3 h-3 mr-1" />
+                Submitted
+              </Badge>
               <div className="text-sm text-gray-500 mt-2">Pending approval</div>
+              {weekSummary?.submittedAt && (
+                <div className="text-xs text-gray-400 mt-1">
+                  Submitted {new Date(weekSummary.submittedAt.toDate?.() || weekSummary.submittedAt).toLocaleDateString()}
+                </div>
+              )}
             </div>
           ) : weekSummary?.status === 'approved' ? (
             <div>
@@ -334,6 +356,11 @@ export default function TimeTracking() {
                 <CheckCircle className="w-3 h-3 mr-1" />
                 Approved
               </Badge>
+              {weekSummary?.approvedAt && (
+                <div className="text-xs text-gray-400 mt-2">
+                  Approved {new Date(weekSummary.approvedAt.toDate?.() || weekSummary.approvedAt).toLocaleDateString()}
+                </div>
+              )}
             </div>
           ) : weekSummary?.status === 'rejected' ? (
             <div>
@@ -341,7 +368,24 @@ export default function TimeTracking() {
                 <XCircle className="w-3 h-3 mr-1" />
                 Rejected
               </Badge>
-              <div className="text-sm text-gray-500 mt-2">Please review and resubmit</div>
+              {weekSummary?.rejectionReason && (
+                <div className="mt-2 p-2 bg-red-50 rounded text-xs text-red-700">
+                  <div className="font-medium flex items-center gap-1">
+                    <MessageSquare className="w-3 h-3" />
+                    Reason:
+                  </div>
+                  <div className="mt-1">{weekSummary.rejectionReason}</div>
+                </div>
+              )}
+              <Button
+                size="sm"
+                onClick={handleOpenSubmitConfirm}
+                disabled={submitting}
+                className="w-full mt-2"
+              >
+                <Send className="w-4 h-4 mr-1" />
+                Resubmit
+              </Button>
             </div>
           ) : (
             <div className="text-gray-500">No entries yet</div>
@@ -592,6 +636,119 @@ export default function TimeTracking() {
         confirmLabel="Delete"
         variant="danger"
       />
+
+      {/* Submit Timesheet Confirmation */}
+      <Modal
+        isOpen={showSubmitConfirm}
+        onClose={() => !submitting && setShowSubmitConfirm(false)}
+        size="md"
+      >
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+              <Send className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Submit Timesheet</h3>
+              <p className="text-sm text-gray-500">
+                Week of {currentWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </p>
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{formatHours(weeklyTotals.totalHours)}</div>
+                <div className="text-xs text-gray-500">Total Hours</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">{formatHours(weeklyTotals.billableHours)}</div>
+                <div className="text-xs text-green-700">Billable</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{entries.length}</div>
+                <div className="text-xs text-gray-500">Entries</div>
+              </div>
+            </div>
+            {weeklyTotals.totalAmount > 0 && (
+              <div className="mt-3 pt-3 border-t border-gray-200 text-center">
+                <div className="text-lg font-semibold text-green-600">
+                  ${weeklyTotals.totalAmount.toFixed(2)}
+                </div>
+                <div className="text-xs text-gray-500">Total Billable Amount</div>
+              </div>
+            )}
+          </div>
+
+          {/* Entries preview */}
+          <div className="mb-4">
+            <div className="text-sm font-medium text-gray-700 mb-2">Entries to submit:</div>
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {entries.map(entry => (
+                <div key={entry.id} className="flex items-center justify-between text-sm py-1 px-2 bg-white rounded border">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">{formatDate(entry.date).split(',')[0]}</span>
+                    <span className="font-medium truncate max-w-[150px]">{entry.projectName || 'No project'}</span>
+                  </div>
+                  <span className="text-gray-600">{formatHours(entry.totalHours)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes field */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notes for approver (optional)
+            </label>
+            <textarea
+              value={submitNotes}
+              onChange={(e) => setSubmitNotes(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Any additional context for your timesheet..."
+              disabled={submitting}
+            />
+          </div>
+
+          {/* Warning */}
+          <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg text-sm text-amber-800 mb-4">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div>
+              <span className="font-medium">Note:</span> Once submitted, you won't be able to edit entries until the timesheet is approved or rejected.
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setShowSubmitConfirm(false)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitTimesheet}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Submit Timesheet
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

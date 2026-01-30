@@ -483,12 +483,15 @@ export async function recalculateTimesheetTotals(operatorId, weekStartDate) {
 /**
  * Submit a timesheet for approval
  * @param {string} timesheetId - Timesheet ID
+ * @param {string} notes - Optional notes for the approver
  */
-export async function submitTimesheet(timesheetId) {
+export async function submitTimesheet(timesheetId, notes = '') {
   const docRef = doc(db, 'timesheets', timesheetId)
   await updateDoc(docRef, {
     status: 'submitted',
     submittedAt: serverTimestamp(),
+    submissionNotes: notes || null,
+    rejectionReason: null, // Clear any previous rejection reason
     updatedAt: serverTimestamp()
   })
 
