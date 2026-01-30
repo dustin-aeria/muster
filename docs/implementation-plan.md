@@ -1,6 +1,6 @@
 # Aeria Ops: Implementation Plan
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** January 29, 2026
 **Based on:** Strategic Product Analysis
 
@@ -8,157 +8,17 @@
 
 ## Overview
 
-This plan transforms Aeria Ops from a drone-focused compliance platform into a comprehensive field operations SaaS serving standalone operators and enterprise divisions. The plan is organized into 4 phases over approximately 12-18 months.
+This plan transforms Aeria Ops from a drone-focused compliance platform into a comprehensive field operations SaaS serving standalone operators and enterprise divisions. The plan is organized into 4 phases over approximately 10-14 months.
 
 ---
 
 ## Phase 1: Foundation (Stickiness)
-**Duration:** 3-4 months
-**Goal:** Make the software indispensable for daily operations by touching revenue
+**Duration:** 2-3 months
+**Goal:** Make the software indispensable for daily operations through time tracking and client visibility
 
 ---
 
-### 1.1 Invoicing Module
-**Priority:** Critical
-**Estimated Effort:** 4-5 weeks
-
-#### Data Model
-
-```javascript
-// New Collection: invoices
-{
-  id: string,
-  invoiceNumber: string,              // Auto-generated (INV-2026-0001)
-  projectId: string,                  // Link to project
-  clientId: string,                   // Link to client
-
-  // Billing Details
-  billingType: 'fixed' | 'time_materials' | 'progress' | 'per_unit',
-  billingPeriod: {
-    startDate: Timestamp,
-    endDate: Timestamp
-  },
-
-  // Line Items
-  lineItems: [{
-    id: string,
-    type: 'service' | 'equipment' | 'labor' | 'expense' | 'other',
-    description: string,
-    quantity: number,
-    unit: string,                     // 'hours', 'days', 'acres', 'miles', etc.
-    rate: number,
-    amount: number,
-    sourceId: string | null,          // Link to service/equipment/timeEntry
-    taxable: boolean
-  }],
-
-  // Totals
-  subtotal: number,
-  taxRate: number,
-  taxAmount: number,
-  total: number,
-
-  // Progress Billing (if applicable)
-  progressBilling: {
-    contractAmount: number,
-    previouslyBilled: number,
-    currentBilled: number,
-    retainagePercent: number,
-    retainageAmount: number,
-    percentComplete: number
-  } | null,
-
-  // Status & Payment
-  status: 'draft' | 'sent' | 'viewed' | 'paid' | 'overdue' | 'void',
-  issueDate: Timestamp,
-  dueDate: Timestamp,
-  paidDate: Timestamp | null,
-  paidAmount: number,
-  paymentMethod: string | null,
-  paymentReference: string | null,
-
-  // Terms & Notes
-  terms: string,
-  notes: string,
-  internalNotes: string,
-
-  // Metadata
-  createdBy: string,
-  createdAt: Timestamp,
-  updatedAt: Timestamp,
-  sentAt: Timestamp | null,
-  viewedAt: Timestamp | null
-}
-```
-
-#### Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/lib/firestoreInvoices.js` | CRUD operations, invoice number generation, status management |
-| `src/pages/Invoices.jsx` | Invoice list page with filters and search |
-| `src/pages/InvoiceDetail.jsx` | View/edit single invoice |
-| `src/components/invoices/InvoiceBuilder.jsx` | Create/edit invoice with line items |
-| `src/components/invoices/InvoicePreview.jsx` | PDF preview component |
-| `src/components/invoices/InvoiceFromProject.jsx` | Generate invoice from project costs |
-| `src/components/invoices/LineItemEditor.jsx` | Add/edit line items |
-| `src/components/invoices/PaymentRecorder.jsx` | Record payment modal |
-| `src/lib/invoicePdf.js` | PDF generation with company branding |
-
-#### Implementation Steps
-
-1. **Create data layer** (`firestoreInvoices.js`)
-   - `createInvoice()`, `updateInvoice()`, `getInvoice()`, `getInvoices()`
-   - `generateInvoiceNumber()` - sequential numbering with prefix
-   - `calculateInvoiceTotals()` - sum line items, apply tax
-   - `getInvoicesByProject()`, `getInvoicesByClient()`
-   - `getInvoiceMetrics()` - totals by status, aging report
-
-2. **Build Invoice List page** (`Invoices.jsx`)
-   - Stats cards: Draft, Sent, Overdue, Paid (this month)
-   - Filters: Status, Client, Date range
-   - Table view with sortable columns
-   - Quick actions: View, Send, Record Payment, Void
-
-3. **Build Invoice Builder** (`InvoiceBuilder.jsx`)
-   - Client selector (auto-populate from project)
-   - Billing type selector
-   - Line item table with add/edit/remove
-   - Auto-calculate from project costs button
-   - Tax settings
-   - Terms and notes
-   - Save as draft / Preview / Send
-
-4. **Build "Generate from Project" flow** (`InvoiceFromProject.jsx`)
-   - Select project
-   - Choose what to include (services, equipment, labor, expenses)
-   - Select billing type
-   - Auto-populate line items from project data
-   - Review and adjust before creating
-
-5. **PDF Generation** (`invoicePdf.js`)
-   - Company logo and branding
-   - Client details
-   - Line items table
-   - Totals with tax breakdown
-   - Payment terms and instructions
-   - Professional layout matching existing PDF exports
-
-6. **Add to Navigation**
-   - Add "Invoices" under new "Billing" section in sidebar
-   - Add invoice stats to Dashboard
-
-#### Acceptance Criteria
-- [ ] Can create invoice manually with line items
-- [ ] Can generate invoice from project costs
-- [ ] Can preview and download PDF
-- [ ] Can track payment status
-- [ ] Can see aging report (30/60/90 days)
-- [ ] Invoice numbers are sequential and unique
-
----
-
-### 1.2 Time Tracking
+### 1.1 Time Tracking
 **Priority:** High
 **Estimated Effort:** 3-4 weeks
 
@@ -187,8 +47,6 @@ This plan transforms Aeria Ops from a drone-focused compliance platform into a c
   billable: boolean,
   billingRate: number,                // Hourly rate at time of entry
   billingAmount: number,              // totalHours * billingRate
-  invoiced: boolean,
-  invoiceId: string | null,
 
   // Approval
   status: 'draft' | 'submitted' | 'approved' | 'rejected',
@@ -272,10 +130,9 @@ This plan transforms Aeria Ops from a drone-focused compliance platform into a c
    - Calculate total labor cost
    - Feed into project cost summary
 
-6. **Integrate with Invoicing**
-   - Option to add time entries as invoice line items
-   - Mark entries as invoiced when added
-   - Prevent duplicate billing
+6. **Add to Navigation**
+   - Add "Time Tracking" to sidebar
+   - Add time summary widget to Dashboard
 
 #### Acceptance Criteria
 - [ ] Can log time against projects
@@ -283,11 +140,11 @@ This plan transforms Aeria Ops from a drone-focused compliance platform into a c
 - [ ] Can submit timesheet for approval
 - [ ] Manager can approve/reject timesheets
 - [ ] Time entries flow into project costs
-- [ ] Time entries can be added to invoices
+- [ ] Dashboard shows time summary
 
 ---
 
-### 1.3 Client Portal (Basic)
+### 1.2 Client Portal (Basic)
 **Priority:** Medium
 **Estimated Effort:** 3 weeks
 
@@ -302,7 +159,6 @@ Client Portal (portal.aeriaops.com OR app.aeriaops.com/portal)
 ├── Read-only access for clients
 ├── View assigned projects
 ├── Download deliverables
-├── View/pay invoices
 └── Branded experience
 ```
 
@@ -352,7 +208,6 @@ Client Portal (portal.aeriaops.com OR app.aeriaops.com/portal)
 | `src/pages/portal/PortalDashboard.jsx` | Client home page |
 | `src/pages/portal/PortalProjects.jsx` | List of client's projects |
 | `src/pages/portal/PortalProjectView.jsx` | Read-only project view |
-| `src/pages/portal/PortalInvoices.jsx` | Client's invoices |
 | `src/pages/portal/PortalDocuments.jsx` | Downloadable deliverables |
 | `src/components/portal/PortalLayout.jsx` | Client portal layout |
 | `src/contexts/PortalAuthContext.jsx` | Client authentication context |
@@ -373,7 +228,6 @@ Client Portal (portal.aeriaops.com OR app.aeriaops.com/portal)
 
 3. **Portal Dashboard**
    - Active projects count
-   - Pending invoices
    - Recent activity
    - Quick links
 
@@ -388,13 +242,7 @@ Client Portal (portal.aeriaops.com OR app.aeriaops.com/portal)
    - Organized by project
    - Download tracking
 
-6. **Invoices View**
-   - List all invoices
-   - View invoice details
-   - Download PDF
-   - Payment status
-
-7. **Invite Clients from Main App**
+6. **Invite Clients from Main App**
    - Client detail page: "Enable Portal Access"
    - Add portal users (email addresses)
    - Send invitation emails
@@ -404,7 +252,6 @@ Client Portal (portal.aeriaops.com OR app.aeriaops.com/portal)
 - [ ] Client can log in via magic link
 - [ ] Client can view their projects (read-only)
 - [ ] Client can download deliverables
-- [ ] Client can view and download invoices
 - [ ] Portal shows client branding
 - [ ] Operator can invite clients from main app
 
@@ -597,7 +444,6 @@ Client Portal (portal.aeriaops.com OR app.aeriaops.com/portal)
 | **Safety** | Manage | Manage | Edit | Submit | View |
 | **Compliance** | Manage | Manage | Edit | View | View |
 | **Training** | Manage | Manage | Edit | View own | None |
-| **Invoices** | Manage | Manage | View | None | Own only |
 | **Time** | Manage | Manage | Approve | Own only | None |
 | **Settings** | Manage | Manage | View | None | None |
 | **Team** | Manage | Manage | View | None | None |
@@ -1168,7 +1014,6 @@ Client Portal (portal.aeriaops.com OR app.aeriaops.com/portal)
    - View assigned projects
    - Upload documents
    - Submit time/work completed
-   - View payments
 
 #### Acceptance Criteria
 - [ ] Can add/manage subcontractors
@@ -1368,26 +1213,11 @@ Each industry package includes:
 
 | Integration | Type | Value |
 |-------------|------|-------|
-| QuickBooks Online | Accounting | Sync invoices, payments |
-| Xero | Accounting | Sync invoices, payments |
+| QuickBooks Online | Accounting | Sync clients, export cost data |
+| Xero | Accounting | Sync clients, export cost data |
 | Google Calendar | Scheduling | Sync project dates, deadlines |
 | Outlook/Microsoft 365 | Scheduling | Sync project dates, deadlines |
 | Zapier | Automation | Connect to 5000+ apps |
-
-#### QuickBooks Integration
-
-**Scope:**
-- Push invoices to QuickBooks
-- Sync customers (clients)
-- Pull payment status
-- Sync chart of accounts (for line item categorization)
-
-**Implementation:**
-1. OAuth2 connection flow
-2. Customer sync (Aeria clients ↔ QB customers)
-3. Invoice push (Aeria invoice → QB invoice)
-4. Payment webhook (QB payment → update Aeria)
-5. Disconnect/reconnect flow
 
 #### Google Calendar Integration
 
@@ -1407,7 +1237,7 @@ Each industry package includes:
 #### Zapier Integration
 
 **Scope:**
-- Triggers: Project created, Invoice sent, Form submitted, etc.
+- Triggers: Project created, Form submitted, Equipment maintenance due, etc.
 - Actions: Create project, Add equipment, etc.
 
 **Implementation:**
@@ -1429,11 +1259,10 @@ Each industry package includes:
 | `src/components/integrations/CalendarSetup.jsx` | Calendar connection UI |
 
 #### Acceptance Criteria
-- [ ] Can connect QuickBooks account
-- [ ] Invoices sync to QuickBooks
-- [ ] Payments sync back from QuickBooks
 - [ ] Can connect Google Calendar
 - [ ] Project dates appear in calendar
+- [ ] Can connect QuickBooks/Xero for client sync
+- [ ] Zapier triggers work
 - [ ] Can disconnect integrations cleanly
 
 ---
@@ -1474,22 +1303,27 @@ Each industry package includes:
 - SDKs (JavaScript, Python)
 - Developer portal
 
+### 4.5 Invoicing Module (Future)
+- Generate invoices from project costs
+- Support Fixed, T&M, Progress billing
+- PDF generation with company branding
+- Payment tracking
+- Integration with accounting software
+
 ---
 
 ## Implementation Timeline
 
 ```
-Month 1-2:   Invoicing Module
-Month 2-3:   Time Tracking
-Month 3-4:   Client Portal (Basic)
-Month 4-5:   Multi-Tenancy / Organizations
-Month 5-6:   Role-Based Access Control
-Month 6-7:   Audit Logging + SSO
-Month 7-9:   Full Offline Sync
-Month 9-10:  Subcontractor Management
-Month 10-12: Industry Templates
-Month 12-14: Integrations (QuickBooks, Calendar)
-Month 14+:   Phase 4 (Scale)
+Month 1-2:   Time Tracking + Client Portal
+Month 2-4:   Multi-Tenancy / Organizations
+Month 4-5:   Role-Based Access Control
+Month 5-6:   Audit Logging + SSO
+Month 6-8:   Full Offline Sync
+Month 8-9:   Subcontractor Management
+Month 9-11:  Industry Templates
+Month 11-13: Integrations (Calendar, Zapier)
+Month 13+:   Phase 4 (Scale)
 ```
 
 ---
@@ -1534,9 +1368,9 @@ Consider migrating to Supabase for:
 ## Success Metrics
 
 ### Phase 1 Success
-- 50% of projects have invoices generated
-- Average time to invoice < 24 hours after project completion
 - Time tracking adoption > 70% of operators
+- Average time entry within 24 hours of work
+- Client portal active for 30% of clients
 
 ### Phase 2 Success
 - 3+ enterprise clients onboarded
@@ -1581,7 +1415,7 @@ Consider migrating to Supabase for:
    - Plan offline sync architecture
 
 3. **Start Phase 1**
-   - Begin invoicing module design
+   - Begin time tracking module design
    - Create detailed technical specs
    - Set up development environment
 
