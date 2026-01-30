@@ -337,11 +337,16 @@ export async function createTimeEntry(data) {
  */
 export async function updateTimeEntry(id, data) {
   const docRef = doc(db, 'timeEntries', id)
+  const current = await getTimeEntryById(id)
+
+  // Only allow editing draft or rejected entries
+  if (current.status !== 'draft' && current.status !== 'rejected') {
+    throw new Error('Cannot edit an entry that has been submitted or approved')
+  }
 
   // Recalculate hours if time fields changed
   let updateData = { ...data }
   if (data.startTime !== undefined || data.endTime !== undefined || data.breakMinutes !== undefined) {
-    const current = await getTimeEntryById(id)
     const totalHours = calculateTotalHours(
       data.startTime ?? current.startTime,
       data.endTime ?? current.endTime,
@@ -350,8 +355,10 @@ export async function updateTimeEntry(id, data) {
     updateData.totalHours = totalHours
 
     // Recalculate billing if billable
-    if (current.billable && current.billingRate) {
-      updateData.billingAmount = totalHours * current.billingRate
+    const billable = data.billable ?? current.billable
+    const billingRate = data.billingRate ?? current.billingRate
+    if (billable && billingRate) {
+      updateData.billingAmount = totalHours * billingRate
     }
   }
 
@@ -359,6 +366,12 @@ export async function updateTimeEntry(id, data) {
   if (data.date) {
     updateData.weekId = getWeekId(new Date(data.date))
     updateData.weekStartDate = formatDateString(getWeekStart(new Date(data.date)))
+  }
+
+  // If entry was rejected, reset to draft when edited
+  if (current.status === 'rejected') {
+    updateData.status = 'draft'
+    updateData.rejectionReason = null
   }
 
   await updateDoc(docRef, {
@@ -373,6 +386,13 @@ export async function updateTimeEntry(id, data) {
  */
 export async function deleteTimeEntry(id) {
   const docRef = doc(db, 'timeEntries', id)
+
+  // Check if entry can be deleted
+  const entry = await getTimeEntryById(id)
+  if (entry.status !== 'draft' && entry.status !== 'rejected') {
+    throw new Error('Cannot delete an entry that has been submitted or approved')
+  }
+
   await deleteDoc(docRef)
 }
 
@@ -540,21 +560,27 @@ export async function submitTimesheet(timesheetId, notes = '') {
  */
 export async function approveTimesheet(timesheetId, approvedBy, approvedByName) {
   const docRef = doc(db, 'timesheets', timesheetId)
-  await updateDoc(docRef, {
-    status: 'approved',
-    approvedBy,
-    approvedByName,
-    approvedAt: serverTimestamp(),
-    rejectionReason: null,
-    updatedAt: serverTimestamp()
-  })
 
-  // Also mark all associated entries as approved
+  // Get the timesheet to find operator and week
   const timesheet = await getDoc(docRef)
   const data = timesheet.data()
 
+  // Get all entries for this week
   const entries = await getTimeEntriesForWeek(data.operatorId, new Date(data.weekStartDate))
+
+  // Recalculate totals from entries to ensure accuracy
+  let totalHours = 0
+  let billableHours = 0
+  let totalBillingAmount = 0
+
   for (const entry of entries) {
+    totalHours += entry.totalHours || 0
+    if (entry.billable) {
+      billableHours += entry.totalHours || 0
+      totalBillingAmount += entry.billingAmount || 0
+    }
+
+    // Mark entry as approved if it was submitted
     if (entry.status === 'submitted') {
       await updateDoc(doc(db, 'timeEntries', entry.id), {
         status: 'approved',
@@ -565,6 +591,20 @@ export async function approveTimesheet(timesheetId, approvedBy, approvedByName) 
       })
     }
   }
+
+  // Update timesheet with approval status AND recalculated totals
+  await updateDoc(docRef, {
+    status: 'approved',
+    approvedBy,
+    approvedByName,
+    approvedAt: serverTimestamp(),
+    rejectionReason: null,
+    totalHours,
+    billableHours,
+    totalBillingAmount,
+    entriesCount: entries.length,
+    updatedAt: serverTimestamp()
+  })
 }
 
 /**
@@ -638,9 +678,27 @@ export async function getTimesheetWithEntries(timesheetId) {
 
   const entries = await getTimeEntriesForWeek(timesheet.operatorId, weekStart)
 
+  // Calculate totals from actual entries (ensures accuracy even if stored values are stale)
+  let totalHours = 0
+  let billableHours = 0
+  let totalBillingAmount = 0
+
+  entries.forEach(entry => {
+    totalHours += entry.totalHours || 0
+    if (entry.billable) {
+      billableHours += entry.totalHours || 0
+      totalBillingAmount += entry.billingAmount || 0
+    }
+  })
+
   return {
     ...timesheet,
-    entries
+    entries,
+    // Override stored totals with calculated values for accuracy
+    totalHours,
+    billableHours,
+    totalBillingAmount,
+    entriesCount: entries.length
   }
 }
 

@@ -465,7 +465,8 @@ export default function TimeTracking() {
             {entriesByDay.map((day) => {
               const isToday = formatDateString(new Date()) === day.dateStr
               const isPast = new Date(day.dateStr) < new Date(formatDateString(new Date()))
-              const canEdit = weekSummary?.status === 'draft' || !weekSummary?.status
+              // Can always add new entries to past/today days
+              const canAddEntry = isPast || isToday
 
               return (
                 <div
@@ -476,7 +477,7 @@ export default function TimeTracking() {
                 >
                   {day.entries.length === 0 ? (
                     <div className="h-full flex items-center justify-center">
-                      {canEdit && (isPast || isToday) && (
+                      {canAddEntry && (
                         <button
                           onClick={() => {
                             setEditingEntry({ date: day.dateStr })
@@ -490,33 +491,49 @@ export default function TimeTracking() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {day.entries.map(entry => (
-                        <div
-                          key={entry.id}
-                          className={`p-2 rounded-lg text-xs cursor-pointer transition-colors ${
-                            TASK_TYPES[entry.taskType]?.color || 'bg-gray-100 text-gray-700'
-                          } hover:opacity-80`}
-                          onClick={() => canEdit && handleEditEntry(entry)}
-                        >
-                          <div className="font-medium truncate">
-                            {entry.projectName || 'No project'}
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <span>{formatHours(entry.totalHours)}</span>
-                            {entry.billable && (
-                              <span className="text-green-600">$</span>
+                      {day.entries.map(entry => {
+                        // Entry is editable if it's draft or rejected (not submitted or approved)
+                        const entryEditable = entry.status === 'draft' || entry.status === 'rejected'
+                        return (
+                          <div
+                            key={entry.id}
+                            className={`p-2 rounded-lg text-xs transition-colors ${
+                              TASK_TYPES[entry.taskType]?.color || 'bg-gray-100 text-gray-700'
+                            } ${entryEditable ? 'cursor-pointer hover:opacity-80' : 'opacity-75'}`}
+                            onClick={() => entryEditable && handleEditEntry(entry)}
+                          >
+                            <div className="font-medium truncate">
+                              {entry.projectName || 'No project'}
+                            </div>
+                            <div className="flex items-center justify-between mt-1">
+                              <span>{formatHours(entry.totalHours)}</span>
+                              {entry.billable && (
+                                <span className="text-green-600">$</span>
+                              )}
+                            </div>
+                            {entry.description && (
+                              <div className="text-gray-600 truncate mt-1">
+                                {entry.description}
+                              </div>
+                            )}
+                            {/* Show status indicator for non-draft entries */}
+                            {entry.status !== 'draft' && (
+                              <div className={`text-xs mt-1 ${
+                                entry.status === 'approved' ? 'text-green-700' :
+                                entry.status === 'submitted' ? 'text-blue-700' :
+                                entry.status === 'rejected' ? 'text-red-700' : ''
+                              }`}>
+                                {entry.status === 'approved' ? '✓ Approved' :
+                                 entry.status === 'submitted' ? '⏳ Pending' :
+                                 entry.status === 'rejected' ? '✗ Rejected' : ''}
+                              </div>
                             )}
                           </div>
-                          {entry.description && (
-                            <div className="text-gray-600 truncate mt-1">
-                              {entry.description}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        )
+                      })}
 
-                      {/* Add more button */}
-                      {canEdit && (isPast || isToday) && (
+                      {/* Add more button - always allow adding new entries */}
+                      {canAddEntry && (
                         <button
                           onClick={() => {
                             setEditingEntry({ date: day.dateStr })
@@ -590,11 +607,28 @@ export default function TimeTracking() {
                       )}
                     </div>
 
-                    {(weekSummary?.status === 'draft' || !weekSummary?.status) && (
+                    {/* Status badge */}
+                    {entry.status && entry.status !== 'draft' && (
+                      <Badge size="sm" className={
+                        entry.status === 'approved' ? 'bg-green-100 text-green-700' :
+                        entry.status === 'submitted' ? 'bg-blue-100 text-blue-700' :
+                        entry.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-700'
+                      }>
+                        {entry.status === 'approved' ? 'Approved' :
+                         entry.status === 'submitted' ? 'Pending' :
+                         entry.status === 'rejected' ? 'Rejected' :
+                         entry.status}
+                      </Badge>
+                    )}
+
+                    {/* Edit/Delete buttons - only for draft or rejected entries */}
+                    {(entry.status === 'draft' || entry.status === 'rejected' || !entry.status) && (
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleEditEntry(entry)}
                           className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                          title="Edit entry"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -604,6 +638,7 @@ export default function TimeTracking() {
                             setShowDeleteConfirm(true)
                           }}
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                          title="Delete entry"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
