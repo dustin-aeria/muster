@@ -50,9 +50,12 @@ const safetyNavigation = [
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'CAPAs', href: '/capas', icon: Target },
   { name: 'JHSC', href: '/jhsc', icon: UserCheck },
-  { name: 'Training', href: '/training', icon: GraduationCap },
   { name: 'Inspections', href: '/inspections', icon: ListChecks },
   { name: 'Safety Audit', href: '/cor-audit', icon: ClipboardCheck },
+]
+
+const trainingNavigation = [
+  { name: 'Training Records', href: '/training', icon: GraduationCap },
 ]
 
 const complianceNavigation = [
@@ -80,6 +83,7 @@ function Sidebar({ mobile, onClose }) {
   const navigate = useNavigate()
   const [librariesOpen, setLibrariesOpen] = useState(true)
   const [safetyOpen, setSafetyOpen] = useState(true)
+  const [trainingOpen, setTrainingOpen] = useState(true)
   const [complianceOpen, setComplianceOpen] = useState(true)
   const [maintenanceOpen, setMaintenanceOpen] = useState(true)
 
@@ -151,6 +155,30 @@ function Sidebar({ mobile, onClose }) {
           {safetyOpen && (
             <div id="safety-nav" className="mt-1 space-y-1">
               {safetyNavigation.map((item) => (
+                <NavItem key={item.name} item={item} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Training section */}
+        <div className="pt-4">
+          <button
+            type="button"
+            onClick={() => setTrainingOpen(!trainingOpen)}
+            className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700"
+            aria-expanded={trainingOpen}
+            aria-controls="training-nav"
+          >
+            <span className="flex items-center gap-2">
+              <GraduationCap className="w-4 h-4" aria-hidden="true" />
+              Training
+            </span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${trainingOpen ? '' : '-rotate-90'}`} aria-hidden="true" />
+          </button>
+          {trainingOpen && (
+            <div id="training-nav" className="mt-1 space-y-1">
+              {trainingNavigation.map((item) => (
                 <NavItem key={item.name} item={item} />
               ))}
             </div>

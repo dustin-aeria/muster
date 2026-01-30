@@ -441,15 +441,6 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
                       )}
                     </div>
 
-                    {/* DEBUG: Show raw rate values */}
-                    <div className="text-xs text-gray-400 p-2 bg-gray-100 rounded font-mono">
-                      hourly: {String(selectedService.hourlyRate)} |
-                      daily: {String(selectedService.dailyRate)} |
-                      weekly: {String(selectedService.weeklyRate)} |
-                      fixed: {String(selectedService.fixedRate)} |
-                      unit: {String(selectedService.unitRate)}
-                    </div>
-
                     {/* Rate Type Selection */}
                     {(() => {
                       // Use simple truthy check (matches Services.jsx display logic)
