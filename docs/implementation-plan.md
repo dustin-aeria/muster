@@ -8,6 +8,7 @@
 | Date | Sprint | Changes |
 |------|--------|---------|
 | Jan 30, 2026 | Phase 1, Sprint 1 | Time tracking data layer, entry form, weekly view page, dashboard widget |
+| Jan 30, 2026 | Phase 1, Sprint 2 | Timesheet submission confirmation modal, notes for approver, rejection display |
 
 ---
 
@@ -142,7 +143,7 @@ This plan transforms Aeria Ops from a drone-focused compliance platform into a c
 #### Acceptance Criteria
 - [x] Can log time against projects ✓ (Sprint 1 - Jan 30, 2026)
 - [x] Can view weekly timesheet ✓ (Sprint 1 - Jan 30, 2026)
-- [ ] Can submit timesheet for approval (Sprint 2)
+- [x] Can submit timesheet for approval ✓ (Sprint 2 - Jan 30, 2026)
 - [ ] Manager can approve/reject timesheets (Sprint 3)
 - [ ] Time entries flow into project costs (Sprint 4)
 - [x] Dashboard shows time summary ✓ (Sprint 1 - Jan 30, 2026)
