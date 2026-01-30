@@ -1,8 +1,13 @@
 # Aeria Ops: Implementation Plan
 
-**Version:** 1.1
-**Date:** January 29, 2026
+**Version:** 1.2
+**Date:** January 30, 2026
 **Based on:** Strategic Product Analysis
+
+### Progress Log
+| Date | Sprint | Changes |
+|------|--------|---------|
+| Jan 30, 2026 | Phase 1, Sprint 1 | Time tracking data layer, entry form, weekly view page, dashboard widget |
 
 ---
 
@@ -84,15 +89,15 @@ This plan transforms Aeria Ops from a drone-focused compliance platform into a c
 
 #### Files to Create
 
-| File | Purpose |
-|------|---------|
-| `src/lib/firestoreTimeTracking.js` | CRUD for time entries and timesheets |
-| `src/pages/TimeTracking.jsx` | Time entry list and weekly view |
-| `src/components/time/TimeEntryForm.jsx` | Add/edit time entry |
-| `src/components/time/WeeklyTimesheet.jsx` | Weekly grid view |
-| `src/components/time/TimeApproval.jsx` | Manager approval interface |
-| `src/components/time/TimeSummaryWidget.jsx` | Dashboard widget |
-| `src/components/projects/ProjectTimeEntries.jsx` | Time entries for a project |
+| File | Purpose | Status |
+|------|---------|--------|
+| `src/lib/firestoreTimeTracking.js` | CRUD for time entries and timesheets | ✓ Done |
+| `src/pages/TimeTracking.jsx` | Time entry list and weekly view | ✓ Done |
+| `src/components/time/TimeEntryForm.jsx` | Add/edit time entry | ✓ Done |
+| `src/components/time/WeeklyTimesheet.jsx` | Weekly grid view | (merged into TimeTracking.jsx) |
+| `src/components/time/TimeApproval.jsx` | Manager approval interface | Sprint 3 |
+| `src/components/time/TimeSummaryWidget.jsx` | Dashboard widget | ✓ Done |
+| `src/components/projects/ProjectTimeEntries.jsx` | Time entries for a project | Sprint 4 |
 
 #### Implementation Steps
 
@@ -135,12 +140,12 @@ This plan transforms Aeria Ops from a drone-focused compliance platform into a c
    - Add time summary widget to Dashboard
 
 #### Acceptance Criteria
-- [ ] Can log time against projects
-- [ ] Can view weekly timesheet
-- [ ] Can submit timesheet for approval
-- [ ] Manager can approve/reject timesheets
-- [ ] Time entries flow into project costs
-- [ ] Dashboard shows time summary
+- [x] Can log time against projects ✓ (Sprint 1 - Jan 30, 2026)
+- [x] Can view weekly timesheet ✓ (Sprint 1 - Jan 30, 2026)
+- [ ] Can submit timesheet for approval (Sprint 2)
+- [ ] Manager can approve/reject timesheets (Sprint 3)
+- [ ] Time entries flow into project costs (Sprint 4)
+- [x] Dashboard shows time summary ✓ (Sprint 1 - Jan 30, 2026)
 
 ---
 
