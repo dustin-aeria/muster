@@ -443,7 +443,7 @@ export default function Settings() {
                 {!showEmailChange ? (
                   <div className="flex items-center gap-2">
                     <div className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900">
-                      {userProfile?.email || 'No email set'}
+                      {user?.email || 'No email set'}
                     </div>
                     <button
                       type="button"
@@ -456,7 +456,7 @@ export default function Settings() {
                 ) : (
                   <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <p className="text-sm text-gray-600">
-                      Current email: <strong>{userProfile?.email}</strong>
+                      Current email: <strong>{user?.email}</strong>
                     </p>
                     <div>
                       <label className="label text-sm">New Email</label>
