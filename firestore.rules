@@ -380,6 +380,18 @@ service cloud.firestore {
         canDelete(resource.data.organizationId);
     }
 
+    // Formal Hazard Assessments (FHAs)
+    match /formalHazards/{fhaId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+    }
+
     // ============================================
     // Maintenance Collection
     // ============================================
