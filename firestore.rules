@@ -392,6 +392,19 @@ service cloud.firestore {
         canDelete(resource.data.organizationId);
     }
 
+    // Field Hazard Reviews
+    match /fieldHazardReviews/{reviewId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid ||
+         isMemberOf(resource.data.organizationId));
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid ||
+         isMemberOf(resource.data.organizationId));
+      allow delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
     // ============================================
     // Maintenance Collection
     // ============================================
