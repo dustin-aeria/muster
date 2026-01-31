@@ -411,9 +411,31 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Maintenance Collection
+    // Maintenance Collections
     // ============================================
     match /maintenanceLogs/{logId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+    }
+
+    match /maintenanceSchedules/{scheduleId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+    }
+
+    match /maintenanceRecords/{recordId} {
       allow read: if isAuthenticated() &&
         isMemberOf(resource.data.organizationId);
       allow create: if isAuthenticated() &&
