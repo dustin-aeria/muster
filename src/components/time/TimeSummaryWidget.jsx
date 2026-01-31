@@ -17,6 +17,7 @@ import {
   Plus
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useOrganization } from '../../hooks/useOrganization'
 import {
   getCurrentWeekSummary,
   getWeekStart,
@@ -44,21 +45,23 @@ const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 export default function TimeSummaryWidget({ compact = false }) {
   const { user } = useAuth()
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (user?.uid) {
+    if (user?.uid && organizationId) {
       loadSummary()
     }
-  }, [user?.uid])
+  }, [user?.uid, organizationId])
 
   const loadSummary = async () => {
+    if (!organizationId) return
     try {
       setLoading(true)
       setError(null)
-      const data = await getCurrentWeekSummary(user.uid)
+      const data = await getCurrentWeekSummary(user.uid, organizationId)
       setSummary(data)
     } catch (err) {
       logger.error('Failed to load time summary:', err)

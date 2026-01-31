@@ -656,10 +656,18 @@ export async function ungroundItem(itemId, itemType, clearedBy, notes = '') {
  * Get maintenance dashboard statistics
  * @returns {Promise<Object>} Dashboard stats
  */
-export async function getMaintenanceDashboardStats() {
-  // Get all equipment and aircraft
-  const equipmentSnap = await getDocs(equipmentRef)
-  const aircraftSnap = await getDocs(aircraftRef)
+export async function getMaintenanceDashboardStats(organizationId) {
+  if (!organizationId) {
+    console.warn('getMaintenanceDashboardStats called without organizationId')
+    return { totalItems: 0, itemsWithSchedules: 0, dueSoon: 0, overdue: 0, grounded: 0, ok: 0, dueSoonItems: [], overdueItems: [], groundedItems: [] }
+  }
+
+  // Get all equipment and aircraft for this organization
+  const equipmentQuery = query(equipmentRef, where('organizationId', '==', organizationId))
+  const aircraftQuery = query(aircraftRef, where('organizationId', '==', organizationId))
+
+  const equipmentSnap = await getDocs(equipmentQuery)
+  const aircraftSnap = await getDocs(aircraftQuery)
 
   const equipment = equipmentSnap.docs.map(doc => ({ id: doc.id, type: 'equipment', ...doc.data() }))
   const aircraft = aircraftSnap.docs.map(doc => ({ id: doc.id, type: 'aircraft', ...doc.data() }))

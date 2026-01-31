@@ -19,20 +19,25 @@ import {
   Loader2
 } from 'lucide-react'
 import { getMaintenanceDashboardStats } from '../../lib/firestoreMaintenance'
+import { useOrganization } from '../../hooks/useOrganization'
 
 export default function MaintenanceAlertWidget({ compact = false }) {
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    loadStats()
-  }, [])
+    if (organizationId) {
+      loadStats()
+    }
+  }, [organizationId])
 
   const loadStats = async () => {
+    if (!organizationId) return
     setLoading(true)
     try {
-      const dashboardStats = await getMaintenanceDashboardStats()
+      const dashboardStats = await getMaintenanceDashboardStats(organizationId)
       setStats(dashboardStats)
     } catch (err) {
       console.error('Failed to load maintenance stats:', err)

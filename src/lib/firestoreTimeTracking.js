@@ -240,19 +240,20 @@ export async function getTimeEntriesByOperator(operatorId, filters = {}) {
  * @param {Date} weekStartDate - Monday of the week
  * @returns {Promise<Array>}
  */
-export async function getTimeEntriesForWeek(operatorId, weekStartDate) {
+export async function getTimeEntriesForWeek(operatorId, weekStartDate, organizationId = null) {
   const monday = getWeekStart(weekStartDate)
   const sunday = getWeekEnd(weekStartDate)
 
   const mondayStr = formatDateString(monday)
   const sundayStr = formatDateString(sunday)
 
-  // Simple query by operatorId only (no composite index needed)
-  // Then filter by date client-side
-  const q = query(
-    timeEntriesRef,
-    where('operatorId', '==', operatorId)
-  )
+  // Query by operatorId and organizationId (required for security rules)
+  const constraints = [where('operatorId', '==', operatorId)]
+  if (organizationId) {
+    constraints.push(where('organizationId', '==', organizationId))
+  }
+
+  const q = query(timeEntriesRef, ...constraints)
 
   const snapshot = await getDocs(q)
   const allEntries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
@@ -407,14 +408,16 @@ export async function deleteTimeEntry(id) {
  * @param {Date} weekStartDate - Monday of the week
  * @returns {Promise<Object>}
  */
-export async function getTimesheetForWeek(operatorId, weekStartDate) {
+export async function getTimesheetForWeek(operatorId, weekStartDate, organizationId = null) {
   const weekId = getWeekId(weekStartDate)
 
-  // Query by operatorId only, then filter client-side
-  const q = query(
-    timesheetsRef,
-    where('operatorId', '==', operatorId)
-  )
+  // Query by operatorId and organizationId (required for security rules)
+  const constraints = [where('operatorId', '==', operatorId)]
+  if (organizationId) {
+    constraints.push(where('organizationId', '==', organizationId))
+  }
+
+  const q = query(timesheetsRef, ...constraints)
   const snapshot = await getDocs(q)
   const timesheets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 
@@ -952,10 +955,10 @@ export async function getOperatorTimeStats(operatorId, days = 30) {
  * @param {string} operatorId - Operator ID
  * @returns {Promise<Object>}
  */
-export async function getCurrentWeekSummary(operatorId) {
+export async function getCurrentWeekSummary(operatorId, organizationId = null) {
   const today = new Date()
-  const entries = await getTimeEntriesForWeek(operatorId, today)
-  const timesheet = await getTimesheetForWeek(operatorId, today)
+  const entries = await getTimeEntriesForWeek(operatorId, today, organizationId)
+  const timesheet = await getTimesheetForWeek(operatorId, today, organizationId)
 
   const summary = {
     totalHours: 0,

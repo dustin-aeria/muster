@@ -22,6 +22,7 @@ import { getAllTrainingRecords } from '../../lib/firestoreTraining'
 import { getInspections } from '../../lib/firestoreInspections'
 import { getInsurancePolicies } from '../../lib/firestoreInsurance'
 import { useAuth } from '../../contexts/AuthContext'
+import { useOrganization } from '../../hooks/useOrganization'
 import { addDays, isBefore, isAfter, startOfDay, format } from 'date-fns'
 
 const EVENT_TYPES = {
@@ -33,12 +34,13 @@ const EVENT_TYPES = {
 
 export default function UpcomingEvents({ daysAhead = 14, limit = 5 }) {
   const { user } = useAuth()
+  const { organizationId } = useOrganization()
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const loadEvents = async () => {
-      if (!user?.uid) return
+      if (!user?.uid || !organizationId) return
 
       setLoading(true)
       const allEvents = []
@@ -47,7 +49,7 @@ export default function UpcomingEvents({ daysAhead = 14, limit = 5 }) {
 
       try {
         // Load projects with start dates
-        const projects = await getProjects()
+        const projects = await getProjects(organizationId)
         projects.forEach(project => {
           if (project.startDate) {
             const startDate = new Date(project.startDate)
@@ -141,7 +143,7 @@ export default function UpcomingEvents({ daysAhead = 14, limit = 5 }) {
     }
 
     loadEvents()
-  }, [user?.uid, daysAhead, limit])
+  }, [user?.uid, organizationId, daysAhead, limit])
 
   const formatEventDate = (date) => {
     const today = startOfDay(new Date())

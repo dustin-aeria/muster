@@ -21,20 +21,25 @@ import {
 import { getPermits, PERMIT_TYPES } from '../../lib/firestorePermits'
 import { getInsurancePolicies, INSURANCE_TYPES, calculateInsuranceStatus } from '../../lib/firestoreInsurance'
 import { getOperators } from '../../lib/firestore'
+import { useOrganization } from '../../hooks/useOrganization'
 import { differenceInDays, addDays, isBefore, format } from 'date-fns'
 
 const EXPIRY_THRESHOLD_DAYS = 30
 
 export default function ExpiryRemindersWidget({ operatorId = null }) {
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [expiringItems, setExpiringItems] = useState([])
 
   useEffect(() => {
-    loadExpiringItems()
-  }, [operatorId])
+    if (organizationId) {
+      loadExpiringItems()
+    }
+  }, [operatorId, organizationId])
 
   const loadExpiringItems = async () => {
+    if (!organizationId) return
     setLoading(true)
     setError(null)
 
@@ -44,7 +49,7 @@ export default function ExpiryRemindersWidget({ operatorId = null }) {
       const threshold = addDays(now, EXPIRY_THRESHOLD_DAYS)
 
       // Load permits
-      const permits = await getPermits(operatorId ? { operatorId } : {})
+      const permits = await getPermits(organizationId, operatorId ? { operatorId } : {})
       permits.forEach(permit => {
         if (permit.status === 'expiring_soon' || permit.status === 'expired') {
           const expiryDate = permit.expiryDate?.toDate?.() || (permit.expiryDate ? new Date(permit.expiryDate) : null)
@@ -66,8 +71,8 @@ export default function ExpiryRemindersWidget({ operatorId = null }) {
       })
 
       // Load insurance policies
-      if (operatorId) {
-        const insurancePolicies = await getInsurancePolicies(operatorId)
+      if (organizationId) {
+        const insurancePolicies = await getInsurancePolicies(organizationId)
         insurancePolicies.forEach(policy => {
           const status = calculateInsuranceStatus(policy)
           if (status === 'expiring_soon' || status === 'expired') {
@@ -91,7 +96,7 @@ export default function ExpiryRemindersWidget({ operatorId = null }) {
       }
 
       // Load operator certifications
-      const operators = await getOperators()
+      const operators = await getOperators(organizationId)
       operators.forEach(op => {
         const certs = op.certifications || []
         certs.forEach(cert => {
