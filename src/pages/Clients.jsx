@@ -30,6 +30,8 @@ import {
 } from 'lucide-react'
 import { getClients, createClient, updateClient, deleteClient } from '../lib/firestore'
 import { useOrganization } from '../hooks/useOrganization'
+import { usePermissions } from '../hooks/usePermissions'
+import { CanEdit, CanDelete } from '../components/PermissionGuard'
 import { logger } from '../lib/logger'
 import ClientPortalManager from '../components/clients/ClientPortalManager'
 import Modal from '../components/Modal'
@@ -362,7 +364,7 @@ function ClientModal({ isOpen, onClose, client, onSave }) {
 }
 
 // Client Card Component
-function ClientCard({ client, onEdit, onDelete, onPortalAccess, menuOpen, setMenuOpen }) {
+function ClientCard({ client, onEdit, onDelete, onPortalAccess, menuOpen, setMenuOpen, canEdit, canDelete }) {
   // FIX #6: Handle menu button click with stopPropagation
   const handleMenuClick = (e) => {
     e.stopPropagation() // Prevent document click handler from firing
@@ -415,50 +417,59 @@ function ClientCard({ client, onEdit, onDelete, onPortalAccess, menuOpen, setMen
           </div>
         </div>
         
-        <div className="relative">
-          <button
-            onClick={handleMenuClick}
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </button>
-          
-          {menuOpen === client.id && (
-            <>
-              {/* FIX #6: Backdrop with stopPropagation */}
-              <div 
-                className="fixed inset-0 z-10"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setMenuOpen(null)
-                }}
-              />
-              <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[140px]">
-                <button
-                  onClick={handleEditClick}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit
-                </button>
-                <button
-                  onClick={handlePortalClick}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  Portal Access
-                </button>
-                <button
-                  onClick={handleDeleteClick}
-                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        {/* Only show menu if user has edit or delete permissions */}
+        {(canEdit || canDelete) && (
+          <div className="relative">
+            <button
+              onClick={handleMenuClick}
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {menuOpen === client.id && (
+              <>
+                {/* FIX #6: Backdrop with stopPropagation */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setMenuOpen(null)
+                  }}
+                />
+                <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[140px]">
+                  {canEdit && (
+                    <button
+                      onClick={handleEditClick}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      onClick={handlePortalClick}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Users className="w-4 h-4" />
+                      Portal Access
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={handleDeleteClick}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
       
       <div className="mt-4 space-y-2">
@@ -508,6 +519,7 @@ function ClientCard({ client, onEdit, onDelete, onPortalAccess, menuOpen, setMen
 
 export default function Clients() {
   const { organizationId } = useOrganization()
+  const { canEdit, canDelete } = usePermissions()
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -588,16 +600,18 @@ export default function Clients() {
           <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
           <p className="text-gray-600 mt-1">Manage your client companies</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingClient(null)
-            setShowModal(true)
-          }}
-          className="btn-primary"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Client
-        </button>
+        <CanEdit>
+          <button
+            onClick={() => {
+              setEditingClient(null)
+              setShowModal(true)
+            }}
+            className="btn-primary"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Client
+          </button>
+        </CanEdit>
       </div>
 
       {/* Search */}
@@ -633,16 +647,18 @@ export default function Clients() {
             }
           </p>
           {!searchQuery && (
-            <button
-              onClick={() => {
-                setEditingClient(null)
-                setShowModal(true)
-              }}
-              className="btn-primary"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Client
-            </button>
+            <CanEdit>
+              <button
+                onClick={() => {
+                  setEditingClient(null)
+                  setShowModal(true)
+                }}
+                className="btn-primary"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Client
+              </button>
+            </CanEdit>
           )}
         </div>
       ) : (
@@ -656,6 +672,8 @@ export default function Clients() {
               onPortalAccess={handlePortalAccess}
               menuOpen={menuOpen}
               setMenuOpen={setMenuOpen}
+              canEdit={canEdit}
+              canDelete={canDelete}
             />
           ))}
         </div>

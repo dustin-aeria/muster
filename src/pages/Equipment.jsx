@@ -46,6 +46,8 @@ import {
   EQUIPMENT_STATUS
 } from '../lib/firestore'
 import { useOrganization } from '../hooks/useOrganization'
+import { usePermissions } from '../hooks/usePermissions'
+import { CanEdit, CanDelete } from '../components/PermissionGuard'
 import { calculateOverallMaintenanceStatus } from '../lib/firestoreMaintenance'
 import { formatCurrency } from '../lib/costEstimator'
 import EquipmentModal from '../components/EquipmentModal'
@@ -112,6 +114,7 @@ const maintenanceStatusConfig = {
 export default function Equipment() {
   const navigate = useNavigate()
   const { organizationId } = useOrganization()
+  const { canEdit, canDelete } = usePermissions()
   const [equipment, setEquipment] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -459,20 +462,24 @@ export default function Equipment() {
             )}
           </div>
 
-          <button
-            onClick={() => setShowImport(true)}
-            className="btn-secondary inline-flex items-center gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            Import
-          </button>
-          <button
-            onClick={() => setShowModal(true)}
-            className="btn-primary inline-flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Equipment
-          </button>
+          <CanEdit>
+            <button
+              onClick={() => setShowImport(true)}
+              className="btn-secondary inline-flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Import
+            </button>
+          </CanEdit>
+          <CanEdit>
+            <button
+              onClick={() => setShowModal(true)}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Equipment
+            </button>
+          </CanEdit>
         </div>
       </div>
 
@@ -593,15 +600,19 @@ export default function Equipment() {
             <>
               <h3 className="text-lg font-medium text-gray-900 mb-1">No equipment yet</h3>
               <p className="text-gray-500 mb-4">
-                Add equipment to your inventory to track and assign to projects.
+                {canEdit
+                  ? 'Add equipment to your inventory to track and assign to projects.'
+                  : 'No equipment has been added yet. Contact an admin to add equipment.'}
               </p>
-              <button
-                onClick={() => setShowModal(true)}
-                className="btn-primary inline-flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Equipment
-              </button>
+              <CanEdit>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="btn-primary inline-flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Equipment
+                </button>
+              </CanEdit>
             </>
           ) : (
             <>
@@ -706,21 +717,25 @@ export default function Equipment() {
                             <Wrench className="w-4 h-4" />
                             Maintenance
                           </Link>
-                          <hr className="my-1 border-gray-100" />
-                          <button
-                            onClick={() => handleEdit(item)}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                          >
-                            <Edit className="w-4 h-4" />
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id, item.name)}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
+                          {(canEdit || canDelete) && <hr className="my-1 border-gray-100" />}
+                          {canEdit && (
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(item.id, item.name)}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </>
                     )}
@@ -889,24 +904,28 @@ export default function Equipment() {
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEdit(item)
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-gray-600 rounded"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDelete(item.id, item.name)
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded ml-1"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEdit(item)
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 rounded"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(item.id, item.name)
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 rounded ml-1"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )

@@ -40,10 +40,13 @@ import {
   INCIDENT_STATUS,
   RPAS_INCIDENT_TYPES
 } from '../lib/firestoreSafety'
+import { usePermissions } from '../hooks/usePermissions'
 import { logger } from '../lib/logger'
 
 export default function Incidents() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const { canEdit, canDelete, can } = usePermissions()
+  const canReportIncidents = can('reportIncidents')
   const [incidents, setIncidents] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -195,10 +198,12 @@ export default function Incidents() {
             <Eye className="w-4 h-4" />
             Dashboard
           </Link>
-          <Link to="/incidents/new" className="btn-primary inline-flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Report Incident
-          </Link>
+          {canReportIncidents && (
+            <Link to="/incidents/new" className="btn-primary inline-flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Report Incident
+            </Link>
+          )}
         </div>
       </div>
 
@@ -287,10 +292,12 @@ export default function Incidents() {
               <p className="text-gray-500 mb-4">
                 That's good news! Report any incidents or near misses here.
               </p>
-              <Link to="/incidents/new" className="btn-primary inline-flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Report Incident
-              </Link>
+              {canReportIncidents && (
+                <Link to="/incidents/new" className="btn-primary inline-flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Report Incident
+                </Link>
+              )}
             </>
           ) : (
             <>
@@ -418,14 +425,16 @@ export default function Incidents() {
                             <Eye className="w-4 h-4" />
                             View Details
                           </Link>
-                          <Link
-                            to={`/incidents/${incident.id}/edit`}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                          >
-                            <FileText className="w-4 h-4" />
-                            Edit
-                          </Link>
-                          {incident.status !== 'closed' && (
+                          {canEdit && (
+                            <Link
+                              to={`/incidents/${incident.id}/edit`}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              <FileText className="w-4 h-4" />
+                              Edit
+                            </Link>
+                          )}
+                          {canEdit && incident.status !== 'closed' && (
                             <Link
                               to={`/capas/new?incidentId=${incident.id}`}
                               className="w-full px-4 py-2 text-left text-sm text-purple-700 hover:bg-purple-50 flex items-center gap-2"
@@ -434,13 +443,15 @@ export default function Incidents() {
                               Create CAPA
                             </Link>
                           )}
-                          <button
-                            onClick={() => handleDelete(incident.id, incident.incidentNumber)}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(incident.id, incident.incidentNumber)}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </>
                     )}

@@ -31,6 +31,8 @@ import {
 import { Link } from 'react-router-dom'
 import { getAircraft, deleteAircraft } from '../lib/firestore'
 import { useOrganization } from '../hooks/useOrganization'
+import { usePermissions } from '../hooks/usePermissions'
+import { CanEdit, CanDelete } from '../components/PermissionGuard'
 import { calculateOverallMaintenanceStatus } from '../lib/firestoreMaintenance'
 import AircraftModal from '../components/AircraftModal'
 import AircraftSpecSheet, { generateAircraftSpecPDF } from '../components/AircraftSpecSheet'
@@ -86,6 +88,7 @@ const categoryLabels = {
 // ============================================
 export default function Aircraft() {
   const { organizationId } = useOrganization()
+  const { canEdit, canDelete } = usePermissions()
   const [aircraft, setAircraft] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -188,13 +191,15 @@ export default function Aircraft() {
           <h1 className="text-2xl font-bold text-gray-900">Fleet</h1>
           <p className="text-gray-600 mt-1">Global aircraft inventory for all projects</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn-primary inline-flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Aircraft
-        </button>
+        <CanEdit>
+          <button
+            onClick={() => setShowModal(true)}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Aircraft
+          </button>
+        </CanEdit>
       </div>
 
       {/* Fleet Stats */}
@@ -267,15 +272,19 @@ export default function Aircraft() {
             <>
               <h3 className="text-lg font-medium text-gray-900 mb-1">No aircraft yet</h3>
               <p className="text-gray-500 mb-4">
-                Add aircraft to your fleet to assign them to operations.
+                {canEdit
+                  ? 'Add aircraft to your fleet to assign them to operations.'
+                  : 'No aircraft have been added yet. Contact an admin to add aircraft.'}
               </p>
-              <button 
-                onClick={() => setShowModal(true)}
-                className="btn-primary inline-flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Aircraft
-              </button>
+              <CanEdit>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="btn-primary inline-flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Aircraft
+                </button>
+              </CanEdit>
             </>
           ) : (
             <>
@@ -352,21 +361,25 @@ export default function Aircraft() {
                             <Wrench className="w-4 h-4" />
                             Maintenance Details
                           </Link>
-                          <hr className="my-1 border-gray-200" />
-                          <button
-                            onClick={() => handleEdit(ac)}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                          >
-                            <Edit className="w-4 h-4" />
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(ac.id, ac.nickname)}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
+                          {(canEdit || canDelete) && <hr className="my-1 border-gray-200" />}
+                          {canEdit && (
+                            <button
+                              onClick={() => handleEdit(ac)}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(ac.id, ac.nickname)}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </>
                     )}

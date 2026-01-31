@@ -26,6 +26,8 @@ import {
 } from 'lucide-react'
 import { getProjects, deleteProject, duplicateProject, getClients } from '../lib/firestore'
 import { useOrganizationContext } from '../contexts/OrganizationContext'
+import { usePermissions } from '../hooks/usePermissions'
+import { CanEdit, CanDelete } from '../components/PermissionGuard'
 import NewProjectModal from '../components/NewProjectModal'
 import { format } from 'date-fns'
 import { logger } from '../lib/logger'
@@ -49,6 +51,7 @@ const statusLabels = {
 export default function Projects() {
   const navigate = useNavigate()
   const { organizationId } = useOrganizationContext()
+  const { canEdit, canDelete } = usePermissions()
   const [projects, setProjects] = useState([])
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
@@ -167,13 +170,15 @@ export default function Projects() {
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
           <p className="text-gray-600 mt-1">Manage your operations plans</p>
         </div>
-        <button 
-          onClick={() => setShowNewModal(true)}
-          className="btn-primary inline-flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          New Project
-        </button>
+        <CanEdit>
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Project
+          </button>
+        </CanEdit>
       </div>
 
       {/* Filters and search */}
@@ -241,15 +246,19 @@ export default function Projects() {
             <>
               <h3 className="text-lg font-medium text-gray-900 mb-1">No projects yet</h3>
               <p className="text-gray-500 mb-4">
-                Create your first project to get started with operations planning.
+                {canEdit
+                  ? 'Create your first project to get started with operations planning.'
+                  : 'No projects have been created yet. Contact an admin to create projects.'}
               </p>
-              <button 
-                onClick={() => setShowNewModal(true)}
-                className="btn-primary inline-flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Create Project
-              </button>
+              <CanEdit>
+                <button
+                  onClick={() => setShowNewModal(true)}
+                  className="btn-primary inline-flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Project
+                </button>
+              </CanEdit>
             </>
           ) : (
             <>
@@ -333,7 +342,8 @@ export default function Projects() {
                       <ChevronRight className="w-5 h-5" />
                     </Link>
                     
-                    {/* More menu */}
+                    {/* More menu - only show if user has edit or delete permissions */}
+                    {(canEdit || canDelete) && (
                     <div className="relative">
                       <button
                         onClick={(e) => {
@@ -347,35 +357,40 @@ export default function Projects() {
                       
                       {menuOpen === project.id && (
                         <>
-                          <div 
+                          <div
                             className="fixed inset-0 z-10"
                             onClick={() => setMenuOpen(null)}
                           />
                           <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleDuplicate(project.id, project.name)
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                            >
-                              <Copy className="w-4 h-4" />
-                              Duplicate
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleDelete(project.id, project.name)
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Delete
-                            </button>
+                            <CanEdit>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDuplicate(project.id, project.name)
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <Copy className="w-4 h-4" />
+                                Duplicate
+                              </button>
+                            </CanEdit>
+                            <CanDelete>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDelete(project.id, project.name)
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </button>
+                            </CanDelete>
                           </div>
                         </>
                       )}
                     </div>
+                    )}
                   </div>
                 </div>
               </div>

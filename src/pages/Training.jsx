@@ -41,6 +41,7 @@ import {
   TRAINING_STATUS
 } from '../lib/firestoreTraining'
 import { exportTrainingReport } from '../lib/safetyExportService'
+import { usePermissions } from '../hooks/usePermissions'
 
 import TrainingCourseModal from '../components/training/TrainingCourseModal'
 import TrainingRecordModal from '../components/training/TrainingRecordModal'
@@ -48,6 +49,8 @@ import TrainingRecordModal from '../components/training/TrainingRecordModal'
 export default function Training() {
   const { user } = useAuth()
   const { organizationId } = useOrganization()
+  const { canEdit, can } = usePermissions()
+  const canRecordTraining = can('recordOwnTraining')
 
   // State
   const [loading, setLoading] = useState(true)
@@ -221,13 +224,15 @@ export default function Training() {
             <Download className="w-4 h-4" />
             {exporting ? 'Exporting...' : 'Export PDF'}
           </button>
-          <button
-            onClick={() => handleAddRecord()}
-            className="flex items-center gap-2 px-4 py-2 bg-aeria-blue text-white rounded-lg hover:bg-aeria-navy transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Training Record
-          </button>
+          {canRecordTraining && (
+            <button
+              onClick={() => handleAddRecord()}
+              className="flex items-center gap-2 px-4 py-2 bg-aeria-blue text-white rounded-lg hover:bg-aeria-navy transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Training Record
+            </button>
+          )}
         </div>
       </div>
 
@@ -440,13 +445,15 @@ export default function Training() {
                 ))}
               </select>
 
-              <button
-                onClick={handleAddCourse}
-                className="flex items-center gap-2 px-4 py-2 bg-aeria-blue text-white rounded-lg hover:bg-aeria-navy transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Course
-              </button>
+              {canEdit && (
+                <button
+                  onClick={handleAddCourse}
+                  className="flex items-center gap-2 px-4 py-2 bg-aeria-blue text-white rounded-lg hover:bg-aeria-navy transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Course
+                </button>
+              )}
             </div>
 
             {/* Courses Grid */}
@@ -480,19 +487,23 @@ export default function Training() {
                   </div>
 
                   <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                    <button
-                      onClick={() => handleAddRecord(course)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm text-aeria-blue hover:bg-aeria-blue/10 rounded-lg transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Record
-                    </button>
-                    <button
-                      onClick={() => handleEditCourse(course)}
-                      className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
+                    {canRecordTraining && (
+                      <button
+                        onClick={() => handleAddRecord(course)}
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm text-aeria-blue hover:bg-aeria-blue/10 rounded-lg transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Record
+                      </button>
+                    )}
+                    {canEdit && (
+                      <button
+                        onClick={() => handleEditCourse(course)}
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -551,13 +562,15 @@ export default function Training() {
                 </button>
               </div>
 
-              <button
-                onClick={() => handleAddRecord()}
-                className="flex items-center gap-2 px-4 py-2 bg-aeria-blue text-white rounded-lg hover:bg-aeria-navy transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Record
-              </button>
+              {canRecordTraining && (
+                <button
+                  onClick={() => handleAddRecord()}
+                  className="flex items-center gap-2 px-4 py-2 bg-aeria-blue text-white rounded-lg hover:bg-aeria-navy transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Record
+                </button>
+              )}
             </div>
 
             {/* Records Table/Grid */}
