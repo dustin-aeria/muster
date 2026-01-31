@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { getOperators, getAircraft, getClients, getFormsByProject, linkFormToProject } from '../../lib/firestore'
 import { useBranding } from '../BrandingSettings'
+import { useOrganization } from '../../hooks/useOrganization'
 import * as formDefs from '../../lib/formDefinitions'
 import { 
   ClipboardList,
@@ -1981,15 +1982,17 @@ export default function ProjectForms({ project, onUpdate }) {
 
   // FIX #8 & #9: Get branding for PDF exports
   const { branding } = useBranding()
+  const { organizationId } = useOrganization()
 
   useEffect(() => {
     const loadData = async () => {
+      if (!organizationId) return
       try {
         // Load operators, aircraft, clients, and linked forms in parallel
         const [ops, acs, cls, linked] = await Promise.all([
-          getOperators().catch(() => []),
-          getAircraft().catch(() => []),
-          getClients().catch(() => []),
+          getOperators(organizationId).catch(() => []),
+          getAircraft(organizationId).catch(() => []),
+          getClients(organizationId).catch(() => []),
           project?.id ? getFormsByProject(project.id).catch(() => []) : Promise.resolve([])
         ])
         setOperators(ops || [])
@@ -2005,7 +2008,7 @@ export default function ProjectForms({ project, onUpdate }) {
       }
     }
     loadData()
-  }, [project?.id])
+  }, [organizationId, project?.id])
 
   // FIX: Ensure projectForms is ALWAYS an array
   const projectForms = Array.isArray(project?.forms) ? project.forms : []

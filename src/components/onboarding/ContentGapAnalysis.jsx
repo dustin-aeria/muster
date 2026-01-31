@@ -29,6 +29,7 @@ import {
   TrendingUp
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useOrganization } from '../../hooks/useOrganization'
 import { getPoliciesEnhanced } from '../../lib/firestorePolicies'
 import { getPublishedMasterPolicies } from '../../lib/firestoreMasterPolicies'
 import { getAllTrainingRecords, getCourses } from '../../lib/firestoreTraining'
@@ -58,6 +59,7 @@ const ESSENTIAL_TRAINING = [
 
 export default function ContentGapAnalysis() {
   const { user } = useAuth()
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
   const [gaps, setGaps] = useState({
@@ -80,7 +82,7 @@ export default function ContentGapAnalysis() {
       const [policies, masterPolicies, operators, trainingRecords, courses] = await Promise.all([
         getPoliciesEnhanced().catch(() => []),
         getPublishedMasterPolicies().catch(() => []),
-        getOperators().catch(() => []),
+        organizationId ? getOperators(organizationId).catch(() => []) : Promise.resolve([]),
         getAllTrainingRecords().catch(() => []),
         getCourses().catch(() => [])
       ])

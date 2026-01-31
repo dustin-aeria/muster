@@ -25,10 +25,12 @@ import { getProjects, getAircraft, getEquipment, getOperators } from '../../lib/
 import { getAllIncidents } from '../../lib/firestoreIncidents'
 import { getAllTrainingRecords } from '../../lib/firestoreTraining'
 import { useAuth } from '../../contexts/AuthContext'
+import { useOrganization } from '../../hooks/useOrganization'
 import { logger } from '../../lib/logger'
 
 export default function QuickStats() {
   const { operatorData } = useAuth()
+  const { organizationId } = useOrganization()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -42,10 +44,10 @@ export default function QuickStats() {
     setLoading(true)
     try {
       const [projects, aircraft, equipment, operators, incidents, training] = await Promise.all([
-        getProjects().catch(() => []),
-        getAircraft().catch(() => []),
-        getEquipment().catch(() => []),
-        getOperators().catch(() => []),
+        organizationId ? getProjects(organizationId).catch(() => []) : Promise.resolve([]),
+        organizationId ? getAircraft(organizationId).catch(() => []) : Promise.resolve([]),
+        organizationId ? getEquipment(organizationId).catch(() => []) : Promise.resolve([]),
+        organizationId ? getOperators(organizationId).catch(() => []) : Promise.resolve([]),
         getAllIncidents(operatorData.id).catch(() => []),
         getAllTrainingRecords(operatorData.id).catch(() => [])
       ])

@@ -34,6 +34,7 @@ import {
   getPoliciesEnhanced
 } from '../../lib/firestorePolicies'
 import { getOperators } from '../../lib/firestore'
+import { useOrganization } from '../../hooks/useOrganization'
 import { logger } from '../../lib/logger'
 
 /**
@@ -150,6 +151,7 @@ SummaryCards.propTypes = {
  * Main AcknowledgmentDashboard component
  */
 export default function AcknowledgmentDashboard({ policyId = null }) {
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -181,7 +183,7 @@ export default function AcknowledgmentDashboard({ policyId = null }) {
 
       const [policiesData, operatorsData] = await Promise.all([
         getPoliciesEnhanced({ status: 'active' }),
-        getOperators()
+        organizationId ? getOperators(organizationId) : Promise.resolve([])
       ])
 
       setPolicies(policiesData.filter(p => p.acknowledgmentSettings?.required))

@@ -30,6 +30,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useOrganization } from '../../hooks/useOrganization'
 import { getAircraft, getOperators, getProjects } from '../../lib/firestore'
 import { getPoliciesEnhanced } from '../../lib/firestorePolicies'
 import { logger } from '../../lib/logger'
@@ -79,6 +80,7 @@ const ONBOARDING_STEPS = [
 
 export default function OnboardingChecklist({ onDismiss }) {
   const { userProfile, user } = useAuth()
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(true)
   const [checkData, setCheckData] = useState({
@@ -99,10 +101,10 @@ export default function OnboardingChecklist({ onDismiss }) {
     setLoading(true)
     try {
       const [aircraft, operators, policies, projects] = await Promise.all([
-        getAircraft().catch(() => []),
-        getOperators().catch(() => []),
+        organizationId ? getAircraft(organizationId).catch(() => []) : Promise.resolve([]),
+        organizationId ? getOperators(organizationId).catch(() => []) : Promise.resolve([]),
         getPoliciesEnhanced().catch(() => []),
-        getProjects().catch(() => [])
+        organizationId ? getProjects(organizationId).catch(() => []) : Promise.resolve([])
       ])
 
       setCheckData({

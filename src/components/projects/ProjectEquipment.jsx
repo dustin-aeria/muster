@@ -37,6 +37,7 @@ import {
   getEquipment,
   EQUIPMENT_CATEGORIES
 } from '../../lib/firestore'
+import { useOrganization } from '../../hooks/useOrganization'
 import AircraftSpecSheet, { generateAircraftSpecPDF } from '../AircraftSpecSheet'
 import { useBranding } from '../BrandingSettings'
 import { BrandedPDF } from '../../lib/pdfExportService'
@@ -104,6 +105,7 @@ const categoryIcons = {
 // MAIN COMPONENT
 // ============================================
 export default function ProjectEquipment({ project, onUpdate }) {
+  const { organizationId } = useOrganization()
   const [allAircraft, setAllAircraft] = useState([])
   const [allEquipment, setAllEquipment] = useState([])
   const [loading, setLoading] = useState(true)
@@ -137,10 +139,11 @@ export default function ProjectEquipment({ project, onUpdate }) {
   // Load all aircraft and equipment
   useEffect(() => {
     const loadData = async () => {
+      if (!organizationId) return
       try {
         const [aircraftData, equipmentData] = await Promise.all([
-          getAircraft(),
-          getEquipment()
+          getAircraft(organizationId),
+          getEquipment(organizationId)
         ])
         setAllAircraft(aircraftData)
         setAllEquipment(equipmentData)
@@ -151,7 +154,7 @@ export default function ProjectEquipment({ project, onUpdate }) {
       }
     }
     loadData()
-  }, [])
+  }, [organizationId])
 
   // Available aircraft (not already assigned)
   const availableAircraft = allAircraft.filter(a =>

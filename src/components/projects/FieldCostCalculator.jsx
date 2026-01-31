@@ -19,9 +19,11 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { getOperators, getEquipment, getAircraft } from '../../lib/firestore'
+import { useOrganization } from '../../hooks/useOrganization'
 import { formatCurrency } from '../../lib/costEstimator'
 
 export default function FieldCostCalculator({ project, onUpdate }) {
+  const { organizationId } = useOrganization()
   const [freshOperators, setFreshOperators] = useState([])
   const [freshEquipment, setFreshEquipment] = useState([])
   const [freshAircraft, setFreshAircraft] = useState([])
@@ -36,11 +38,12 @@ export default function FieldCostCalculator({ project, onUpdate }) {
   // Load fresh operator, equipment, and aircraft data
   useEffect(() => {
     const loadData = async () => {
+      if (!organizationId) return
       try {
         const [ops, equip, aircraft] = await Promise.all([
-          getOperators(),
-          getEquipment(),
-          getAircraft()
+          getOperators(organizationId),
+          getEquipment(organizationId),
+          getAircraft(organizationId)
         ])
         setFreshOperators(ops)
         setFreshEquipment(equip)
@@ -52,7 +55,7 @@ export default function FieldCostCalculator({ project, onUpdate }) {
       }
     }
     loadData()
-  }, [])
+  }, [organizationId])
 
   // Calculate crew costs with fresh rates
   const crewCosts = useMemo(() => {

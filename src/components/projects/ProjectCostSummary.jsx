@@ -18,10 +18,12 @@ import {
   PackageCheck
 } from 'lucide-react'
 import { getOperators, getEquipment, getAircraft } from '../../lib/firestore'
+import { useOrganization } from '../../hooks/useOrganization'
 import { formatCurrency, calculatePhaseCost } from '../../lib/costEstimator'
 import { calculateServiceCost } from './ProjectServicesSection'
 
 export default function ProjectCostSummary({ project }) {
+  const { organizationId } = useOrganization()
   const [freshOperators, setFreshOperators] = useState([])
   const [freshEquipment, setFreshEquipment] = useState([])
   const [freshAircraft, setFreshAircraft] = useState([])
@@ -31,11 +33,12 @@ export default function ProjectCostSummary({ project }) {
   // Load fresh data for field calculations
   useEffect(() => {
     const loadData = async () => {
+      if (!organizationId) return
       try {
         const [ops, equip, aircraft] = await Promise.all([
-          getOperators(),
-          getEquipment(),
-          getAircraft()
+          getOperators(organizationId),
+          getEquipment(organizationId),
+          getAircraft(organizationId)
         ])
         setFreshOperators(ops)
         setFreshEquipment(equip)
@@ -47,7 +50,7 @@ export default function ProjectCostSummary({ project }) {
       }
     }
     loadData()
-  }, [])
+  }, [organizationId])
 
   // Calculate all costs
   const costs = useMemo(() => {

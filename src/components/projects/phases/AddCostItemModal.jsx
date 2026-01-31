@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react'
 import { X, Search, Users, Settings, Wrench, Truck, DollarSign, Loader2, FileText } from 'lucide-react'
 import { getOperators, getServices, getEquipment } from '../../../lib/firestore'
+import { useOrganization } from '../../../hooks/useOrganization'
 import { formatCurrency, calculateCostItemTotal } from '../../../lib/costEstimator'
 import { COST_ITEM_TYPES, createCostItem } from './phaseConstants'
 
@@ -26,6 +27,7 @@ export default function AddCostItemModal({
   onSave,
   taskName = ''
 }) {
+  const { organizationId } = useOrganization()
   const [activeTab, setActiveTab] = useState('service')
   const [searchQuery, setSearchQuery] = useState('')
   const [resources, setResources] = useState({
@@ -73,12 +75,13 @@ export default function AddCostItemModal({
   }, [selectedResource])
 
   const loadResources = async () => {
+    if (!organizationId) return
     setLoading(true)
     try {
       const [operators, services, equipment] = await Promise.all([
-        getOperators(),
-        getServices(),
-        getEquipment()
+        getOperators(organizationId),
+        getServices(organizationId),
+        getEquipment(organizationId)
       ])
 
       // Filter equipment for fleet (vehicles category)

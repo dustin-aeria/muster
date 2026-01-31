@@ -10,6 +10,7 @@
 
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useOrganization } from '../hooks/useOrganization'
 import { 
   Shield,
   AlertTriangle,
@@ -107,6 +108,7 @@ function DaysSinceIncidentCard({ days, lastIncident }) {
 
 // Main Dashboard Component
 export default function SafetyDashboard() {
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lastRefresh, setLastRefresh] = useState(null)
@@ -248,10 +250,10 @@ export default function SafetyDashboard() {
       const [incidents, capas, projects, operators, aircraft, clients] = await Promise.all([
         getIncidents({}).catch(() => []),
         getCapas({}).catch(() => []),
-        getProjects().catch(() => []),
-        getOperators().catch(() => []),
-        getAircraft().catch(() => []),
-        getClients().catch(() => [])
+        getProjects(organizationId).catch(() => []),
+        getOperators(organizationId).catch(() => []),
+        getAircraft(organizationId).catch(() => []),
+        getClients(organizationId).catch(() => [])
       ])
       
       // Gather all forms from projects
