@@ -165,6 +165,7 @@ export default function LogMaintenanceModal({
     setSaving(true)
     try {
       const recordData = {
+        organizationId: item?.organizationId || null,
         scheduleId: schedule?.id || null,
         scheduleName: schedule?.name || null,
         itemName: item?.name || item?.nickname || '',

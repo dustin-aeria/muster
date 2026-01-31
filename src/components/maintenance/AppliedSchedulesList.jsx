@@ -122,7 +122,7 @@ export default function AppliedSchedulesList({ item, onUpdate }) {
 
   const loadAvailableSchedules = async () => {
     try {
-      const allSchedules = await getMaintenanceSchedules({ itemType: item.itemType })
+      const allSchedules = await getMaintenanceSchedules(item.organizationId, { itemType: item.itemType })
       const appliedIds = item?.maintenanceScheduleIds || []
       const available = allSchedules.filter(s => !appliedIds.includes(s.id))
       setAvailableSchedules(available)

@@ -68,14 +68,26 @@ const aircraftRef = collection(db, 'aircraft')
 
 /**
  * Get all maintenance schedules with optional filters
+ * @param {string} organizationId - Organization ID (required)
  * @param {Object} filters - Optional filters (itemType, category)
  * @returns {Promise<Array>}
  */
-export async function getMaintenanceSchedules(filters = {}) {
-  let q = query(maintenanceSchedulesRef, orderBy('name', 'asc'))
+export async function getMaintenanceSchedules(organizationId, filters = {}) {
+  if (!organizationId) {
+    console.warn('getMaintenanceSchedules called without organizationId')
+    return []
+  }
+
+  let q = query(
+    maintenanceSchedulesRef,
+    where('organizationId', '==', organizationId),
+    orderBy('name', 'asc')
+  )
 
   if (filters.itemType) {
-    q = query(maintenanceSchedulesRef,
+    q = query(
+      maintenanceSchedulesRef,
+      where('organizationId', '==', organizationId),
       where('itemType', '==', filters.itemType),
       orderBy('name', 'asc')
     )
@@ -103,11 +115,17 @@ export async function getMaintenanceScheduleById(id) {
 
 /**
  * Create a new maintenance schedule
+ * @param {string} organizationId - Organization ID (required)
  * @param {Object} data - Schedule data
  * @returns {Promise<Object>}
  */
-export async function createMaintenanceSchedule(data) {
+export async function createMaintenanceSchedule(organizationId, data) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to create a maintenance schedule')
+  }
+
   const schedule = {
+    organizationId,
     name: data.name || '',
     description: data.description || '',
     itemType: data.itemType || 'equipment', // 'equipment' | 'aircraft'
@@ -745,12 +763,13 @@ export async function getMaintenanceDashboardStats(organizationId) {
 
 /**
  * Get items due for maintenance soon
+ * @param {string} organizationId - Organization ID
  * @param {number} daysAhead - Days to look ahead
  * @param {string} itemType - Optional filter by type
  * @returns {Promise<Array>}
  */
-export async function getItemsDueSoon(daysAhead = 30, itemType = null) {
-  const stats = await getMaintenanceDashboardStats()
+export async function getItemsDueSoon(organizationId, daysAhead = 30, itemType = null) {
+  const stats = await getMaintenanceDashboardStats(organizationId)
 
   let items = [...stats.dueSoonItems, ...stats.overdueItems]
 
@@ -775,11 +794,12 @@ export async function getItemsDueSoon(daysAhead = 30, itemType = null) {
 
 /**
  * Get overdue items
+ * @param {string} organizationId - Organization ID
  * @param {string} itemType - Optional filter by type
  * @returns {Promise<Array>}
  */
-export async function getOverdueItems(itemType = null) {
-  const stats = await getMaintenanceDashboardStats()
+export async function getOverdueItems(organizationId, itemType = null) {
+  const stats = await getMaintenanceDashboardStats(organizationId)
 
   let items = stats.overdueItems
 
@@ -792,11 +812,12 @@ export async function getOverdueItems(itemType = null) {
 
 /**
  * Get upcoming maintenance events (calendar view)
+ * @param {string} organizationId - Organization ID
  * @param {number} daysAhead - Days to look ahead
  * @returns {Promise<Array>}
  */
-export async function getUpcomingMaintenance(daysAhead = 90) {
-  const stats = await getMaintenanceDashboardStats()
+export async function getUpcomingMaintenance(organizationId, daysAhead = 90) {
+  const stats = await getMaintenanceDashboardStats(organizationId)
   const events = []
 
   const allItems = [...stats.dueSoonItems, ...stats.overdueItems]
@@ -830,12 +851,18 @@ export async function getUpcomingMaintenance(daysAhead = 90) {
 
 /**
  * Get recent maintenance activity
+ * @param {string} organizationId - Organization ID
  * @param {number} limitCount - Number of records to return
  * @returns {Promise<Array>}
  */
-export async function getRecentMaintenance(limitCount = 10) {
+export async function getRecentMaintenance(organizationId, limitCount = 10) {
+  if (!organizationId) {
+    console.warn('getRecentMaintenance called without organizationId')
+    return []
+  }
   const q = query(
     maintenanceRecordsRef,
+    where('organizationId', '==', organizationId),
     orderBy('serviceDate', 'desc'),
     limit(limitCount)
   )
@@ -900,12 +927,21 @@ export async function createMaintenanceRecordFromForm(formSubmission) {
 
 /**
  * Get all maintainable items (equipment + aircraft combined)
+ * @param {string} organizationId - Organization ID
  * @param {Object} filters - Optional filters
  * @returns {Promise<Array>}
  */
-export async function getAllMaintainableItems(filters = {}) {
-  const equipmentSnap = await getDocs(equipmentRef)
-  const aircraftSnap = await getDocs(aircraftRef)
+export async function getAllMaintainableItems(organizationId, filters = {}) {
+  if (!organizationId) {
+    console.warn('getAllMaintainableItems called without organizationId')
+    return []
+  }
+
+  const equipmentQuery = query(equipmentRef, where('organizationId', '==', organizationId))
+  const aircraftQuery = query(aircraftRef, where('organizationId', '==', organizationId))
+
+  const equipmentSnap = await getDocs(equipmentQuery)
+  const aircraftSnap = await getDocs(aircraftQuery)
 
   let equipment = equipmentSnap.docs.map(doc => ({
     id: doc.id,

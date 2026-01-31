@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday } from 'date-fns'
 import { getUpcomingMaintenance, getAllMaintainableItems } from '../lib/firestoreMaintenance'
+import { useOrganization } from '../hooks/useOrganization'
 
 // Status colors and icons
 const statusConfig = {
@@ -36,6 +37,7 @@ const statusConfig = {
 }
 
 export default function MaintenanceCalendar() {
+  const { organizationId } = useOrganization()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -43,14 +45,17 @@ export default function MaintenanceCalendar() {
   const [stats, setStats] = useState({ total: 0, overdue: 0, dueSoon: 0 })
 
   useEffect(() => {
-    loadMaintenanceEvents()
-  }, [currentDate])
+    if (organizationId) {
+      loadMaintenanceEvents()
+    }
+  }, [currentDate, organizationId])
 
   const loadMaintenanceEvents = async () => {
+    if (!organizationId) return
     setLoading(true)
     try {
       // Get upcoming maintenance for the next year
-      const maintenanceEvents = await getUpcomingMaintenance(365)
+      const maintenanceEvents = await getUpcomingMaintenance(organizationId, 365)
 
       // Calculate stats
       const overdueCount = maintenanceEvents.filter(e => e.status === 'overdue').length

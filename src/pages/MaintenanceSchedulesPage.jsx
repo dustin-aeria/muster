@@ -37,6 +37,7 @@ import {
   deleteMaintenanceSchedule,
   getAllMaintainableItems
 } from '../lib/firestoreMaintenance'
+import { useOrganization } from '../hooks/useOrganization'
 import ScheduleEditorModal from '../components/maintenance/ScheduleEditorModal'
 
 const INTERVAL_TYPE_LABELS = {
@@ -46,6 +47,7 @@ const INTERVAL_TYPE_LABELS = {
 }
 
 export default function MaintenanceSchedulesPage() {
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [schedules, setSchedules] = useState([])
@@ -60,16 +62,19 @@ export default function MaintenanceSchedulesPage() {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    loadData()
-  }, [])
+    if (organizationId) {
+      loadData()
+    }
+  }, [organizationId])
 
   const loadData = async () => {
+    if (!organizationId) return
     setLoading(true)
     setError(null)
     try {
       const [schedulesData, itemsData] = await Promise.all([
-        getMaintenanceSchedules(),
-        getAllMaintainableItems({ includeRetired: false })
+        getMaintenanceSchedules(organizationId),
+        getAllMaintainableItems(organizationId, { includeRetired: false })
       ])
       setSchedules(schedulesData)
       setItems(itemsData)
@@ -134,7 +139,7 @@ export default function MaintenanceSchedulesPage() {
     if (editingSchedule?.id) {
       await updateMaintenanceSchedule(editingSchedule.id, data)
     } else {
-      await createMaintenanceSchedule(data)
+      await createMaintenanceSchedule(organizationId, data)
     }
     await loadData()
   }

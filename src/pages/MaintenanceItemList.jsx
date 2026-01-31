@@ -31,6 +31,7 @@ import {
   getMostUrgentMaintenance
 } from '../lib/firestoreMaintenance'
 import MaintenanceFilters from '../components/maintenance/MaintenanceFilters'
+import { useOrganization } from '../hooks/useOrganization'
 import MaintenanceItemCard from '../components/maintenance/MaintenanceItemCard'
 import SelectScheduleModal from '../components/maintenance/SelectScheduleModal'
 import LogMaintenanceModal from '../components/maintenance/LogMaintenanceModal'
@@ -51,6 +52,7 @@ const statusPriority = {
 }
 
 export default function MaintenanceItemList() {
+  const { organizationId } = useOrganization()
   const [searchParams, setSearchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -74,8 +76,10 @@ export default function MaintenanceItemList() {
   const [selectedSchedule, setSelectedSchedule] = useState(null)
 
   useEffect(() => {
-    loadItems()
-  }, [])
+    if (organizationId) {
+      loadItems()
+    }
+  }, [organizationId])
 
   // Update URL when filters change
   useEffect(() => {
@@ -88,10 +92,11 @@ export default function MaintenanceItemList() {
   }, [filters, setSearchParams])
 
   const loadItems = async () => {
+    if (!organizationId) return
     setLoading(true)
     setError(null)
     try {
-      const data = await getAllMaintainableItems({ includeRetired: false })
+      const data = await getAllMaintainableItems(organizationId, { includeRetired: false })
       setItems(data)
     } catch (err) {
       console.error('Failed to load items:', err)

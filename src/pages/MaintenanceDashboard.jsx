@@ -32,11 +32,13 @@ import {
   getMaintenanceDashboardStats,
   getRecentMaintenance
 } from '../lib/firestoreMaintenance'
+import { useOrganization } from '../hooks/useOrganization'
 import MaintenanceStatCard from '../components/maintenance/MaintenanceStatCard'
 import MaintenanceAlertList from '../components/maintenance/MaintenanceAlertList'
 import RecentMaintenanceList from '../components/maintenance/RecentMaintenanceList'
 
 export default function MaintenanceDashboard() {
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [stats, setStats] = useState(null)
@@ -44,10 +46,14 @@ export default function MaintenanceDashboard() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    loadDashboardData()
-  }, [])
+    if (organizationId) {
+      loadDashboardData()
+    }
+  }, [organizationId])
 
   const loadDashboardData = async (isRefresh = false) => {
+    if (!organizationId) return
+
     if (isRefresh) {
       setRefreshing(true)
     } else {
@@ -57,8 +63,8 @@ export default function MaintenanceDashboard() {
 
     try {
       const [dashboardStats, recent] = await Promise.all([
-        getMaintenanceDashboardStats(),
-        getRecentMaintenance(10)
+        getMaintenanceDashboardStats(organizationId),
+        getRecentMaintenance(organizationId, 10)
       ])
 
       setStats(dashboardStats)

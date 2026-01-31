@@ -187,7 +187,7 @@ export default function Calendar() {
       })
 
       // Load maintenance due dates
-      const maintenanceEvents = await getUpcomingMaintenance(365).catch(() => [])
+      const maintenanceEvents = await getUpcomingMaintenance(organizationId, 365).catch(() => [])
       maintenanceEvents.forEach(maint => {
         if (maint.dueDate) {
           const dueDate = new Date(maint.dueDate)
