@@ -35,11 +35,13 @@ import {
   doc,
   getDocs,
   query,
+  where,
   orderBy,
   serverTimestamp
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { useOrganization } from '../hooks/useOrganization'
 import Modal, { ModalFooter } from '../components/Modal'
 
 // Service categories
@@ -118,16 +120,23 @@ export const COMMON_MODIFIERS = [
 ]
 
 // Firestore helpers for services
-async function getServices(userId) {
-  const q = query(collection(db, 'services'), orderBy('name'))
+async function getServices(organizationId) {
+  if (!organizationId) return []
+  const q = query(
+    collection(db, 'services'),
+    where('organizationId', '==', organizationId),
+    orderBy('name')
+  )
   const snapshot = await getDocs(q)
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 }
 
-async function createService(data, userId) {
+async function createService(data, userId, organizationId) {
+  if (!organizationId) throw new Error('organizationId is required')
   return await addDoc(collection(db, 'services'), {
     ...data,
     createdBy: userId,
+    organizationId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   })
@@ -152,7 +161,7 @@ function generateId() {
 }
 
 // Service modal component with enhanced pricing
-function ServiceModal({ isOpen, onClose, service, onSave, userId }) {
+function ServiceModal({ isOpen, onClose, service, onSave, userId, organizationId }) {
   const [activeTab, setActiveTab] = useState('basic')
   const [formData, setFormData] = useState({
     name: '',
@@ -311,7 +320,7 @@ function ServiceModal({ isOpen, onClose, service, onSave, userId }) {
       if (service) {
         await updateService(service.id, data)
       } else {
-        await createService(data, userId)
+        await createService(data, userId, organizationId)
       }
 
       onSave()
@@ -746,6 +755,7 @@ function ServiceModal({ isOpen, onClose, service, onSave, userId }) {
 
 export default function Services() {
   const { user } = useAuth()
+  const { organizationId } = useOrganization()
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -755,8 +765,9 @@ export default function Services() {
   const [editingService, setEditingService] = useState(null)
 
   const loadServices = async () => {
+    if (!organizationId) return
     try {
-      const data = await getServices(user?.uid)
+      const data = await getServices(organizationId)
       setServices(data)
     } catch (err) {
       console.error('Failed to load services:', err)
@@ -766,10 +777,10 @@ export default function Services() {
   }
 
   useEffect(() => {
-    if (user) {
+    if (user && organizationId) {
       loadServices()
     }
-  }, [user])
+  }, [user, organizationId])
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this service?')) return
@@ -1065,6 +1076,7 @@ export default function Services() {
         service={editingService}
         onSave={loadServices}
         userId={user?.uid}
+        organizationId={organizationId}
       />
     </div>
   )

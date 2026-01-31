@@ -779,13 +779,18 @@ export async function getClient(id) {
   return { id: snapshot.id, ...snapshot.data() }
 }
 
-export async function createClient(data) {
+export async function createClient(data, organizationId) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to create a client')
+  }
+
   const client = {
     ...data,
+    organizationId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   }
-  
+
   const docRef = await addDoc(clientsRef, client)
   return { id: docRef.id, ...client }
 }
@@ -892,14 +897,19 @@ export async function getAircraftById(id) {
   return { id: snapshot.id, ...snapshot.data() }
 }
 
-export async function createAircraft(data) {
+export async function createAircraft(data, organizationId) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to create aircraft')
+  }
+
   const aircraft = {
     ...data,
+    organizationId,
     status: 'airworthy',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   }
-  
+
   const docRef = await addDoc(aircraftRef, aircraft)
   return { id: docRef.id, ...aircraft }
 }
@@ -1039,9 +1049,14 @@ export async function getEquipmentById(id) {
 /**
  * Create new equipment
  * @param {Object} data - Equipment data
+ * @param {string} organizationId - Organization ID
  * @returns {Promise<Object>}
  */
-export async function createEquipment(data) {
+export async function createEquipment(data, organizationId) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to create equipment')
+  }
+
   const equipment = {
     name: data.name || '',
     category: data.category || 'support',
@@ -1069,7 +1084,7 @@ export async function createEquipment(data) {
     // Category-specific custom fields
     customFields: data.customFields || {},
 
-    // Tracking
+    organizationId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   }
@@ -1411,9 +1426,14 @@ export async function getServiceById(id) {
 /**
  * Create a new service
  * @param {Object} data - Service data
+ * @param {string} organizationId - Organization ID
  * @returns {Promise<Object>}
  */
-export async function createService(data) {
+export async function createService(data, organizationId) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to create a service')
+  }
+
   const service = {
     name: data.name,
     category: data.category || 'other',
@@ -1426,6 +1446,7 @@ export async function createService(data) {
     status: data.status || 'active',
     notes: data.notes || '',
     createdBy: data.createdBy,
+    organizationId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   }
@@ -1494,11 +1515,16 @@ export async function getForms(organizationId, filters = {}) {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 }
 
-export async function createForm(data) {
+export async function createForm(data, organizationId) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to create a form')
+  }
+
   const form = {
     ...data,
     projectId: data.projectId || null,  // Optional link to project
     status: data.status || 'draft',
+    organizationId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   }
@@ -1607,9 +1633,14 @@ export async function getPolicy(id) {
 /**
  * Create a new policy
  * @param {Object} data - Policy data
+ * @param {string} organizationId - Organization ID
  * @returns {Promise<Object>}
  */
-export async function createPolicy(data) {
+export async function createPolicy(data, organizationId) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to create a policy')
+  }
+
   const policy = {
     number: data.number || '',
     title: data.title || '',
@@ -1625,6 +1656,7 @@ export async function createPolicy(data) {
     regulatoryRefs: data.regulatoryRefs || [],
     sections: data.sections || [],
     attachments: data.attachments || [],
+    organizationId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     createdBy: data.createdBy || null
@@ -1884,12 +1916,18 @@ export async function getCustomForm(id) {
  * Create a new custom form
  * @param {Object} data - Form data
  * @param {string} userId - User ID
+ * @param {string} organizationId - Organization ID
  * @returns {Promise<Object>}
  */
-export async function createCustomForm(data, userId) {
+export async function createCustomForm(data, userId, organizationId) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to create a custom form')
+  }
+
   const customForm = {
     ...data,
     createdBy: userId,
+    organizationId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   }

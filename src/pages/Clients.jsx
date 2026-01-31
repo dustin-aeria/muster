@@ -29,6 +29,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { getClients, createClient, updateClient, deleteClient } from '../lib/firestore'
+import { useOrganization } from '../hooks/useOrganization'
 import { logger } from '../lib/logger'
 import ClientPortalManager from '../components/clients/ClientPortalManager'
 import Modal from '../components/Modal'
@@ -506,6 +507,7 @@ function ClientCard({ client, onEdit, onDelete, onPortalAccess, menuOpen, setMen
 }
 
 export default function Clients() {
+  const { organizationId } = useOrganization()
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -515,13 +517,16 @@ export default function Clients() {
   const [portalClient, setPortalClient] = useState(null)
 
   useEffect(() => {
-    loadClients()
-  }, [])
+    if (organizationId) {
+      loadClients()
+    }
+  }, [organizationId])
 
   const loadClients = async () => {
+    if (!organizationId) return
     setLoading(true)
     try {
-      const data = await getClients()
+      const data = await getClients(organizationId)
       setClients(data)
     } catch (err) {
       logger.error('Error loading clients:', err)
@@ -534,7 +539,7 @@ export default function Clients() {
     if (editingClient) {
       await updateClient(editingClient.id, formData)
     } else {
-      await createClient(formData)
+      await createClient(formData, organizationId)
     }
     await loadClients()
     setEditingClient(null)
