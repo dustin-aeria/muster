@@ -442,12 +442,9 @@ export default function Settings() {
                 <label className="label">Email</label>
                 {!showEmailChange ? (
                   <div className="flex items-center gap-2">
-                    <input
-                      type="email"
-                      className="input bg-gray-50 flex-1"
-                      value={userProfile?.email || ''}
-                      disabled
-                    />
+                    <div className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900">
+                      {userProfile?.email || 'No email set'}
+                    </div>
                     <button
                       type="button"
                       onClick={() => setShowEmailChange(true)}
