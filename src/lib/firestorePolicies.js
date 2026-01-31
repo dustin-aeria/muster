@@ -2749,14 +2749,20 @@ export async function seedMissingFromMaster(userId, organizationId) {
 
 /**
  * Check for available updates from master policies
+ * @param {string} organizationId - Organization ID
  * @returns {Promise<Array>} Array of policies with updates available
  */
-export async function checkForMasterUpdates() {
+export async function checkForMasterUpdates(organizationId) {
+  if (!organizationId) {
+    console.warn('checkForMasterUpdates called without organizationId')
+    return []
+  }
+
   try {
     const { checkForUpdates } = await import('./firestoreMasterPolicies.js')
 
-    // Get all operator policies
-    const snapshot = await getDocs(policiesRef)
+    // Get all operator policies for this organization
+    const snapshot = await getDocs(query(policiesRef, where('organizationId', '==', organizationId)))
     const operatorPolicies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 
     // Check for updates

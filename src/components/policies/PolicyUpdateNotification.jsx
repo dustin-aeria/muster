@@ -27,6 +27,7 @@ import {
 import { checkForMasterUpdates, updateFromMaster } from '../../lib/firestorePolicies'
 import { getMasterPolicy } from '../../lib/firestoreMasterPolicies'
 import { useAuth } from '../../contexts/AuthContext'
+import { useOrganizationContext } from '../../contexts/OrganizationContext'
 import { logger } from '../../lib/logger'
 
 /**
@@ -184,19 +185,23 @@ function UpdateItem({ update, onApply, onDismiss, applying }) {
  */
 export function PolicyUpdatesPanel({ onClose }) {
   const { user } = useAuth()
+  const { organizationId } = useOrganizationContext()
   const [updates, setUpdates] = useState([])
   const [loading, setLoading] = useState(true)
   const [applying, setApplying] = useState(null)
   const [dismissed, setDismissed] = useState(new Set())
 
   useEffect(() => {
-    loadUpdates()
-  }, [])
+    if (organizationId) {
+      loadUpdates()
+    }
+  }, [organizationId])
 
   const loadUpdates = async () => {
+    if (!organizationId) return
     setLoading(true)
     try {
-      const data = await checkForMasterUpdates()
+      const data = await checkForMasterUpdates(organizationId)
       setUpdates(data)
     } catch (err) {
       logger.error('Error loading updates:', err)
@@ -306,26 +311,32 @@ export function PolicyUpdatesPanel({ onClose }) {
 
 /**
  * Hook to get update count for badge display
+ * @param {string} organizationId - Organization ID
  */
-export function usePolicyUpdates() {
+export function usePolicyUpdates(organizationId) {
   const [updates, setUpdates] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    checkForMasterUpdates()
+    if (!organizationId) {
+      setLoading(false)
+      return
+    }
+    checkForMasterUpdates(organizationId)
       .then(setUpdates)
       .catch(err => logger.error('Error:', err))
       .finally(() => setLoading(false))
-  }, [])
+  }, [organizationId])
 
   return {
     count: updates.length,
     updates,
     loading,
     refresh: async () => {
+      if (!organizationId) return
       setLoading(true)
       try {
-        const data = await checkForMasterUpdates()
+        const data = await checkForMasterUpdates(organizationId)
         setUpdates(data)
       } finally {
         setLoading(false)

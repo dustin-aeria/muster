@@ -1846,7 +1846,7 @@ export default function PolicyLibrary() {
   const { organizationId } = useOrganizationContext()
   const permissions = usePolicyPermissions()
   const { pendingCount } = usePendingAcknowledgments()
-  const { count: updateCount, refresh: refreshUpdates } = usePolicyUpdates()
+  const { count: updateCount, refresh: refreshUpdates } = usePolicyUpdates(organizationId)
 
   const [policies, setPolicies] = useState([])
   const [loading, setLoading] = useState(true)
