@@ -833,6 +833,11 @@ export async function getPoliciesEnhanced(filters = {}) {
   let q = policiesRef
   const constraints = []
 
+  // REQUIRED: Filter by organizationId for Firestore security rules
+  if (filters.organizationId) {
+    constraints.push(where('organizationId', '==', filters.organizationId))
+  }
+
   if (filters.category) {
     constraints.push(where('category', '==', filters.category))
   }

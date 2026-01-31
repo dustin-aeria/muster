@@ -102,11 +102,6 @@ export default function OperatorModal({ isOpen, onClose, operator }) {
         dailyRate: operator.dailyRate != null ? operator.dailyRate : '',
         weeklyRate: operator.weeklyRate != null ? operator.weeklyRate : ''
       })
-      console.log('[OperatorModal] Loaded operator rates:', {
-        hourlyRate: operator.hourlyRate,
-        dailyRate: operator.dailyRate,
-        weeklyRate: operator.weeklyRate
-      })
       setCertifications(operator.certifications || [])
     } else {
       resetForm()
@@ -226,17 +221,11 @@ export default function OperatorModal({ isOpen, onClose, operator }) {
         weeklyRate: formData.weeklyRate !== '' ? parseFloat(formData.weeklyRate) : null
       }
 
-      console.log('[OperatorModal] Saving operator data:', operatorData)
-
       if (isEditing) {
-        console.log('[OperatorModal] Updating operator:', operator.id)
         await updateOperator(operator.id, operatorData)
       } else {
-        console.log('[OperatorModal] Creating new operator')
         await createOperator(operatorData)
       }
-
-      console.log('[OperatorModal] Save successful')
       onClose()
     } catch (err) {
       setError(err.message)

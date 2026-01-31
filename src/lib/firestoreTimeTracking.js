@@ -149,34 +149,34 @@ export function getWeekId(date) {
  * @param {Object} filters - Optional filters
  * @returns {Promise<Array>}
  */
-export async function getTimeEntries(filters = {}) {
-  let q = query(timeEntriesRef, orderBy('date', 'desc'))
+export async function getTimeEntries(organizationId, filters = {}) {
+  if (!organizationId) {
+    console.warn('getTimeEntries called without organizationId')
+    return []
+  }
+
+  const constraints = [
+    where('organizationId', '==', organizationId),
+    orderBy('date', 'desc')
+  ]
 
   if (filters.projectId) {
-    q = query(timeEntriesRef,
-      where('projectId', '==', filters.projectId),
-      orderBy('date', 'desc')
-    )
+    constraints.splice(1, 0, where('projectId', '==', filters.projectId))
   }
 
   if (filters.operatorId) {
-    q = query(timeEntriesRef,
-      where('operatorId', '==', filters.operatorId),
-      orderBy('date', 'desc')
-    )
+    constraints.splice(1, 0, where('operatorId', '==', filters.operatorId))
   }
 
   if (filters.status) {
-    q = query(timeEntriesRef,
-      where('status', '==', filters.status),
-      orderBy('date', 'desc')
-    )
+    constraints.splice(1, 0, where('status', '==', filters.status))
   }
 
   if (filters.limit) {
-    q = query(q, limit(filters.limit))
+    constraints.push(limit(filters.limit))
   }
 
+  const q = query(timeEntriesRef, ...constraints)
   const snapshot = await getDocs(q)
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 }

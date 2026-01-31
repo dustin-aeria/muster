@@ -50,6 +50,7 @@ import {
   updateProcedureField
 } from '../lib/firestoreProcedures'
 import { useAuth } from '../contexts/AuthContext'
+import { useOrganizationContext } from '../contexts/OrganizationContext'
 import { logger } from '../lib/logger'
 
 // ============================================
@@ -605,6 +606,7 @@ function DeleteConfirmModal({ procedure, onConfirm, onCancel, deleting }) {
 export default function ProcedureLibrary() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { organizationId } = useOrganizationContext()
 
   const [procedures, setProcedures] = useState([])
   const [loading, setLoading] = useState(true)
@@ -623,9 +625,10 @@ export default function ProcedureLibrary() {
 
   // Load procedures from Firestore
   const loadProcedures = async () => {
+    if (!organizationId) return
     try {
       setError('')
-      const data = await getProceduresEnhanced()
+      const data = await getProceduresEnhanced(organizationId)
       setProcedures(data)
     } catch (err) {
       setError('Failed to load procedures. Please try again.')
@@ -636,8 +639,10 @@ export default function ProcedureLibrary() {
   }
 
   useEffect(() => {
-    loadProcedures()
-  }, [])
+    if (organizationId) {
+      loadProcedures()
+    }
+  }, [organizationId])
 
   // Handle seed missing procedures
   const handleSeedProcedures = async () => {

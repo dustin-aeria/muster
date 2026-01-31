@@ -220,14 +220,12 @@ export async function sendTeamNotification(projectId, event, eventData = {}, opt
     // Check if this event type is enabled
     const eventSettings = notificationSettings[event === 'goNoGo' ? 'goNoGoDecision' : event]
     if (!eventSettings?.enabled) {
-      console.log(`Notifications disabled for event: ${event}`)
       return { sent: false, reason: 'disabled' }
     }
 
     // Get configured distribution lists
     const listIds = eventSettings.listIds || []
     if (listIds.length === 0) {
-      console.log(`No distribution lists configured for event: ${event}`)
       return { sent: false, reason: 'no_lists' }
     }
 

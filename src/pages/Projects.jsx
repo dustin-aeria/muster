@@ -25,6 +25,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { getProjects, deleteProject, duplicateProject, getClients } from '../lib/firestore'
+import { useOrganizationContext } from '../contexts/OrganizationContext'
 import NewProjectModal from '../components/NewProjectModal'
 import { format } from 'date-fns'
 import { logger } from '../lib/logger'
@@ -47,6 +48,7 @@ const statusLabels = {
 
 export default function Projects() {
   const navigate = useNavigate()
+  const { organizationId } = useOrganizationContext()
   const [projects, setProjects] = useState([])
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
@@ -57,17 +59,20 @@ export default function Projects() {
   const [menuOpen, setMenuOpen] = useState(null)
 
   useEffect(() => {
-    loadData()
-  }, [])
+    if (organizationId) {
+      loadData()
+    }
+  }, [organizationId])
 
   const loadData = async () => {
+    if (!organizationId) return
     setLoading(true)
     setLoadError(null)
     try {
       // Load projects and clients in parallel
       const [projectsData, clientsData] = await Promise.all([
-        getProjects(),
-        getClients()
+        getProjects(organizationId),
+        getClients(organizationId)
       ])
       setProjects(projectsData)
       setClients(clientsData)
@@ -80,9 +85,10 @@ export default function Projects() {
   }
 
   const loadProjects = async () => {
+    if (!organizationId) return
     setLoading(true)
     try {
-      const data = await getProjects()
+      const data = await getProjects(organizationId)
       setProjects(data)
     } catch (err) {
       // Intentionally silent for retry - empty state will be shown with error banner above

@@ -31,9 +31,17 @@ class ErrorBoundary extends React.Component {
 
     // In production, send to error reporting service
     // In development, errors are already shown in the React error overlay
-    if (process.env.NODE_ENV === 'production') {
-      // TODO: Send to error reporting service (e.g., Sentry, LogRocket)
-      // logErrorToService(error, errorInfo)
+    if (import.meta.env.PROD) {
+      // Error Tracking Integration
+      // To enable: npm install @sentry/react && configure in main.jsx
+      //
+      // Sentry.captureException(error, {
+      //   contexts: { react: { componentStack: errorInfo?.componentStack } }
+      // })
+      //
+      // For now, log to console in production for debugging
+      // eslint-disable-next-line no-console
+      console.error('[ErrorBoundary] Uncaught error:', error, errorInfo)
     }
   }
 

@@ -395,7 +395,13 @@ export default function FormalHazardLibrary() {
           <RiskMatrixDisplay
             fhas={filteredFHAs}
             onCellClick={(cellData) => {
-              // TODO: Filter to show only FHAs in this risk cell
+              // Filter to show only FHAs matching this risk cell
+              if (cellData?.riskLevel) {
+                setFilters(prev => ({
+                  ...prev,
+                  riskLevel: prev.riskLevel === cellData.riskLevel ? null : cellData.riskLevel
+                }))
+              }
             }}
           />
         </div>

@@ -125,8 +125,17 @@ export function PortalAuthProvider({ children }) {
 
       logger.info('Magic link generated:', magicLinkUrl)
 
-      // TODO: Send email with magic link
-      // await sendMagicLinkEmail(user.email, magicLinkUrl)
+      // PRODUCTION: Integrate email service to send magic link
+      // Options: Firebase Extensions (Trigger Email), SendGrid, or AWS SES
+      // Example implementation:
+      // await sendMagicLinkEmail({
+      //   to: user.email,
+      //   subject: 'Your Aeria Ops Login Link',
+      //   magicLinkUrl,
+      //   expiresIn: '15 minutes'
+      // })
+      //
+      // For now, magic link URL is returned in dev mode for testing
 
       return {
         success: true,

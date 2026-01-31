@@ -104,7 +104,6 @@ export default function ProjectTeam({ project, onUpdate }) {
 
   // Distribution List Handlers
   const handleCreateList = () => {
-    console.log('handleCreateList called, setting showListEditor to true')
     setEditingList(null)
     setShowListEditor(true)
   }
@@ -344,7 +343,6 @@ export default function ProjectTeam({ project, onUpdate }) {
       </div>
 
       {/* List Editor Modal */}
-      {console.log('showListEditor state:', showListEditor)}
       {showListEditor && (
         <DistributionListEditor
           list={editingList}

@@ -56,6 +56,7 @@ import PolicyDocumentUpload from './policies/PolicyDocumentUpload'
 import { getPoliciesEnhanced, deletePolicyEnhanced, seedSamplePolicies, seedMissingPolicies, updatePoliciesWithContent, updatePolicyField, seedFromMasterPolicies, seedMissingFromMaster } from '../lib/firestorePolicies'
 import { usePolicyPermissions, usePendingAcknowledgments } from '../hooks/usePolicyPermissions'
 import { useAuth } from '../contexts/AuthContext'
+import { useOrganizationContext } from '../contexts/OrganizationContext'
 import { UpdateBadge, PolicyUpdatesPanel, usePolicyUpdates } from './policies/PolicyUpdateNotification'
 import { logger } from '../lib/logger'
 
@@ -1842,6 +1843,7 @@ function DeleteConfirmModal({ policy, onConfirm, onCancel, deleting }) {
 export default function PolicyLibrary() {
   const navigate = useNavigate()
   const { user, userProfile } = useAuth()
+  const { organizationId } = useOrganizationContext()
   const permissions = usePolicyPermissions()
   const { pendingCount } = usePendingAcknowledgments()
   const { count: updateCount, refresh: refreshUpdates } = usePolicyUpdates()
@@ -1868,9 +1870,10 @@ export default function PolicyLibrary() {
 
   // Load policies from Firestore
   const loadPolicies = async () => {
+    if (!organizationId) return
     try {
       setError('')
-      const data = await getPoliciesEnhanced()
+      const data = await getPoliciesEnhanced({ organizationId })
       setPolicies(data)
     } catch (err) {
       setError('Failed to load policies. Please try again.')
@@ -1882,7 +1885,7 @@ export default function PolicyLibrary() {
 
   useEffect(() => {
     loadPolicies()
-  }, [])
+  }, [organizationId])
 
   // Handle policy click - navigate to detail page
   const handlePolicyClick = (policy) => {

@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useOrganizationContext } from '../contexts/OrganizationContext'
 import {
   FolderKanban,
   ClipboardList,
@@ -76,6 +77,7 @@ function calculateSiteSORA(site) {
 
 export default function Dashboard() {
   const { userProfile } = useAuth()
+  const { organizationId } = useOrganizationContext()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [stats, setStats] = useState({
@@ -97,19 +99,22 @@ export default function Dashboard() {
   })
 
   useEffect(() => {
-    loadDashboardData()
-  }, [])
+    if (organizationId) {
+      loadDashboardData()
+    }
+  }, [organizationId])
 
   const loadDashboardData = async () => {
+    if (!organizationId) return
     setLoading(true)
     setLoadError(null)
     try {
       // Load all data in parallel
       const [projects, forms, operators, policies] = await Promise.all([
-        getProjects(),
-        getForms(),
-        getOperators(),
-        getPolicies()
+        getProjects(organizationId),
+        getForms(organizationId),
+        getOperators(organizationId),
+        getPolicies(organizationId)
       ])
 
       // Calculate policy stats
