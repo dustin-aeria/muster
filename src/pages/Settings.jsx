@@ -13,7 +13,7 @@ import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertC
 import { updateOperator } from '../lib/firestore'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
-import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
+import { updatePassword, updateEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import BrandingSettings from '../components/BrandingSettings'
 import InsuranceManager from '../components/insurance/InsuranceManager'
@@ -74,6 +74,16 @@ export default function Settings() {
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordError, setPasswordError] = useState('')
   const [passwordSuccess, setPasswordSuccess] = useState(false)
+
+  // Email change state
+  const [emailData, setEmailData] = useState({
+    newEmail: '',
+    password: ''
+  })
+  const [emailSaving, setEmailSaving] = useState(false)
+  const [emailError, setEmailError] = useState('')
+  const [emailSuccess, setEmailSuccess] = useState(false)
+  const [showEmailChange, setShowEmailChange] = useState(false)
 
   // Data migration state
   const [policiesSeeded, setPoliciesSeeded] = useState(null)
@@ -268,6 +278,56 @@ export default function Settings() {
     }
   }
 
+  const handleUpdateEmail = async () => {
+    setEmailError('')
+    setEmailSuccess(false)
+
+    if (!emailData.newEmail || !emailData.newEmail.includes('@')) {
+      setEmailError('Please enter a valid email address')
+      return
+    }
+
+    if (!emailData.password) {
+      setEmailError('Please enter your current password to confirm')
+      return
+    }
+
+    setEmailSaving(true)
+    try {
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(user.email, emailData.password)
+      await reauthenticateWithCredential(auth.currentUser, credential)
+
+      // Update email in Firebase Auth
+      await updateEmail(auth.currentUser, emailData.newEmail)
+
+      // Also update email in the operator profile
+      if (userProfile?.id) {
+        await updateOperator(userProfile.id, { email: emailData.newEmail })
+      }
+
+      setEmailSuccess(true)
+      setEmailData({ newEmail: '', password: '' })
+      setShowEmailChange(false)
+      setTimeout(() => setEmailSuccess(false), 5000)
+    } catch (err) {
+      if (err.code === 'auth/wrong-password') {
+        setEmailError('Password is incorrect')
+      } else if (err.code === 'auth/email-already-in-use') {
+        setEmailError('This email is already in use by another account')
+      } else if (err.code === 'auth/invalid-email') {
+        setEmailError('Please enter a valid email address')
+      } else if (err.code === 'auth/requires-recent-login') {
+        setEmailError('Please log out and log back in before changing your email')
+      } else {
+        setEmailError('Failed to update email. Please try again.')
+        logger.error('Email update error:', err)
+      }
+    } finally {
+      setEmailSaving(false)
+    }
+  }
+
   const allTabs = [
     { id: 'profile', label: 'Profile', icon: User, description: 'Your personal information' },
     { id: 'organization', label: 'Organization', icon: Building, description: 'Organization settings', requiresAdmin: true },
@@ -380,13 +440,82 @@ export default function Settings() {
               </div>
               <div>
                 <label className="label">Email</label>
-                <input
-                  type="email"
-                  className="input bg-gray-50"
-                  value={userProfile?.email || ''}
-                  disabled
-                />
-                <p className="text-xs text-gray-500 mt-1">Contact administrator to change email</p>
+                {!showEmailChange ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      className="input bg-gray-50 flex-1"
+                      value={userProfile?.email || ''}
+                      disabled
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEmailChange(true)}
+                      className="btn-secondary text-sm"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600">
+                      Current email: <strong>{userProfile?.email}</strong>
+                    </p>
+                    <div>
+                      <label className="label text-sm">New Email</label>
+                      <input
+                        type="email"
+                        className="input"
+                        value={emailData.newEmail}
+                        onChange={(e) => setEmailData({ ...emailData, newEmail: e.target.value })}
+                        placeholder="Enter new email address"
+                      />
+                    </div>
+                    <div>
+                      <label className="label text-sm">Confirm with Password</label>
+                      <input
+                        type="password"
+                        className="input"
+                        value={emailData.password}
+                        onChange={(e) => setEmailData({ ...emailData, password: e.target.value })}
+                        placeholder="Enter your current password"
+                      />
+                    </div>
+                    {emailError && (
+                      <p className="text-sm text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        {emailError}
+                      </p>
+                    )}
+                    {emailSuccess && (
+                      <p className="text-sm text-green-600 flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Email updated successfully!
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleUpdateEmail}
+                        disabled={emailSaving}
+                        className="btn-primary text-sm"
+                      >
+                        {emailSaving ? 'Updating...' : 'Update Email'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowEmailChange(false)
+                          setEmailData({ newEmail: '', password: '' })
+                          setEmailError('')
+                        }}
+                        className="btn-secondary text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="label">Phone</label>
