@@ -10,6 +10,8 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { useAuth } from './AuthContext'
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import {
   getMembershipsByUser,
   getOrganization,
@@ -18,6 +20,12 @@ import {
   ORGANIZATION_ROLES,
   linkPendingInvitations
 } from '../lib/firestoreOrganizations'
+
+// Role migration mapping (old role -> new role)
+const ROLE_MIGRATION_MAP = {
+  'owner': 'admin',
+  'manager': 'management'
+}
 
 const OrganizationContext = createContext(null)
 
@@ -91,6 +99,37 @@ export function OrganizationProvider({ children }) {
 
     fetchOrganizationData()
   }, [user, authLoading])
+
+  // Automatic role migration: owner -> admin, manager -> management
+  useEffect(() => {
+    async function migrateRoleIfNeeded() {
+      if (!membership?.role || !membership?.id) return
+
+      const newRole = ROLE_MIGRATION_MAP[membership.role]
+      if (!newRole) return // Role doesn't need migration
+
+      console.log(`[RBAC Migration] Migrating role from "${membership.role}" to "${newRole}"`)
+
+      try {
+        const memberRef = doc(db, 'organizationMembers', membership.id)
+        await updateDoc(memberRef, {
+          role: newRole,
+          previousRole: membership.role,
+          roleMigratedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        })
+
+        // Update local state immediately
+        setMembership(prev => prev ? { ...prev, role: newRole } : null)
+
+        console.log(`[RBAC Migration] Successfully migrated to "${newRole}"`)
+      } catch (err) {
+        console.error('[RBAC Migration] Failed to migrate role:', err)
+      }
+    }
+
+    migrateRoleIfNeeded()
+  }, [membership?.role, membership?.id])
 
   /**
    * Check if current user has a specific permission
