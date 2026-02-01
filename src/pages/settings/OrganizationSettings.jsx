@@ -1,6 +1,6 @@
 /**
  * OrganizationSettings.jsx
- * Organization settings page for managing org details, branding, and subscription
+ * Organization settings page for managing business details and preferences
  *
  * @location src/pages/settings/OrganizationSettings.jsx
  */
@@ -11,14 +11,18 @@ import { useAuth } from '../../contexts/AuthContext'
 import { updateOrganization } from '../../lib/firestoreOrganizations'
 import {
   Building2,
-  Palette,
   Globe,
   Clock,
   Ruler,
   Save,
   Loader2,
   Check,
-  AlertCircle
+  AlertCircle,
+  MapPin,
+  Phone,
+  Mail,
+  FileText,
+  Plane
 } from 'lucide-react'
 
 const TIMEZONES = [
@@ -42,16 +46,42 @@ const MEASUREMENT_SYSTEMS = [
   { value: 'imperial', label: 'Imperial (feet, miles)' }
 ]
 
+const PROVINCES = [
+  { value: '', label: 'Select Province/Territory' },
+  { value: 'AB', label: 'Alberta' },
+  { value: 'BC', label: 'British Columbia' },
+  { value: 'MB', label: 'Manitoba' },
+  { value: 'NB', label: 'New Brunswick' },
+  { value: 'NL', label: 'Newfoundland and Labrador' },
+  { value: 'NS', label: 'Nova Scotia' },
+  { value: 'NT', label: 'Northwest Territories' },
+  { value: 'NU', label: 'Nunavut' },
+  { value: 'ON', label: 'Ontario' },
+  { value: 'PE', label: 'Prince Edward Island' },
+  { value: 'QC', label: 'Quebec' },
+  { value: 'SK', label: 'Saskatchewan' },
+  { value: 'YT', label: 'Yukon' }
+]
+
 export default function OrganizationSettings() {
   const { organization, refreshOrganization, canManageSettings } = useOrganization()
   const { user } = useAuth()
 
   const [formData, setFormData] = useState({
     name: '',
+    legalName: '',
     slug: '',
-    branding: {
-      logoUrl: '',
-      primaryColor: '#3B82F6'
+    phone: '',
+    email: '',
+    website: '',
+    taxNumber: '',
+    operatorNumber: '',
+    address: {
+      street: '',
+      city: '',
+      province: '',
+      postalCode: '',
+      country: 'Canada'
     },
     settings: {
       timezone: 'America/Toronto',
@@ -68,10 +98,19 @@ export default function OrganizationSettings() {
     if (organization) {
       setFormData({
         name: organization.name || '',
+        legalName: organization.legalName || '',
         slug: organization.slug || '',
-        branding: {
-          logoUrl: organization.branding?.logoUrl || '',
-          primaryColor: organization.branding?.primaryColor || '#3B82F6'
+        phone: organization.phone || '',
+        email: organization.email || '',
+        website: organization.website || '',
+        taxNumber: organization.taxNumber || '',
+        operatorNumber: organization.operatorNumber || '',
+        address: {
+          street: organization.address?.street || '',
+          city: organization.address?.city || '',
+          province: organization.address?.province || '',
+          postalCode: organization.address?.postalCode || '',
+          country: organization.address?.country || 'Canada'
         },
         settings: {
           timezone: organization.settings?.timezone || 'America/Toronto',
@@ -109,7 +148,13 @@ export default function OrganizationSettings() {
     try {
       await updateOrganization(organization.id, {
         name: formData.name,
-        branding: formData.branding,
+        legalName: formData.legalName,
+        phone: formData.phone,
+        email: formData.email,
+        website: formData.website,
+        taxNumber: formData.taxNumber,
+        operatorNumber: formData.operatorNumber,
+        address: formData.address,
         settings: formData.settings
       })
 
@@ -148,91 +193,211 @@ export default function OrganizationSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Organization Details */}
+      {/* Business Information */}
       <div className="card">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 bg-aeria-sky rounded-lg">
             <Building2 className="w-5 h-5 text-aeria-navy" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Organization Details</h2>
-            <p className="text-sm text-gray-500">Basic information about your organization</p>
+            <h2 className="text-lg font-semibold text-gray-900">Business Information</h2>
+            <p className="text-sm text-gray-500">Legal and operating details for your organization</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Organization Name
+              Operating Name
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => handleChange(null, 'name', e.target.value)}
               className="input"
-              placeholder="Enter organization name"
+              placeholder="Your company name"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL Slug
+              Legal Name
             </label>
             <input
               type="text"
-              value={formData.slug}
-              disabled
-              className="input bg-gray-50 text-gray-500"
-              placeholder="organization-slug"
+              value={formData.legalName}
+              onChange={(e) => handleChange(null, 'legalName', e.target.value)}
+              className="input"
+              placeholder="Registered legal name"
             />
-            <p className="text-xs text-gray-500 mt-1">URL slug cannot be changed</p>
+            <p className="text-xs text-gray-500 mt-1">As registered with government</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <FileText className="w-4 h-4 inline mr-1" />
+              Business Number / Tax ID
+            </label>
+            <input
+              type="text"
+              value={formData.taxNumber}
+              onChange={(e) => handleChange(null, 'taxNumber', e.target.value)}
+              className="input"
+              placeholder="123456789 RT0001"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Plane className="w-4 h-4 inline mr-1" />
+              Transport Canada Operator Number
+            </label>
+            <input
+              type="text"
+              value={formData.operatorNumber}
+              onChange={(e) => handleChange(null, 'operatorNumber', e.target.value)}
+              className="input"
+              placeholder="TC operator certificate number"
+            />
           </div>
         </div>
       </div>
 
-      {/* Branding */}
+      {/* Contact Information */}
       <div className="card">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 bg-aeria-sky rounded-lg">
-            <Palette className="w-5 h-5 text-aeria-navy" />
+            <Phone className="w-5 h-5 text-aeria-navy" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Branding</h2>
-            <p className="text-sm text-gray-500">Customize your organization's appearance</p>
+            <h2 className="text-lg font-semibold text-gray-900">Contact Information</h2>
+            <p className="text-sm text-gray-500">Primary contact details</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Logo URL
+              <Phone className="w-4 h-4 inline mr-1" />
+              Phone Number
             </label>
             <input
-              type="url"
-              value={formData.branding.logoUrl}
-              onChange={(e) => handleChange('branding', 'logoUrl', e.target.value)}
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => handleChange(null, 'phone', e.target.value)}
               className="input"
-              placeholder="https://example.com/logo.png"
+              placeholder="+1 (555) 123-4567"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Primary Color
+              <Mail className="w-4 h-4 inline mr-1" />
+              Email Address
             </label>
-            <div className="flex gap-2">
-              <input
-                type="color"
-                value={formData.branding.primaryColor}
-                onChange={(e) => handleChange('branding', 'primaryColor', e.target.value)}
-                className="w-12 h-10 p-1 rounded border border-gray-300 cursor-pointer"
-              />
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleChange(null, 'email', e.target.value)}
+              className="input"
+              placeholder="contact@company.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Globe className="w-4 h-4 inline mr-1" />
+              Website
+            </label>
+            <input
+              type="url"
+              value={formData.website}
+              onChange={(e) => handleChange(null, 'website', e.target.value)}
+              className="input"
+              placeholder="https://www.company.com"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Address */}
+      <div className="card">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-aeria-sky rounded-lg">
+            <MapPin className="w-5 h-5 text-aeria-navy" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Business Address</h2>
+            <p className="text-sm text-gray-500">Primary place of business</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Street Address
+            </label>
+            <input
+              type="text"
+              value={formData.address.street}
+              onChange={(e) => handleChange('address', 'street', e.target.value)}
+              className="input"
+              placeholder="123 Main Street, Suite 100"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                City
+              </label>
               <input
                 type="text"
-                value={formData.branding.primaryColor}
-                onChange={(e) => handleChange('branding', 'primaryColor', e.target.value)}
-                className="input flex-1"
-                placeholder="#3B82F6"
+                value={formData.address.city}
+                onChange={(e) => handleChange('address', 'city', e.target.value)}
+                className="input"
+                placeholder="Toronto"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Province
+              </label>
+              <select
+                value={formData.address.province}
+                onChange={(e) => handleChange('address', 'province', e.target.value)}
+                className="input"
+              >
+                {PROVINCES.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Postal Code
+              </label>
+              <input
+                type="text"
+                value={formData.address.postalCode}
+                onChange={(e) => handleChange('address', 'postalCode', e.target.value.toUpperCase())}
+                className="input"
+                placeholder="M5V 1A1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Country
+              </label>
+              <input
+                type="text"
+                value={formData.address.country}
+                onChange={(e) => handleChange('address', 'country', e.target.value)}
+                className="input"
+                placeholder="Canada"
               />
             </div>
           </div>
