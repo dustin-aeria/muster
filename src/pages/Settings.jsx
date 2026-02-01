@@ -9,17 +9,15 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganization } from '../hooks/useOrganization'
 import { usePermissions } from '../hooks/usePermissions'
-import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2, Globe, Phone, FolderOpen, Users, Lock } from 'lucide-react'
+import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2, Globe, Phone, Users } from 'lucide-react'
 import { updateOperator } from '../lib/firestore'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { updatePassword, updateEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import BrandingSettings from '../components/BrandingSettings'
-import InsuranceManager from '../components/insurance/InsuranceManager'
 import RegulatoryFrameworkSelector from '../components/settings/RegulatoryFrameworkSelector'
 import EmergencyContactsManager from '../components/settings/EmergencyContactsManager'
-import CategoryManager from '../components/policies/CategoryManager'
 import OrganizationSettings from './settings/OrganizationSettings'
 import TeamMembers from './settings/TeamMembers'
 import { RequireAdmin, AccessDeniedMessage } from '../components/PermissionGuard'
@@ -330,13 +328,10 @@ export default function Settings() {
 
   const allTabs = [
     { id: 'profile', label: 'Profile', icon: User, description: 'Your personal information' },
-    { id: 'organization', label: 'Organization', icon: Building, description: 'Organization settings', requiresAdmin: true },
+    { id: 'organization', label: 'Organization', icon: Building, description: 'Company & organization settings', requiresAdmin: true },
     { id: 'team', label: 'Team', icon: Users, description: 'Team members & roles', requiresAdmin: true },
-    { id: 'company', label: 'Company', icon: Building, description: 'Company details', requiresSettings: true },
     { id: 'regulatory', label: 'Regulatory', icon: Globe, description: 'Aviation authority & regulations', requiresSettings: true },
     { id: 'emergency', label: 'Emergency', icon: Phone, description: 'Emergency contacts', requiresSettings: true },
-    { id: 'policies', label: 'Policy Categories', icon: FolderOpen, description: 'Manage policy categories', requiresAdmin: true },
-    { id: 'insurance', label: 'Insurance', icon: Shield, description: 'Insurance policies & documents', requiresSettings: true },
     { id: 'branding', label: 'Branding', icon: Palette, description: 'PDF export branding', requiresSettings: true },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alert preferences' },
     { id: 'security', label: 'Security', icon: Shield, description: 'Password & authentication' },
@@ -559,78 +554,6 @@ export default function Settings() {
           </RequireAdmin>
         )}
 
-        {/* Company Tab */}
-        {activeTab === 'company' && (
-          <div className="card">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-aeria-sky rounded-lg">
-                <Building className="w-5 h-5 text-aeria-navy" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Company</h2>
-                <p className="text-sm text-gray-500">Company details</p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="label">Company Name</label>
-                <input
-                  type="text"
-                  className="input"
-                  value={companyData.name}
-                  onChange={(e) => setCompanyData({ ...companyData, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label">Transport Canada Operator Number</label>
-                <input
-                  type="text"
-                  className="input"
-                  value={companyData.operatorNumber}
-                  onChange={(e) => setCompanyData({ ...companyData, operatorNumber: e.target.value })}
-                />
-              </div>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Primary Contact Email</label>
-                  <input
-                    type="email"
-                    className="input"
-                    value={companyData.email}
-                    onChange={(e) => setCompanyData({ ...companyData, email: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="label">Primary Contact Phone</label>
-                  <input
-                    type="tel"
-                    className="input"
-                    value={companyData.phone}
-                    onChange={(e) => setCompanyData({ ...companyData, phone: e.target.value })}
-                    placeholder="+1 (555) 123-4567"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="label">Address</label>
-                <textarea
-                  className="input min-h-[80px]"
-                  value={companyData.address}
-                  onChange={(e) => setCompanyData({ ...companyData, address: e.target.value })}
-                  placeholder="Street Address, City, Province, Postal Code"
-                />
-              </div>
-              <div className="pt-4">
-                <SaveButton
-                  saving={companySaving}
-                  saved={companySaved}
-                  onClick={() => handleSaveCompany()}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Regulatory Tab */}
         {activeTab === 'regulatory' && (
           <div className="card">
@@ -650,20 +573,6 @@ export default function Settings() {
         {activeTab === 'emergency' && (
           <div className="card">
             <EmergencyContactsManager />
-          </div>
-        )}
-
-        {/* Policy Categories Tab */}
-        {activeTab === 'policies' && (
-          <div className="card">
-            <CategoryManager />
-          </div>
-        )}
-
-        {/* Insurance Tab */}
-        {activeTab === 'insurance' && (
-          <div className="card">
-            <InsuranceManager organizationId={organizationId} />
           </div>
         )}
 
