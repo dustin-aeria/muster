@@ -373,7 +373,7 @@ export default function BrandingSettings() {
                   value={operatorBranding.registration}
                   onChange={(e) => updateOperator('registration', e.target.value)}
                   className="input"
-                  placeholder="e.g., Transport Canada Operator #123456"
+                  placeholder="e.g., Operator License #123456"
                 />
               </div>
               <div>

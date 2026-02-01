@@ -46,21 +46,19 @@ const MEASUREMENT_SYSTEMS = [
   { value: 'imperial', label: 'Imperial (feet, miles)' }
 ]
 
-const PROVINCES = [
-  { value: '', label: 'Select Province/Territory' },
-  { value: 'AB', label: 'Alberta' },
-  { value: 'BC', label: 'British Columbia' },
-  { value: 'MB', label: 'Manitoba' },
-  { value: 'NB', label: 'New Brunswick' },
-  { value: 'NL', label: 'Newfoundland and Labrador' },
-  { value: 'NS', label: 'Nova Scotia' },
-  { value: 'NT', label: 'Northwest Territories' },
-  { value: 'NU', label: 'Nunavut' },
-  { value: 'ON', label: 'Ontario' },
-  { value: 'PE', label: 'Prince Edward Island' },
-  { value: 'QC', label: 'Quebec' },
-  { value: 'SK', label: 'Saskatchewan' },
-  { value: 'YT', label: 'Yukon' }
+const REGULATORY_AUTHORITIES = [
+  { value: '', label: 'Select Authority' },
+  { value: 'tc', label: 'Transport Canada (Canada)' },
+  { value: 'faa', label: 'FAA (United States)' },
+  { value: 'easa', label: 'EASA (European Union)' },
+  { value: 'casa', label: 'CASA (Australia)' },
+  { value: 'caa_uk', label: 'CAA (United Kingdom)' },
+  { value: 'dgca', label: 'DGCA (India)' },
+  { value: 'caac', label: 'CAAC (China)' },
+  { value: 'jcab', label: 'JCAB (Japan)' },
+  { value: 'anac', label: 'ANAC (Brazil)' },
+  { value: 'sacaa', label: 'SACAA (South Africa)' },
+  { value: 'other', label: 'Other' }
 ]
 
 export default function OrganizationSettings() {
@@ -75,18 +73,19 @@ export default function OrganizationSettings() {
     email: '',
     website: '',
     taxNumber: '',
-    operatorNumber: '',
+    regulatoryAuthority: '',
+    operatorLicenseNumber: '',
     address: {
       street: '',
       city: '',
-      province: '',
+      stateProvince: '',
       postalCode: '',
-      country: 'Canada'
+      country: ''
     },
     settings: {
-      timezone: 'America/Toronto',
-      dateFormat: 'MM/DD/YYYY',
-      measurementSystem: 'imperial'
+      timezone: 'UTC',
+      dateFormat: 'YYYY-MM-DD',
+      measurementSystem: 'metric'
     }
   })
 
@@ -104,18 +103,19 @@ export default function OrganizationSettings() {
         email: organization.email || '',
         website: organization.website || '',
         taxNumber: organization.taxNumber || '',
-        operatorNumber: organization.operatorNumber || '',
+        regulatoryAuthority: organization.regulatoryAuthority || '',
+        operatorLicenseNumber: organization.operatorLicenseNumber || organization.operatorNumber || '',
         address: {
           street: organization.address?.street || '',
           city: organization.address?.city || '',
-          province: organization.address?.province || '',
+          stateProvince: organization.address?.stateProvince || organization.address?.province || '',
           postalCode: organization.address?.postalCode || '',
-          country: organization.address?.country || 'Canada'
+          country: organization.address?.country || ''
         },
         settings: {
-          timezone: organization.settings?.timezone || 'America/Toronto',
-          dateFormat: organization.settings?.dateFormat || 'MM/DD/YYYY',
-          measurementSystem: organization.settings?.measurementSystem || 'imperial'
+          timezone: organization.settings?.timezone || 'UTC',
+          dateFormat: organization.settings?.dateFormat || 'YYYY-MM-DD',
+          measurementSystem: organization.settings?.measurementSystem || 'metric'
         }
       })
     }
@@ -153,7 +153,8 @@ export default function OrganizationSettings() {
         email: formData.email,
         website: formData.website,
         taxNumber: formData.taxNumber,
-        operatorNumber: formData.operatorNumber,
+        regulatoryAuthority: formData.regulatoryAuthority,
+        operatorLicenseNumber: formData.operatorLicenseNumber,
         address: formData.address,
         settings: formData.settings
       })
@@ -243,22 +244,39 @@ export default function OrganizationSettings() {
               value={formData.taxNumber}
               onChange={(e) => handleChange(null, 'taxNumber', e.target.value)}
               className="input"
-              placeholder="123456789 RT0001"
+              placeholder="Tax identification number"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Globe className="w-4 h-4 inline mr-1" />
+              Regulatory Authority
+            </label>
+            <select
+              value={formData.regulatoryAuthority}
+              onChange={(e) => handleChange(null, 'regulatoryAuthority', e.target.value)}
+              className="input"
+            >
+              {REGULATORY_AUTHORITIES.map(ra => (
+                <option key={ra.value} value={ra.value}>{ra.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               <Plane className="w-4 h-4 inline mr-1" />
-              Transport Canada Operator Number
+              Operator License / Certificate Number
             </label>
             <input
               type="text"
-              value={formData.operatorNumber}
-              onChange={(e) => handleChange(null, 'operatorNumber', e.target.value)}
+              value={formData.operatorLicenseNumber}
+              onChange={(e) => handleChange(null, 'operatorLicenseNumber', e.target.value)}
               className="input"
-              placeholder="TC operator certificate number"
+              placeholder="Your aviation authority operator certificate or license number"
             />
+            <p className="text-xs text-gray-500 mt-1">Certificate number issued by your regulatory authority</p>
           </div>
         </div>
       </div>
@@ -347,7 +365,7 @@ export default function OrganizationSettings() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-1">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 City
               </label>
@@ -356,35 +374,33 @@ export default function OrganizationSettings() {
                 value={formData.address.city}
                 onChange={(e) => handleChange('address', 'city', e.target.value)}
                 className="input"
-                placeholder="Toronto"
+                placeholder="City"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Province
+                State / Province / Region
               </label>
-              <select
-                value={formData.address.province}
-                onChange={(e) => handleChange('address', 'province', e.target.value)}
+              <input
+                type="text"
+                value={formData.address.stateProvince}
+                onChange={(e) => handleChange('address', 'stateProvince', e.target.value)}
                 className="input"
-              >
-                {PROVINCES.map(p => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
+                placeholder="State or province"
+              />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Postal Code
+                Postal / ZIP Code
               </label>
               <input
                 type="text"
                 value={formData.address.postalCode}
-                onChange={(e) => handleChange('address', 'postalCode', e.target.value.toUpperCase())}
+                onChange={(e) => handleChange('address', 'postalCode', e.target.value)}
                 className="input"
-                placeholder="M5V 1A1"
+                placeholder="Postal code"
               />
             </div>
 
@@ -397,7 +413,7 @@ export default function OrganizationSettings() {
                 value={formData.address.country}
                 onChange={(e) => handleChange('address', 'country', e.target.value)}
                 className="input"
-                placeholder="Canada"
+                placeholder="Country"
               />
             </div>
           </div>
