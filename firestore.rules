@@ -713,12 +713,14 @@ service cloud.firestore {
     // Operators Collection (Team Members)
     // ============================================
     match /operators/{operatorId} {
+      // Allow users to read their own profile OR members of the organization
       allow read: if isAuthenticated() &&
-        isMemberOf(resource.data.organizationId);
+        (operatorId == request.auth.uid || isMemberOf(resource.data.organizationId));
       allow create: if isAuthenticated() &&
         canEdit(request.resource.data.organizationId);
+      // Allow users to update their own profile OR users with edit permission
       allow update: if isAuthenticated() &&
-        canEdit(resource.data.organizationId);
+        (operatorId == request.auth.uid || canEdit(resource.data.organizationId));
       allow delete: if isAuthenticated() &&
         canDelete(resource.data.organizationId);
     }
