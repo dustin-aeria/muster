@@ -16,9 +16,9 @@ import { db } from '../lib/firebase'
 import { updatePassword, updateEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import BrandingSettings from '../components/BrandingSettings'
-import RegulatoryFrameworkSelector from '../components/settings/RegulatoryFrameworkSelector'
 import EmergencyContactsManager from '../components/settings/EmergencyContactsManager'
 import OrganizationSettings from './settings/OrganizationSettings'
+import RegulatoryComplianceSettings from './settings/RegulatoryComplianceSettings'
 import TeamMembers from './settings/TeamMembers'
 import { RequireAdmin, AccessDeniedMessage } from '../components/PermissionGuard'
 import { seedPolicies, isPoliciesSeeded } from '../lib/seedPolicies'
@@ -330,7 +330,7 @@ export default function Settings() {
     { id: 'profile', label: 'Profile', icon: User, description: 'Your personal information' },
     { id: 'organization', label: 'Organization', icon: Building, description: 'Company & organization settings', requiresAdmin: true },
     { id: 'team', label: 'Team', icon: Users, description: 'Team members & roles', requiresAdmin: true },
-    { id: 'regulatory', label: 'Regulatory', icon: Globe, description: 'Aviation authority & regulations', requiresSettings: true },
+    { id: 'regulatory', label: 'Compliance', icon: Globe, description: 'Regulatory compliance across all domains', requiresSettings: true },
     { id: 'emergency', label: 'Emergency', icon: Phone, description: 'Emergency contacts', requiresSettings: true },
     { id: 'branding', label: 'Branding', icon: Palette, description: 'PDF export branding', requiresSettings: true },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alert preferences' },
@@ -556,17 +556,7 @@ export default function Settings() {
 
         {/* Regulatory Tab */}
         {activeTab === 'regulatory' && (
-          <div className="card">
-            <RegulatoryFrameworkSelector
-              value={companyData.regulatoryAuthority}
-              onChange={(value) => {
-                setCompanyData({ ...companyData, regulatoryAuthority: value })
-                // Auto-save regulatory selection
-                handleSaveCompany({ ...companyData, regulatoryAuthority: value })
-              }}
-              showDetails={true}
-            />
-          </div>
+          <RegulatoryComplianceSettings />
         )}
 
         {/* Emergency Contacts Tab */}
