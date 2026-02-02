@@ -733,20 +733,32 @@ export function UnifiedProjectMap({
 
               const classFilter = enabledClasses.length > 0
                 ? ['in', ['get', 'icaoClass'], ['literal', enabledClasses]]
-                : ['==', 1, 0] // Hide all if none selected
+                : null // Will use visibility instead
 
-              // Check if layers already exist - if so, just update the filter
+              // Check if layers already exist - if so, just update the filter/visibility
               if (map.getLayer(`${mapLayerId}-fill`)) {
-                map.setFilter(`${mapLayerId}-fill`, classFilter)
-                map.setFilter(mapLayerId, classFilter)
+                if (enabledClasses.length === 0) {
+                  map.setLayoutProperty(`${mapLayerId}-fill`, 'visibility', 'none')
+                  map.setLayoutProperty(mapLayerId, 'visibility', 'none')
+                } else {
+                  map.setLayoutProperty(`${mapLayerId}-fill`, 'visibility', 'visible')
+                  map.setLayoutProperty(mapLayerId, 'visibility', 'visible')
+                  map.setFilter(`${mapLayerId}-fill`, classFilter)
+                  map.setFilter(mapLayerId, classFilter)
+                }
               } else {
                 // Airspace zones - fill with colored overlay based on icaoClass
+                const layerVisibility = enabledClasses.length > 0 ? 'visible' : 'none'
+
                 map.addLayer({
                   id: `${mapLayerId}-fill`,
                   type: 'fill',
                   source: sourceId,
                   'source-layer': config.sourceLayer,
-                  filter: classFilter,
+                  ...(classFilter && { filter: classFilter }),
+                  layout: {
+                    'visibility': layerVisibility
+                  },
                   paint: {
                     'fill-color': [
                       'match',
@@ -770,7 +782,10 @@ export function UnifiedProjectMap({
                   type: 'line',
                   source: sourceId,
                   'source-layer': config.sourceLayer,
-                  filter: classFilter,
+                  ...(classFilter && { filter: classFilter }),
+                  layout: {
+                    'visibility': layerVisibility
+                  },
                   paint: {
                     'line-color': [
                       'match',
@@ -884,16 +899,27 @@ export function UnifiedProjectMap({
       .filter(([_, enabled]) => enabled)
       .map(([cls]) => parseInt(cls, 10))
 
-    const classFilter = enabledClasses.length > 0
-      ? ['in', ['get', 'icaoClass'], ['literal', enabledClasses]]
-      : ['==', 1, 0] // Hide all if none selected
-
     try {
-      if (map.getLayer(fillLayerId)) {
-        map.setFilter(fillLayerId, classFilter)
-      }
-      if (map.getLayer(lineLayerId)) {
-        map.setFilter(lineLayerId, classFilter)
+      if (enabledClasses.length === 0) {
+        // Hide layers when no classes selected
+        if (map.getLayer(fillLayerId)) {
+          map.setLayoutProperty(fillLayerId, 'visibility', 'none')
+        }
+        if (map.getLayer(lineLayerId)) {
+          map.setLayoutProperty(lineLayerId, 'visibility', 'none')
+        }
+      } else {
+        // Show layers and apply filter
+        const classFilter = ['in', ['get', 'icaoClass'], ['literal', enabledClasses]]
+
+        if (map.getLayer(fillLayerId)) {
+          map.setLayoutProperty(fillLayerId, 'visibility', 'visible')
+          map.setFilter(fillLayerId, classFilter)
+        }
+        if (map.getLayer(lineLayerId)) {
+          map.setLayoutProperty(lineLayerId, 'visibility', 'visible')
+          map.setFilter(lineLayerId, classFilter)
+        }
       }
     } catch (err) {
       console.warn('Could not update airspace filter:', err.message)
