@@ -928,35 +928,49 @@ export function UnifiedProjectMap({
               const airportPopup = new mapboxgl.Popup({
                 closeButton: false,
                 closeOnClick: false,
-                className: 'airport-popup'
+                className: 'airport-popup',
+                maxWidth: '280px'
               })
 
-              // Helper to get airport type name
+              // OpenAIP airport type mapping
               const getAirportType = (type) => {
                 const types = {
-                  0: 'Airport',
-                  1: 'Glider Site',
-                  2: 'Airfield',
+                  0: 'Closed',
+                  1: 'Airport',
+                  2: 'Gliding',
                   3: 'Heliport',
-                  4: 'Military',
-                  5: 'Ultralight',
-                  6: 'Parachute',
-                  7: 'Balloon',
-                  8: 'Seaplane Base',
-                  9: 'International'
+                  4: 'Light Aircraft',
+                  5: 'Military',
+                  6: 'Parachute Drop Zone',
+                  7: 'Seaplane Base',
+                  8: 'Ultralight'
                 }
-                return types[type] || 'Airport'
+                return types[type] || null
               }
 
-              // Helper to parse elevation
+              // Helper to parse elevation JSON
               const parseElevation = (elevJson) => {
                 try {
                   const elev = typeof elevJson === 'string' ? JSON.parse(elevJson) : elevJson
-                  const value = elev.value || 0
+                  if (!elev || elev.value === undefined) return null
+                  const value = Math.round(elev.value)
                   const unit = elev.unit === 1 ? 'ft' : 'm'
-                  return `${Math.round(value).toLocaleString()} ${unit}`
+                  return `${value.toLocaleString()} ${unit}`
                 } catch {
-                  return 'Unknown'
+                  return null
+                }
+              }
+
+              // Helper to parse frequency JSON
+              const parseFrequency = (freqJson) => {
+                try {
+                  const freq = typeof freqJson === 'string' ? JSON.parse(freqJson) : freqJson
+                  if (Array.isArray(freq) && freq.length > 0) {
+                    return freq[0].value ? `${freq[0].value} MHz` : null
+                  }
+                  return null
+                } catch {
+                  return null
                 }
               }
 
@@ -969,26 +983,30 @@ export function UnifiedProjectMap({
                   const feature = e.features[0]
                   const props = feature.properties
 
-                  // Log properties to console to see what's available
-                  console.log('Airport properties:', props)
-
-                  const name = props.name || 'Unnamed Airport'
-                  const icao = props.icaoCode || props.icao || ''
-                  const iata = props.iataCode || props.iata || ''
+                  const name = props.name || 'Unnamed'
+                  const icao = props.icaoCode || ''
+                  const iata = props.iataCode || ''
                   const type = getAirportType(props.type)
-                  const elevation = props.elevation ? parseElevation(props.elevation) : ''
-                  const runways = props.runwayCount || props.runways || ''
+                  const elevation = parseElevation(props.elevation)
+                  const frequency = parseFrequency(props.frequencies)
+                  const country = props.country || ''
 
-                  let html = `
-                    <div style="padding: 8px; min-width: 180px;">
-                      <p style="font-weight: 600; margin: 0 0 6px 0; color: #1e3a5f;">${name}</p>
-                      <div style="font-size: 12px; color: #4b5563;">
-                        ${icao ? `<p style="margin: 2px 0;"><strong>ICAO:</strong> ${icao}</p>` : ''}
-                        ${iata ? `<p style="margin: 2px 0;"><strong>IATA:</strong> ${iata}</p>` : ''}
-                        <p style="margin: 2px 0;"><strong>Type:</strong> ${type}</p>
-                        ${elevation ? `<p style="margin: 2px 0;"><strong>Elevation:</strong> ${elevation}</p>` : ''}
-                        ${runways ? `<p style="margin: 2px 0;"><strong>Runways:</strong> ${runways}</p>` : ''}
+                  // Build codes string
+                  const codes = [icao, iata].filter(Boolean).join(' / ')
+
+                  // Build info rows
+                  const rows = []
+                  if (type) rows.push(`<span style="color: #6b7280;">Type:</span> ${type}`)
+                  if (elevation) rows.push(`<span style="color: #6b7280;">Elev:</span> ${elevation}`)
+                  if (frequency) rows.push(`<span style="color: #6b7280;">Freq:</span> ${frequency}`)
+
+                  const html = `
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                      <div style="font-weight: 600; font-size: 13px; color: #1e3a5f; margin-bottom: 4px;">
+                        ${name}
                       </div>
+                      ${codes ? `<div style="font-size: 12px; font-weight: 500; color: #2563eb; margin-bottom: 6px;">${codes}</div>` : ''}
+                      ${rows.length > 0 ? `<div style="font-size: 11px; line-height: 1.5;">${rows.join('<br>')}</div>` : ''}
                     </div>
                   `
 
