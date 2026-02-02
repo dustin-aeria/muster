@@ -805,53 +805,6 @@ export function UnifiedProjectMap({
                 })
               }
 
-              // Add labels to airspace zones showing class letter and name
-              map.addLayer({
-                id: `${mapLayerId}-labels`,
-                type: 'symbol',
-                source: sourceId,
-                'source-layer': config.sourceLayer,
-                ...(classFilter && { filter: classFilter }),
-                minzoom: 8,
-                layout: {
-                  'visibility': layerVisibility,
-                  'text-field': [
-                    'concat',
-                    'Class ',
-                    ['match', ['get', 'icaoClass'], 0, 'A', 1, 'B', 2, 'C', 3, 'D', 4, 'E', 5, 'F', 6, 'G', '?'],
-                    '\n',
-                    ['get', 'name']
-                  ],
-                  'text-size': [
-                    'interpolate', ['linear'], ['zoom'],
-                    8, 9,
-                    12, 11
-                  ],
-                  'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
-                  'text-allow-overlap': false,
-                  'text-ignore-placement': false,
-                  'symbol-placement': 'point',
-                  'text-anchor': 'center',
-                  'text-max-width': 12
-                },
-                paint: {
-                  'text-color': [
-                    'match',
-                    ['get', 'icaoClass'],
-                    0, '#991B1B', // Darker red
-                    1, '#C2410C', // Darker orange
-                    2, '#A16207', // Darker yellow
-                    3, '#1D4ED8', // Darker blue
-                    4, '#6D28D9', // Darker purple
-                    5, '#0F766E', // Darker teal
-                    6, '#4B5563', // Darker gray
-                    '#4B5563'
-                  ],
-                  'text-halo-color': 'rgba(255, 255, 255, 0.95)',
-                  'text-halo-width': 2
-                }
-              })
-
               // Add hover popup for airspace info
               const airspacePopup = new mapboxgl.Popup({
                 closeButton: false,
@@ -1003,7 +956,6 @@ export function UnifiedProjectMap({
     const map = mapRef.current
     const fillLayerId = 'overlay-airspace-fill'
     const lineLayerId = 'overlay-airspace'
-    const labelsLayerId = 'overlay-airspace-labels'
 
     // Build filter for enabled classes
     const enabledClasses = Object.entries(airspaceClasses)
@@ -1019,9 +971,6 @@ export function UnifiedProjectMap({
         if (map.getLayer(lineLayerId)) {
           map.setLayoutProperty(lineLayerId, 'visibility', 'none')
         }
-        if (map.getLayer(labelsLayerId)) {
-          map.setLayoutProperty(labelsLayerId, 'visibility', 'none')
-        }
       } else {
         // Show layers and apply filter
         const classFilter = ['in', ['get', 'icaoClass'], ['literal', enabledClasses]]
@@ -1033,10 +982,6 @@ export function UnifiedProjectMap({
         if (map.getLayer(lineLayerId)) {
           map.setLayoutProperty(lineLayerId, 'visibility', 'visible')
           map.setFilter(lineLayerId, classFilter)
-        }
-        if (map.getLayer(labelsLayerId)) {
-          map.setLayoutProperty(labelsLayerId, 'visibility', 'visible')
-          map.setFilter(labelsLayerId, classFilter)
         }
       }
     } catch (err) {
