@@ -23,7 +23,6 @@ import {
   FileCheck,
   UserCheck,
   GraduationCap,
-  Award,
   ListChecks,
   MessageSquarePlus,
   CalendarDays,
@@ -48,13 +47,11 @@ const navigation = [
 
 const safetyNavigation = [
   { name: 'Safety Dashboard', href: '/safety', icon: Shield },
-  { name: 'Safety Program', href: '/cor-dashboard', icon: Award },
   { name: 'Hazard Library', href: '/hazards', icon: FileCheck },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'CAPAs', href: '/capas', icon: Target },
   { name: 'JHSC', href: '/jhsc', icon: UserCheck },
   { name: 'Inspections', href: '/inspections', icon: ListChecks },
-  { name: 'Safety Audit', href: '/cor-audit', icon: ClipboardCheck },
 ]
 
 const trainingNavigation = [
