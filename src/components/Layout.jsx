@@ -62,7 +62,6 @@ const trainingNavigation = [
 ]
 
 const complianceNavigation = [
-  { name: 'Compliance Hub', href: '/compliance', icon: ClipboardCheck },
   { name: 'Policies & Procedures', href: '/policies', icon: BookOpen },
 ]
 

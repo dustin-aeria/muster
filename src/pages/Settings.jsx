@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganization } from '../hooks/useOrganization'
 import { usePermissions } from '../hooks/usePermissions'
-import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2, Globe, Phone, Users } from 'lucide-react'
+import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2, Phone, Users } from 'lucide-react'
 import { updateOperator } from '../lib/firestore'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
@@ -18,7 +18,6 @@ import { auth } from '../lib/firebase'
 import BrandingSettings from '../components/BrandingSettings'
 import EmergencyContactsManager from '../components/settings/EmergencyContactsManager'
 import OrganizationSettings from './settings/OrganizationSettings'
-import RegulatoryComplianceSettings from './settings/RegulatoryComplianceSettings'
 import TeamMembers from './settings/TeamMembers'
 import { RequireAdmin, AccessDeniedMessage } from '../components/PermissionGuard'
 import { seedPolicies, isPoliciesSeeded } from '../lib/seedPolicies'
@@ -330,7 +329,6 @@ export default function Settings() {
     { id: 'profile', label: 'Profile', icon: User, description: 'Your personal information' },
     { id: 'organization', label: 'Organization', icon: Building, description: 'Company & organization settings', requiresAdmin: true },
     { id: 'team', label: 'Team', icon: Users, description: 'Team members & roles', requiresAdmin: true },
-    { id: 'regulatory', label: 'Compliance', icon: Globe, description: 'Regulatory compliance across all domains', requiresSettings: true },
     { id: 'emergency', label: 'Emergency', icon: Phone, description: 'Emergency contacts', requiresSettings: true },
     { id: 'branding', label: 'Branding', icon: Palette, description: 'PDF export branding', requiresSettings: true },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alert preferences' },
@@ -552,11 +550,6 @@ export default function Settings() {
           <RequireAdmin fallback={<AccessDeniedMessage message="Only admins can manage team members." />}>
             <TeamMembers />
           </RequireAdmin>
-        )}
-
-        {/* Regulatory Tab */}
-        {activeTab === 'regulatory' && (
-          <RegulatoryComplianceSettings />
         )}
 
         {/* Emergency Contacts Tab */}

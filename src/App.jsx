@@ -72,11 +72,6 @@ const Inspections = lazy(() => import('./pages/Inspections'))
 const CORDashboard = lazy(() => import('./pages/CORDashboard'))
 const Calendar = lazy(() => import('./pages/Calendar'))
 
-// Compliance Module Pages - lazy-loaded
-const ComplianceHub = lazy(() => import('./pages/ComplianceHub'))
-const ComplianceApplicationEditor = lazy(() => import('./pages/ComplianceApplicationEditor'))
-const ComplianceProjectView = lazy(() => import('./pages/ComplianceProjectView'))
-
 // Maintenance Module Pages - lazy-loaded
 const MaintenanceDashboard = lazy(() => import('./pages/MaintenanceDashboard'))
 const MaintenanceItemList = lazy(() => import('./pages/MaintenanceItemList'))
@@ -280,12 +275,6 @@ function App() {
           <Route path="cor-audit" element={<Suspense fallback={<PageLoader />}><CORAuditManagement /></Suspense>} />
           <Route path="inspections" element={<Suspense fallback={<PageLoader />}><Inspections /></Suspense>} />
           <Route path="cor-dashboard" element={<Suspense fallback={<PageLoader />}><CORDashboard /></Suspense>} />
-
-          {/* Compliance Module Routes - lazy-loaded */}
-          <Route path="compliance" element={<Suspense fallback={<PageLoader />}><ComplianceHub /></Suspense>} />
-          <Route path="compliance/templates" element={<Suspense fallback={<PageLoader />}><ComplianceHub /></Suspense>} />
-          <Route path="compliance/application/:id" element={<Suspense fallback={<PageLoader />}><ComplianceApplicationEditor /></Suspense>} />
-          <Route path="compliance/project/:id" element={<Suspense fallback={<PageLoader />}><ComplianceProjectView /></Suspense>} />
 
           {/* Maintenance Module Routes - lazy-loaded */}
           <Route path="maintenance" element={<Suspense fallback={<PageLoader />}><MaintenanceDashboard /></Suspense>} />
