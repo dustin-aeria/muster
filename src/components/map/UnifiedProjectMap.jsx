@@ -804,6 +804,69 @@ export function UnifiedProjectMap({
                   }
                 })
               }
+
+              // Add hover popup for airspace info
+              const airspacePopup = new mapboxgl.Popup({
+                closeButton: false,
+                closeOnClick: false,
+                className: 'airspace-popup'
+              })
+
+              // Helper to parse altitude JSON
+              const parseAltitude = (altJson) => {
+                try {
+                  const alt = typeof altJson === 'string' ? JSON.parse(altJson) : altJson
+                  const value = alt.value || 0
+                  const unit = alt.unit === 1 ? 'ft' : 'm'
+                  const datum = alt.referenceDatum === 0 ? 'AGL' : 'MSL'
+                  return `${value.toLocaleString()} ${unit} ${datum}`
+                } catch {
+                  return 'Unknown'
+                }
+              }
+
+              // Helper to get class name
+              const getClassName = (icaoClass) => {
+                const names = { 0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E', 5: 'F', 6: 'G' }
+                return names[icaoClass] || 'Unknown'
+              }
+
+              map.on('mouseenter', `${mapLayerId}-fill`, () => {
+                map.getCanvas().style.cursor = 'pointer'
+              })
+
+              map.on('mousemove', `${mapLayerId}-fill`, (e) => {
+                if (e.features && e.features.length > 0) {
+                  const feature = e.features[0]
+                  const props = feature.properties
+
+                  const name = props.name || 'Unnamed Airspace'
+                  const icaoClass = getClassName(props.icaoClass)
+                  const lower = parseAltitude(props.lowerLimit)
+                  const upper = parseAltitude(props.upperLimit)
+
+                  const html = `
+                    <div style="padding: 8px; min-width: 180px;">
+                      <p style="font-weight: 600; margin: 0 0 6px 0; color: #1e3a5f;">${name}</p>
+                      <div style="font-size: 12px; color: #4b5563;">
+                        <p style="margin: 2px 0;"><strong>Class:</strong> ${icaoClass}</p>
+                        <p style="margin: 2px 0;"><strong>Lower:</strong> ${lower}</p>
+                        <p style="margin: 2px 0;"><strong>Upper:</strong> ${upper}</p>
+                      </div>
+                    </div>
+                  `
+
+                  airspacePopup
+                    .setLngLat(e.lngLat)
+                    .setHTML(html)
+                    .addTo(map)
+                }
+              })
+
+              map.on('mouseleave', `${mapLayerId}-fill`, () => {
+                map.getCanvas().style.cursor = ''
+                airspacePopup.remove()
+              })
             } catch (err) {
               console.warn('Could not add airspace layer:', err.message)
             }
