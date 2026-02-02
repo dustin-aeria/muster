@@ -11,7 +11,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useOrganization } from '../hooks/useOrganization'
-import { 
+import {
   Shield,
   AlertTriangle,
   CheckCircle2,
@@ -24,12 +24,12 @@ import {
   Target,
   ChevronRight,
   FileText,
-  Download,
   Loader2,
   FileDown
 } from 'lucide-react'
 import { logger } from '../lib/logger'
-import CostOfSafetyWidget from '../components/safety/CostOfSafetyWidget'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 
 // Stat card component
 function StatCard({ title, value, subtitle, icon: Icon, color = 'bg-white', link }) {
@@ -126,10 +126,8 @@ export default function SafetyDashboard() {
     pendingNotifications: 0
   })
 
-  // Raw data for Cost of Safety widget
-  const [rawIncidents, setRawIncidents] = useState([])
-  const [rawTraining, setRawTraining] = useState([])
-  const [rawInsurance, setRawInsurance] = useState([])
+  // Emergency contacts from settings
+  const [emergencyContacts, setEmergencyContacts] = useState([])
 
   useEffect(() => {
     loadDashboardData()
@@ -209,22 +207,14 @@ export default function SafetyDashboard() {
         pendingNotifications: pendingNotifications.length
       })
 
-      // Store raw data for Cost of Safety widget
-      setRawIncidents(incidents)
-
-      // Try to load training and insurance data
+      // Load emergency contacts from settings
       try {
-        const { getAllTrainingRecords } = await import('../lib/firestoreTraining')
-        const { getInsurancePolicies } = await import('../lib/firestore')
-        const [trainingData, insuranceData] = await Promise.all([
-          getAllTrainingRecords().catch(() => []),
-          getInsurancePolicies().catch(() => [])
-        ])
-        setRawTraining(trainingData)
-        setRawInsurance(insuranceData)
+        const contactsDoc = await getDoc(doc(db, 'settings', 'emergencyContacts'))
+        if (contactsDoc.exists()) {
+          setEmergencyContacts(contactsDoc.data().contacts || [])
+        }
       } catch (err) {
-        // Non-critical - Cost of Safety widget will work with partial data
-        logger.warn('Could not load training/insurance data for Cost of Safety widget:', err)
+        logger.warn('Could not load emergency contacts:', err)
       }
 
       setLastRefresh(new Date())
@@ -442,71 +432,59 @@ export default function SafetyDashboard() {
         />
       </div>
 
-      {/* Cost of Safety & Action Items Row */}
-      <div className="grid lg:grid-cols-3 gap-4">
-        {/* Action Items */}
-        <div className="lg:col-span-2">
-          {(stats.overdueCapas > 0 || stats.pendingNotifications > 0) ? (
-            <div className="card border-orange-200 bg-orange-50 h-full">
-              <h2 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                Action Items Requiring Attention
-              </h2>
-              <div className="space-y-2">
-                {stats.pendingNotifications > 0 && (
-                  <Link
-                    to="/incidents?filter=pending_notification"
-                    className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-orange-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-100 rounded-lg">
-                        <Bell className="w-4 h-4 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">Pending Regulatory Notifications</p>
-                        <p className="text-sm text-gray-500">{stats.pendingNotifications} incident(s) require notification</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </Link>
-                )}
-                {stats.overdueCapas > 0 && (
-                  <Link
-                    to="/capas?filter=overdue"
-                    className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-orange-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-100 rounded-lg">
-                        <Clock className="w-4 h-4 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">Overdue CAPAs</p>
-                        <p className="text-sm text-gray-500">{stats.overdueCapas} CAPA(s) past target date</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </Link>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="card border-green-200 bg-green-50 h-full">
-              <h2 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5" />
-                All Clear
-              </h2>
-              <p className="text-green-700">No pending action items. Keep up the great safety culture!</p>
-            </div>
-          )}
+      {/* Action Items */}
+      {(stats.overdueCapas > 0 || stats.pendingNotifications > 0) ? (
+        <div className="card border-orange-200 bg-orange-50">
+          <h2 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
+            <Bell className="w-5 h-5" />
+            Action Items Requiring Attention
+          </h2>
+          <div className="space-y-2">
+            {stats.pendingNotifications > 0 && (
+              <Link
+                to="/incidents?filter=pending_notification"
+                className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-orange-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <Bell className="w-4 h-4 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Pending Regulatory Notifications</p>
+                    <p className="text-sm text-gray-500">{stats.pendingNotifications} incident(s) require notification</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </Link>
+            )}
+            {stats.overdueCapas > 0 && (
+              <Link
+                to="/capas?filter=overdue"
+                className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-orange-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <Clock className="w-4 h-4 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Overdue CAPAs</p>
+                    <p className="text-sm text-gray-500">{stats.overdueCapas} CAPA(s) past target date</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </Link>
+            )}
+          </div>
         </div>
-
-        {/* Cost of Safety Widget */}
-        <CostOfSafetyWidget
-          incidents={rawIncidents}
-          training={rawTraining}
-          insurance={rawInsurance}
-        />
-      </div>
+      ) : (
+        <div className="card border-green-200 bg-green-50">
+          <h2 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" />
+            All Clear
+          </h2>
+          <p className="text-green-700">No pending action items. Keep up the great safety culture!</p>
+        </div>
+      )}
 
       {/* Quick Links */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -549,17 +527,40 @@ export default function SafetyDashboard() {
 
       {/* Emergency Contacts */}
       <div className="card bg-gray-50">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contacts</h2>
-        <div className="grid sm:grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="font-medium text-gray-700">TSB (Aircraft Occurrence)</p>
-            <p className="text-gray-900">1-800-387-3557</p>
-          </div>
-          <div>
-            <p className="font-medium text-gray-700">Aeria Operations</p>
-            <p className="text-gray-900">604-849-2345</p>
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Emergency Contacts</h2>
+          <Link to="/settings" className="text-sm text-aeria-blue hover:text-aeria-navy">
+            Manage →
+          </Link>
         </div>
+        {emergencyContacts.length > 0 ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+            {emergencyContacts
+              .filter(c => c.isPrimary || ['emergency', 'aviation', 'regulatory', 'safety', 'manager'].includes(c.role))
+              .slice(0, 6)
+              .map((contact, idx) => (
+                <div key={contact.id || idx} className="bg-white p-3 rounded-lg border border-gray-200">
+                  <p className="font-medium text-gray-700">{contact.name}</p>
+                  <a
+                    href={`tel:${contact.phone}`}
+                    className="text-lg font-semibold text-aeria-blue hover:text-aeria-navy"
+                  >
+                    {contact.phone}
+                  </a>
+                  {contact.notes && (
+                    <p className="text-xs text-gray-500 mt-1">{contact.notes}</p>
+                  )}
+                </div>
+              ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-gray-500">
+            <p>No emergency contacts configured</p>
+            <Link to="/settings" className="text-sm text-aeria-blue hover:underline mt-1 inline-block">
+              Add contacts in Settings → Emergency
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   )
