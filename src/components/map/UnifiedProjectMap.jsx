@@ -735,54 +735,60 @@ export function UnifiedProjectMap({
                 ? ['in', ['get', 'icaoClass'], ['literal', enabledClasses]]
                 : ['==', 1, 0] // Hide all if none selected
 
-              // Airspace zones - fill with colored overlay based on icaoClass
-              map.addLayer({
-                id: `${mapLayerId}-fill`,
-                type: 'fill',
-                source: sourceId,
-                'source-layer': config.sourceLayer,
-                filter: classFilter,
-                paint: {
-                  'fill-color': [
-                    'match',
-                    ['get', 'icaoClass'],
-                    0, '#DC2626', // Class A - Red
-                    1, '#EA580C', // Class B - Orange
-                    2, '#CA8A04', // Class C - Yellow
-                    3, '#2563EB', // Class D - Blue
-                    4, '#7C3AED', // Class E - Purple
-                    5, '#0D9488', // Class F - Teal
-                    6, '#6B7280', // Class G - Gray
-                    '#6B7280'     // Default
-                  ],
-                  'fill-opacity': 0.15
-                }
-              })
+              // Check if layers already exist - if so, just update the filter
+              if (map.getLayer(`${mapLayerId}-fill`)) {
+                map.setFilter(`${mapLayerId}-fill`, classFilter)
+                map.setFilter(mapLayerId, classFilter)
+              } else {
+                // Airspace zones - fill with colored overlay based on icaoClass
+                map.addLayer({
+                  id: `${mapLayerId}-fill`,
+                  type: 'fill',
+                  source: sourceId,
+                  'source-layer': config.sourceLayer,
+                  filter: classFilter,
+                  paint: {
+                    'fill-color': [
+                      'match',
+                      ['get', 'icaoClass'],
+                      0, '#DC2626', // Class A - Red
+                      1, '#EA580C', // Class B - Orange
+                      2, '#CA8A04', // Class C - Yellow
+                      3, '#2563EB', // Class D - Blue
+                      4, '#7C3AED', // Class E - Purple
+                      5, '#0D9488', // Class F - Teal
+                      6, '#6B7280', // Class G - Gray
+                      '#6B7280'     // Default
+                    ],
+                    'fill-opacity': 0.15
+                  }
+                })
 
-              // Airspace outline
-              map.addLayer({
-                id: mapLayerId,
-                type: 'line',
-                source: sourceId,
-                'source-layer': config.sourceLayer,
-                filter: classFilter,
-                paint: {
-                  'line-color': [
-                    'match',
-                    ['get', 'icaoClass'],
-                    0, '#DC2626',
-                    1, '#EA580C',
-                    2, '#CA8A04',
-                    3, '#2563EB',
-                    4, '#7C3AED',
-                    5, '#0D9488',
-                    6, '#6B7280',
-                    '#6B7280'
-                  ],
-                  'line-width': 1.5,
-                  'line-opacity': 0.8
-                }
-              })
+                // Airspace outline
+                map.addLayer({
+                  id: mapLayerId,
+                  type: 'line',
+                  source: sourceId,
+                  'source-layer': config.sourceLayer,
+                  filter: classFilter,
+                  paint: {
+                    'line-color': [
+                      'match',
+                      ['get', 'icaoClass'],
+                      0, '#DC2626',
+                      1, '#EA580C',
+                      2, '#CA8A04',
+                      3, '#2563EB',
+                      4, '#7C3AED',
+                      5, '#0D9488',
+                      6, '#6B7280',
+                      '#6B7280'
+                    ],
+                    'line-width': 1.5,
+                    'line-opacity': 0.8
+                  }
+                })
+              }
             } catch (err) {
               console.warn('Could not add airspace layer:', err.message)
             }
