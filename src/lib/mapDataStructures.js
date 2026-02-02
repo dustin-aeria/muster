@@ -193,8 +193,7 @@ export const MAP_OVERLAY_LAYERS = {
     label: 'Municipal Boundaries',
     description: 'City, town, and district boundaries',
     icon: 'building',
-    tilesetId: 'dustinwales.0qttfaq8',
-    sourceLayer: 'lcsd000b21a_e_2-5io9be'
+    comingSoon: true
   },
   airspace: {
     id: 'airspace',
