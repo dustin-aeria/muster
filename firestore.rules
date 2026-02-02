@@ -713,14 +713,9 @@ service cloud.firestore {
     // Tasks Collection
     // ============================================
     match /tasks/{taskId} {
-      // Can read if member of org AND (task is team-visible OR user is assignee/creator)
-      allow read: if isAuthenticated() && (
-        isMemberOf(resource.data.organizationId) && (
-          resource.data.visibility == 'team' ||
-          resource.data.assignedTo == request.auth.uid ||
-          resource.data.createdBy == request.auth.uid
-        )
-      );
+      // Org members can read all tasks (visibility filtering done in app layer)
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
 
       // Any org member can create tasks
       allow create: if isAuthenticated() &&
