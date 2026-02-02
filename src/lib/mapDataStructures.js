@@ -191,9 +191,10 @@ export const MAP_OVERLAY_LAYERS = {
   municipalBoundaries: {
     id: 'municipalBoundaries',
     label: 'Municipal Boundaries',
-    description: 'City, town, and district boundaries (requires Mapbox Enterprise)',
+    description: 'City, town, and district boundaries',
     icon: 'building',
-    comingSoon: true
+    tilesetId: 'dustinwales.0qttfaq8',
+    sourceLayer: 'lcsd000b21a_e_2-5io9be'
   },
   airspace: {
     id: 'airspace',
