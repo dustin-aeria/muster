@@ -726,13 +726,19 @@ export function UnifiedProjectMap({
                 })
               }
 
-              // Build filter for enabled classes
+              // Build filter for enabled classes - check multiple possible property names
               const enabledClasses = Object.entries(airspaceClasses)
                 .filter(([_, enabled]) => enabled)
                 .map(([cls]) => cls)
 
+              // Try different property names that OpenAIP might use
               const classFilter = enabledClasses.length > 0
-                ? ['in', ['get', 'class'], ['literal', enabledClasses]]
+                ? ['any',
+                    ['in', ['get', 'class'], ['literal', enabledClasses]],
+                    ['in', ['get', 'icaoClass'], ['literal', enabledClasses]],
+                    ['in', ['get', 'type'], ['literal', enabledClasses]],
+                    ['in', ['coalesce', ['get', 'category'], ''], ['literal', enabledClasses]]
+                  ]
                 : ['==', 1, 0] // Hide all if none selected
 
               // Airspace zones - fill with colored overlay
@@ -741,20 +747,9 @@ export function UnifiedProjectMap({
                 type: 'fill',
                 source: sourceId,
                 'source-layer': config.sourceLayer,
-                filter: classFilter,
                 paint: {
-                  'fill-color': [
-                    'match',
-                    ['get', 'class'],
-                    'A', '#DC2626', // Red - Class A
-                    'B', '#EA580C', // Orange - Class B
-                    'C', '#CA8A04', // Yellow - Class C
-                    'D', '#2563EB', // Blue - Class D
-                    'E', '#7C3AED', // Purple - Class E
-                    'F', '#0D9488', // Teal - Class F (advisory)
-                    '#6B7280'       // Gray - default
-                  ],
-                  'fill-opacity': 0.15
+                  'fill-color': '#3B82F6', // Blue for now - will color-code once we know the property
+                  'fill-opacity': 0.2
                 }
               })
 
@@ -764,21 +759,21 @@ export function UnifiedProjectMap({
                 type: 'line',
                 source: sourceId,
                 'source-layer': config.sourceLayer,
-                filter: classFilter,
                 paint: {
-                  'line-color': [
-                    'match',
-                    ['get', 'class'],
-                    'A', '#DC2626',
-                    'B', '#EA580C',
-                    'C', '#CA8A04',
-                    'D', '#2563EB',
-                    'E', '#7C3AED',
-                    'F', '#0D9488',
-                    '#6B7280'
-                  ],
-                  'line-width': 1.5,
+                  'line-color': '#2563EB',
+                  'line-width': 2,
                   'line-opacity': 0.8
+                }
+              })
+
+              // Log feature properties to help debug
+              map.once('idle', () => {
+                const features = map.querySourceFeatures(sourceId, { sourceLayer: config.sourceLayer })
+                if (features.length > 0) {
+                  console.log('Airspace feature properties:', features[0].properties)
+                  console.log('Sample of features:', features.slice(0, 3).map(f => f.properties))
+                } else {
+                  console.log('No airspace features found in view')
                 }
               })
             } catch (err) {
