@@ -1,76 +1,158 @@
 /**
  * Muster - Firebase Cloud Functions
- * Handles notifications for team communication
+ * Handles email notifications for team invitations
  *
- * NOTE: Email/SMS sending is disabled. Only in-app notifications are active.
- * To enable email/SMS, configure SendGrid/Twilio and uncomment the send calls.
- *
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const functions = require('firebase-functions')
 const admin = require('firebase-admin')
+const { Resend } = require('resend')
 
 // Initialize Firebase Admin
 admin.initializeApp()
 
 const db = admin.firestore()
 
-// Email/SMS disabled - uncomment these when ready to enable
-// const { sendEmail } = require('./sendEmail')
-// const { sendSMS } = require('./sendSMS')
+// Initialize Resend - using environment variables
+const RESEND_API_KEY = process.env.RESEND_API_KEY
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Muster <onboarding@resend.dev>'
+const APP_URL = process.env.APP_URL || 'https://aeria-ops.vercel.app'
+
+let resend = null
+if (RESEND_API_KEY) {
+  resend = new Resend(RESEND_API_KEY)
+  functions.logger.info('Resend initialized successfully')
+} else {
+  functions.logger.warn('Resend API key not configured. Email sending will fail.')
+}
 
 /**
- * Firestore trigger: Process new notifications
- * Triggered when a new notification document is created
+ * Firestore trigger: Send invitation email when a new member is invited
+ * Triggered when a new organizationMembers document is created with status 'invited'
  */
-exports.processNotification = functions.firestore
-  .document('notifications/{notificationId}')
+exports.sendInvitationEmail = functions.firestore
+  .document('organizationMembers/{memberId}')
   .onCreate(async (snap, context) => {
-    const notification = snap.data()
-    const notificationId = context.params.notificationId
+    const member = snap.data()
+    const memberId = context.params.memberId
 
-    functions.logger.info('Processing notification:', notificationId)
+    // Only send email for invited members
+    if (member.status !== 'invited') {
+      functions.logger.info('Skipping email - member status is not invited:', memberId)
+      return null
+    }
 
-    const results = {
-      email: null,
-      sms: null
+    if (!member.email) {
+      functions.logger.error('No email address for invitation:', memberId)
+      return null
+    }
+
+    if (!resend) {
+      functions.logger.error('Resend not configured, cannot send invitation email')
+      await snap.ref.update({
+        emailStatus: 'failed',
+        emailError: 'Email service not configured'
+      })
+      return null
     }
 
     try {
-      // Email sending disabled - mark as such
-      if (notification.deliveryStatus?.email === 'pending') {
-        results.email = 'disabled'
-        functions.logger.info('Email sending disabled, skipping:', notificationId)
+      // Get organization name
+      let orgName = 'your organization'
+      if (member.organizationId) {
+        const orgDoc = await db.collection('organizations').doc(member.organizationId).get()
+        if (orgDoc.exists) {
+          orgName = orgDoc.data().name || orgName
+        }
       }
 
-      // SMS sending disabled - mark as such
-      if (notification.deliveryStatus?.sms === 'pending') {
-        results.sms = 'disabled'
-        functions.logger.info('SMS sending disabled, skipping:', notificationId)
+      // Get inviter name
+      let inviterName = 'A team member'
+      if (member.invitedBy) {
+        const inviterDoc = await db.collection('operators').doc(member.invitedBy).get()
+        if (inviterDoc.exists) {
+          const inviter = inviterDoc.data()
+          inviterName = inviter.firstName ? `${inviter.firstName} ${inviter.lastName || ''}`.trim() : inviterName
+        }
       }
 
-      // Update notification with delivery results
-      const updateData = {
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      const roleName = member.role === 'management' ? 'Management' :
+                       member.role === 'operator' ? 'Operator' :
+                       member.role === 'viewer' ? 'Viewer' : member.role
+
+      // Send the invitation email
+      const { data, error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: member.email,
+        subject: `You've been invited to join ${orgName} on Muster`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Muster</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Field Operations Platform</p>
+            </div>
+
+            <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+              <h2 style="color: #1e3a5f; margin-top: 0;">You're Invited!</h2>
+
+              <p>${inviterName} has invited you to join <strong>${orgName}</strong> on Muster as a <strong>${roleName}</strong>.</p>
+
+              <p>Muster is a field operations platform for managing projects, safety, equipment, and team coordination.</p>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${APP_URL}/login" style="background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+                  Accept Invitation
+                </a>
+              </div>
+
+              <p style="color: #6b7280; font-size: 14px;">Simply sign up or log in with this email address (<strong>${member.email}</strong>) and you'll automatically be added to the organization.</p>
+
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+              <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">
+                If you didn't expect this invitation, you can safely ignore this email.
+              </p>
+            </div>
+          </body>
+          </html>
+        `
+      })
+
+      if (error) {
+        functions.logger.error('Resend error:', error)
+        await snap.ref.update({
+          emailStatus: 'failed',
+          emailError: error.message
+        })
+        return { success: false, error: error.message }
       }
 
-      if (results.email) {
-        updateData['deliveryStatus.email'] = results.email
-      }
-      if (results.sms) {
-        updateData['deliveryStatus.sms'] = results.sms
-      }
+      functions.logger.info('Invitation email sent successfully:', {
+        to: member.email,
+        messageId: data?.id
+      })
 
-      await snap.ref.update(updateData)
+      // Update the invitation document with email status
+      await snap.ref.update({
+        emailStatus: 'sent',
+        emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        emailMessageId: data?.id
+      })
 
-      return { success: true, results }
+      return { success: true, messageId: data?.id }
     } catch (error) {
-      functions.logger.error('Error processing notification:', error)
+      functions.logger.error('Error sending invitation email:', error)
 
       await snap.ref.update({
-        'deliveryStatus.error': error.message,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        emailStatus: 'failed',
+        emailError: error.message
       })
 
       return { success: false, error: error.message }
@@ -78,10 +160,9 @@ exports.processNotification = functions.firestore
   })
 
 /**
- * HTTP endpoint: Manually trigger notification send
- * Currently disabled - returns message about feature being disabled
+ * HTTP endpoint: Resend invitation email
  */
-exports.retryNotification = functions.https.onCall(async (data, context) => {
+exports.resendInvitationEmail = functions.https.onCall(async (data, context) => {
   // Verify authentication
   if (!context.auth) {
     throw new functions.https.HttpsError(
@@ -90,77 +171,108 @@ exports.retryNotification = functions.https.onCall(async (data, context) => {
     )
   }
 
-  const { notificationId, channels } = data
+  const { memberId } = data
 
-  if (!notificationId) {
+  if (!memberId) {
     throw new functions.https.HttpsError(
       'invalid-argument',
-      'Notification ID is required'
+      'Member ID is required'
     )
   }
 
-  // Email/SMS disabled
-  return {
-    success: false,
-    message: 'Email/SMS sending is currently disabled. Only in-app notifications are active.',
-    channels: channels || []
+  if (!resend) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Email service not configured'
+    )
+  }
+
+  try {
+    const memberDoc = await db.collection('organizationMembers').doc(memberId).get()
+
+    if (!memberDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Invitation not found')
+    }
+
+    const member = memberDoc.data()
+
+    if (member.status !== 'invited') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Member has already accepted the invitation'
+      )
+    }
+
+    // Get organization name
+    let orgName = 'your organization'
+    if (member.organizationId) {
+      const orgDoc = await db.collection('organizations').doc(member.organizationId).get()
+      if (orgDoc.exists) {
+        orgName = orgDoc.data().name || orgName
+      }
+    }
+
+    const roleName = member.role === 'management' ? 'Management' :
+                     member.role === 'operator' ? 'Operator' :
+                     member.role === 'viewer' ? 'Viewer' : member.role
+
+    // Send the invitation email
+    const { data: emailData, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: member.email,
+      subject: `Reminder: You've been invited to join ${orgName} on Muster`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Muster</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Field Operations Platform</p>
+          </div>
+
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+            <h2 style="color: #1e3a5f; margin-top: 0;">Reminder: You're Invited!</h2>
+
+            <p>This is a reminder that you've been invited to join <strong>${orgName}</strong> on Muster as a <strong>${roleName}</strong>.</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/login" style="background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+                Accept Invitation
+              </a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px;">Simply sign up or log in with this email address (<strong>${member.email}</strong>) and you'll automatically be added to the organization.</p>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">
+              If you didn't expect this invitation, you can safely ignore this email.
+            </p>
+          </div>
+        </body>
+        </html>
+      `
+    })
+
+    if (error) {
+      throw new functions.https.HttpsError('internal', error.message)
+    }
+
+    // Update the invitation document
+    await memberDoc.ref.update({
+      emailStatus: 'sent',
+      emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+      emailMessageId: emailData?.id,
+      emailResendCount: admin.firestore.FieldValue.increment(1)
+    })
+
+    return { success: true, messageId: emailData?.id }
+  } catch (error) {
+    functions.logger.error('Error resending invitation:', error)
+    throw new functions.https.HttpsError('internal', error.message)
   }
 })
-
-/**
- * Scheduled function: Cleanup for stuck notifications
- * Marks stuck pending notifications as disabled
- */
-exports.processStuckNotifications = functions.pubsub
-  .schedule('every 1 hours')
-  .onRun(async (context) => {
-    functions.logger.info('Running stuck notification processor')
-
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-
-    // Find notifications stuck in pending state
-    const pendingEmailQuery = db.collection('notifications')
-      .where('deliveryStatus.email', '==', 'pending')
-      .where('createdAt', '<', oneHourAgo)
-      .limit(50)
-
-    const pendingSmsQuery = db.collection('notifications')
-      .where('deliveryStatus.sms', '==', 'pending')
-      .where('createdAt', '<', oneHourAgo)
-      .limit(50)
-
-    const [emailSnap, smsSnap] = await Promise.all([
-      pendingEmailQuery.get(),
-      pendingSmsQuery.get()
-    ])
-
-    const processedIds = new Set()
-    let processed = 0
-
-    // Mark stuck email notifications as disabled
-    for (const doc of emailSnap.docs) {
-      if (processedIds.has(doc.id)) continue
-      processedIds.add(doc.id)
-
-      await doc.ref.update({
-        'deliveryStatus.email': 'disabled',
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      })
-      processed++
-    }
-
-    // Mark stuck SMS notifications as disabled
-    for (const doc of smsSnap.docs) {
-      if (processedIds.has(doc.id)) continue
-      processedIds.add(doc.id)
-
-      await doc.ref.update({
-        'deliveryStatus.sms': 'disabled',
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      })
-      processed++
-    }
-
-    functions.logger.info(`Marked ${processed} stuck notifications as disabled`)
-    return null
-  })
