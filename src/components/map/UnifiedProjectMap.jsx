@@ -923,6 +923,86 @@ export function UnifiedProjectMap({
                   'text-halo-width': 1.5
                 }
               })
+
+              // Add hover popup for airport info
+              const airportPopup = new mapboxgl.Popup({
+                closeButton: false,
+                closeOnClick: false,
+                className: 'airport-popup'
+              })
+
+              // Helper to get airport type name
+              const getAirportType = (type) => {
+                const types = {
+                  0: 'Airport',
+                  1: 'Glider Site',
+                  2: 'Airfield',
+                  3: 'Heliport',
+                  4: 'Military',
+                  5: 'Ultralight',
+                  6: 'Parachute',
+                  7: 'Balloon',
+                  8: 'Seaplane Base',
+                  9: 'International'
+                }
+                return types[type] || 'Airport'
+              }
+
+              // Helper to parse elevation
+              const parseElevation = (elevJson) => {
+                try {
+                  const elev = typeof elevJson === 'string' ? JSON.parse(elevJson) : elevJson
+                  const value = elev.value || 0
+                  const unit = elev.unit === 1 ? 'ft' : 'm'
+                  return `${Math.round(value).toLocaleString()} ${unit}`
+                } catch {
+                  return 'Unknown'
+                }
+              }
+
+              map.on('mouseenter', mapLayerId, () => {
+                map.getCanvas().style.cursor = 'pointer'
+              })
+
+              map.on('mousemove', mapLayerId, (e) => {
+                if (e.features && e.features.length > 0) {
+                  const feature = e.features[0]
+                  const props = feature.properties
+
+                  // Log properties to console to see what's available
+                  console.log('Airport properties:', props)
+
+                  const name = props.name || 'Unnamed Airport'
+                  const icao = props.icaoCode || props.icao || ''
+                  const iata = props.iataCode || props.iata || ''
+                  const type = getAirportType(props.type)
+                  const elevation = props.elevation ? parseElevation(props.elevation) : ''
+                  const runways = props.runwayCount || props.runways || ''
+
+                  let html = `
+                    <div style="padding: 8px; min-width: 180px;">
+                      <p style="font-weight: 600; margin: 0 0 6px 0; color: #1e3a5f;">${name}</p>
+                      <div style="font-size: 12px; color: #4b5563;">
+                        ${icao ? `<p style="margin: 2px 0;"><strong>ICAO:</strong> ${icao}</p>` : ''}
+                        ${iata ? `<p style="margin: 2px 0;"><strong>IATA:</strong> ${iata}</p>` : ''}
+                        <p style="margin: 2px 0;"><strong>Type:</strong> ${type}</p>
+                        ${elevation ? `<p style="margin: 2px 0;"><strong>Elevation:</strong> ${elevation}</p>` : ''}
+                        ${runways ? `<p style="margin: 2px 0;"><strong>Runways:</strong> ${runways}</p>` : ''}
+                      </div>
+                    </div>
+                  `
+
+                  airportPopup
+                    .setLngLat(e.lngLat)
+                    .setHTML(html)
+                    .addTo(map)
+                }
+              })
+
+              map.on('mouseleave', mapLayerId, () => {
+                map.getCanvas().style.cursor = ''
+                airportPopup.remove()
+              })
             } catch (err) {
               console.warn('Could not add airports layer:', err.message)
             }
