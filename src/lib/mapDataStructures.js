@@ -201,7 +201,16 @@ export const MAP_OVERLAY_LAYERS = {
     description: 'Controlled airspace from OpenAIP',
     icon: 'plane',
     tilesetId: 'dustinwales.2qdxi73r',
-    sourceLayer: 'ca_asp-70vtd0'
+    sourceLayer: 'ca_asp-70vtd0',
+    hasSubLayers: true,
+    subLayers: {
+      A: { label: 'Class A', color: '#DC2626', description: 'High altitude (18,000ft+)' },
+      B: { label: 'Class B', color: '#EA580C', description: 'Major airports' },
+      C: { label: 'Class C', color: '#CA8A04', description: 'Busy airports with tower' },
+      D: { label: 'Class D', color: '#2563EB', description: 'Airports with tower' },
+      E: { label: 'Class E', color: '#7C3AED', description: 'Controlled airspace' },
+      F: { label: 'Class F', color: '#0D9488', description: 'Advisory/restricted' }
+    }
   },
   airports: {
     id: 'airports',

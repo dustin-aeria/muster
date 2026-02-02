@@ -183,6 +183,8 @@ export function UnifiedProjectMap({
   const [styleVersion, setStyleVersion] = useState(0) // Increments when style changes to force layer re-render
   const [overlayLayers, setOverlayLayers] = useState({}) // Which overlay layers are enabled
   const [showOverlayPanel, setShowOverlayPanel] = useState(false) // Show overlay layer picker
+  const [airspaceClasses, setAirspaceClasses] = useState({ A: true, B: true, C: true, D: true, E: true, F: true }) // Which airspace classes are visible
+  const [showAirspacePanel, setShowAirspacePanel] = useState(false) // Show airspace class picker
   
   // Map data hook - use external if provided, otherwise create internal
   const internalMapData = useMapData(project, onUpdate, {
@@ -724,12 +726,22 @@ export function UnifiedProjectMap({
                 })
               }
 
+              // Build filter for enabled classes
+              const enabledClasses = Object.entries(airspaceClasses)
+                .filter(([_, enabled]) => enabled)
+                .map(([cls]) => cls)
+
+              const classFilter = enabledClasses.length > 0
+                ? ['in', ['get', 'class'], ['literal', enabledClasses]]
+                : ['==', 1, 0] // Hide all if none selected
+
               // Airspace zones - fill with colored overlay
               map.addLayer({
                 id: `${mapLayerId}-fill`,
                 type: 'fill',
                 source: sourceId,
                 'source-layer': config.sourceLayer,
+                filter: classFilter,
                 paint: {
                   'fill-color': [
                     'match',
@@ -752,6 +764,7 @@ export function UnifiedProjectMap({
                 type: 'line',
                 source: sourceId,
                 'source-layer': config.sourceLayer,
+                filter: classFilter,
                 paint: {
                   'line-color': [
                     'match',
@@ -843,7 +856,7 @@ export function UnifiedProjectMap({
         }
       }
     })
-  }, [overlayLayers, mapLoaded, styleVersion]) // Re-run when style changes
+  }, [overlayLayers, mapLoaded, styleVersion, airspaceClasses]) // Re-run when style changes or airspace classes change
 
   // ============================================
   // FIT TO BOUNDS
@@ -1516,38 +1529,93 @@ export function UnifiedProjectMap({
                 </div>
                 <div className="p-2 space-y-1">
                   {Object.entries(MAP_OVERLAY_LAYERS).map(([layerId, config]) => (
-                    <button
-                      key={layerId}
-                      onClick={() => !config.comingSoon && toggleOverlayLayer(layerId)}
-                      disabled={config.comingSoon}
-                      className={`w-full flex items-start gap-3 p-2 rounded-lg transition-colors text-left ${
-                        config.comingSoon
-                          ? 'bg-gray-50 cursor-not-allowed opacity-60'
-                          : overlayLayers[layerId]
-                            ? 'bg-aeria-navy/10 border border-aeria-navy/30'
-                            : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center ${
-                        overlayLayers[layerId] && !config.comingSoon
-                          ? 'bg-aeria-navy border-aeria-navy'
-                          : 'border-gray-300'
-                      }`}>
-                        {overlayLayers[layerId] && !config.comingSoon && (
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
+                    <div key={layerId}>
+                      <button
+                        onClick={() => !config.comingSoon && toggleOverlayLayer(layerId)}
+                        disabled={config.comingSoon}
+                        className={`w-full flex items-start gap-3 p-2 rounded-lg transition-colors text-left ${
+                          config.comingSoon
+                            ? 'bg-gray-50 cursor-not-allowed opacity-60'
+                            : overlayLayers[layerId]
+                              ? 'bg-aeria-navy/10 border border-aeria-navy/30'
+                              : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center ${
+                          overlayLayers[layerId] && !config.comingSoon
+                            ? 'bg-aeria-navy border-aeria-navy'
+                            : 'border-gray-300'
+                        }`}>
+                          {overlayLayers[layerId] && !config.comingSoon && (
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {config.label}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {config.description}
+                          </p>
+                        </div>
+                        {/* Expand button for layers with sub-layers */}
+                        {config.hasSubLayers && overlayLayers[layerId] && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setShowAirspacePanel(!showAirspacePanel)
+                            }}
+                            className="p-1 hover:bg-gray-200 rounded"
+                          >
+                            <svg className={`w-4 h-4 text-gray-500 transition-transform ${showAirspacePanel ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
                         )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {config.label}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {config.description}
-                        </p>
-                      </div>
-                    </button>
+                      </button>
+
+                      {/* Sub-layer panel for airspace classes */}
+                      {layerId === 'airspace' && config.hasSubLayers && overlayLayers[layerId] && showAirspacePanel && (
+                        <div className="ml-6 mt-1 mb-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                          <p className="text-xs font-medium text-gray-600 mb-2">Filter by class:</p>
+                          <div className="grid grid-cols-2 gap-1">
+                            {Object.entries(config.subLayers).map(([classId, classConfig]) => (
+                              <button
+                                key={classId}
+                                onClick={() => setAirspaceClasses(prev => ({ ...prev, [classId]: !prev[classId] }))}
+                                className={`flex items-center gap-2 px-2 py-1.5 rounded text-left text-xs transition-colors ${
+                                  airspaceClasses[classId]
+                                    ? 'bg-white border border-gray-300 shadow-sm'
+                                    : 'bg-gray-100 text-gray-400'
+                                }`}
+                              >
+                                <div
+                                  className="w-3 h-3 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: airspaceClasses[classId] ? classConfig.color : '#D1D5DB' }}
+                                />
+                                <span className="font-medium">{classConfig.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-2 mt-2 pt-2 border-t border-gray-200">
+                            <button
+                              onClick={() => setAirspaceClasses({ A: true, B: true, C: true, D: true, E: true, F: true })}
+                              className="flex-1 text-xs text-aeria-navy hover:underline"
+                            >
+                              Select All
+                            </button>
+                            <button
+                              onClick={() => setAirspaceClasses({ A: false, B: false, C: false, D: false, E: false, F: false })}
+                              className="flex-1 text-xs text-gray-500 hover:underline"
+                            >
+                              Clear All
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
