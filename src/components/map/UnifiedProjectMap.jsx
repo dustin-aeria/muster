@@ -656,6 +656,7 @@ export function UnifiedProjectMap({
                 'source-layer': 'admin',
                 minzoom: 0,
                 maxzoom: 22,
+                filter: ['<=', ['get', 'admin_level'], 1], // Countries and provinces/states only
                 paint: {
                   'line-color': '#7C3AED', // Purple
                   'line-width': [
@@ -672,11 +673,109 @@ export function UnifiedProjectMap({
               console.warn('Could not add admin boundaries layer:', err.message)
             }
           }
+
+          if (layerId === 'municipalBoundaries') {
+            try {
+              // First try Mapbox Boundaries tileset (more detailed municipal data)
+              // Add the boundaries source if not already present
+              if (!map.getSource('mapbox-boundaries')) {
+                map.addSource('mapbox-boundaries', {
+                  type: 'vector',
+                  url: 'mapbox://mapbox.boundaries-adm3-v4'
+                })
+              }
+
+              // Municipal boundaries - teal color, appears at higher zoom
+              map.addLayer({
+                id: mapLayerId,
+                type: 'line',
+                source: 'mapbox-boundaries',
+                'source-layer': 'boundaries_admin_3',
+                minzoom: 6,
+                maxzoom: 22,
+                paint: {
+                  'line-color': '#0D9488', // Teal-600
+                  'line-width': [
+                    'interpolate', ['linear'], ['zoom'],
+                    6, 0.5,
+                    10, 1,
+                    14, 1.5
+                  ],
+                  'line-opacity': [
+                    'interpolate', ['linear'], ['zoom'],
+                    6, 0.4,
+                    10, 0.7,
+                    14, 0.9
+                  ],
+                  'line-dasharray': [2, 1]
+                }
+              })
+
+              // Also add labels for municipalities at higher zoom
+              map.addLayer({
+                id: `${mapLayerId}-labels`,
+                type: 'symbol',
+                source: 'mapbox-boundaries',
+                'source-layer': 'boundaries_admin_3',
+                minzoom: 10,
+                layout: {
+                  'text-field': ['get', 'name'],
+                  'text-size': [
+                    'interpolate', ['linear'], ['zoom'],
+                    10, 10,
+                    14, 12
+                  ],
+                  'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+                  'text-offset': [0, 0],
+                  'text-anchor': 'center',
+                  'text-allow-overlap': false
+                },
+                paint: {
+                  'text-color': '#0D9488',
+                  'text-halo-color': 'rgba(255, 255, 255, 0.9)',
+                  'text-halo-width': 1.5
+                }
+              })
+            } catch (err) {
+              console.warn('Could not add municipal boundaries layer:', err.message)
+              // Fallback: try using composite source with admin level 2
+              try {
+                if (map.getSource('composite')) {
+                  map.addLayer({
+                    id: mapLayerId,
+                    type: 'line',
+                    source: 'composite',
+                    'source-layer': 'admin',
+                    minzoom: 6,
+                    maxzoom: 22,
+                    filter: ['>=', ['get', 'admin_level'], 2],
+                    paint: {
+                      'line-color': '#0D9488',
+                      'line-width': [
+                        'interpolate', ['linear'], ['zoom'],
+                        6, 0.5,
+                        10, 1,
+                        14, 1.5
+                      ],
+                      'line-opacity': 0.7,
+                      'line-dasharray': [2, 1]
+                    }
+                  })
+                }
+              } catch (fallbackErr) {
+                console.warn('Fallback municipal boundaries also failed:', fallbackErr.message)
+              }
+            }
+          }
         }
       } else {
         // Remove the layer if it exists
         if (map.getLayer(mapLayerId)) {
           map.removeLayer(mapLayerId)
+        }
+        // Also remove associated label layers (for municipal boundaries)
+        if (map.getLayer(`${mapLayerId}-labels`)) {
+          map.removeLayer(`${mapLayerId}-labels`)
         }
       }
     })

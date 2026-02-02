@@ -191,9 +191,8 @@ export const MAP_OVERLAY_LAYERS = {
   municipalBoundaries: {
     id: 'municipalBoundaries',
     label: 'Municipal Boundaries',
-    description: 'City/town boundaries - requires Statistics Canada data',
-    icon: 'building',
-    comingSoon: true
+    description: 'City, town, and district boundaries',
+    icon: 'building'
   },
   airspace: {
     id: 'airspace',
