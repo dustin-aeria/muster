@@ -867,6 +867,40 @@ export function UnifiedProjectMap({
   }, [overlayLayers, mapLoaded, styleVersion, airspaceClasses]) // Re-run when style changes or airspace classes change
 
   // ============================================
+  // UPDATE AIRSPACE FILTER WHEN CLASSES CHANGE
+  // Separate effect to ensure filter updates happen
+  // ============================================
+
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return
+    if (!overlayLayers.airspace) return // Only if airspace layer is enabled
+
+    const map = mapRef.current
+    const fillLayerId = 'overlay-airspace-fill'
+    const lineLayerId = 'overlay-airspace'
+
+    // Build filter for enabled classes
+    const enabledClasses = Object.entries(airspaceClasses)
+      .filter(([_, enabled]) => enabled)
+      .map(([cls]) => parseInt(cls, 10))
+
+    const classFilter = enabledClasses.length > 0
+      ? ['in', ['get', 'icaoClass'], ['literal', enabledClasses]]
+      : ['==', 1, 0] // Hide all if none selected
+
+    try {
+      if (map.getLayer(fillLayerId)) {
+        map.setFilter(fillLayerId, classFilter)
+      }
+      if (map.getLayer(lineLayerId)) {
+        map.setFilter(lineLayerId, classFilter)
+      }
+    } catch (err) {
+      console.warn('Could not update airspace filter:', err.message)
+    }
+  }, [airspaceClasses, mapLoaded, overlayLayers.airspace])
+
+  // ============================================
   // FIT TO BOUNDS
   // ============================================
   
