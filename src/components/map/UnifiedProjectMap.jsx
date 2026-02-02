@@ -924,55 +924,12 @@ export function UnifiedProjectMap({
                 }
               })
 
-              // Add hover popup for airport info
+              // Add hover popup for airport name
               const airportPopup = new mapboxgl.Popup({
                 closeButton: false,
                 closeOnClick: false,
-                className: 'airport-popup',
-                maxWidth: '280px'
+                className: 'airport-popup'
               })
-
-              // OpenAIP airport type mapping
-              const getAirportType = (type) => {
-                const types = {
-                  0: 'Closed',
-                  1: 'Airport',
-                  2: 'Gliding',
-                  3: 'Heliport',
-                  4: 'Light Aircraft',
-                  5: 'Military',
-                  6: 'Parachute Drop Zone',
-                  7: 'Seaplane Base',
-                  8: 'Ultralight'
-                }
-                return types[type] || null
-              }
-
-              // Helper to parse elevation JSON
-              const parseElevation = (elevJson) => {
-                try {
-                  const elev = typeof elevJson === 'string' ? JSON.parse(elevJson) : elevJson
-                  if (!elev || elev.value === undefined) return null
-                  const value = Math.round(elev.value)
-                  const unit = elev.unit === 1 ? 'ft' : 'm'
-                  return `${value.toLocaleString()} ${unit}`
-                } catch {
-                  return null
-                }
-              }
-
-              // Helper to parse frequency JSON
-              const parseFrequency = (freqJson) => {
-                try {
-                  const freq = typeof freqJson === 'string' ? JSON.parse(freqJson) : freqJson
-                  if (Array.isArray(freq) && freq.length > 0) {
-                    return freq[0].value ? `${freq[0].value} MHz` : null
-                  }
-                  return null
-                } catch {
-                  return null
-                }
-              }
 
               map.on('mouseenter', mapLayerId, () => {
                 map.getCanvas().style.cursor = 'pointer'
@@ -980,39 +937,12 @@ export function UnifiedProjectMap({
 
               map.on('mousemove', mapLayerId, (e) => {
                 if (e.features && e.features.length > 0) {
-                  const feature = e.features[0]
-                  const props = feature.properties
-
-                  const name = props.name || 'Unnamed'
-                  const icao = props.icaoCode || ''
-                  const iata = props.iataCode || ''
-                  const type = getAirportType(props.type)
-                  const elevation = parseElevation(props.elevation)
-                  const frequency = parseFrequency(props.frequencies)
-                  const country = props.country || ''
-
-                  // Build codes string
-                  const codes = [icao, iata].filter(Boolean).join(' / ')
-
-                  // Build info rows
-                  const rows = []
-                  if (type) rows.push(`<span style="color: #6b7280;">Type:</span> ${type}`)
-                  if (elevation) rows.push(`<span style="color: #6b7280;">Elev:</span> ${elevation}`)
-                  if (frequency) rows.push(`<span style="color: #6b7280;">Freq:</span> ${frequency}`)
-
-                  const html = `
-                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                      <div style="font-weight: 600; font-size: 13px; color: #1e3a5f; margin-bottom: 4px;">
-                        ${name}
-                      </div>
-                      ${codes ? `<div style="font-size: 12px; font-weight: 500; color: #2563eb; margin-bottom: 6px;">${codes}</div>` : ''}
-                      ${rows.length > 0 ? `<div style="font-size: 11px; line-height: 1.5;">${rows.join('<br>')}</div>` : ''}
-                    </div>
-                  `
+                  const props = e.features[0].properties
+                  const name = props.name || 'Unnamed Airport'
 
                   airportPopup
                     .setLngLat(e.lngLat)
-                    .setHTML(html)
+                    .setHTML(`<div style="font-weight: 600; color: #1e3a5f;">${name}</div>`)
                     .addTo(map)
                 }
               })
