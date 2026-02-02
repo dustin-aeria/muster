@@ -88,7 +88,7 @@ export default function Tasks() {
       }
 
       const [projectsData, membersData] = await Promise.all([
-        getProjects({ organizationId }),
+        getProjects(organizationId),
         getOrganizationMembers(organizationId)
       ])
 
