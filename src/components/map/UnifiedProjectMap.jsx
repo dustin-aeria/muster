@@ -183,7 +183,7 @@ export function UnifiedProjectMap({
   const [styleVersion, setStyleVersion] = useState(0) // Increments when style changes to force layer re-render
   const [overlayLayers, setOverlayLayers] = useState({}) // Which overlay layers are enabled
   const [showOverlayPanel, setShowOverlayPanel] = useState(false) // Show overlay layer picker
-  const [airspaceClasses, setAirspaceClasses] = useState({ A: true, B: true, C: true, D: true, E: true, F: true }) // Which airspace classes are visible
+  const [airspaceClasses, setAirspaceClasses] = useState({ 0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true }) // Which airspace classes are visible (numeric icaoClass)
   const [showAirspacePanel, setShowAirspacePanel] = useState(false) // Show airspace class picker
   
   // Map data hook - use external if provided, otherwise create internal
@@ -726,30 +726,36 @@ export function UnifiedProjectMap({
                 })
               }
 
-              // Build filter for enabled classes - check multiple possible property names
+              // Build filter for enabled classes (icaoClass is numeric: 0=A, 1=B, etc.)
               const enabledClasses = Object.entries(airspaceClasses)
                 .filter(([_, enabled]) => enabled)
-                .map(([cls]) => cls)
+                .map(([cls]) => parseInt(cls, 10))
 
-              // Try different property names that OpenAIP might use
               const classFilter = enabledClasses.length > 0
-                ? ['any',
-                    ['in', ['get', 'class'], ['literal', enabledClasses]],
-                    ['in', ['get', 'icaoClass'], ['literal', enabledClasses]],
-                    ['in', ['get', 'type'], ['literal', enabledClasses]],
-                    ['in', ['coalesce', ['get', 'category'], ''], ['literal', enabledClasses]]
-                  ]
+                ? ['in', ['get', 'icaoClass'], ['literal', enabledClasses]]
                 : ['==', 1, 0] // Hide all if none selected
 
-              // Airspace zones - fill with colored overlay
+              // Airspace zones - fill with colored overlay based on icaoClass
               map.addLayer({
                 id: `${mapLayerId}-fill`,
                 type: 'fill',
                 source: sourceId,
                 'source-layer': config.sourceLayer,
+                filter: classFilter,
                 paint: {
-                  'fill-color': '#3B82F6', // Blue for now - will color-code once we know the property
-                  'fill-opacity': 0.2
+                  'fill-color': [
+                    'match',
+                    ['get', 'icaoClass'],
+                    0, '#DC2626', // Class A - Red
+                    1, '#EA580C', // Class B - Orange
+                    2, '#CA8A04', // Class C - Yellow
+                    3, '#2563EB', // Class D - Blue
+                    4, '#7C3AED', // Class E - Purple
+                    5, '#0D9488', // Class F - Teal
+                    6, '#6B7280', // Class G - Gray
+                    '#6B7280'     // Default
+                  ],
+                  'fill-opacity': 0.15
                 }
               })
 
@@ -759,21 +765,22 @@ export function UnifiedProjectMap({
                 type: 'line',
                 source: sourceId,
                 'source-layer': config.sourceLayer,
+                filter: classFilter,
                 paint: {
-                  'line-color': '#2563EB',
-                  'line-width': 2,
+                  'line-color': [
+                    'match',
+                    ['get', 'icaoClass'],
+                    0, '#DC2626',
+                    1, '#EA580C',
+                    2, '#CA8A04',
+                    3, '#2563EB',
+                    4, '#7C3AED',
+                    5, '#0D9488',
+                    6, '#6B7280',
+                    '#6B7280'
+                  ],
+                  'line-width': 1.5,
                   'line-opacity': 0.8
-                }
-              })
-
-              // Log feature properties to help debug
-              map.once('idle', () => {
-                const features = map.querySourceFeatures(sourceId, { sourceLayer: config.sourceLayer })
-                if (features.length > 0) {
-                  console.log('Airspace feature properties:', features[0].properties)
-                  console.log('Sample of features:', features.slice(0, 3).map(f => f.properties))
-                } else {
-                  console.log('No airspace features found in view')
                 }
               })
             } catch (err) {
@@ -1596,13 +1603,13 @@ export function UnifiedProjectMap({
                           </div>
                           <div className="flex gap-2 mt-2 pt-2 border-t border-gray-200">
                             <button
-                              onClick={() => setAirspaceClasses({ A: true, B: true, C: true, D: true, E: true, F: true })}
+                              onClick={() => setAirspaceClasses({ 0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true })}
                               className="flex-1 text-xs text-aeria-navy hover:underline"
                             >
                               Select All
                             </button>
                             <button
-                              onClick={() => setAirspaceClasses({ A: false, B: false, C: false, D: false, E: false, F: false })}
+                              onClick={() => setAirspaceClasses({ 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false })}
                               className="flex-1 text-xs text-gray-500 hover:underline"
                             >
                               Clear All

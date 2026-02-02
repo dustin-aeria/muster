@@ -203,13 +203,15 @@ export const MAP_OVERLAY_LAYERS = {
     tilesetId: 'dustinwales.2qdxi73r',
     sourceLayer: 'ca_asp-70vtd0',
     hasSubLayers: true,
+    // OpenAIP uses numeric icaoClass: 0=A, 1=B, 2=C, 3=D, 4=E, 5=F, 6=G
     subLayers: {
-      A: { label: 'Class A', color: '#DC2626', description: 'High altitude (18,000ft+)' },
-      B: { label: 'Class B', color: '#EA580C', description: 'Major airports' },
-      C: { label: 'Class C', color: '#CA8A04', description: 'Busy airports with tower' },
-      D: { label: 'Class D', color: '#2563EB', description: 'Airports with tower' },
-      E: { label: 'Class E', color: '#7C3AED', description: 'Controlled airspace' },
-      F: { label: 'Class F', color: '#0D9488', description: 'Advisory/restricted' }
+      0: { label: 'Class A', color: '#DC2626', description: 'High altitude (18,000ft+)' },
+      1: { label: 'Class B', color: '#EA580C', description: 'Major airports' },
+      2: { label: 'Class C', color: '#CA8A04', description: 'Busy airports with tower' },
+      3: { label: 'Class D', color: '#2563EB', description: 'Airports with tower' },
+      4: { label: 'Class E', color: '#7C3AED', description: 'Controlled airspace' },
+      5: { label: 'Class F', color: '#0D9488', description: 'Advisory/restricted' },
+      6: { label: 'Class G', color: '#6B7280', description: 'Uncontrolled airspace' }
     }
   },
   airports: {
