@@ -29,7 +29,8 @@ import {
   ShieldCheck,
   Briefcase,
   Wrench,
-  Clock
+  Clock,
+  CheckSquare
 } from 'lucide-react'
 import FeedbackModal from './FeedbackModal'
 import NotificationBell from './NotificationBell'
@@ -39,6 +40,7 @@ import KeyboardShortcuts from './KeyboardShortcuts'
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
+  { name: 'Tasks', href: '/tasks', icon: CheckSquare },
   { name: 'Time Tracking', href: '/time-tracking', icon: Clock },
   { name: 'Time Approval', href: '/time-approval', icon: ClipboardCheck },
   { name: 'Calendar', href: '/calendar', icon: CalendarDays },
@@ -66,7 +68,6 @@ const maintenanceNavigation = [
   { name: 'Dashboard', href: '/maintenance', icon: Wrench },
   { name: 'All Items', href: '/maintenance/items', icon: Package },
   { name: 'Schedules', href: '/maintenance/schedules', icon: Settings },
-  { name: 'Calendar', href: '/maintenance/calendar', icon: CalendarDays },
 ]
 
 const libraries = [

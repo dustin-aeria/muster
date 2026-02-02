@@ -27,7 +27,8 @@ import {
   Shield,
   Settings,
   RefreshCw,
-  FileCheck
+  FileCheck,
+  CheckSquare
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, parseISO } from 'date-fns'
 import { getProjects } from '../lib/firestore'
@@ -36,10 +37,12 @@ import { getInsurancePolicies } from '../lib/firestoreInsurance'
 import { getInspections } from '../lib/firestoreInspections'
 import { getUpcomingMaintenance, getAllMaintainableItems } from '../lib/firestoreMaintenance'
 import { getPermitExpiryEvents } from '../lib/firestorePermits'
+import { getTasksWithDueDates } from '../lib/firestoreTasks'
 
 // Event types with colors
 const EVENT_TYPES = {
-  project: { label: 'Project', color: 'bg-blue-500', icon: Plane, bgLight: 'bg-blue-100 text-blue-800' },
+  task: { label: 'Task', color: 'bg-blue-600', icon: CheckSquare, bgLight: 'bg-blue-100 text-blue-800' },
+  project: { label: 'Project', color: 'bg-indigo-500', icon: Plane, bgLight: 'bg-indigo-100 text-indigo-800' },
   training: { label: 'Training', color: 'bg-green-500', icon: GraduationCap, bgLight: 'bg-green-100 text-green-800' },
   training_expiry: { label: 'Training Expiry', color: 'bg-yellow-500', icon: AlertTriangle, bgLight: 'bg-yellow-100 text-yellow-800' },
   inspection: { label: 'Inspection', color: 'bg-purple-500', icon: ClipboardCheck, bgLight: 'bg-purple-100 text-purple-800' },
@@ -60,6 +63,7 @@ export default function Calendar() {
   const [showEventModal, setShowEventModal] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
+    task: true,
     project: true,
     training: true,
     training_expiry: true,
@@ -93,6 +97,26 @@ export default function Calendar() {
     setLoading(true)
     try {
       const allEvents = []
+
+      // Load tasks with due dates
+      const tasks = await getTasksWithDueDates(organizationId).catch(() => [])
+      tasks.forEach(task => {
+        if (task.dueDate && task.status !== 'complete') {
+          allEvents.push({
+            id: `task-${task.id}`,
+            title: task.title,
+            date: task.dueDate,
+            type: 'task',
+            source: 'task',
+            sourceId: task.id,
+            status: task.status,
+            details: {
+              priority: task.priority,
+              description: task.description
+            }
+          })
+        }
+      })
 
       // Load projects
       const projects = await getProjects(organizationId).catch(() => [])

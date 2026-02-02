@@ -710,6 +710,37 @@ service cloud.firestore {
     }
 
     // ============================================
+    // Tasks Collection
+    // ============================================
+    match /tasks/{taskId} {
+      // Can read if member of org AND (task is team-visible OR user is assignee/creator)
+      allow read: if isAuthenticated() && (
+        isMemberOf(resource.data.organizationId) && (
+          resource.data.visibility == 'team' ||
+          resource.data.assignedTo == request.auth.uid ||
+          resource.data.createdBy == request.auth.uid
+        )
+      );
+
+      // Any org member can create tasks
+      allow create: if isAuthenticated() &&
+        isMemberOf(request.resource.data.organizationId);
+
+      // Creator, assignee, or editors can update
+      allow update: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid ||
+        resource.data.assignedTo == request.auth.uid ||
+        canEdit(resource.data.organizationId)
+      );
+
+      // Creator or admins can delete
+      allow delete: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid ||
+        canDelete(resource.data.organizationId)
+      );
+    }
+
+    // ============================================
     // Operators Collection (Team Members)
     // ============================================
     match /operators/{operatorId} {
