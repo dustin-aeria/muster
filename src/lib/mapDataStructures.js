@@ -191,8 +191,9 @@ export const MAP_OVERLAY_LAYERS = {
   municipalBoundaries: {
     id: 'municipalBoundaries',
     label: 'Municipal Boundaries',
-    description: 'City, town, and district boundaries',
-    icon: 'building'
+    description: 'City, town, and district boundaries (requires Mapbox Enterprise)',
+    icon: 'building',
+    comingSoon: true
   },
   airspace: {
     id: 'airspace',
