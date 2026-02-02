@@ -1,53 +1,35 @@
 /**
  * Dashboard.jsx
- * Enhanced dashboard with multi-site summaries, SORA overview, and policy alerts
- * 
+ * Enhanced dashboard with operations overview and policy alerts
+ *
  * Features:
  * - Live statistics from Firestore
- * - Multi-site project summary with SAIL distribution
+ * - Multi-site project summary
  * - Policy review status alerts
- * - SORA summary across active projects
+ * - Time tracking summary
  * - Quick links to new features
- * 
+ *
  * @location src/pages/Dashboard.jsx
  * @action REPLACE
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganizationContext } from '../contexts/OrganizationContext'
 import {
   FolderKanban,
   ClipboardList,
   AlertTriangle,
-  CheckCircle2,
   Plus,
   ArrowRight,
-  Loader2,
-  Building2,
-  Calendar,
-  Users,
-  Shield,
   MapPin,
-  Target,
   BookOpen,
-  FileText,
-  Plane,
   AlertCircle,
-  TrendingUp,
-  Layers,
-  Wrench
+  Layers
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { getProjects, getClients, getForms, getOperators, getPolicies } from '../lib/firestore'
-import { format, isThisWeek, isToday, addDays, isBefore, differenceInDays } from 'date-fns'
-import {
-  getIntrinsicGRC,
-  calculateFinalGRC,
-  calculateResidualARC,
-  getSAIL,
-  sailColors
-} from '../lib/soraConfig'
+import { getProjects, getForms, getOperators, getPolicies } from '../lib/firestore'
+import { format, isThisWeek, isToday, addDays, isBefore } from 'date-fns'
 import { getStatusInfo } from '../components/PolicyLibrary'
 import { logger } from '../lib/logger'
 import ActivityFeed from '../components/dashboard/ActivityFeed'
@@ -55,25 +37,7 @@ import UpcomingEvents from '../components/dashboard/UpcomingEvents'
 import ExpiryRemindersWidget from '../components/dashboard/ExpiryRemindersWidget'
 import MaintenanceAlertWidget from '../components/maintenance/MaintenanceAlertWidget'
 import OnboardingChecklist from '../components/onboarding/OnboardingChecklist'
-import ContentGapAnalysis from '../components/onboarding/ContentGapAnalysis'
 import TimeSummaryWidget from '../components/time/TimeSummaryWidget'
-
-// ============================================
-// SAIL CALCULATION HELPER
-// ============================================
-function calculateSiteSORA(site) {
-  const sora = site?.soraAssessment || {}
-  const population = sora.populationCategory || site?.siteSurvey?.population?.category || 'sparsely'
-  const uaChar = sora.uaCharacteristics || '1m_25ms'
-  
-  const iGRC = getIntrinsicGRC(population, uaChar)
-  const fGRC = calculateFinalGRC(iGRC, sora.mitigations || {})
-  const initialARC = sora.initialARC || 'ARC-b'
-  const residualARC = calculateResidualARC(initialARC, sora.tmpr || {})
-  const sail = getSAIL(fGRC, residualARC)
-  
-  return { sail, fGRC, residualARC }
-}
 
 export default function Dashboard() {
   const { userProfile } = useAuth()
@@ -90,8 +54,6 @@ export default function Dashboard() {
   const [recentProjects, setRecentProjects] = useState([])
   const [recentForms, setRecentForms] = useState([])
   const [expiringOperators, setExpiringOperators] = useState([])
-  const [sailDistribution, setSailDistribution] = useState({})
-  const [allProjects, setAllProjects] = useState([])
   const [policyStats, setPolicyStats] = useState({
     totalPolicies: 0,
     reviewDue: 0,
@@ -123,8 +85,6 @@ export default function Dashboard() {
       const reviewOverdue = policies.filter(p => getStatusInfo(p).status === 'overdue').length
       setPolicyStats({ totalPolicies, reviewDue, reviewOverdue })
 
-      setAllProjects(projects)
-
       // Calculate stats
       const activeProjects = projects.filter(p => p.status === 'active').length
       
@@ -154,30 +114,10 @@ export default function Dashboard() {
 
       // Calculate total sites across all projects
       let totalSites = 0
-      const sailDist = { I: 0, II: 0, III: 0, IV: 0, V: 0, VI: 0 }
-      
       projects.forEach(project => {
         const sites = Array.isArray(project.sites) ? project.sites : []
         totalSites += sites.length || 1 // Count at least 1 if no sites array
-        
-        // Calculate SAIL for each site
-        sites.forEach(site => {
-          const calc = calculateSiteSORA(site)
-          if (calc.sail && sailDist[calc.sail] !== undefined) {
-            sailDist[calc.sail]++
-          }
-        })
-        
-        // If no sites, check project-level SORA
-        if (sites.length === 0 && project.soraAssessment?.sail) {
-          const sail = project.soraAssessment.sail
-          if (sailDist[sail] !== undefined) {
-            sailDist[sail]++
-          }
-        }
       })
-
-      setSailDistribution(sailDist)
 
       setStats({
         activeProjects,
@@ -242,23 +182,6 @@ export default function Dashboard() {
     completed: 'bg-purple-100 text-purple-700',
     archived: 'bg-gray-100 text-gray-500'
   }
-
-  // Calculate max SAIL across all projects
-  const maxSAIL = useMemo(() => {
-    const sailOrder = ['I', 'II', 'III', 'IV', 'V', 'VI']
-    let maxIndex = -1
-    
-    Object.entries(sailDistribution).forEach(([sail, count]) => {
-      if (count > 0) {
-        const idx = sailOrder.indexOf(sail)
-        if (idx > maxIndex) maxIndex = idx
-      }
-    })
-    
-    return maxIndex >= 0 ? sailOrder[maxIndex] : null
-  }, [sailDistribution])
-
-  const totalSAILAssessments = Object.values(sailDistribution).reduce((a, b) => a + b, 0)
 
   const statCards = [
     { 
@@ -376,85 +299,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* SORA & Policy Overview Row */}
+      {/* Policy Overview & Time Tracking Row */}
       {!loading && (
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* SORA Summary Card */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-aeria-navy" />
-                SORA Overview
-              </h2>
-              {maxSAIL && (
-                <span
-                  className="px-3 py-1 rounded-full text-sm font-bold"
-                  style={{
-                    backgroundColor: sailColors[maxSAIL],
-                    color: maxSAIL === 'I' || maxSAIL === 'II' ? '#1F2937' : '#FFFFFF'
-                  }}
-                >
-                  Max SAIL {maxSAIL}
-                </span>
-              )}
-            </div>
-
-            {totalSAILAssessments > 0 ? (
-              <>
-                <p className="text-sm text-gray-600 mb-4">
-                  {totalSAILAssessments} site{totalSAILAssessments !== 1 ? 's' : ''} with SORA assessments
-                </p>
-
-                {/* SAIL Distribution Bar */}
-                <div className="space-y-2">
-                  <div className="flex h-4 rounded-full overflow-hidden bg-gray-100">
-                    {['I', 'II', 'III', 'IV', 'V', 'VI'].map(sail => {
-                      const count = sailDistribution[sail] || 0
-                      const percentage = totalSAILAssessments > 0
-                        ? (count / totalSAILAssessments) * 100
-                        : 0
-                      if (percentage === 0) return null
-                      return (
-                        <div
-                          key={sail}
-                          className="h-full transition-all"
-                          style={{
-                            width: `${percentage}%`,
-                            backgroundColor: sailColors[sail]
-                          }}
-                          title={`SAIL ${sail}: ${count}`}
-                        />
-                      )
-                    })}
-                  </div>
-
-                  {/* Legend */}
-                  <div className="flex flex-wrap gap-3 mt-3">
-                    {['I', 'II', 'III', 'IV', 'V', 'VI'].map(sail => {
-                      const count = sailDistribution[sail] || 0
-                      if (count === 0) return null
-                      return (
-                        <div key={sail} className="flex items-center gap-1.5 text-xs">
-                          <div
-                            className="w-3 h-3 rounded"
-                            style={{ backgroundColor: sailColors[sail] }}
-                          />
-                          <span className="text-gray-600">SAIL {sail}: {count}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-6 text-gray-500">
-                <Shield className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                <p>No SORA assessments completed</p>
-                <p className="text-sm mt-1">Complete site surveys and flight plans to generate assessments</p>
-              </div>
-            )}
-          </div>
-
           {/* Policy Status Card */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
@@ -520,14 +367,9 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Time Tracking Summary */}
-      {!loading && (
-        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Time Tracking Summary */}
           <TimeSummaryWidget />
-          <ContentGapAnalysis />
         </div>
       )}
 
