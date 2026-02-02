@@ -198,9 +198,18 @@ export const MAP_OVERLAY_LAYERS = {
   airspace: {
     id: 'airspace',
     label: 'Airspace Zones',
-    description: 'Controlled airspace - requires NAV CANADA data',
+    description: 'Controlled airspace from OpenAIP',
     icon: 'plane',
-    comingSoon: true
+    tilesetId: 'dustinwales.2qdxi73r',
+    sourceLayer: 'ca_asp-70vtd0'
+  },
+  airports: {
+    id: 'airports',
+    label: 'Airports',
+    description: 'Canadian airports from OpenAIP',
+    icon: 'plane',
+    tilesetId: 'dustinwales.4uq7nsfr',
+    sourceLayer: 'ca_apt-03h2t3'
   },
   populationDensity: {
     id: 'populationDensity',

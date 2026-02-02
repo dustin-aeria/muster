@@ -674,23 +674,22 @@ export function UnifiedProjectMap({
             }
           }
 
-          if (layerId === 'municipalBoundaries') {
+          if (layerId === 'municipalBoundaries' && config.tilesetId) {
             try {
-              // First try Mapbox Boundaries tileset (more detailed municipal data)
-              // Add the boundaries source if not already present
-              if (!map.getSource('mapbox-boundaries')) {
-                map.addSource('mapbox-boundaries', {
+              const sourceId = `municipal-boundaries-source`
+              if (!map.getSource(sourceId)) {
+                map.addSource(sourceId, {
                   type: 'vector',
-                  url: 'mapbox://mapbox.boundaries-adm3-v4'
+                  url: `mapbox://${config.tilesetId}`
                 })
               }
 
-              // Municipal boundaries - teal color, appears at higher zoom
+              // Municipal boundaries - teal color
               map.addLayer({
                 id: mapLayerId,
                 type: 'line',
-                source: 'mapbox-boundaries',
-                'source-layer': 'boundaries_admin_3',
+                source: sourceId,
+                'source-layer': config.sourceLayer,
                 minzoom: 6,
                 maxzoom: 22,
                 paint: {
@@ -710,61 +709,123 @@ export function UnifiedProjectMap({
                   'line-dasharray': [2, 1]
                 }
               })
+            } catch (err) {
+              console.warn('Could not add municipal boundaries layer:', err.message)
+            }
+          }
 
-              // Also add labels for municipalities at higher zoom
+          if (layerId === 'airspace' && config.tilesetId) {
+            try {
+              const sourceId = 'airspace-source'
+              if (!map.getSource(sourceId)) {
+                map.addSource(sourceId, {
+                  type: 'vector',
+                  url: `mapbox://${config.tilesetId}`
+                })
+              }
+
+              // Airspace zones - fill with colored overlay
+              map.addLayer({
+                id: `${mapLayerId}-fill`,
+                type: 'fill',
+                source: sourceId,
+                'source-layer': config.sourceLayer,
+                paint: {
+                  'fill-color': [
+                    'match',
+                    ['get', 'class'],
+                    'A', '#DC2626', // Red - Class A
+                    'B', '#EA580C', // Orange - Class B
+                    'C', '#CA8A04', // Yellow - Class C
+                    'D', '#2563EB', // Blue - Class D
+                    'E', '#7C3AED', // Purple - Class E
+                    'F', '#0D9488', // Teal - Class F (advisory)
+                    '#6B7280'       // Gray - default
+                  ],
+                  'fill-opacity': 0.15
+                }
+              })
+
+              // Airspace outline
+              map.addLayer({
+                id: mapLayerId,
+                type: 'line',
+                source: sourceId,
+                'source-layer': config.sourceLayer,
+                paint: {
+                  'line-color': [
+                    'match',
+                    ['get', 'class'],
+                    'A', '#DC2626',
+                    'B', '#EA580C',
+                    'C', '#CA8A04',
+                    'D', '#2563EB',
+                    'E', '#7C3AED',
+                    'F', '#0D9488',
+                    '#6B7280'
+                  ],
+                  'line-width': 1.5,
+                  'line-opacity': 0.8
+                }
+              })
+            } catch (err) {
+              console.warn('Could not add airspace layer:', err.message)
+            }
+          }
+
+          if (layerId === 'airports' && config.tilesetId) {
+            try {
+              const sourceId = 'airports-source'
+              if (!map.getSource(sourceId)) {
+                map.addSource(sourceId, {
+                  type: 'vector',
+                  url: `mapbox://${config.tilesetId}`
+                })
+              }
+
+              // Airport markers
+              map.addLayer({
+                id: mapLayerId,
+                type: 'circle',
+                source: sourceId,
+                'source-layer': config.sourceLayer,
+                paint: {
+                  'circle-radius': [
+                    'interpolate', ['linear'], ['zoom'],
+                    5, 3,
+                    10, 6,
+                    14, 10
+                  ],
+                  'circle-color': '#1E40AF', // Blue-800
+                  'circle-stroke-color': '#FFFFFF',
+                  'circle-stroke-width': 1.5,
+                  'circle-opacity': 0.9
+                }
+              })
+
+              // Airport labels at higher zoom
               map.addLayer({
                 id: `${mapLayerId}-labels`,
                 type: 'symbol',
-                source: 'mapbox-boundaries',
-                'source-layer': 'boundaries_admin_3',
-                minzoom: 10,
+                source: sourceId,
+                'source-layer': config.sourceLayer,
+                minzoom: 8,
                 layout: {
-                  'text-field': ['get', 'name'],
-                  'text-size': [
-                    'interpolate', ['linear'], ['zoom'],
-                    10, 10,
-                    14, 12
-                  ],
+                  'text-field': ['coalesce', ['get', 'name'], ['get', 'icao'], ''],
+                  'text-size': 11,
                   'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
-                  'text-offset': [0, 0],
-                  'text-anchor': 'center',
+                  'text-offset': [0, 1.2],
+                  'text-anchor': 'top',
                   'text-allow-overlap': false
                 },
                 paint: {
-                  'text-color': '#0D9488',
+                  'text-color': '#1E40AF',
                   'text-halo-color': 'rgba(255, 255, 255, 0.9)',
                   'text-halo-width': 1.5
                 }
               })
             } catch (err) {
-              console.warn('Could not add municipal boundaries layer:', err.message)
-              // Fallback: try using composite source with admin level 2
-              try {
-                if (map.getSource('composite')) {
-                  map.addLayer({
-                    id: mapLayerId,
-                    type: 'line',
-                    source: 'composite',
-                    'source-layer': 'admin',
-                    minzoom: 6,
-                    maxzoom: 22,
-                    filter: ['>=', ['get', 'admin_level'], 2],
-                    paint: {
-                      'line-color': '#0D9488',
-                      'line-width': [
-                        'interpolate', ['linear'], ['zoom'],
-                        6, 0.5,
-                        10, 1,
-                        14, 1.5
-                      ],
-                      'line-opacity': 0.7,
-                      'line-dasharray': [2, 1]
-                    }
-                  })
-                }
-              } catch (fallbackErr) {
-                console.warn('Fallback municipal boundaries also failed:', fallbackErr.message)
-              }
+              console.warn('Could not add airports layer:', err.message)
             }
           }
         }
@@ -773,9 +834,12 @@ export function UnifiedProjectMap({
         if (map.getLayer(mapLayerId)) {
           map.removeLayer(mapLayerId)
         }
-        // Also remove associated label layers (for municipal boundaries)
+        // Also remove associated layers (labels, fills)
         if (map.getLayer(`${mapLayerId}-labels`)) {
           map.removeLayer(`${mapLayerId}-labels`)
+        }
+        if (map.getLayer(`${mapLayerId}-fill`)) {
+          map.removeLayer(`${mapLayerId}-fill`)
         }
       }
     })
