@@ -142,10 +142,11 @@ export const REGULATORY_TRIGGERS = {
     conditions: ['fatal', 'serious_injury', 'hospitalization'],
     timeframe: 'Immediately',
   },
-  AERIA_INTERNAL: {
-    label: 'Aeria Internal (Accountable Executive)',
-    name: 'Dustin Wales',
-    phone: '604-849-2345',
+  ACCOUNTABLE_EXECUTIVE: {
+    label: 'Accountable Executive',
+    // Contact info should come from organization settings
+    name: '',
+    phone: '',
     conditions: ['all'],
     timeframe: 'Same day',
   },

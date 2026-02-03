@@ -57,7 +57,7 @@ export const Input = forwardRef(({
       <div className="relative flex-1">
         {LeftIcon && !leftAddon && (
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <LeftIcon className="h-4 w-4 text-gray-400" />
+            <LeftIcon className="h-4 w-4 text-gray-500" />
           </div>
         )}
         <input
@@ -80,7 +80,7 @@ export const Input = forwardRef(({
         />
         {RightIcon && !rightAddon && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <RightIcon className="h-4 w-4 text-gray-400" />
+            <RightIcon className="h-4 w-4 text-gray-500" />
           </div>
         )}
       </div>
@@ -141,12 +141,14 @@ export const PasswordInput = forwardRef(({
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
+          aria-label={showPassword ? 'Hide password' : 'Show password'}
+          aria-pressed={showPassword}
           className="absolute inset-y-0 right-0 pr-3 flex items-center"
         >
           {showPassword ? (
-            <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+            <EyeOff className="h-4 w-4 text-gray-500 hover:text-gray-700" />
           ) : (
-            <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+            <Eye className="h-4 w-4 text-gray-500 hover:text-gray-700" />
           )}
         </button>
       </div>
@@ -219,9 +221,10 @@ export const SearchInput = forwardRef(({
         <button
           type="button"
           onClick={handleClear}
+          aria-label="Clear search"
           className="absolute inset-y-0 right-0 pr-3 flex items-center"
         >
-          <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+          <X className="h-4 w-4 text-gray-500 hover:text-gray-700" />
         </button>
       )}
     </div>
@@ -283,7 +286,8 @@ export const NumberInput = forwardRef(({
         type="button"
         onClick={handleDecrement}
         disabled={min !== undefined && value <= min}
-        className="px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+        aria-label="Decrease value"
+        className="px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
       >
         -
       </button>
@@ -303,7 +307,8 @@ export const NumberInput = forwardRef(({
         type="button"
         onClick={handleIncrement}
         disabled={max !== undefined && value >= max}
-        className="px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+        aria-label="Increase value"
+        className="px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
       >
         +
       </button>
@@ -433,7 +438,7 @@ export function InlineEditInput({
         onClick={() => setIsEditing(true)}
         className={`text-left hover:bg-gray-100 px-2 py-1 rounded ${className}`}
       >
-        {value || <span className="text-gray-400">{placeholder}</span>}
+        {value || <span className="text-gray-500">{placeholder}</span>}
       </button>
     )
   }

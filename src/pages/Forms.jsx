@@ -134,10 +134,10 @@ function NotificationTriggersPanel({ triggers }) {
             <div className="bg-blue-100 border border-blue-400 rounded-lg p-3">
               <div className="flex items-center gap-2 font-bold text-blue-900">
                 <User className="w-5 h-5" />
-                <span>NOTIFY AERIA ACCOUNTABLE EXECUTIVE</span>
+                <span>NOTIFY ACCOUNTABLE EXECUTIVE</span>
               </div>
               <div className="mt-1 text-blue-800">
-                <p>Dustin Wales: <span className="font-mono">604-849-2345</span></p>
+                <p className="text-sm">Contact your organization's Accountable Executive immediately.</p>
               </div>
               <p className="text-sm mt-1 text-blue-700">Required for ALL incidents.</p>
             </div>

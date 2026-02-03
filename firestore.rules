@@ -402,12 +402,15 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
         (resource.data.userId == request.auth.uid ||
          isMemberOf(resource.data.organizationId));
-      allow create: if isAuthenticated();
+      // Must be member of org to create field hazard reviews
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
       allow update: if isAuthenticated() &&
         (resource.data.userId == request.auth.uid ||
-         isMemberOf(resource.data.organizationId));
+         canEdit(resource.data.organizationId));
       allow delete: if isAuthenticated() &&
-        resource.data.userId == request.auth.uid;
+        (resource.data.userId == request.auth.uid ||
+         canDelete(resource.data.organizationId));
     }
 
     // ============================================
@@ -763,7 +766,54 @@ service cloud.firestore {
     // ============================================
     match /settings/{settingId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated(); // Consider restricting to admins
+      // Global settings should only be modified by admin SDK/Cloud Functions
+      allow write: if false;
+    }
+
+    // ============================================
+    // Organization Settings Collection
+    // ============================================
+    match /organizationSettings/{orgId} {
+      allow read: if isAuthenticated() && isMemberOf(orgId);
+      // Only org admins can modify organization settings
+      allow write: if isAuthenticated() && canManageTeam(orgId);
+    }
+
+    // ============================================
+    // Portal Collections (Client Portal)
+    // ============================================
+
+    // Portal Users - clients who access via magic link
+    match /portalUsers/{portalUserId} {
+      // Portal users can read their own data
+      // Org members can read portal users for their organization
+      allow read: if isAuthenticated() && (
+        request.auth.uid == portalUserId ||
+        isMemberOf(resource.data.organizationId)
+      );
+      // Only org admins/management can create/modify portal users
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+    }
+
+    // Portal Sessions - magic link authentication sessions
+    match /portalSessions/{sessionId} {
+      // Sessions can be read by the portal user or org members
+      allow read: if isAuthenticated() && (
+        resource.data.odMemberId == request.auth.uid ||
+        isMemberOf(resource.data.organizationId)
+      );
+      // Sessions are created by Cloud Functions, not directly
+      allow create: if false;
+      // Sessions can be updated (marked used) by the session owner
+      allow update: if isAuthenticated() &&
+        resource.data.odMemberId == request.auth.uid;
+      // Sessions should be cleaned up by Cloud Functions
+      allow delete: if false;
     }
   }
 }

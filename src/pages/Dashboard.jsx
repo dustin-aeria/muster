@@ -71,13 +71,33 @@ export default function Dashboard() {
     setLoading(true)
     setLoadError(null)
     try {
-      // Load all data in parallel
-      const [projects, forms, operators, policies] = await Promise.all([
+      // Load all data in parallel with graceful failure handling
+      const [projectsResult, formsResult, operatorsResult, policiesResult] = await Promise.allSettled([
         getProjects(organizationId),
         getForms(organizationId),
         getOperators(organizationId),
         getPolicies(organizationId)
       ])
+
+      // Extract results, using empty arrays for failed requests
+      const projects = projectsResult.status === 'fulfilled' ? projectsResult.value : []
+      const forms = formsResult.status === 'fulfilled' ? formsResult.value : []
+      const operators = operatorsResult.status === 'fulfilled' ? operatorsResult.value : []
+      const policies = policiesResult.status === 'fulfilled' ? policiesResult.value : []
+
+      // Log any failures
+      if (projectsResult.status === 'rejected') {
+        logger.error('Failed to load projects:', projectsResult.reason)
+      }
+      if (formsResult.status === 'rejected') {
+        logger.error('Failed to load forms:', formsResult.reason)
+      }
+      if (operatorsResult.status === 'rejected') {
+        logger.error('Failed to load operators:', operatorsResult.reason)
+      }
+      if (policiesResult.status === 'rejected') {
+        logger.error('Failed to load policies:', policiesResult.reason)
+      }
 
       // Calculate policy stats
       const totalPolicies = policies.length

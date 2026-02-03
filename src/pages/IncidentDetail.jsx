@@ -690,9 +690,9 @@ export default function IncidentDetail() {
                       )}
                       <div>
                         <h4 className={`font-medium ${notif.aeriaNotified ? 'text-green-900' : 'text-blue-900'}`}>
-                          Aeria Internal (Accountable Executive)
+                          Accountable Executive
                         </h4>
-                        <p className="text-sm">Dustin Wales - <a href="tel:604-849-2345" className="underline">604-849-2345</a></p>
+                        <p className="text-sm">Contact your organization's Accountable Executive</p>
                       </div>
                     </div>
                     {!notif.aeriaNotified && (

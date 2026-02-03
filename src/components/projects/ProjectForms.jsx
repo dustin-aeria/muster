@@ -1472,8 +1472,7 @@ function FormModal({ form, formTemplate, project, operators = [], aircraft = [],
         const contacts = project?.emergency?.contacts || []
         const defaultContacts = [
           { role: 'Emergency Services', number: '911' },
-          { role: 'Poison Control', number: '1-800-567-8911' },
-          { role: 'Aeria Accountable Executive', number: RPAS_INCIDENT_TRIGGERS?.AERIA_INTERNAL?.phone || '604-849-2345' }
+          { role: 'Poison Control', number: '1-800-567-8911' }
         ]
         const displayContacts = contacts.length > 0 ? contacts : defaultContacts
         return (

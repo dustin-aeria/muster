@@ -8,6 +8,7 @@
 import React, { Fragment, useState, useRef, useEffect, forwardRef } from 'react'
 import { Listbox, Combobox, Transition } from '@headlessui/react'
 import { Check, ChevronDown, X, Search, Loader2 } from 'lucide-react'
+import { logger } from '../../lib/logger'
 
 // ============================================
 // BASE SELECT
@@ -46,11 +47,11 @@ export function Select({
             ${error ? 'border-red-300' : 'border-gray-300'}
           `}
         >
-          <span className={`block truncate ${!selected ? 'text-gray-400' : 'text-gray-900'}`}>
+          <span className={`block truncate ${!selected ? 'text-gray-500' : 'text-gray-900'}`}>
             {selected?.label || placeholder}
           </span>
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-            <ChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+            <ChevronDown className="h-4 w-4 text-gray-500" aria-hidden="true" />
           </span>
         </Listbox.Button>
         <Transition
@@ -148,7 +149,7 @@ export const NativeSelect = forwardRef(({
         ))}
       </select>
       <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-        <ChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+        <ChevronDown className="h-4 w-4 text-gray-500" aria-hidden="true" />
       </span>
     </div>
   )
@@ -162,6 +163,7 @@ NativeSelect.displayName = 'NativeSelect'
 
 /**
  * Multi-select with chips
+ * Includes keyboard navigation for accessibility
  */
 export function MultiSelect({
   value = [],
@@ -175,7 +177,9 @@ export function MultiSelect({
   className = ''
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [focusedIndex, setFocusedIndex] = useState(0)
   const containerRef = useRef(null)
+  const triggerRef = useRef(null)
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -186,6 +190,13 @@ export function MultiSelect({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Reset focus index when menu opens
+  useEffect(() => {
+    if (isOpen) {
+      setFocusedIndex(0)
+    }
+  }, [isOpen])
 
   const toggleOption = (optionValue) => {
     if (value.includes(optionValue)) {
@@ -200,23 +211,68 @@ export function MultiSelect({
     onChange(value.filter((v) => v !== optionValue))
   }
 
+  const handleKeyDown = (e) => {
+    if (!isOpen) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        setIsOpen(true)
+      }
+      return
+    }
+
+    switch (e.key) {
+      case 'Escape':
+        e.preventDefault()
+        setIsOpen(false)
+        triggerRef.current?.focus()
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        setFocusedIndex(i => Math.min(i + 1, options.length - 1))
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setFocusedIndex(i => Math.max(i - 1, 0))
+        break
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        const option = options[focusedIndex]
+        const isDisabled = option?.disabled || (!value.includes(option?.value) && maxItems && value.length >= maxItems)
+        if (option && !isDisabled) {
+          toggleOption(option.value)
+        }
+        break
+      case 'Tab':
+        setIsOpen(false)
+        break
+    }
+  }
+
   const selectedOptions = options.filter((opt) => value.includes(opt.value))
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       <div
+        ref={triggerRef}
+        tabIndex={disabled ? -1 : 0}
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label={placeholder}
         onClick={() => !disabled && setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
         className={`
           min-h-[40px] w-full rounded-md border bg-white px-3 py-2 cursor-pointer
           flex flex-wrap gap-1 items-center
-          focus:outline-none
+          focus:outline-none focus:ring-2 focus:ring-blue-500
           ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
           ${error ? 'border-red-300' : 'border-gray-300'}
           ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}
         `}
       >
         {selectedOptions.length === 0 ? (
-          <span className="text-gray-400 text-sm">{placeholder}</span>
+          <span className="text-gray-500 text-sm">{placeholder}</span>
         ) : (
           selectedOptions.map((option) => (
             <span
@@ -227,6 +283,7 @@ export function MultiSelect({
               <button
                 type="button"
                 onClick={(e) => removeOption(option.value, e)}
+                aria-label={`Remove ${option.label}`}
                 className="hover:bg-blue-200 rounded-full p-0.5"
               >
                 <X className="h-3 w-3" />
@@ -235,23 +292,32 @@ export function MultiSelect({
           ))
         )}
         <span className="ml-auto pointer-events-none">
-          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </span>
       </div>
       {isOpen && (
-        <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5">
-          {options.map((option) => {
+        <div
+          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5"
+          role="listbox"
+          aria-multiselectable="true"
+          onKeyDown={handleKeyDown}
+        >
+          {options.map((option, index) => {
             const isSelected = value.includes(option.value)
             const isDisabled = option.disabled || (!isSelected && maxItems && value.length >= maxItems)
 
             return (
               <div
                 key={option.value}
+                role="option"
+                aria-selected={isSelected}
+                tabIndex={index === focusedIndex ? 0 : -1}
                 onClick={() => !isDisabled && toggleOption(option.value)}
                 className={`
                   relative cursor-pointer select-none py-2 pl-10 pr-4 text-sm
                   ${isSelected ? 'bg-blue-50 text-blue-900' : 'text-gray-900 hover:bg-gray-50'}
                   ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+                  ${index === focusedIndex ? 'bg-gray-100' : ''}
                 `}
               >
                 <span className={`block truncate ${isSelected ? 'font-medium' : 'font-normal'}`}>
@@ -330,9 +396,9 @@ export function SearchableSelect({
           />
           <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
             {loading ? (
-              <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+              <Loader2 className="h-4 w-4 text-gray-500 animate-spin" />
             ) : (
-              <ChevronDown className="h-4 w-4 text-gray-400" />
+              <ChevronDown className="h-4 w-4 text-gray-500" />
             )}
           </Combobox.Button>
         </div>
@@ -424,7 +490,7 @@ export function AsyncSelect({
         const results = await loadOptions(query)
         setOptions(results)
       } catch (err) {
-        console.error('Failed to load options:', err)
+        logger.error('Failed to load options:', err)
         setOptions([])
       } finally {
         setLoading(false)
@@ -514,11 +580,11 @@ export function GroupedSelect({
           ${error ? 'border-red-300' : 'border-gray-300'}
         `}
       >
-        <span className={`block truncate ${!selected ? 'text-gray-400' : 'text-gray-900'}`}>
+        <span className={`block truncate ${!selected ? 'text-gray-500' : 'text-gray-900'}`}>
           {selected?.label || placeholder}
         </span>
         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </span>
       </button>
       {isOpen && (
@@ -650,7 +716,7 @@ export function CreatableSelect({
           `}
         />
         <span className="absolute inset-y-0 right-0 flex items-center pr-2">
-          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </span>
       </div>
       {isOpen && (
@@ -737,12 +803,12 @@ export function IconSelect({
             ${error ? 'border-red-300' : 'border-gray-300'}
           `}
         >
-          <span className={`flex items-center gap-2 truncate ${!selected ? 'text-gray-400' : 'text-gray-900'}`}>
+          <span className={`flex items-center gap-2 truncate ${!selected ? 'text-gray-500' : 'text-gray-900'}`}>
             {selected?.icon && <selected.icon className="h-4 w-4 text-gray-500" />}
             {selected?.label || placeholder}
           </span>
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className="h-4 w-4 text-gray-500" />
           </span>
         </Listbox.Button>
         <Transition

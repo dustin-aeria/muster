@@ -21,10 +21,4 @@ export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const storage = getStorage(app)
 
-// Development helper: expose auth to window for admin utils
-if (typeof window !== 'undefined' && import.meta.env.DEV) {
-  window.auth = auth
-  window.db = db
-}
-
 export default app

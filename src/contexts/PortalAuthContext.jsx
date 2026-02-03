@@ -13,7 +13,8 @@ import {
   createMagicLinkSession,
   verifyMagicLinkToken,
   recordPortalUserLogin,
-  getClientForPortal
+  getClientForPortal,
+  validatePortalSession
 } from '../lib/firestorePortal'
 import { logger } from '../lib/logger'
 
@@ -43,6 +44,7 @@ export function PortalAuthProvider({ children }) {
 
   /**
    * Check for existing session in localStorage
+   * Performs server-side validation to ensure session is still valid
    */
   const checkExistingSession = async () => {
     try {
@@ -54,21 +56,30 @@ export function PortalAuthProvider({ children }) {
 
       const session = JSON.parse(sessionData)
 
-      // Check if session is expired (7 days)
+      // Client-side expiry check (server will also validate)
       if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
         localStorage.removeItem(PORTAL_SESSION_KEY)
         setLoading(false)
         return
       }
 
-      // Fetch user and client data
-      const user = await getPortalUserById(session.portalUserId)
-      if (!user || user.status === 'disabled') {
+      // SERVER-SIDE VALIDATION - verify session is still valid
+      const validation = await validatePortalSession(
+        session.portalUserId,
+        session.clientId
+      )
+
+      if (!validation.valid) {
+        logger.warn('Session validation failed:', validation.error)
         localStorage.removeItem(PORTAL_SESSION_KEY)
         setLoading(false)
         return
       }
 
+      // Session is valid - use the validated user data
+      const user = validation.user
+
+      // Fetch client data
       const clientData = await getClientForPortal(user.clientId)
       if (!clientData) {
         localStorage.removeItem(PORTAL_SESSION_KEY)

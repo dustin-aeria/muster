@@ -31,6 +31,7 @@ import {
   runTransaction
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { logger } from './logger'
 
 // Import multi-site structures
 import {
@@ -127,7 +128,7 @@ const projectsRef = collection(db, 'projects')
 
 export async function getProjects(organizationId, filters = {}) {
   if (!organizationId) {
-    console.warn('getProjects called without organizationId')
+    logger.warn('getProjects called without organizationId')
     return []
   }
 
@@ -760,7 +761,7 @@ const clientsRef = collection(db, 'clients')
 
 export async function getClients(organizationId) {
   if (!organizationId) {
-    console.warn('getClients called without organizationId')
+    logger.warn('getClients called without organizationId')
     return []
   }
 
@@ -821,7 +822,7 @@ const operatorsRef = collection(db, 'operators')
 
 export async function getOperators(organizationId) {
   if (!organizationId) {
-    console.warn('getOperators called without organizationId')
+    logger.warn('getOperators called without organizationId')
     return []
   }
 
@@ -883,7 +884,7 @@ const aircraftRef = collection(db, 'aircraft')
 
 export async function getAircraft(organizationId) {
   if (!organizationId) {
-    console.warn('getAircraft called without organizationId')
+    logger.warn('getAircraft called without organizationId')
     return []
   }
 
@@ -1017,7 +1018,7 @@ export const EQUIPMENT_STATUS = {
  */
 export async function getEquipment(organizationId, filters = {}) {
   if (!organizationId) {
-    console.warn('getEquipment called without organizationId')
+    logger.warn('getEquipment called without organizationId')
     return []
   }
 
@@ -1190,7 +1191,7 @@ export async function removeEquipmentFromProject(projectId, assignmentId, equipm
  */
 export async function getEquipmentDueForMaintenance(organizationId, daysAhead = 30) {
   if (!organizationId) {
-    console.warn('getEquipmentDueForMaintenance called without organizationId')
+    logger.warn('getEquipmentDueForMaintenance called without organizationId')
     return []
   }
 
@@ -1217,7 +1218,7 @@ export async function getEquipmentDueForMaintenance(organizationId, daysAhead = 
  */
 export async function getEquipmentMaintenanceStats(organizationId) {
   if (!organizationId) {
-    console.warn('getEquipmentMaintenanceStats called without organizationId')
+    logger.warn('getEquipmentMaintenanceStats called without organizationId')
     return {
       total: 0, withMaintenance: 0, overdue: 0, dueSoon: 0,
       upToDate: 0, noSchedule: 0, overdueItems: [], dueSoonItems: []
@@ -1343,7 +1344,7 @@ export async function setEquipmentMaintenanceStatus(equipmentId, inMaintenance, 
  */
 export async function getEquipmentValueSummary(organizationId) {
   if (!organizationId) {
-    console.warn('getEquipmentValueSummary called without organizationId')
+    logger.warn('getEquipmentValueSummary called without organizationId')
     return { totalValue: 0, totalItems: 0, byCategory: {}, byStatus: {} }
   }
 
@@ -1394,7 +1395,7 @@ const servicesRef = collection(db, 'services')
  */
 export async function getServices(organizationId, filters = {}) {
   if (!organizationId) {
-    console.warn('getServices called without organizationId')
+    logger.warn('getServices called without organizationId')
     return []
   }
 
@@ -1495,7 +1496,7 @@ const formsRef = collection(db, 'forms')
 
 export async function getForms(organizationId, filters = {}) {
   if (!organizationId) {
-    console.warn('getForms called without organizationId')
+    logger.warn('getForms called without organizationId')
     return []
   }
 
@@ -1606,7 +1607,7 @@ const policiesRef = collection(db, 'policies')
  */
 export async function getPolicies(organizationId, filters = {}) {
   if (!organizationId) {
-    console.warn('getPolicies called without organizationId')
+    logger.warn('getPolicies called without organizationId')
     return []
   }
 
@@ -1893,7 +1894,7 @@ const customFormsRef = collection(db, 'customForms')
  */
 export async function getCustomForms(organizationId) {
   if (!organizationId) {
-    console.warn('getCustomForms called without organizationId')
+    logger.warn('getCustomForms called without organizationId')
     return []
   }
 
@@ -2007,7 +2008,7 @@ export async function submitFeedback(data) {
  */
 export async function getFeedback(organizationId, filters = {}) {
   if (!organizationId) {
-    console.warn('getFeedback called without organizationId')
+    logger.warn('getFeedback called without organizationId')
     return []
   }
 
@@ -2062,7 +2063,7 @@ export async function deleteFeedback(id) {
  */
 export async function getFeedbackStats(organizationId) {
   if (!organizationId) {
-    console.warn('getFeedbackStats called without organizationId')
+    logger.warn('getFeedbackStats called without organizationId')
     return {
       total: 0,
       byStatus: { new: 0, reviewed: 0, resolved: 0 },

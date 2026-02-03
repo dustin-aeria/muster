@@ -22,21 +22,46 @@ export function isEmpty(value) {
 
 /**
  * Check if value is a valid email
+ * Uses a more comprehensive regex and additional checks
  */
 export function isValidEmail(email) {
-  if (!email) return false
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return regex.test(email)
+  if (!email || typeof email !== 'string') return false
+
+  // More comprehensive email regex
+  const regex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+
+  if (!regex.test(email)) return false
+
+  // Additional checks
+  if (email.length > 254) return false
+  const [local, domain] = email.split('@')
+  if (!local || local.length > 64) return false
+  if (!domain || domain.length < 3) return false
+
+  return true
 }
 
 /**
  * Check if value is a valid phone number
+ * @param {string} phone - Phone number to validate
+ * @param {string} country - Country code for validation (default: 'US')
  */
-export function isValidPhone(phone) {
-  if (!phone) return false
+export function isValidPhone(phone, country = 'US') {
+  if (!phone || typeof phone !== 'string') return false
+
   // Remove all non-digits
   const digits = phone.replace(/\D/g, '')
-  return digits.length >= 10 && digits.length <= 15
+
+  // North American validation (US, CA)
+  if (country === 'US' || country === 'CA') {
+    // Must be 10 or 11 digits (with optional 1 prefix)
+    if (digits.length === 10) return true
+    if (digits.length === 11 && digits.startsWith('1')) return true
+    return false
+  }
+
+  // Generic international validation
+  return digits.length >= 7 && digits.length <= 15
 }
 
 /**

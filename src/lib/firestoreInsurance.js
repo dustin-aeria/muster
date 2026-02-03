@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { uploadInsuranceDocument, deleteInsuranceDocument } from './storageHelpers'
+import { logger } from './logger'
 
 // ============================================
 // COLLECTION REFERENCES
@@ -122,7 +123,7 @@ export async function createInsurancePolicy(policyData) {
     const docRef = await addDoc(insuranceRef, newPolicy)
     return { id: docRef.id, ...newPolicy }
   } catch (error) {
-    console.error('Error creating insurance policy:', error)
+    logger.error('Error creating insurance policy:', error)
     throw error
   }
 }
@@ -145,7 +146,7 @@ export async function updateInsurancePolicy(policyId, updates) {
     })
     return { id: policyId, ...updates }
   } catch (error) {
-    console.error('Error updating insurance policy:', error)
+    logger.error('Error updating insurance policy:', error)
     throw error
   }
 }
@@ -167,7 +168,7 @@ export async function getInsurancePolicy(policyId) {
       status: calculateInsuranceStatus(data)
     }
   } catch (error) {
-    console.error('Error getting insurance policy:', error)
+    logger.error('Error getting insurance policy:', error)
     throw error
   }
 }
@@ -190,7 +191,7 @@ export async function getInsurancePolicies(organizationId) {
       status: calculateInsuranceStatus(doc.data())
     }))
   } catch (error) {
-    console.error('Error getting insurance policies:', error)
+    logger.error('Error getting insurance policies:', error)
     throw error
   }
 }
@@ -219,7 +220,7 @@ export async function deleteInsurancePolicy(policyId) {
     const docRef = doc(insuranceRef, policyId)
     await deleteDoc(docRef)
   } catch (error) {
-    console.error('Error deleting insurance policy:', error)
+    logger.error('Error deleting insurance policy:', error)
     throw error
   }
 }
@@ -251,7 +252,7 @@ export async function addPolicyDocument(policyId, file) {
 
     return uploadResult
   } catch (error) {
-    console.error('Error adding policy document:', error)
+    logger.error('Error adding policy document:', error)
     throw error
   }
 }
@@ -271,7 +272,7 @@ export async function removePolicyDocument(policyId, documentPath) {
     // Update policy
     await updateInsurancePolicy(policyId, { documents })
   } catch (error) {
-    console.error('Error removing policy document:', error)
+    logger.error('Error removing policy document:', error)
     throw error
   }
 }
@@ -330,7 +331,7 @@ export async function getInsuranceMetrics(organizationId) {
         : 100
     }
   } catch (error) {
-    console.error('Error getting insurance metrics:', error)
+    logger.error('Error getting insurance metrics:', error)
     throw error
   }
 }
@@ -355,7 +356,7 @@ export async function getInsuranceSummary(organizationId) {
       hasDocument: (policy.documents?.length || 0) > 0
     }))
   } catch (error) {
-    console.error('Error getting insurance summary:', error)
+    logger.error('Error getting insurance summary:', error)
     throw error
   }
 }

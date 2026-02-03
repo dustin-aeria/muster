@@ -221,6 +221,7 @@ import { ChevronDown } from 'lucide-react'
 
 /**
  * Button with dropdown menu
+ * Includes keyboard navigation for accessibility
  */
 export function SplitButton({
   children,
@@ -233,7 +234,9 @@ export function SplitButton({
   className = ''
 }) {
   const [isOpen, setIsOpen] = React.useState(false)
+  const [focusedIndex, setFocusedIndex] = React.useState(0)
   const menuRef = React.useRef(null)
+  const dropdownButtonRef = React.useRef(null)
 
   React.useEffect(() => {
     const handleClickOutside = (event) => {
@@ -244,6 +247,51 @@ export function SplitButton({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Reset focus index when menu opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setFocusedIndex(0)
+    }
+  }, [isOpen])
+
+  const handleKeyDown = (e) => {
+    if (!isOpen) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        setIsOpen(true)
+      }
+      return
+    }
+
+    switch (e.key) {
+      case 'Escape':
+        e.preventDefault()
+        setIsOpen(false)
+        dropdownButtonRef.current?.focus()
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        setFocusedIndex(i => Math.min(i + 1, options.length - 1))
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setFocusedIndex(i => Math.max(i - 1, 0))
+        break
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        if (options[focusedIndex] && !options[focusedIndex].disabled) {
+          onOptionClick?.(options[focusedIndex])
+          setIsOpen(false)
+          dropdownButtonRef.current?.focus()
+        }
+        break
+      case 'Tab':
+        setIsOpen(false)
+        break
+    }
+  }
 
   return (
     <div className={`relative inline-flex ${className}`} ref={menuRef}>
@@ -257,25 +305,40 @@ export function SplitButton({
         {children}
       </Button>
       <Button
+        ref={dropdownButtonRef}
         variant={variant}
         size={size}
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label="Show more options"
         className="rounded-l-none border-l border-white/20 px-2"
       >
         <ChevronDown className="h-4 w-4" />
       </Button>
       {isOpen && (
-        <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10">
+        <div
+          className="absolute top-full right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10"
+          role="menu"
+          aria-orientation="vertical"
+          onKeyDown={handleKeyDown}
+        >
           {options.map((option, index) => (
             <button
               key={option.value || index}
+              role="menuitem"
+              tabIndex={index === focusedIndex ? 0 : -1}
               onClick={() => {
                 onOptionClick?.(option)
                 setIsOpen(false)
+                dropdownButtonRef.current?.focus()
               }}
               disabled={option.disabled}
-              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed ${
+                index === focusedIndex ? 'bg-gray-100' : ''
+              }`}
             >
               {option.icon && <option.icon className="inline h-4 w-4 mr-2" />}
               {option.label}
@@ -448,8 +511,8 @@ export function CloseButton({
       className={`
         ${sizeClasses[size]}
         inline-flex items-center justify-center
-        rounded-full text-gray-400
-        hover:text-gray-500 hover:bg-gray-100
+        rounded-full text-gray-500
+        hover:text-gray-700 hover:bg-gray-100
         focus:outline-none focus:ring-2 focus:ring-gray-500
         ${className}
       `}

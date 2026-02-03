@@ -38,6 +38,7 @@ import { getInspections } from '../lib/firestoreInspections'
 import { getUpcomingMaintenance, getAllMaintainableItems } from '../lib/firestoreMaintenance'
 import { getPermitExpiryEvents } from '../lib/firestorePermits'
 import { getTasksWithDueDates } from '../lib/firestoreTasks'
+import { logger } from '../lib/logger'
 
 // Event types with colors
 const EVENT_TYPES = {
@@ -119,7 +120,10 @@ export default function Calendar() {
       })
 
       // Load projects
-      const projects = await getProjects(organizationId).catch(() => [])
+      const projects = await getProjects(organizationId).catch(err => {
+        logger.error('Failed to load projects for calendar:', err)
+        return []
+      })
       projects.forEach(project => {
         if (project.startDate) {
           allEvents.push({
@@ -138,7 +142,10 @@ export default function Calendar() {
       })
 
       // Load training records with expiry dates
-      const trainingRecords = await getAllTrainingRecords(organizationId).catch(() => [])
+      const trainingRecords = await getAllTrainingRecords(organizationId).catch(err => {
+        logger.error('Failed to load training records for calendar:', err)
+        return []
+      })
       trainingRecords.forEach(record => {
         if (record.expiryDate) {
           const expiryDate = record.expiryDate?.toDate?.() || new Date(record.expiryDate)
@@ -171,7 +178,10 @@ export default function Calendar() {
       })
 
       // Load insurance policies with expiry dates
-      const policies = await getInsurancePolicies(organizationId).catch(() => [])
+      const policies = await getInsurancePolicies(organizationId).catch(err => {
+        logger.error('Failed to load insurance policies for calendar:', err)
+        return []
+      })
       policies.forEach(policy => {
         if (policy.expiryDate) {
           const expiryDate = policy.expiryDate?.toDate?.() || new Date(policy.expiryDate)
@@ -191,7 +201,10 @@ export default function Calendar() {
       })
 
       // Load inspections
-      const inspections = await getInspections(organizationId).catch(() => [])
+      const inspections = await getInspections(organizationId).catch(err => {
+        logger.error('Failed to load inspections for calendar:', err)
+        return []
+      })
       inspections.forEach(inspection => {
         if (inspection.scheduledDate) {
           const scheduledDate = inspection.scheduledDate?.toDate?.() || new Date(inspection.scheduledDate)
@@ -211,7 +224,10 @@ export default function Calendar() {
       })
 
       // Load maintenance due dates
-      const maintenanceEvents = await getUpcomingMaintenance(organizationId, 365).catch(() => [])
+      const maintenanceEvents = await getUpcomingMaintenance(organizationId, 365).catch(err => {
+        logger.error('Failed to load maintenance events for calendar:', err)
+        return []
+      })
       maintenanceEvents.forEach(maint => {
         if (maint.dueDate) {
           const dueDate = new Date(maint.dueDate)
@@ -233,7 +249,10 @@ export default function Calendar() {
       })
 
       // Load permit expiry events
-      const permitEvents = await getPermitExpiryEvents(organizationId, 365).catch(() => [])
+      const permitEvents = await getPermitExpiryEvents(organizationId, 365).catch(err => {
+        logger.error('Failed to load permit events for calendar:', err)
+        return []
+      })
       permitEvents.forEach(event => {
         allEvents.push(event)
       })
@@ -248,7 +267,7 @@ export default function Calendar() {
 
       setEvents(allEvents)
     } catch (err) {
-      console.error('Error loading calendar events:', err)
+      logger.error('Error loading calendar events:', err)
     } finally {
       setLoading(false)
     }

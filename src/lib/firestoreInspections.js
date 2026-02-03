@@ -19,6 +19,7 @@ import {
   writeBatch
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { logger } from './logger'
 
 // Collection references
 const inspectionTemplatesRef = collection(db, 'inspectionTemplates')
@@ -30,7 +31,7 @@ const withErrorHandling = async (operation, errorMessage) => {
   try {
     return await operation()
   } catch (error) {
-    console.error(errorMessage, error)
+    logger.error(errorMessage, error)
     throw new Error(`${errorMessage}: ${error.message}`)
   }
 }

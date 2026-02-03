@@ -26,6 +26,7 @@ import {
   Timestamp
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { logger } from './logger'
 
 // ============================================
 // COLLECTION REFERENCES
@@ -188,33 +189,50 @@ export async function recordPortalUserLogin(id) {
  */
 
 /**
- * Generate a random token
- * @returns {string}
+ * Generate a cryptographically secure random token
+ * Uses Web Crypto API for secure random values
+ * @returns {string} 64-character URL-safe base64 token
  */
 function generateToken() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let token = ''
-  for (let i = 0; i < 64; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return token
+  const array = new Uint8Array(48) // 48 bytes = 64 base64 characters
+  crypto.getRandomValues(array)
+
+  // Convert to base64 and make URL-safe
+  const base64 = btoa(String.fromCharCode.apply(null, array))
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+/**
+ * Hash a token for secure storage
+ * Never store plain tokens - only store hashes
+ * @param {string} token - Plain token
+ * @returns {Promise<string>} SHA-256 hash of token
+ */
+async function hashToken(token) {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(token)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 /**
  * Create a magic link session
+ * Stores hashed token for security - plain token only returned once
  * @param {Object} data - Session data
  * @returns {Promise<Object>}
  */
 export async function createMagicLinkSession(data) {
   const token = generateToken()
+  const tokenHash = await hashToken(token)
   const now = new Date()
-  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours
+  const expiresAt = new Date(now.getTime() + 15 * 60 * 1000) // 15 minutes (more secure)
 
   const session = {
     portalUserId: data.portalUserId,
     clientId: data.clientId,
     email: data.email.toLowerCase(),
-    token,
+    tokenHash, // Store hash, never plain token
     type: data.type || 'login',
     status: 'pending',
     createdAt: serverTimestamp(),
@@ -223,18 +241,29 @@ export async function createMagicLinkSession(data) {
   }
 
   const docRef = await addDoc(portalSessionsRef, session)
+
+  // Return plain token only once - for sending in email
+  // This is the only time the plain token exists
   return { id: docRef.id, ...session, token }
 }
 
 /**
  * Verify and consume a magic link token
- * @param {string} token - The magic link token
+ * Hashes the provided token and compares with stored hash
+ * @param {string} token - The magic link token (plain text from URL)
  * @returns {Promise<Object|null>} - Session data if valid, null if invalid/expired
  */
 export async function verifyMagicLinkToken(token) {
+  if (!token || typeof token !== 'string') {
+    return null
+  }
+
+  // Hash the provided token to compare with stored hash
+  const tokenHash = await hashToken(token)
+
   const q = query(
     portalSessionsRef,
-    where('token', '==', token),
+    where('tokenHash', '==', tokenHash),
     where('status', '==', 'pending'),
     limit(1)
   )
@@ -244,19 +273,21 @@ export async function verifyMagicLinkToken(token) {
     return null
   }
 
-  const session = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() }
+  const sessionDoc = snapshot.docs[0]
+  const session = { id: sessionDoc.id, ...sessionDoc.data() }
 
   // Check if expired
   const expiresAt = session.expiresAt?.toDate ? session.expiresAt.toDate() : new Date(session.expiresAt)
   if (expiresAt < new Date()) {
     // Mark as expired
     await updateDoc(doc(db, 'portalSessions', session.id), {
-      status: 'expired'
+      status: 'expired',
+      expiredAt: serverTimestamp()
     })
     return null
   }
 
-  // Mark as used
+  // Mark as used (one-time use)
   await updateDoc(doc(db, 'portalSessions', session.id), {
     status: 'used',
     usedAt: serverTimestamp()
@@ -267,13 +298,19 @@ export async function verifyMagicLinkToken(token) {
 
 /**
  * Get session by token (without consuming)
- * @param {string} token - The magic link token
+ * @param {string} token - The magic link token (plain text)
  * @returns {Promise<Object|null>}
  */
 export async function getSessionByToken(token) {
+  if (!token || typeof token !== 'string') {
+    return null
+  }
+
+  const tokenHash = await hashToken(token)
+
   const q = query(
     portalSessionsRef,
-    where('token', '==', token),
+    where('tokenHash', '==', tokenHash),
     limit(1)
   )
   const snapshot = await getDocs(q)
@@ -283,6 +320,41 @@ export async function getSessionByToken(token) {
   }
 
   return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() }
+}
+
+/**
+ * Validate portal session server-side
+ * Call this to verify a user's session is still valid
+ * @param {string} portalUserId - Portal user ID
+ * @param {string} clientId - Client ID
+ * @returns {Promise<{valid: boolean, user?: Object, error?: string}>}
+ */
+export async function validatePortalSession(portalUserId, clientId) {
+  if (!portalUserId || !clientId) {
+    return { valid: false, error: 'Missing session data' }
+  }
+
+  try {
+    // Verify user exists and is active
+    const user = await getPortalUserById(portalUserId)
+    if (!user) {
+      return { valid: false, error: 'User not found' }
+    }
+
+    if (user.status === 'disabled') {
+      return { valid: false, error: 'User account is disabled' }
+    }
+
+    // Verify user belongs to claimed client
+    if (user.clientId !== clientId) {
+      return { valid: false, error: 'Client mismatch' }
+    }
+
+    return { valid: true, user }
+  } catch (err) {
+    logger.error('Session validation failed:', err)
+    return { valid: false, error: 'Validation failed' }
+  }
 }
 
 // ============================================

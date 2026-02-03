@@ -149,12 +149,13 @@ export const RPAS_INCIDENT_TRIGGERS = {
     ],
     instructions: 'Report workplace incident to WorkSafeBC.',
   },
-  AERIA_INTERNAL: {
-    label: 'Aeria Internal Notification',
-    accountableExecutive: 'Dustin Wales',
-    phone: '604-849-2345',
+  ACCOUNTABLE_EXECUTIVE: {
+    label: 'Accountable Executive Notification',
+    // Contact info should come from organization settings
+    accountableExecutive: '',
+    phone: '',
     conditions: ['all_incidents'],
-    instructions: 'Notify Accountable Executive for ALL incidents.',
+    instructions: 'Notify your Accountable Executive for ALL incidents.',
   },
 }
 

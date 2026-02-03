@@ -29,6 +29,7 @@ import {
   Timestamp
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { logger } from './logger'
 
 // ============================================
 // COLLECTION REFERENCES
@@ -234,7 +235,7 @@ export async function getFormalHazards(filters = {}) {
  */
 export async function getUserFormalHazards(organizationId) {
   if (!organizationId) {
-    console.warn('getUserFormalHazards called without organizationId')
+    logger.warn('getUserFormalHazards called without organizationId')
     return []
   }
   const q = query(
