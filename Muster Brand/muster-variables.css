@@ -1,0 +1,201 @@
+/**
+ * MUSTER Brand CSS Variables
+ * Operations Assembled
+ * 
+ * Usage: Import this file in your main CSS or copy variables to your root stylesheet
+ */
+
+:root {
+  /* ========================================
+   * PRIMARY COLORS
+   * ======================================== */
+  
+  /* Navy Primary - Main brand color */
+  --muster-navy-primary: #1E3A5F;
+  --muster-navy-primary-rgb: 30, 58, 95;
+  
+  /* Navy Light - Gradients, hover states */
+  --muster-navy-light: #2D5A87;
+  --muster-navy-light-rgb: 45, 90, 135;
+  
+  /* Signal Amber - CTAs, alerts, highlights */
+  --muster-amber: #F5A623;
+  --muster-amber-rgb: 245, 166, 35;
+  
+  /* Amber Dark - Hover/pressed states */
+  --muster-amber-dark: #D4920F;
+  --muster-amber-dark-rgb: 212, 146, 15;
+
+
+  /* ========================================
+   * SECONDARY COLORS
+   * ======================================== */
+  
+  /* Slate - Secondary text, labels */
+  --muster-slate: #5A7B9A;
+  --muster-slate-rgb: 90, 123, 154;
+  
+  /* Slate Light - Borders, backgrounds */
+  --muster-slate-light: #A8C5DB;
+  --muster-slate-light-rgb: 168, 197, 219;
+  
+  /* Operational Green - Success states */
+  --muster-success: #2E7D4A;
+  --muster-success-rgb: 46, 125, 74;
+
+
+  /* ========================================
+   * NEUTRAL COLORS
+   * ======================================== */
+  
+  --muster-gray-900: #0F172A;
+  --muster-gray-500: #64748B;
+  --muster-gray-200: #CBD5E1;
+  --muster-gray-100: #E8EDF2;
+  --muster-off-white: #F8FAFC;
+  --muster-white: #FFFFFF;
+
+
+  /* ========================================
+   * STATUS COLORS
+   * ======================================== */
+  
+  --muster-error: #DC2626;
+  --muster-warning: #F5A623;  /* Same as amber */
+  --muster-info: #2D5A87;     /* Same as navy-light */
+
+
+  /* ========================================
+   * TYPOGRAPHY
+   * ======================================== */
+  
+  /* Font Families */
+  --muster-font-display: 'Outfit', 'Montserrat', system-ui, sans-serif;
+  --muster-font-body: 'Inter', system-ui, sans-serif;
+  --muster-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  
+  /* Font Sizes */
+  --muster-text-display: 48px;
+  --muster-text-h1: 32px;
+  --muster-text-h2: 24px;
+  --muster-text-h3: 20px;
+  --muster-text-body: 16px;
+  --muster-text-small: 14px;
+  --muster-text-caption: 12px;
+  
+  /* Line Heights */
+  --muster-leading-tight: 1.1;
+  --muster-leading-snug: 1.2;
+  --muster-leading-normal: 1.5;
+
+
+  /* ========================================
+   * SPACING & LAYOUT
+   * ======================================== */
+  
+  --muster-radius-sm: 4px;
+  --muster-radius-md: 8px;
+  --muster-radius-lg: 12px;
+  --muster-radius-xl: 16px;
+  
+  /* Shadows */
+  --muster-shadow-sm: 0 1px 2px rgba(30, 58, 95, 0.05);
+  --muster-shadow-md: 0 4px 6px rgba(30, 58, 95, 0.1);
+  --muster-shadow-lg: 0 10px 15px rgba(30, 58, 95, 0.1);
+
+
+  /* ========================================
+   * TRANSITIONS
+   * ======================================== */
+  
+  --muster-transition-fast: 150ms ease;
+  --muster-transition-normal: 200ms ease;
+  --muster-transition-slow: 300ms ease;
+}
+
+
+/* ========================================
+ * UTILITY CLASSES
+ * ======================================== */
+
+/* Background Colors */
+.bg-muster-navy { background-color: var(--muster-navy-primary); }
+.bg-muster-navy-light { background-color: var(--muster-navy-light); }
+.bg-muster-amber { background-color: var(--muster-amber); }
+.bg-muster-slate { background-color: var(--muster-slate); }
+.bg-muster-success { background-color: var(--muster-success); }
+
+/* Text Colors */
+.text-muster-navy { color: var(--muster-navy-primary); }
+.text-muster-amber { color: var(--muster-amber); }
+.text-muster-slate { color: var(--muster-slate); }
+.text-muster-success { color: var(--muster-success); }
+
+/* Font Families */
+.font-muster-display { font-family: var(--muster-font-display); }
+.font-muster-body { font-family: var(--muster-font-body); }
+.font-muster-mono { font-family: var(--muster-font-mono); }
+
+
+/* ========================================
+ * COMPONENT STYLES
+ * ======================================== */
+
+/* Primary Button */
+.btn-muster-primary {
+  background-color: var(--muster-amber);
+  color: var(--muster-gray-900);
+  font-family: var(--muster-font-body);
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: var(--muster-radius-md);
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--muster-transition-fast);
+}
+
+.btn-muster-primary:hover {
+  background-color: var(--muster-amber-dark);
+}
+
+/* Secondary Button */
+.btn-muster-secondary {
+  background-color: transparent;
+  color: var(--muster-navy-primary);
+  font-family: var(--muster-font-body);
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: var(--muster-radius-md);
+  border: 2px solid var(--muster-navy-primary);
+  cursor: pointer;
+  transition: all var(--muster-transition-fast);
+}
+
+.btn-muster-secondary:hover {
+  background-color: var(--muster-navy-primary);
+  color: var(--muster-white);
+}
+
+/* Card */
+.card-muster {
+  background-color: var(--muster-white);
+  border-radius: var(--muster-radius-lg);
+  box-shadow: var(--muster-shadow-md);
+  padding: 24px;
+}
+
+/* Input */
+.input-muster {
+  font-family: var(--muster-font-body);
+  font-size: var(--muster-text-body);
+  padding: 12px 16px;
+  border: 1px solid var(--muster-gray-200);
+  border-radius: var(--muster-radius-md);
+  transition: border-color var(--muster-transition-fast);
+}
+
+.input-muster:focus {
+  outline: none;
+  border-color: var(--muster-amber);
+  box-shadow: 0 0 0 3px rgba(var(--muster-amber-rgb), 0.2);
+}
