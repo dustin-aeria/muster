@@ -194,6 +194,7 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
     serialNumber: '',
     purchaseDate: '',
     purchasePrice: '',
+    payoffInterval: '', // Days of use to pay off equipment
     status: 'available',
     condition: '',
     notes: '',
@@ -204,6 +205,7 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
     weeklyRate: '',
 
     // Maintenance & Usage
+    trackMaintenance: true, // Toggle for maintenance tracking
     currentHours: '',
     currentCycles: '',
     maintenanceInterval: '',
@@ -226,12 +228,14 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
         serialNumber: equipment.serialNumber || '',
         purchaseDate: equipment.purchaseDate || '',
         purchasePrice: equipment.purchasePrice || '',
+        payoffInterval: equipment.payoffInterval || '',
         status: equipment.status || 'available',
         condition: equipment.condition || '',
         notes: equipment.notes || '',
         hourlyRate: equipment.hourlyRate || '',
         dailyRate: equipment.dailyRate || '',
         weeklyRate: equipment.weeklyRate || '',
+        trackMaintenance: equipment.trackMaintenance !== false, // Default true for backwards compat
         currentHours: equipment.currentHours || '',
         currentCycles: equipment.currentCycles || '',
         maintenanceInterval: equipment.maintenanceInterval || '',
@@ -258,12 +262,14 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
       serialNumber: '',
       purchaseDate: '',
       purchasePrice: '',
+      payoffInterval: '',
       status: 'available',
       condition: '',
       notes: '',
       hourlyRate: '',
       dailyRate: '',
       weeklyRate: '',
+      trackMaintenance: true,
       currentHours: '',
       currentCycles: '',
       maintenanceInterval: '',
@@ -348,6 +354,26 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
     }
   }, [formData.maintenanceInterval, formData.lastServiceDate])
 
+  // Auto-calculate billing rates when purchase price or payoff interval changes
+  useEffect(() => {
+    const price = parseFloat(formData.purchasePrice)
+    const days = parseFloat(formData.payoffInterval)
+
+    if (price > 0 && days > 0) {
+      // Calculate rates based on payoff interval in days
+      const dailyRate = (price / days).toFixed(2)
+      const hourlyRate = (price / (days * 8)).toFixed(2) // Assuming 8-hour workday
+      const weeklyRate = ((price / days) * 7).toFixed(2) // 7 days per week
+
+      setFormData(prev => ({
+        ...prev,
+        hourlyRate,
+        dailyRate,
+        weeklyRate
+      }))
+    }
+  }, [formData.purchasePrice, formData.payoffInterval])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -362,12 +388,14 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
       const equipmentData = {
         ...formData,
         purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
+        payoffInterval: formData.payoffInterval ? parseFloat(formData.payoffInterval) : null,
         hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
         dailyRate: formData.dailyRate ? parseFloat(formData.dailyRate) : null,
         weeklyRate: formData.weeklyRate ? parseFloat(formData.weeklyRate) : null,
-        currentHours: formData.currentHours ? parseFloat(formData.currentHours) : null,
-        currentCycles: formData.currentCycles ? parseInt(formData.currentCycles, 10) : null,
-        maintenanceInterval: formData.maintenanceInterval ? parseInt(formData.maintenanceInterval, 10) : null
+        trackMaintenance: formData.trackMaintenance,
+        currentHours: formData.trackMaintenance && formData.currentHours ? parseFloat(formData.currentHours) : null,
+        currentCycles: formData.trackMaintenance && formData.currentCycles ? parseInt(formData.currentCycles, 10) : null,
+        maintenanceInterval: formData.trackMaintenance && formData.maintenanceInterval ? parseInt(formData.maintenanceInterval, 10) : null
       }
 
       let equipmentId = equipment?.id
@@ -694,6 +722,22 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
                 min="0"
               />
             </div>
+            <div>
+              <label htmlFor="eq-payoffInterval" className="label">Interval to Pay Off (days)</label>
+              <input
+                id="eq-payoffInterval"
+                type="number"
+                name="payoffInterval"
+                value={formData.payoffInterval}
+                onChange={handleChange}
+                className="input"
+                placeholder="e.g., 30"
+                min="1"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Days of use to recover purchase cost. Auto-calculates billing rates below.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -704,6 +748,13 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
             Billing Rates
             <span className="text-xs font-normal text-gray-500">(Admin only - for cost estimation)</span>
           </h3>
+          {formData.purchasePrice && formData.payoffInterval && (
+            <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-xs text-green-700">
+                Auto-calculated from ${parseFloat(formData.purchasePrice).toLocaleString()} over {formData.payoffInterval} days (8 hours/day)
+              </p>
+            </div>
+          )}
           <div className="grid sm:grid-cols-3 gap-4">
             <div>
               <label htmlFor="eq-hourlyRate" className="label">Hourly Rate ($)</label>
@@ -749,101 +800,122 @@ export default function EquipmentModal({ isOpen, onClose, equipment }) {
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            These rates are used in the project cost estimator.
+            These rates are used in the project cost estimator. Set &quot;Interval to Pay Off&quot; above to auto-calculate, or enter manually.
           </p>
         </div>
 
         {/* Maintenance & Usage Tracking */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Wrench className="w-4 h-4" />
-            Maintenance & Usage Tracking
-          </h3>
-          <div className="grid sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label htmlFor="eq-currentHours" className="label">Current Hours</label>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <Wrench className="w-4 h-4" />
+              Maintenance & Usage Tracking
+            </h3>
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
-                id="eq-currentHours"
-                type="number"
-                name="currentHours"
-                value={formData.currentHours}
+                type="checkbox"
+                name="trackMaintenance"
+                checked={formData.trackMaintenance}
                 onChange={handleChange}
-                className="input"
-                placeholder="Operating hours"
-                step="0.1"
-                min="0"
+                className="w-4 h-4 text-aeria-navy border-gray-300 rounded focus:ring-aeria-navy"
               />
-              <p className="text-xs text-gray-500 mt-1">Used for hour-based maintenance schedules</p>
-            </div>
-            <div>
-              <label htmlFor="eq-currentCycles" className="label">Current Cycles</label>
-              <input
-                id="eq-currentCycles"
-                type="number"
-                name="currentCycles"
-                value={formData.currentCycles}
-                onChange={handleChange}
-                className="input"
-                placeholder="Usage cycles"
-                min="0"
-              />
-              <p className="text-xs text-gray-500 mt-1">Used for cycle-based maintenance schedules</p>
-            </div>
+              <span className="text-sm text-gray-600">Enable tracking</span>
+            </label>
           </div>
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="eq-interval" className="label">Service Interval (days)</label>
-              <input
-                id="eq-interval"
-                type="number"
-                name="maintenanceInterval"
-                value={formData.maintenanceInterval}
-                onChange={handleChange}
-                className="input"
-                placeholder="e.g., 365"
-                min="0"
-              />
-            </div>
-            <div>
-              <label htmlFor="eq-lastService" className="label">Last Service</label>
-              <input
-                id="eq-lastService"
-                type="date"
-                name="lastServiceDate"
-                value={formData.lastServiceDate}
-                onChange={handleChange}
-                className="input"
-              />
-            </div>
-            <div>
-              <label htmlFor="eq-nextService" className="label">Next Service</label>
-              <input
-                id="eq-nextService"
-                type="date"
-                name="nextServiceDate"
-                value={formData.nextServiceDate}
-                onChange={handleChange}
-                className="input"
-              />
-              {formData.maintenanceInterval && formData.lastServiceDate && (
-                <p className="text-xs text-gray-500 mt-1">Auto-calculated from interval</p>
+
+          {formData.trackMaintenance ? (
+            <>
+              <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label htmlFor="eq-currentHours" className="label">Current Hours</label>
+                  <input
+                    id="eq-currentHours"
+                    type="number"
+                    name="currentHours"
+                    value={formData.currentHours}
+                    onChange={handleChange}
+                    className="input"
+                    placeholder="Operating hours"
+                    step="0.1"
+                    min="0"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Used for hour-based maintenance schedules</p>
+                </div>
+                <div>
+                  <label htmlFor="eq-currentCycles" className="label">Current Cycles</label>
+                  <input
+                    id="eq-currentCycles"
+                    type="number"
+                    name="currentCycles"
+                    value={formData.currentCycles}
+                    onChange={handleChange}
+                    className="input"
+                    placeholder="Usage cycles"
+                    min="0"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Used for cycle-based maintenance schedules</p>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="eq-interval" className="label">Service Interval (days)</label>
+                  <input
+                    id="eq-interval"
+                    type="number"
+                    name="maintenanceInterval"
+                    value={formData.maintenanceInterval}
+                    onChange={handleChange}
+                    className="input"
+                    placeholder="e.g., 365"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="eq-lastService" className="label">Last Service</label>
+                  <input
+                    id="eq-lastService"
+                    type="date"
+                    name="lastServiceDate"
+                    value={formData.lastServiceDate}
+                    onChange={handleChange}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="eq-nextService" className="label">Next Service</label>
+                  <input
+                    id="eq-nextService"
+                    type="date"
+                    name="nextServiceDate"
+                    value={formData.nextServiceDate}
+                    onChange={handleChange}
+                    className="input"
+                  />
+                  {formData.maintenanceInterval && formData.lastServiceDate && (
+                    <p className="text-xs text-gray-500 mt-1">Auto-calculated from interval</p>
+                  )}
+                </div>
+              </div>
+              {isEditing && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    For detailed maintenance schedules and history, visit the{' '}
+                    <a
+                      href={`/maintenance/item/equipment/${equipment?.id}`}
+                      className="font-medium underline hover:text-blue-900"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Maintenance Detail Page
+                    </a>
+                  </p>
+                </div>
               )}
-            </div>
-          </div>
-          {isEditing && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-700">
-                For detailed maintenance schedules and history, visit the{' '}
-                <a
-                  href={`/maintenance/item/equipment/${equipment?.id}`}
-                  className="font-medium underline hover:text-blue-900"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Maintenance Detail Page
-                </a>
-              </p>
-            </div>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500 italic">
+              Maintenance tracking is disabled for this equipment. Enable it above to track hours, cycles, and service schedules.
+            </p>
           )}
         </div>
 
