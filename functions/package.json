@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "firebase-admin": "^11.11.0",
-    "firebase-functions": "^4.5.0",
+    "firebase-functions": "^7.0.5",
     "resend": "^2.0.0"
   },
   "devDependencies": {

@@ -10,7 +10,7 @@
  * @version 1.0.0
  */
 
-const functions = require('firebase-functions')
+const functions = require('firebase-functions/v1')
 const sgMail = require('@sendgrid/mail')
 
 // Initialize SendGrid with API key from Firebase config

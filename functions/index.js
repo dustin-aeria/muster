@@ -5,7 +5,7 @@
  * @version 2.0.0
  */
 
-const functions = require('firebase-functions')
+const functions = require('firebase-functions/v1')
 const admin = require('firebase-admin')
 const { Resend } = require('resend')
 
