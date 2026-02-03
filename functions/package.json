@@ -15,12 +15,12 @@
     "logs": "firebase functions:log"
   },
   "dependencies": {
-    "firebase-admin": "^11.11.0",
+    "firebase-admin": "^13.6.0",
     "firebase-functions": "^7.0.5",
     "resend": "^2.0.0"
   },
   "devDependencies": {
-    "eslint": "^8.56.0",
+    "eslint": "^9.39.2",
     "eslint-config-google": "^0.14.0"
   },
   "private": true
