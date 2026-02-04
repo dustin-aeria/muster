@@ -1,7 +1,7 @@
 # Implementation Tracker: Expense Tracker & In-Field Activities Tracker
 
 **Started:** 2026-02-04
-**Status:** Phase 1 Complete
+**Status:** Phase 2 Complete
 
 ---
 
@@ -10,16 +10,16 @@
 - [x] 1.2 Add `uploadExpenseReceipt()` to `src/lib/storageHelpers.js`
 - [x] 1.3 Update `firestore.rules` - add expenses collection rules
 
-**Commit:** _committing..._
+**Commit:** `48cff158`
 
 ---
 
-## Phase 2: Expense Tracker - UI Components
-- [ ] 2.1 Create `src/components/expenses/ExpenseForm.jsx` - form with receipt capture
-- [ ] 2.2 Create `src/components/expenses/ExpenseList.jsx` - list with filtering
-- [ ] 2.3 Create `src/components/projects/ProjectExpenses.jsx` - project tab
+## Phase 2: Expense Tracker - UI Components ✅
+- [x] 2.1 Create `src/components/expenses/ExpenseForm.jsx` - form with receipt capture
+- [x] 2.2 Create `src/components/expenses/ExpenseList.jsx` - list with filtering
+- [x] 2.3 Create `src/components/projects/ProjectExpenses.jsx` - project tab
 
-**Commit:** _pending_
+**Commit:** _committing..._
 
 ---
 
@@ -84,7 +84,7 @@
 
 | Phase | Completed | Commit Hash | Notes |
 |-------|-----------|-------------|-------|
-| 1     |           |             |       |
+| 1     | ✅ 2026-02-04 | `48cff158` | Core infrastructure: firestoreExpenses.js, storageHelpers, rules |
 | 2     |           |             |       |
 | 3     |           |             |       |
 | 4     |           |             |       |
