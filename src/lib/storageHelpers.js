@@ -821,3 +821,76 @@ export async function uploadMultiplePermitDocuments(files, organizationId, permi
 
   return results
 }
+
+// ============================================
+// EXPENSE RECEIPTS
+// ============================================
+
+/**
+ * Upload an expense receipt image
+ * @param {File} file - The image file to upload
+ * @param {string} organizationId - Organization ID
+ * @param {string} projectId - Project ID
+ * @param {string} expenseId - Expense ID
+ * @returns {Promise<{url: string, path: string, filename: string, uploadedAt: string}>}
+ */
+export async function uploadExpenseReceipt(file, organizationId, projectId, expenseId) {
+  if (!file) throw new Error('No file provided')
+  if (!organizationId) throw new Error('Organization ID required')
+  if (!projectId) throw new Error('Project ID required')
+  if (!expenseId) throw new Error('Expense ID required')
+
+  // Validate file type - images for receipts
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
+  if (!validTypes.includes(file.type)) {
+    throw new Error('Invalid file type. Please upload JPEG, PNG, or WebP images.')
+  }
+
+  // Validate file size (max 10MB)
+  const maxSize = 10 * 1024 * 1024
+  if (file.size > maxSize) {
+    throw new Error('File too large. Maximum size is 10MB.')
+  }
+
+  // Generate unique filename
+  const timestamp = Date.now()
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filename = `${timestamp}_${safeName}`
+
+  // Create storage path: receipts/{organizationId}/{projectId}/{expenseId}/{filename}
+  const storagePath = `receipts/${organizationId}/${projectId}/${expenseId}/${filename}`
+  const storageRef = ref(storage, storagePath)
+
+  // Upload file
+  const snapshot = await uploadBytes(storageRef, file, {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name,
+      uploadedAt: new Date().toISOString(),
+      organizationId,
+      projectId,
+      expenseId
+    }
+  })
+
+  // Get download URL
+  const url = await getDownloadURL(snapshot.ref)
+
+  return {
+    url,
+    path: storagePath,
+    filename: file.name,
+    uploadedAt: new Date().toISOString()
+  }
+}
+
+/**
+ * Delete an expense receipt from Firebase Storage
+ * @param {string} storagePath - The storage path of the file to delete
+ */
+export async function deleteExpenseReceipt(storagePath) {
+  if (!storagePath) throw new Error('Storage path required')
+
+  const storageRef = ref(storage, storagePath)
+  await deleteObject(storageRef)
+}
