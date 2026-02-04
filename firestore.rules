@@ -671,6 +671,20 @@ service cloud.firestore {
     }
 
     // ============================================
+    // Activities Collection (In-Field Tracking)
+    // ============================================
+    match /activities/{activityId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+    }
+
+    // ============================================
     // Services Collection
     // ============================================
     match /services/{serviceId} {

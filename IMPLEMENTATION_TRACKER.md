@@ -38,14 +38,14 @@
 - [x] 4.2 Create OCR trigger in `functions/index.js`
 - [ ] 4.3 Deploy Cloud Function (manual step - run `cd functions && npm install && firebase deploy --only functions`)
 
-**Commit:** _pending_
+**Commit:** `4a52f75e`
 
 ---
 
-## Phase 5: Activities Tracker - Core Infrastructure
-- [ ] 5.1 Create `src/lib/firestoreActivities.js` - CRUD, timer helpers
-- [ ] 5.2 Create `src/hooks/useActivityTimer.js` - real-time timer hook
-- [ ] 5.3 Update `firestore.rules` - add activities collection rules
+## Phase 5: Activities Tracker - Core Infrastructure ✅
+- [x] 5.1 Create `src/lib/firestoreActivities.js` - CRUD, timer helpers
+- [x] 5.2 Create `src/hooks/useActivityTimer.js` - real-time timer hook
+- [x] 5.3 Update `firestore.rules` - add activities collection rules
 
 **Commit:** _pending_
 
@@ -87,7 +87,7 @@
 | 1     | ✅ 2026-02-04 | `48cff158` | Core infrastructure: firestoreExpenses.js, storageHelpers, rules |
 | 2     | ✅ 2026-02-04 | `2b0341af` | UI components: ExpenseForm, ExpenseList, ProjectExpenses |
 | 3     | ✅ 2026-02-04 | `4b120251` | Integration: ProjectView tab, PhaseNavigator, ExpenseApproval page, route |
-| 4     | ✅ 2026-02-04 | _pending_  | OCR Cloud Function: Vision API integration, text extraction helpers |
+| 4     | ✅ 2026-02-04 | `4a52f75e` | OCR Cloud Function: Vision API integration, text extraction helpers |
 | 5     |           |             |       |
 | 6     |           |             |       |
 | 7     |           |             |       |
