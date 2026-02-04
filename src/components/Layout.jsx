@@ -36,6 +36,7 @@ import FeedbackModal from './FeedbackModal'
 import NotificationBell from './NotificationBell'
 import CommandPalette from './CommandPalette'
 import KeyboardShortcuts from './KeyboardShortcuts'
+import ActiveTimerWidget from './activities/ActiveTimerWidget'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -458,6 +459,9 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Active Timer Widget - floating in bottom-left */}
+      <ActiveTimerWidget />
 
       {/* Floating Feedback Button */}
       <button

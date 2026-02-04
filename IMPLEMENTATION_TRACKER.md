@@ -57,15 +57,15 @@
 - [x] 6.3 Create `src/components/activities/ActivityList.jsx` - timeline view
 - [x] 6.4 Create `src/components/projects/ProjectActivities.jsx` - project tab
 
-**Commit:** _pending_
+**Commit:** `cbfbc043`
 
 ---
 
-## Phase 7: Activities Tracker - Integration
-- [ ] 7.1 Update `src/pages/ProjectView.jsx` - add activities tab
-- [ ] 7.2 Update `src/components/projects/PhaseNavigator.jsx` - add to field phase
-- [ ] 7.3 Create `src/components/activities/ActiveTimerWidget.jsx` - floating widget
-- [ ] 7.4 Update `src/components/Layout.jsx` - add floating widget
+## Phase 7: Activities Tracker - Integration ✅
+- [x] 7.1 Update `src/pages/ProjectView.jsx` - add activities tab
+- [x] 7.2 Update `src/components/projects/PhaseNavigator.jsx` - add to field phase
+- [x] 7.3 Create `src/components/activities/ActiveTimerWidget.jsx` - floating widget
+- [x] 7.4 Update `src/components/Layout.jsx` - add floating widget
 
 **Commit:** _pending_
 
@@ -89,6 +89,6 @@
 | 3     | ✅ 2026-02-04 | `4b120251` | Integration: ProjectView tab, PhaseNavigator, ExpenseApproval page, route |
 | 4     | ✅ 2026-02-04 | `4a52f75e` | OCR Cloud Function: Vision API integration, text extraction helpers |
 | 5     | ✅ 2026-02-04 | `411e69fe` | Core infrastructure: firestoreActivities.js, useActivityTimer hook, rules |
-| 6     |           |             |       |
+| 6     | ✅ 2026-02-04 | `cbfbc043` | UI components: ActivityTimer, ActivityForm, ActivityList, ProjectActivities |
 | 7     |           |             |       |
 | 8     |           |             |       |

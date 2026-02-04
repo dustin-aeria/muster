@@ -56,7 +56,8 @@ import {
   Package,
   Calculator,
   Clock,
-  Receipt
+  Receipt,
+  Timer
 } from 'lucide-react'
 import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
@@ -85,6 +86,7 @@ import ProjectEquipment from '../components/projects/ProjectEquipment'
 import ProjectCosts from '../components/projects/ProjectCosts'
 import ProjectTimeEntries from '../components/projects/ProjectTimeEntries'
 import ProjectExpenses from '../components/projects/ProjectExpenses'
+import ProjectActivities from '../components/projects/ProjectActivities'
 import PhaseNavigator, { PHASES, getPhaseForTab, getTabsForPhase } from '../components/projects/PhaseNavigator'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganization } from '../hooks/useOrganization'
@@ -103,6 +105,7 @@ const tabs = [
   // Core tabs continued
   { id: 'crew', label: 'Crew', icon: Users },
   { id: 'equipment', label: 'Equipment', icon: Package },
+  { id: 'activities', label: 'Activities', icon: Timer },
   { id: 'team', label: 'Team', icon: MessageSquare, toggleable: true, sectionKey: 'team' },
   { id: 'notifications', label: 'Notifications', icon: Bell, toggleable: true, sectionKey: 'notifications' },
   { id: 'site', label: 'Site Survey', icon: MapPin },
@@ -692,6 +695,9 @@ export default function ProjectView() {
         )}
         {activeTab === 'equipment' && (
           <ProjectEquipment project={project} onUpdate={handleUpdate} />
+        )}
+        {activeTab === 'activities' && (
+          <ProjectActivities project={project} />
         )}
         {activeTab === 'team' && (
           <ProjectComments project={project} organizationId={organizationId} />
