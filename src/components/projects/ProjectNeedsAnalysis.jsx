@@ -64,7 +64,11 @@ import {
   ArrowRight,
   Calculator,
   Save,
-  RefreshCw
+  RefreshCw,
+  Ship,
+  Anchor,
+  Waves,
+  Car
 } from 'lucide-react'
 
 // ============================================
@@ -102,6 +106,7 @@ const MISSION_PROFILES = {
     id: 'inspection',
     name: 'Infrastructure Inspection',
     icon: Building,
+    platformCategory: 'aerial',
     description: 'Power lines, pipelines, bridges, towers, buildings, solar farms',
     typicalPayloads: ['rgb_camera', 'thermal', 'zoom_camera'],
     considerations: [
@@ -120,6 +125,7 @@ const MISSION_PROFILES = {
     id: 'survey_mapping',
     name: 'Survey & Mapping',
     icon: MapPin,
+    platformCategory: 'aerial',
     description: 'Topographic surveys, volumetrics, orthomosaics, 3D modeling',
     typicalPayloads: ['rgb_camera', 'multispectral', 'lidar'],
     considerations: [
@@ -138,6 +144,7 @@ const MISSION_PROFILES = {
     id: 'construction',
     name: 'Construction Progress',
     icon: HardHat,
+    platformCategory: 'aerial',
     description: 'Site progress monitoring, stockpile measurement, safety documentation',
     typicalPayloads: ['rgb_camera', 'zoom_camera'],
     considerations: [
@@ -156,6 +163,7 @@ const MISSION_PROFILES = {
     id: 'agriculture',
     name: 'Agriculture',
     icon: Wheat,
+    platformCategory: 'aerial',
     description: 'Crop health, irrigation monitoring, precision agriculture, livestock',
     typicalPayloads: ['multispectral', 'thermal', 'rgb_camera'],
     considerations: [
@@ -174,6 +182,7 @@ const MISSION_PROFILES = {
     id: 'emergency',
     name: 'Emergency Response',
     icon: Zap,
+    platformCategory: 'aerial',
     description: 'Search and rescue, disaster assessment, wildfire monitoring',
     typicalPayloads: ['thermal', 'rgb_camera', 'zoom_camera', 'spotlight'],
     considerations: [
@@ -192,6 +201,7 @@ const MISSION_PROFILES = {
     id: 'media',
     name: 'Media & Film',
     icon: Clapperboard,
+    platformCategory: 'aerial',
     description: 'Aerial cinematography, photography, real estate, events',
     typicalPayloads: ['rgb_camera', 'cinema_camera', 'gimbal'],
     considerations: [
@@ -210,6 +220,7 @@ const MISSION_PROFILES = {
     id: 'security',
     name: 'Security & Surveillance',
     icon: ShieldCheck,
+    platformCategory: 'aerial',
     description: 'Perimeter patrol, event security, asset monitoring',
     typicalPayloads: ['rgb_camera', 'thermal', 'zoom_camera', 'spotlight'],
     considerations: [
@@ -228,6 +239,7 @@ const MISSION_PROFILES = {
     id: 'environmental',
     name: 'Environmental Monitoring',
     icon: Leaf,
+    platformCategory: 'aerial',
     description: 'Wildlife surveys, habitat mapping, erosion monitoring, spill detection',
     typicalPayloads: ['multispectral', 'thermal', 'rgb_camera', 'gas_sensor'],
     considerations: [
@@ -246,6 +258,7 @@ const MISSION_PROFILES = {
     id: 'mining',
     name: 'Mining Operations',
     icon: Hammer,
+    platformCategory: 'aerial',
     description: 'Pit surveys, stockpile measurement, haul road inspection, blast monitoring',
     typicalPayloads: ['rgb_camera', 'lidar', 'multispectral'],
     considerations: [
@@ -264,6 +277,7 @@ const MISSION_PROFILES = {
     id: 'linear',
     name: 'Linear Infrastructure',
     icon: Route,
+    platformCategory: 'aerial',
     description: 'Pipelines, transmission lines, railways, roads, corridors',
     typicalPayloads: ['rgb_camera', 'thermal', 'lidar', 'gas_sensor'],
     considerations: [
@@ -277,6 +291,84 @@ const MISSION_PROFILES = {
     typicalDuration: '25-45 min per segment',
     recommendedOperationType: 'BVLOS',
     riskFactors: ['extended_range', 'corridor_operations', 'multiple_jurisdictions']
+  },
+  bathymetric_survey: {
+    id: 'bathymetric_survey',
+    name: 'Bathymetric/Hydrographic Survey',
+    icon: Anchor,
+    platformCategory: 'marine',
+    description: 'Underwater terrain mapping, depth measurement, riverbed/seabed surveys using sonar',
+    typicalPayloads: ['single_beam_sonar', 'multibeam_sonar', 'adcp', 'gnss_receiver'],
+    considerations: [
+      'Water body access and vessel launch',
+      'Tidal and current conditions',
+      'Underwater obstruction hazards',
+      'Coordinate system and vertical datum requirements',
+      'Marine safety equipment (PFDs)'
+    ],
+    deliverables: ['Bathymetric chart', 'Depth contours', 'Cross-sections', 'Volume calculations'],
+    typicalDepth: 'Variable (0.5m - 100m+)',
+    typicalDuration: '4-8 hours per survey day',
+    recommendedOperationType: 'N/A',
+    riskFactors: ['marine_operations', 'water_hazards', 'equipment_loss'],
+    regulatoryNotes: 'Marine vessel operations - Small Vessel Regulations apply, not CARs'
+  },
+  marine_remote_sensing: {
+    id: 'marine_remote_sensing',
+    name: 'Marine Environmental Monitoring',
+    icon: Ship,
+    platformCategory: 'marine',
+    description: 'Vessel-based water quality monitoring, ADCP current profiling, marine habitat assessment',
+    typicalPayloads: ['water_quality_sensor', 'adcp', 'thermal'],
+    considerations: [
+      'Vessel stability for sensor operations',
+      'Weather and sea state limitations',
+      'Marine wildlife interaction protocols',
+      'Float plan requirements'
+    ],
+    deliverables: ['Water quality report', 'Current profiles', 'Temperature data', 'Habitat mapping'],
+    typicalDuration: '6-10 hours per survey day',
+    recommendedOperationType: 'N/A',
+    riskFactors: ['marine_operations', 'weather_dependent'],
+    regulatoryNotes: 'Marine Safety regulations apply'
+  },
+  terrestrial_lidar: {
+    id: 'terrestrial_lidar',
+    name: 'Terrestrial LiDAR Survey',
+    icon: Crosshair,
+    platformCategory: 'ground',
+    description: 'Ground-based static LiDAR scanning for high-precision 3D capture',
+    typicalPayloads: ['terrestrial_scanner', 'gnss_receiver', 'rgb_camera'],
+    considerations: [
+      'Scanner setup positions and coverage',
+      'Line-of-sight obstructions',
+      'Registration target placement',
+      'Laser safety protocols'
+    ],
+    deliverables: ['High-density point cloud', '3D model', 'As-built documentation'],
+    typicalDuration: '2-6 hours per site',
+    recommendedOperationType: 'N/A',
+    riskFactors: ['equipment_safety', 'laser_safety'],
+    regulatoryNotes: 'OH&S and site access regulations apply'
+  },
+  mobile_mapping: {
+    id: 'mobile_mapping',
+    name: 'Mobile Mapping',
+    icon: Car,
+    platformCategory: 'ground',
+    description: 'Vehicle-mounted LiDAR and imaging for corridor surveys',
+    typicalPayloads: ['mobile_lidar', 'panoramic_camera', 'gnss_imu'],
+    considerations: [
+      'Traffic management and safety',
+      'Vehicle speed vs data density',
+      'GNSS coverage along route',
+      'Permit requirements for roadways'
+    ],
+    deliverables: ['Corridor point cloud', 'Roadway imagery', 'Asset inventory'],
+    typicalDuration: '50-100 km per day',
+    recommendedOperationType: 'N/A',
+    riskFactors: ['traffic_safety', 'vehicle_operations'],
+    regulatoryNotes: 'Highway traffic and OH&S regulations apply'
   }
 }
 
@@ -528,6 +620,21 @@ const OPERATION_TYPES = {
     requirements: ['SFOC required', 'Full DAA system', 'Enhanced lighting', 'Night BVLOS procedures'],
     complexity: 'high',
     sailModifier: 2
+  },
+  bvlos_level1_complex: {
+    id: 'bvlos_level1_complex',
+    name: 'BVLOS - Level 1 Complex',
+    icon: Radio,
+    description: 'Low-risk BVLOS under RPOC (Class G, <400ft, sparse population)',
+    requirements: [
+      'Level 1 Complex pilot certificate',
+      'RPOC holder',
+      'Class G airspace only',
+      'Below 400ft AGL',
+      '5nm from aerodromes'
+    ],
+    complexity: 'enhanced',
+    sailModifier: 0
   }
 }
 
@@ -690,6 +797,98 @@ const PAYLOAD_TYPES = {
     typicalWeight: '300-1000g',
     applications: ['Stabilized video', 'Inspection', 'Cinematography'],
     dataOutput: 'N/A (stabilization)'
+  },
+  // MARINE PAYLOADS
+  single_beam_sonar: {
+    id: 'single_beam_sonar',
+    name: 'Single-Beam Sonar',
+    icon: Waves,
+    description: 'Echo sounder for depth measurement',
+    weight: 'medium',
+    applications: ['Bathymetric survey', 'Navigation'],
+    dataOutput: 'Depth profiles',
+    platformCategory: 'marine'
+  },
+  multibeam_sonar: {
+    id: 'multibeam_sonar',
+    name: 'Multibeam Sonar',
+    icon: Waves,
+    description: 'Full swath bathymetric coverage',
+    weight: 'heavy',
+    applications: ['Detailed bathymetry', 'Seabed mapping'],
+    dataOutput: 'Swath bathymetry',
+    platformCategory: 'marine'
+  },
+  adcp: {
+    id: 'adcp',
+    name: 'ADCP (Current Profiler)',
+    icon: Gauge,
+    description: 'Acoustic Doppler Current Profiler',
+    weight: 'medium',
+    applications: ['River flow', 'Current profiling'],
+    dataOutput: 'Velocity profiles',
+    platformCategory: 'marine'
+  },
+  water_quality_sensor: {
+    id: 'water_quality_sensor',
+    name: 'Water Quality Sensor',
+    icon: Thermometer,
+    description: 'Multi-parameter water quality sonde',
+    weight: 'medium',
+    applications: ['Environmental monitoring'],
+    dataOutput: 'pH, DO, conductivity, turbidity',
+    platformCategory: 'marine'
+  },
+  gnss_receiver: {
+    id: 'gnss_receiver',
+    name: 'GNSS Receiver',
+    icon: Navigation,
+    description: 'High-precision positioning receiver',
+    weight: 'light',
+    applications: ['Survey positioning', 'Georeferencing'],
+    dataOutput: 'Position data',
+    platformCategory: 'ground'
+  },
+  // GROUND PAYLOADS
+  terrestrial_scanner: {
+    id: 'terrestrial_scanner',
+    name: 'Terrestrial LiDAR Scanner',
+    icon: Radar,
+    description: 'Static laser scanner',
+    weight: 'heavy',
+    applications: ['As-built surveys', 'Structural monitoring'],
+    dataOutput: 'Dense point cloud',
+    platformCategory: 'ground'
+  },
+  mobile_lidar: {
+    id: 'mobile_lidar',
+    name: 'Mobile LiDAR System',
+    icon: Radar,
+    description: 'Vehicle-mounted LiDAR',
+    weight: 'heavy',
+    applications: ['Road surveys', 'Corridor mapping'],
+    dataOutput: 'Point cloud, trajectory',
+    platformCategory: 'ground'
+  },
+  gnss_imu: {
+    id: 'gnss_imu',
+    name: 'GNSS/IMU Navigation',
+    icon: Navigation,
+    description: 'Integrated positioning system',
+    weight: 'medium',
+    applications: ['Mobile mapping', 'Direct georeferencing'],
+    dataOutput: 'Position, attitude',
+    platformCategory: 'ground'
+  },
+  panoramic_camera: {
+    id: 'panoramic_camera',
+    name: 'Panoramic Camera',
+    icon: Camera,
+    description: '360-degree imaging system',
+    weight: 'medium',
+    applications: ['Street view', 'Asset documentation'],
+    dataOutput: 'Panoramic images',
+    platformCategory: 'ground'
   }
 }
 
@@ -705,25 +904,102 @@ const getWeightClass = (payloadIds) => {
   return 'light'
 }
 
+const checkBvlosLevel1Eligibility = (analysis) => {
+  const { environments = [], airspaces = [] } = analysis
+
+  // Must be Class G only (uncontrolled)
+  const classGOnly = airspaces.length === 0 ||
+    airspaces.every(a => ['uncontrolled_rural', 'uncontrolled_suburban'].includes(a))
+
+  // Must be sparse/controlled population (not urban, suburban, or gathering)
+  const sparsePopulation = environments.length === 0 ||
+    environments.every(e => ['controlled', 'remote', 'sparsely'].includes(e))
+
+  return classGOnly && sparsePopulation
+}
+
 const determineRegulatoryPathway = (analysis) => {
-  const { operationTypes = [], environments = [], airspaces = [] } = analysis
+  const { operationTypes = [], environments = [], airspaces = [], missionProfiles = [] } = analysis
 
   // Canadian Drone Regulations (CARs Part IX) Decision Tree:
-  // 1. SFOC - Required for: BVLOS, Night, over gatherings, restricted airspace
-  // 2. Complex (Level 1) - Specific advanced scenarios with additional requirements
-  // 3. Advanced - Near people, controlled airspace, aerodromes (with authorization)
-  // 4. Basic - Uncontrolled airspace, away from people, specific sites only
+  // 0. Non-aerial operations - Marine/Ground platforms not regulated under CARs Part IX
+  // 1. Level 1 Complex - Low-risk BVLOS under RPOC (Class G, sparse population)
+  // 2. SFOC - Required for: higher-risk BVLOS, Night, over gatherings, restricted airspace
+  // 3. Complex - Specific advanced scenarios with additional requirements
+  // 4. Advanced - Near people, controlled airspace, aerodromes (with authorization)
+  // 5. Basic - Uncontrolled airspace, away from people, specific sites only
 
-  // Check for SFOC requirements (any match triggers SFOC)
+  // First, check for platform types based on mission profiles
+  const selectedProfiles = missionProfiles?.map(id => MISSION_PROFILES[id]).filter(Boolean) || []
+  const hasMarinePlatform = selectedProfiles.some(p => p.platformCategory === 'marine')
+  const hasGroundPlatform = selectedProfiles.some(p => p.platformCategory === 'ground')
+  const hasAerialPlatform = selectedProfiles.some(p => !p.platformCategory || p.platformCategory === 'aerial')
+
+  // If purely non-aerial, return appropriate pathway
+  if (!hasAerialPlatform && (hasMarinePlatform || hasGroundPlatform)) {
+    if (hasMarinePlatform) {
+      return {
+        pathway: 'Marine',
+        pathwayFull: 'Marine Operations (Non-Aviation)',
+        reason: 'Marine vessel operations are regulated under Small Vessel Regulations, not CARs Part IX',
+        complexity: 'varies',
+        requirements: [
+          'Valid vessel operator certification',
+          'Personal flotation devices for all crew',
+          'Float plan filed with shore contact',
+          'Marine weather monitoring',
+          'Small Vessel Regulations compliance'
+        ]
+      }
+    }
+    if (hasGroundPlatform) {
+      return {
+        pathway: 'Ground',
+        pathwayFull: 'Ground Operations (Non-Aviation)',
+        reason: 'Ground-based survey operations are not regulated under CARs Part IX',
+        complexity: 'low',
+        requirements: [
+          'Site access authorization',
+          'Traffic management plan (if applicable)',
+          'Equipment safety procedures',
+          'Provincial OH&S compliance'
+        ]
+      }
+    }
+  }
+
+  // Continue with aviation pathway logic for aerial or hybrid operations
   const hasNightOps = operationTypes.some(op => op?.includes('night'))
   const hasBvlosOps = operationTypes.some(op => op?.includes('bvlos'))
   const hasRestrictedAirspace = airspaces.some(a => a === 'restricted_special')
   const hasGathering = environments.includes('gathering')
 
-  if (hasNightOps || hasBvlosOps || hasRestrictedAirspace || hasGathering) {
+  // NEW: Check if BVLOS qualifies for Level 1 Complex
+  const bvlosQualifiesForLevel1 = hasBvlosOps && checkBvlosLevel1Eligibility(analysis)
+  const hasLevel1ComplexBvlos = operationTypes.includes('bvlos_level1_complex')
+
+  // Level 1 Complex pathway (check BEFORE SFOC)
+  if ((hasLevel1ComplexBvlos || bvlosQualifiesForLevel1) && !hasNightOps && !hasRestrictedAirspace && !hasGathering) {
+    return {
+      pathway: 'Level1Complex',
+      pathwayFull: 'Level 1 Complex Operations (RPOC)',
+      reason: 'Low-risk BVLOS under Level 1 Complex: Class G, <400ft AGL, sparse/controlled population, 5nm from aerodromes',
+      complexity: 'medium',
+      requirements: [
+        'Level 1 Complex pilot certificate',
+        'RPAS Operator Certificate (RPOC)',
+        'Site risk assessment verifying Level 1 Complex conditions',
+        'Operations manual (RPOC-approved)',
+        'Liability insurance'
+      ]
+    }
+  }
+
+  // SFOC required for: night, restricted airspace, gatherings, or BVLOS not meeting Level 1 Complex
+  if (hasNightOps || (hasBvlosOps && !bvlosQualifiesForLevel1) || hasRestrictedAirspace || hasGathering) {
     const reasons = [
       hasNightOps && 'Night operations (after civil twilight)',
-      hasBvlosOps && 'Beyond Visual Line of Sight (BVLOS)',
+      (hasBvlosOps && !bvlosQualifiesForLevel1) && 'Beyond Visual Line of Sight (BVLOS) not meeting Level 1 Complex criteria',
       hasRestrictedAirspace && 'Restricted/special use airspace',
       hasGathering && 'Operations over assembly of people'
     ].filter(Boolean)
@@ -1278,8 +1554,11 @@ function RegulatoryPathwayResult({ pathway }) {
   const colors = {
     Basic: 'bg-green-100 border-green-300 text-green-800',
     Advanced: 'bg-amber-100 border-amber-300 text-amber-800',
+    Level1Complex: 'bg-blue-100 border-blue-300 text-blue-800',
     Complex: 'bg-orange-100 border-orange-300 text-orange-800',
-    SFOC: 'bg-red-100 border-red-300 text-red-800'
+    SFOC: 'bg-red-100 border-red-300 text-red-800',
+    Marine: 'bg-cyan-100 border-cyan-300 text-cyan-800',
+    Ground: 'bg-stone-100 border-stone-300 text-stone-800'
   }
 
   return (

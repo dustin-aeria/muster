@@ -239,13 +239,13 @@ export const DEFAULT_FHA_TEMPLATES = [
     fhaNumber: 'FHA-2.7',
     title: 'BVLOS Operations',
     category: 'flight_ops',
-    description: 'Hazard assessment for Beyond Visual Line of Sight operations requiring special authorization and enhanced safety measures.',
+    description: 'Hazard assessment for Beyond Visual Line of Sight operations. May be conducted under Level 1 Complex (RPOC) for low-risk scenarios or SFOC for higher-risk operations.',
     consequences: 'Loss of aircraft awareness, collision with manned aircraft, inability to detect obstacles, extended emergency response time.',
     likelihood: 3,
     severity: 5,
     riskScore: 15,
     controlMeasures: [
-      { type: 'administrative', description: 'Valid BVLOS SFOC obtained and conditions complied with', responsible: 'Operations Manager' },
+      { type: 'administrative', description: 'Valid BVLOS authorization (SFOC or Level 1 Complex RPOC) obtained', responsible: 'Operations Manager' },
       { type: 'engineering', description: 'Detect and Avoid (DAA) system operational and tested', responsible: 'PIC' },
       { type: 'administrative', description: 'Ground-based visual observers positioned along route', responsible: 'PIC' },
       { type: 'engineering', description: 'Redundant command and control links verified', responsible: 'PIC' },
@@ -256,8 +256,8 @@ export const DEFAULT_FHA_TEMPLATES = [
     residualLikelihood: 2,
     residualSeverity: 4,
     residualRiskScore: 8,
-    keywords: ['BVLOS', 'beyond visual', 'DAA', 'detect avoid', 'lost link'],
-    regulatoryRefs: ['CARs 901 SFOC', 'BVLOS Authorization'],
+    keywords: ['BVLOS', 'beyond visual', 'DAA', 'detect avoid', 'lost link', 'Level 1 Complex', 'RPOC'],
+    regulatoryRefs: ['CARs 901 SFOC', 'BVLOS Authorization', 'Level 1 Complex RPOC'],
     applicableOperations: ['BVLOS surveys', 'Linear inspections', 'Extended range operations']
   },
   {
@@ -1187,6 +1187,70 @@ export const DEFAULT_FHA_TEMPLATES = [
     keywords: ['mine', 'mining', 'quarry', 'blasting', 'dust', 'heavy equipment'],
     regulatoryRefs: ['Mining Safety Regulations', 'CARs 901'],
     applicableOperations: ['Mine survey', 'Stockpile measurement', 'Progress monitoring']
+  },
+  {
+    fhaNumber: 'FHA-6.10',
+    title: 'Bathymetric Survey Operations',
+    category: 'specialized',
+    description: 'Hazard assessment for bathymetric survey operations using sonar equipment from marine vessels.',
+    consequences: 'Equipment loss, vessel capsizing, drowning, data quality issues.',
+    likelihood: 3,
+    severity: 4,
+    riskScore: 12,
+    controlMeasures: [
+      { type: 'ppe', description: 'PFDs worn by all crew', responsible: 'All Crew' },
+      { type: 'administrative', description: 'Float plan filed', responsible: 'Vessel Master' },
+      { type: 'administrative', description: 'Tidal/current conditions assessed', responsible: 'Survey Lead' },
+      { type: 'engineering', description: 'Equipment secured and waterproofed', responsible: 'Technician' }
+    ],
+    residualLikelihood: 2,
+    residualSeverity: 3,
+    residualRiskScore: 6,
+    keywords: ['bathymetric', 'hydrographic', 'sonar', 'marine', 'vessel'],
+    regulatoryRefs: ['Small Vessel Regulations', 'Marine Safety'],
+    applicableOperations: ['Bathymetric survey', 'Hydrographic mapping']
+  },
+  {
+    fhaNumber: 'FHA-6.11',
+    title: 'Terrestrial LiDAR Operations',
+    category: 'specialized',
+    description: 'Hazard assessment for ground-based LiDAR survey operations.',
+    consequences: 'Laser eye injury, equipment damage, slips/trips.',
+    likelihood: 2,
+    severity: 3,
+    riskScore: 6,
+    controlMeasures: [
+      { type: 'administrative', description: 'Laser safety training completed', responsible: 'All Operators' },
+      { type: 'ppe', description: 'Laser safety eyewear available', responsible: 'Technician' },
+      { type: 'administrative', description: 'Public exclusion zone maintained', responsible: 'Survey Lead' }
+    ],
+    residualLikelihood: 1,
+    residualSeverity: 2,
+    residualRiskScore: 2,
+    keywords: ['terrestrial', 'LiDAR', 'ground-based', 'laser', 'scanner'],
+    regulatoryRefs: ['Laser Safety Standards', 'OH&S'],
+    applicableOperations: ['Static LiDAR survey', 'As-built documentation']
+  },
+  {
+    fhaNumber: 'FHA-6.12',
+    title: 'Mobile Mapping Operations',
+    category: 'specialized',
+    description: 'Hazard assessment for vehicle-mounted mobile mapping operations.',
+    consequences: 'Traffic accidents, equipment damage, data gaps.',
+    likelihood: 2,
+    severity: 4,
+    riskScore: 8,
+    controlMeasures: [
+      { type: 'administrative', description: 'Route planning completed', responsible: 'Survey Manager' },
+      { type: 'engineering', description: 'Equipment securely mounted', responsible: 'Technician' },
+      { type: 'engineering', description: 'Warning lights on vehicle', responsible: 'Driver' }
+    ],
+    residualLikelihood: 1,
+    residualSeverity: 3,
+    residualRiskScore: 3,
+    keywords: ['mobile mapping', 'vehicle', 'LiDAR', 'corridor'],
+    regulatoryRefs: ['Highway Traffic Act', 'OH&S'],
+    applicableOperations: ['Road surveys', 'Corridor mapping']
   },
 
   // ==========================================

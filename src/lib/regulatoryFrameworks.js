@@ -99,6 +99,21 @@ export const OPERATION_CATEGORIES = {
       ],
       examples: ['BVLOS', 'Night operations', 'Over 25kg', 'Over people'],
       requiresSFOC: true
+    },
+    level1_complex: {
+      id: 'level1_complex',
+      name: 'Level 1 Complex Operations',
+      description: 'Lower-risk BVLOS operations under RPOC without SFOC',
+      requirements: [
+        'Level 1 Complex pilot certificate (18+, 20hr ground school)',
+        'RPAS Operator Certificate (RPOC)',
+        'Operations manual (RPOC-approved)',
+        'Risk assessment',
+        'Insurance coverage'
+      ],
+      examples: ['Low-risk BVLOS in Class G', 'BVLOS over sparsely populated areas'],
+      requiresSFOC: false,
+      requiresRPOC: true
     }
   },
 
@@ -292,7 +307,7 @@ export const OPERATION_TYPES = {
   tc: [
     { id: 'vlos', name: 'Visual Line of Sight (VLOS)', description: 'Pilot can see the drone at all times' },
     { id: 'evlos', name: 'Extended VLOS (EVLOS)', description: 'Using visual observers to extend range' },
-    { id: 'bvlos', name: 'Beyond Visual Line of Sight (BVLOS)', description: 'Drone operated beyond visual range', requiresSFOC: true },
+    { id: 'bvlos', name: 'Beyond Visual Line of Sight (BVLOS)', description: 'Drone operated beyond visual range', requiresSFOC: 'conditional', level1ComplexEligible: true },
     { id: 'night', name: 'Night Operations', description: 'Operations during nighttime', requiresSFOC: true },
     { id: 'over_people', name: 'Over People', description: 'Flight directly over non-participants', requiresSFOC: true }
   ],
