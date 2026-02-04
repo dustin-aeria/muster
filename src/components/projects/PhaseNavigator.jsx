@@ -23,7 +23,7 @@ export const PHASES = [
     label: 'Plan',
     icon: ClipboardList,
     description: 'Project setup & preparation',
-    tabs: ['overview', 'needs', 'costs', 'time', 'expenses', 'sections', 'preField', 'templates', 'proposal']
+    tabs: ['overview', 'needs', 'costs', 'time', 'expenses', 'sections', 'preField', 'templates', 'proposal', 'crew', 'equipment', 'review', 'team', 'notifications', 'forms']
   },
   {
     id: 'sites',
@@ -43,8 +43,8 @@ export const PHASES = [
     id: 'field',
     label: 'Field',
     icon: Plane,
-    description: 'Crew, equipment & operations',
-    tabs: ['crew', 'equipment', 'activities', 'team', 'notifications', 'review', 'tailgate', 'forms']
+    description: 'In-field operations',
+    tabs: ['tailgate', 'activities']
   },
   {
     id: 'deliver',
@@ -75,8 +75,9 @@ export default function PhaseNavigator({
   const getPhaseStatus = (phase) => {
     switch (phase.id) {
       case 'plan':
-        // Plan is complete if basic info is filled
-        return project?.name && project?.clientName ? 'complete' : 'active'
+        // Plan is complete if basic info filled and crew assigned
+        return project?.name && project?.clientName && project?.crew?.length > 0
+          ? 'complete' : 'active'
       case 'sites':
         // Sites complete if site survey or flight plan has data
         return project?.siteSurvey?.location || project?.flightPlan?.waypoints?.length
@@ -86,8 +87,8 @@ export default function PhaseNavigator({
         return project?.hseRisk?.risks?.length || project?.sora?.conops
           ? 'complete' : 'pending'
       case 'field':
-        // Field ready if crew assigned
-        return project?.crew?.length > 0 ? 'complete' : 'pending'
+        // Field ready if tailgate briefing completed or activities logged
+        return project?.tailgateBriefing?.completedAt ? 'complete' : 'pending'
       case 'deliver':
         return 'pending'
       default:
