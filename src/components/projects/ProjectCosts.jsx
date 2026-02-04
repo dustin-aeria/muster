@@ -23,9 +23,11 @@ import {
   Calculator,
   Layers,
   Clock,
-  Percent
+  Percent,
+  Receipt
 } from 'lucide-react'
 import { getOperators, getEquipment, getAircraft } from '../../lib/firestore'
+import { getExpensesByProject, calculateExpenseTotals, formatCurrency as formatExpenseCurrency } from '../../lib/firestoreExpenses'
 import { useOrganization } from '../../hooks/useOrganization'
 import { formatCurrency, calculatePhaseCost } from '../../lib/costEstimator'
 import { calculateServiceCost } from './ProjectServicesSection'
@@ -36,27 +38,31 @@ export default function ProjectCosts({ project }) {
   const [freshOperators, setFreshOperators] = useState([])
   const [freshEquipment, setFreshEquipment] = useState([])
   const [freshAircraft, setFreshAircraft] = useState([])
+  const [expenses, setExpenses] = useState([])
   const [loading, setLoading] = useState(true)
   const [expandedSections, setExpandedSections] = useState({
     preField: true,
     services: true,
     field: true,
-    postField: true
+    postField: true,
+    expenses: true
   })
 
   // Load fresh data for calculations
   useEffect(() => {
     const loadData = async () => {
-      if (!organizationId) return
+      if (!organizationId || !project?.id) return
       try {
-        const [ops, equip, aircraft] = await Promise.all([
+        const [ops, equip, aircraft, projectExpenses] = await Promise.all([
           getOperators(organizationId),
           getEquipment(organizationId),
-          getAircraft(organizationId)
+          getAircraft(organizationId),
+          getExpensesByProject(project.id)
         ])
         setFreshOperators(ops)
         setFreshEquipment(equip)
         setFreshAircraft(aircraft)
+        setExpenses(projectExpenses)
       } catch (err) {
         console.error('Error loading cost data:', err)
       } finally {
@@ -64,7 +70,7 @@ export default function ProjectCosts({ project }) {
       }
     }
     loadData()
-  }, [organizationId])
+  }, [organizationId, project?.id])
 
   // Calculate all costs
   const costs = useMemo(() => {
@@ -199,8 +205,11 @@ export default function ProjectCosts({ project }) {
     const postFieldTasks = project?.postFieldPhase?.tasks || []
     const postFieldCost = calculatePhaseCost(project?.postFieldPhase)
 
-    // Grand total
-    const total = preFieldCost + servicesCost + fieldCost + postFieldCost
+    // Expenses (actual tracked expenses)
+    const expenseTotals = calculateExpenseTotals(expenses)
+
+    // Grand total (estimates + actual expenses)
+    const total = preFieldCost + servicesCost + fieldCost + postFieldCost + expenseTotals.byStatus.approved
 
     return {
       preField: {
@@ -223,9 +232,17 @@ export default function ProjectCosts({ project }) {
         cost: postFieldCost,
         taskCount: postFieldTasks.length
       },
+      expenses: {
+        total: expenseTotals.total,
+        approved: expenseTotals.byStatus.approved,
+        pending: expenseTotals.byStatus.draft + expenseTotals.byStatus.submitted,
+        billable: expenseTotals.billable,
+        count: expenseTotals.count,
+        byCategory: expenseTotals.byCategory
+      },
       total
     }
-  }, [project, freshOperators, freshEquipment, freshAircraft])
+  }, [project, freshOperators, freshEquipment, freshAircraft, expenses])
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
@@ -269,7 +286,7 @@ export default function ProjectCosts({ project }) {
           </div>
           <DollarSign className="w-16 h-16 text-white/20" />
         </div>
-        <div className="grid grid-cols-4 gap-4 mt-6 pt-4 border-t border-white/20">
+        <div className="grid grid-cols-5 gap-4 mt-6 pt-4 border-t border-white/20">
           <div>
             <p className="text-green-100 text-xs">Pre-Field</p>
             <p className="text-lg font-semibold">{formatCurrency(costs.preField.cost)}</p>
@@ -285,6 +302,10 @@ export default function ProjectCosts({ project }) {
           <div>
             <p className="text-green-100 text-xs">Post-Field</p>
             <p className="text-lg font-semibold">{formatCurrency(costs.postField.cost)}</p>
+          </div>
+          <div>
+            <p className="text-green-100 text-xs">Expenses</p>
+            <p className="text-lg font-semibold">{formatCurrency(costs.expenses.approved)}</p>
           </div>
         </div>
       </div>
@@ -595,6 +616,75 @@ export default function ProjectCosts({ project }) {
               <p className="text-sm text-gray-600">
                 Costs calculated from task assignments in the Post-Field tab.
               </p>
+            </div>
+          )}
+        </div>
+
+        {/* Expenses Section */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <button
+            onClick={() => toggleSection('expenses')}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Receipt className="w-5 h-5 text-amber-600" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold text-gray-900">Tracked Expenses</h3>
+                <p className="text-sm text-gray-500">{costs.expenses.count} expense{costs.expenses.count !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xl font-bold text-gray-900">
+                {formatCurrency(costs.expenses.approved)}
+              </span>
+              {expandedSections.expenses ? (
+                <ChevronUp className="w-5 h-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-400" />
+              )}
+            </div>
+          </button>
+          {expandedSections.expenses && (
+            <div className="border-t border-gray-100">
+              <div className="p-4">
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="bg-green-50 rounded-lg p-3">
+                    <p className="text-xs text-green-600 font-medium">Approved</p>
+                    <p className="text-lg font-bold text-green-700">{formatCurrency(costs.expenses.approved)}</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-lg p-3">
+                    <p className="text-xs text-amber-600 font-medium">Pending</p>
+                    <p className="text-lg font-bold text-amber-700">{formatCurrency(costs.expenses.pending)}</p>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg p-3">
+                    <p className="text-xs text-blue-600 font-medium">Billable</p>
+                    <p className="text-lg font-bold text-blue-700">{formatCurrency(costs.expenses.billable)}</p>
+                  </div>
+                </div>
+
+                {/* Category breakdown */}
+                {Object.keys(costs.expenses.byCategory).length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">By Category</h4>
+                    <div className="space-y-2">
+                      {Object.entries(costs.expenses.byCategory).map(([category, amount]) => (
+                        <div key={category} className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-2">
+                          <span className="font-medium text-gray-900 capitalize">{category.replace('_', ' ')}</span>
+                          <span className="text-gray-700">{formatCurrency(amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {costs.expenses.count === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    No expenses tracked yet. Add expenses in the Expenses tab.
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>

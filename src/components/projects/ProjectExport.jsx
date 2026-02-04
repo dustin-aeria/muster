@@ -40,7 +40,7 @@ import {
   generateSORAPDF, 
   generateHSERiskPDF 
 } from '../../lib/pdfExportService'
-import { 
+import {
   exportMultiSitePDF,
   generateMultiSiteOperationsPlanPDF,
   generateMultiSiteSORA_PDF,
@@ -49,6 +49,7 @@ import {
 } from '../../lib/pdfExportServiceMultiSite'
 import { sailColors } from '../../lib/soraConfig'
 import { logger } from '../../lib/logger'
+import { getActivitiesForReport, formatDuration } from '../../lib/firestoreActivities'
 
 // ============================================
 // EXPORT SECTIONS CONFIGURATION
@@ -62,6 +63,7 @@ const exportSections = [
   { id: 'emergency', label: 'Emergency Plan', included: true },
   { id: 'ppe', label: 'PPE Requirements', included: true },
   { id: 'communications', label: 'Communications', included: true },
+  { id: 'activities', label: 'Field Activities', included: true },
   { id: 'approvals', label: 'Approvals & Signatures', included: true },
   { id: 'forms', label: 'Forms Checklist', included: false },
 ]
@@ -242,6 +244,22 @@ export default function ProjectExport({ project, onUpdate }) {
   const [pdfExportProgress, setPdfExportProgress] = useState(null)
   const [selectedSite, setSelectedSite] = useState(null) // null = all sites
   const [showSiteSelector, setShowSiteSelector] = useState(false)
+  const [activities, setActivities] = useState([])
+
+  // Load activities for report
+  useState(() => {
+    const loadActivities = async () => {
+      if (project?.id) {
+        try {
+          const reportActivities = await getActivitiesForReport(project.id)
+          setActivities(reportActivities)
+        } catch (err) {
+          logger.error('Failed to load activities for export:', err)
+        }
+      }
+    }
+    loadActivities()
+  }, [project?.id])
   
   // Get branding settings
   const { branding, loading: brandingLoading } = useBranding()
@@ -406,6 +424,29 @@ export default function ProjectExport({ project, onUpdate }) {
       lines.push('')
     }
 
+    // Activities
+    if (selectedSections.activities && activities.length > 0) {
+      lines.push('-'.repeat(40))
+      lines.push('FIELD ACTIVITIES')
+      lines.push('-'.repeat(40))
+      activities.forEach((activity, i) => {
+        lines.push(`${i + 1}. ${activity.name}`)
+        lines.push(`   Category: ${activity.category || 'General'}`)
+        lines.push(`   Duration: ${formatDuration(activity.totalSeconds || 0)}`)
+        lines.push(`   Operator: ${activity.operatorName || 'N/A'}`)
+        if (activity.methodsUsed?.length > 0) {
+          lines.push(`   Methods: ${activity.methodsUsed.join(', ')}`)
+        }
+        if (activity.notes) {
+          lines.push(`   Notes: ${activity.notes}`)
+        }
+        if (activity.informationGathered) {
+          lines.push(`   Findings: ${activity.informationGathered}`)
+        }
+        lines.push('')
+      })
+    }
+
     // Footer
     lines.push('='.repeat(60))
     lines.push(`Generated: ${new Date().toLocaleString()}`)
@@ -524,6 +565,26 @@ export default function ProjectExport({ project, onUpdate }) {
         <div class="field"><div class="field-label">Nearest Hospital</div><div class="field-value">${project.emergencyPlan.nearestHospital || 'N/A'}</div></div>
         <div class="field"><div class="field-label">Rally Point</div><div class="field-value">${project.emergencyPlan.rallyPoint || 'N/A'}</div></div>
       </div>
+    </div>
+    ` : ''}
+
+    ${selectedSections.activities && activities.length > 0 ? `
+    <div class="section">
+      <div class="section-title">Field Activities (${activities.length})</div>
+      <table>
+        <thead><tr><th>Activity</th><th>Category</th><th>Duration</th><th>Operator</th></tr></thead>
+        <tbody>
+          ${activities.map(a => `<tr>
+            <td>
+              <strong>${a.name || 'Untitled'}</strong>
+              ${a.notes ? `<br><small>${a.notes.substring(0, 100)}${a.notes.length > 100 ? '...' : ''}</small>` : ''}
+            </td>
+            <td>${a.category || 'General'}</td>
+            <td>${formatDuration(a.totalSeconds || 0)}</td>
+            <td>${a.operatorName || 'N/A'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
     </div>
     ` : ''}
   </div>

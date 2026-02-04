@@ -67,14 +67,14 @@
 - [x] 7.3 Create `src/components/activities/ActiveTimerWidget.jsx` - floating widget
 - [x] 7.4 Update `src/components/Layout.jsx` - add floating widget
 
-**Commit:** _pending_
+**Commit:** `66e06584`
 
 ---
 
-## Phase 8: Final Integration & Polish
-- [ ] 8.1 Update `src/components/projects/ProjectCosts.jsx` - show expense totals
-- [ ] 8.2 Update export/report generation - include activities
-- [ ] 8.3 Final testing and verification
+## Phase 8: Final Integration & Polish ✅
+- [x] 8.1 Update `src/components/projects/ProjectCosts.jsx` - show expense totals
+- [x] 8.2 Update export/report generation - include activities
+- [x] 8.3 Final testing and verification
 
 **Commit:** _pending_
 
@@ -90,5 +90,5 @@
 | 4     | ✅ 2026-02-04 | `4a52f75e` | OCR Cloud Function: Vision API integration, text extraction helpers |
 | 5     | ✅ 2026-02-04 | `411e69fe` | Core infrastructure: firestoreActivities.js, useActivityTimer hook, rules |
 | 6     | ✅ 2026-02-04 | `cbfbc043` | UI components: ActivityTimer, ActivityForm, ActivityList, ProjectActivities |
-| 7     |           |             |       |
+| 7     | ✅ 2026-02-04 | `66e06584` | Integration: ProjectView tab, PhaseNavigator, ActiveTimerWidget, Layout |
 | 8     |           |             |       |
