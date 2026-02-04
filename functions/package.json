@@ -15,6 +15,7 @@
     "logs": "firebase functions:log"
   },
   "dependencies": {
+    "@google-cloud/vision": "^4.3.2",
     "firebase-admin": "^13.6.0",
     "firebase-functions": "^7.0.5",
     "resend": "^2.0.0"

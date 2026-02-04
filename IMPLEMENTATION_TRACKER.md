@@ -29,14 +29,14 @@
 - [x] 3.3 Create `src/pages/ExpenseApproval.jsx` - manager approval page
 - [x] 3.4 Update `src/App.jsx` - add ExpenseApproval route
 
-**Commit:** _committing..._
+**Commit:** `4b120251`
 
 ---
 
-## Phase 4: Expense Tracker - OCR Cloud Function
-- [ ] 4.1 Add `@google-cloud/vision` to `functions/package.json`
-- [ ] 4.2 Create OCR trigger in `functions/index.js`
-- [ ] 4.3 Deploy Cloud Function
+## Phase 4: Expense Tracker - OCR Cloud Function ✅
+- [x] 4.1 Add `@google-cloud/vision` to `functions/package.json`
+- [x] 4.2 Create OCR trigger in `functions/index.js`
+- [ ] 4.3 Deploy Cloud Function (manual step - run `cd functions && npm install && firebase deploy --only functions`)
 
 **Commit:** _pending_
 
@@ -86,8 +86,8 @@
 |-------|-----------|-------------|-------|
 | 1     | ✅ 2026-02-04 | `48cff158` | Core infrastructure: firestoreExpenses.js, storageHelpers, rules |
 | 2     | ✅ 2026-02-04 | `2b0341af` | UI components: ExpenseForm, ExpenseList, ProjectExpenses |
-| 3     |           |             |       |
-| 4     |           |             |       |
+| 3     | ✅ 2026-02-04 | `4b120251` | Integration: ProjectView tab, PhaseNavigator, ExpenseApproval page, route |
+| 4     | ✅ 2026-02-04 | _pending_  | OCR Cloud Function: Vision API integration, text extraction helpers |
 | 5     |           |             |       |
 | 6     |           |             |       |
 | 7     |           |             |       |

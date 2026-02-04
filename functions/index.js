@@ -387,3 +387,286 @@ exports.resendInvitationEmail = functions.https.onCall(async (data, context) => 
     throw new functions.https.HttpsError('internal', 'An error occurred')
   }
 })
+
+// ============================================
+// Receipt OCR Processing
+// ============================================
+
+const vision = require('@google-cloud/vision')
+
+// Initialize Vision client (uses default credentials from Firebase)
+let visionClient = null
+function getVisionClient() {
+  if (!visionClient) {
+    visionClient = new vision.ImageAnnotatorClient()
+  }
+  return visionClient
+}
+
+/**
+ * Extract amount from OCR text
+ * Looks for currency patterns like $123.45, 123.45, CAD 123.45, etc.
+ * @param {string} text - OCR extracted text
+ * @returns {number|null} Extracted amount or null
+ */
+function extractAmount(text) {
+  // Common patterns for amounts on receipts
+  const patterns = [
+    // Total patterns (prioritize these)
+    /(?:total|amount|balance|due|paid)[\s:]*\$?\s*(\d{1,6}[.,]\d{2})/gi,
+    /\$\s*(\d{1,6}[.,]\d{2})/g,
+    /(?:CAD|USD|CDN)\s*\$?\s*(\d{1,6}[.,]\d{2})/gi,
+    // Generic number patterns (last resort)
+    /(\d{1,6}[.,]\d{2})/g
+  ]
+
+  let amounts = []
+
+  for (const pattern of patterns) {
+    const matches = text.matchAll(pattern)
+    for (const match of matches) {
+      const amount = parseFloat(match[1].replace(',', '.'))
+      if (amount > 0 && amount < 100000) {
+        amounts.push(amount)
+      }
+    }
+  }
+
+  // Return the largest amount (usually the total)
+  if (amounts.length > 0) {
+    return Math.max(...amounts)
+  }
+
+  return null
+}
+
+/**
+ * Extract date from OCR text
+ * Looks for date patterns
+ * @param {string} text - OCR extracted text
+ * @returns {string|null} Date in YYYY-MM-DD format or null
+ */
+function extractDate(text) {
+  const patterns = [
+    // MM/DD/YYYY or MM-DD-YYYY
+    /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/g,
+    // YYYY/MM/DD or YYYY-MM-DD
+    /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/g,
+    // Month DD, YYYY
+    /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/gi,
+    // DD Month YYYY
+    /(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{4})/gi
+  ]
+
+  const monthMap = {
+    'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+    'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+    'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+  }
+
+  for (const pattern of patterns) {
+    const matches = text.matchAll(pattern)
+    for (const match of matches) {
+      let year, month, day
+
+      if (/^\d{4}$/.test(match[1])) {
+        // YYYY/MM/DD format
+        year = match[1]
+        month = match[2].padStart(2, '0')
+        day = match[3].padStart(2, '0')
+      } else if (/^\d{1,2}$/.test(match[1]) && /^\d{1,2}$/.test(match[2])) {
+        // MM/DD/YYYY format
+        month = match[1].padStart(2, '0')
+        day = match[2].padStart(2, '0')
+        year = match[3]
+      } else if (/^[a-z]/i.test(match[1])) {
+        // Month DD, YYYY format
+        month = monthMap[match[1].toLowerCase().substring(0, 3)]
+        day = match[2].padStart(2, '0')
+        year = match[3]
+      } else if (/^[a-z]/i.test(match[2])) {
+        // DD Month YYYY format
+        day = match[1].padStart(2, '0')
+        month = monthMap[match[2].toLowerCase().substring(0, 3)]
+        year = match[3]
+      }
+
+      // Validate date
+      const yearNum = parseInt(year)
+      const monthNum = parseInt(month)
+      const dayNum = parseInt(day)
+
+      if (yearNum >= 2020 && yearNum <= 2030 &&
+          monthNum >= 1 && monthNum <= 12 &&
+          dayNum >= 1 && dayNum <= 31) {
+        return `${year}-${month}-${day}`
+      }
+    }
+  }
+
+  return null
+}
+
+/**
+ * Extract vendor name from OCR text
+ * Usually the first few lines of receipt contain the store name
+ * @param {string} text - OCR extracted text
+ * @returns {string|null} Vendor name or null
+ */
+function extractVendor(text) {
+  const lines = text.split('\n').filter(line => line.trim().length > 2)
+
+  // Skip common header words
+  const skipWords = ['receipt', 'invoice', 'tax', 'gst', 'hst', 'pst', 'total', 'date', 'time', 'tel', 'phone', 'fax']
+
+  for (let i = 0; i < Math.min(5, lines.length); i++) {
+    const line = lines[i].trim()
+
+    // Skip if it's mostly numbers or too short
+    if (/^\d+$/.test(line.replace(/[\s\-\.]/g, ''))) continue
+    if (line.length < 3 || line.length > 50) continue
+
+    // Skip common non-vendor lines
+    const lowerLine = line.toLowerCase()
+    if (skipWords.some(word => lowerLine.startsWith(word))) continue
+    if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(line)) continue // Date
+    if (/^\$?\d+[.,]\d{2}$/.test(line)) continue // Amount
+
+    // Clean up the line
+    const cleaned = line.replace(/[#*=\-_]+/g, '').trim()
+    if (cleaned.length >= 3) {
+      return cleaned.substring(0, 100) // Cap at 100 chars
+    }
+  }
+
+  return null
+}
+
+/**
+ * Firestore trigger: Process receipt image with OCR when expense is created/updated
+ * Triggered when an expense document is written with ocrStatus 'pending'
+ */
+exports.processReceiptOCR = functions.firestore
+  .document('expenses/{expenseId}')
+  .onWrite(async (change, context) => {
+    const expenseId = context.params.expenseId
+
+    // Skip if document was deleted
+    if (!change.after.exists) {
+      functions.logger.info('Expense deleted, skipping OCR:', expenseId)
+      return null
+    }
+
+    const expense = change.after.data()
+    const previousData = change.before.exists ? change.before.data() : null
+
+    // Only process if ocrStatus is 'pending' and we have a receipt URL
+    if (expense.ocrStatus !== 'pending') {
+      return null
+    }
+
+    if (!expense.receipt?.url) {
+      functions.logger.info('No receipt URL, skipping OCR:', expenseId)
+      await change.after.ref.update({
+        ocrStatus: 'skipped',
+        'ocrData.processedAt': admin.firestore.FieldValue.serverTimestamp()
+      })
+      return null
+    }
+
+    // Prevent reprocessing if URL hasn't changed
+    if (previousData?.receipt?.url === expense.receipt?.url &&
+        previousData?.ocrStatus === 'processing') {
+      functions.logger.info('Already processing this receipt:', expenseId)
+      return null
+    }
+
+    functions.logger.info('Starting OCR processing for expense:', expenseId)
+
+    try {
+      // Mark as processing
+      await change.after.ref.update({
+        ocrStatus: 'processing'
+      })
+
+      // Call Google Cloud Vision API
+      const client = getVisionClient()
+      const [result] = await client.textDetection(expense.receipt.url)
+
+      const detections = result.textAnnotations
+      if (!detections || detections.length === 0) {
+        functions.logger.info('No text detected in receipt:', expenseId)
+        await change.after.ref.update({
+          ocrStatus: 'completed',
+          ocrData: {
+            rawText: null,
+            extractedVendor: null,
+            extractedAmount: null,
+            extractedDate: null,
+            confidence: 0,
+            processedAt: admin.firestore.FieldValue.serverTimestamp()
+          }
+        })
+        return null
+      }
+
+      // First annotation contains the full text
+      const fullText = detections[0].description || ''
+      const confidence = result.textAnnotations[0]?.confidence || 0.8
+
+      functions.logger.info('OCR text extracted:', {
+        expenseId,
+        textLength: fullText.length,
+        confidence
+      })
+
+      // Extract data from text
+      const extractedVendor = extractVendor(fullText)
+      const extractedAmount = extractAmount(fullText)
+      const extractedDate = extractDate(fullText)
+
+      functions.logger.info('OCR extraction results:', {
+        expenseId,
+        extractedVendor,
+        extractedAmount,
+        extractedDate
+      })
+
+      // Update expense with OCR data
+      await change.after.ref.update({
+        ocrStatus: 'completed',
+        ocrData: {
+          rawText: fullText.substring(0, 5000), // Limit storage
+          extractedVendor,
+          extractedAmount,
+          extractedDate,
+          confidence: confidence * 100, // Store as percentage
+          processedAt: admin.firestore.FieldValue.serverTimestamp()
+        }
+      })
+
+      functions.logger.info('OCR processing completed:', expenseId)
+      return { success: true, expenseId }
+
+    } catch (error) {
+      functions.logger.error('OCR processing failed:', {
+        expenseId,
+        error: error.message
+      })
+
+      await change.after.ref.update({
+        ocrStatus: 'failed',
+        ocrData: {
+          rawText: null,
+          extractedVendor: null,
+          extractedAmount: null,
+          extractedDate: null,
+          confidence: 0,
+          error: error.message,
+          processedAt: admin.firestore.FieldValue.serverTimestamp()
+        }
+      })
+
+      return { success: false, error: error.message }
+    }
+  })
