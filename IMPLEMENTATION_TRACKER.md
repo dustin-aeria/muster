@@ -47,15 +47,15 @@
 - [x] 5.2 Create `src/hooks/useActivityTimer.js` - real-time timer hook
 - [x] 5.3 Update `firestore.rules` - add activities collection rules
 
-**Commit:** _pending_
+**Commit:** `411e69fe`
 
 ---
 
-## Phase 6: Activities Tracker - UI Components
-- [ ] 6.1 Create `src/components/activities/ActivityTimer.jsx` - timer display
-- [ ] 6.2 Create `src/components/activities/ActivityForm.jsx` - start/edit modal
-- [ ] 6.3 Create `src/components/activities/ActivityList.jsx` - timeline view
-- [ ] 6.4 Create `src/components/projects/ProjectActivities.jsx` - project tab
+## Phase 6: Activities Tracker - UI Components ✅
+- [x] 6.1 Create `src/components/activities/ActivityTimer.jsx` - timer display
+- [x] 6.2 Create `src/components/activities/ActivityForm.jsx` - start/edit modal
+- [x] 6.3 Create `src/components/activities/ActivityList.jsx` - timeline view
+- [x] 6.4 Create `src/components/projects/ProjectActivities.jsx` - project tab
 
 **Commit:** _pending_
 
@@ -88,7 +88,7 @@
 | 2     | ✅ 2026-02-04 | `2b0341af` | UI components: ExpenseForm, ExpenseList, ProjectExpenses |
 | 3     | ✅ 2026-02-04 | `4b120251` | Integration: ProjectView tab, PhaseNavigator, ExpenseApproval page, route |
 | 4     | ✅ 2026-02-04 | `4a52f75e` | OCR Cloud Function: Vision API integration, text extraction helpers |
-| 5     |           |             |       |
+| 5     | ✅ 2026-02-04 | `411e69fe` | Core infrastructure: firestoreActivities.js, useActivityTimer hook, rules |
 | 6     |           |             |       |
 | 7     |           |             |       |
 | 8     |           |             |       |
