@@ -43,6 +43,7 @@ const Tasks = lazy(() => import('./pages/Tasks'))
 const Forms = lazy(() => import('./pages/Forms'))
 const TimeTracking = lazy(() => import('./pages/TimeTracking'))
 const TimeApproval = lazy(() => import('./pages/TimeApproval'))
+const ExpenseApproval = lazy(() => import('./pages/ExpenseApproval'))
 const Operators = lazy(() => import('./pages/Operators'))
 const Aircraft = lazy(() => import('./pages/Aircraft'))
 const Equipment = lazy(() => import('./pages/Equipment'))
@@ -242,6 +243,7 @@ function App() {
           <Route path="tasks" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
           <Route path="time-tracking" element={<Suspense fallback={<PageLoader />}><TimeTracking /></Suspense>} />
           <Route path="time-approval" element={<Suspense fallback={<PageLoader />}><TimeApproval /></Suspense>} />
+          <Route path="expense-approval" element={<Suspense fallback={<PageLoader />}><ExpenseApproval /></Suspense>} />
           <Route path="forms" element={<Suspense fallback={<PageLoader />}><Forms /></Suspense>} />
           <Route path="policies" element={<Suspense fallback={<PageLoader />}><PolicyProcedureLibrary /></Suspense>} />
           <Route path="policies/:id" element={<Suspense fallback={<PageLoader />}><PolicyDetail /></Suspense>} />

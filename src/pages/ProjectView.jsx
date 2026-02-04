@@ -55,7 +55,8 @@ import {
   PackageCheck,
   Package,
   Calculator,
-  Clock
+  Clock,
+  Receipt
 } from 'lucide-react'
 import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
@@ -83,6 +84,7 @@ import ProjectTeamPanel from '../components/projects/ProjectTeamPanel'
 import ProjectEquipment from '../components/projects/ProjectEquipment'
 import ProjectCosts from '../components/projects/ProjectCosts'
 import ProjectTimeEntries from '../components/projects/ProjectTimeEntries'
+import ProjectExpenses from '../components/projects/ProjectExpenses'
 import PhaseNavigator, { PHASES, getPhaseForTab, getTabsForPhase } from '../components/projects/PhaseNavigator'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganization } from '../hooks/useOrganization'
@@ -94,6 +96,7 @@ const tabs = [
   { id: 'needs', label: 'Needs Analysis', icon: Target },
   { id: 'costs', label: 'Costs', icon: Calculator },
   { id: 'time', label: 'Time', icon: Clock },
+  { id: 'expenses', label: 'Expenses', icon: Receipt },
   { id: 'sections', label: 'Sections', icon: Settings2 },
   // Optional tabs - toggled via Sections page
   { id: 'preField', label: 'Pre-Field', icon: ClipboardCheck, toggleable: true, sectionKey: 'preField' },
@@ -668,6 +671,9 @@ export default function ProjectView() {
         )}
         {activeTab === 'time' && (
           <ProjectTimeEntries project={project} />
+        )}
+        {activeTab === 'expenses' && (
+          <ProjectExpenses project={project} />
         )}
         {activeTab === 'sections' && (
           <ProjectSections project={project} onUpdate={handleUpdate} />

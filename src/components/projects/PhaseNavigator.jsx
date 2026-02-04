@@ -23,7 +23,7 @@ export const PHASES = [
     label: 'Plan',
     icon: ClipboardList,
     description: 'Project setup & preparation',
-    tabs: ['overview', 'needs', 'costs', 'time', 'sections', 'preField', 'templates', 'proposal']
+    tabs: ['overview', 'needs', 'costs', 'time', 'expenses', 'sections', 'preField', 'templates', 'proposal']
   },
   {
     id: 'sites',

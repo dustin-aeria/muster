@@ -1,7 +1,7 @@
 # Implementation Tracker: Expense Tracker & In-Field Activities Tracker
 
 **Started:** 2026-02-04
-**Status:** Phase 2 Complete
+**Status:** Phase 3 Complete
 
 ---
 
@@ -19,17 +19,17 @@
 - [x] 2.2 Create `src/components/expenses/ExpenseList.jsx` - list with filtering
 - [x] 2.3 Create `src/components/projects/ProjectExpenses.jsx` - project tab
 
-**Commit:** _committing..._
+**Commit:** `2b0341af`
 
 ---
 
-## Phase 3: Expense Tracker - Integration
-- [ ] 3.1 Update `src/pages/ProjectView.jsx` - add expenses tab
-- [ ] 3.2 Update `src/components/projects/PhaseNavigator.jsx` - add to plan phase
-- [ ] 3.3 Create `src/pages/ExpenseApproval.jsx` - manager approval page
-- [ ] 3.4 Update `src/App.jsx` - add ExpenseApproval route
+## Phase 3: Expense Tracker - Integration ✅
+- [x] 3.1 Update `src/pages/ProjectView.jsx` - add expenses tab
+- [x] 3.2 Update `src/components/projects/PhaseNavigator.jsx` - add to plan phase
+- [x] 3.3 Create `src/pages/ExpenseApproval.jsx` - manager approval page
+- [x] 3.4 Update `src/App.jsx` - add ExpenseApproval route
 
-**Commit:** _pending_
+**Commit:** _committing..._
 
 ---
 
@@ -85,7 +85,7 @@
 | Phase | Completed | Commit Hash | Notes |
 |-------|-----------|-------------|-------|
 | 1     | ✅ 2026-02-04 | `48cff158` | Core infrastructure: firestoreExpenses.js, storageHelpers, rules |
-| 2     |           |             |       |
+| 2     | ✅ 2026-02-04 | `2b0341af` | UI components: ExpenseForm, ExpenseList, ProjectExpenses |
 | 3     |           |             |       |
 | 4     |           |             |       |
 | 5     |           |             |       |
