@@ -65,6 +65,7 @@ const trainingNavigation = [
 const complianceNavigation = [
   { name: 'Policies & Procedures', href: '/policies', icon: BookOpen },
   { name: 'Document Generator', href: '/document-projects', icon: Sparkles },
+  { name: 'Safety Declarations', href: '/safety-declarations', icon: FileCheck },
 ]
 
 const maintenanceNavigation = [

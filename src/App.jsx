@@ -84,6 +84,10 @@ const DocumentProjects = lazy(() => import('./pages/DocumentProjects'))
 const DocumentProjectView = lazy(() => import('./pages/DocumentProjectView'))
 const DocumentEditor = lazy(() => import('./pages/DocumentEditor'))
 
+// Safety Declaration Module Pages - lazy-loaded
+const SafetyDeclarationHub = lazy(() => import('./pages/SafetyDeclarationHub'))
+const SafetyDeclarationDetail = lazy(() => import('./pages/SafetyDeclarationDetail'))
+
 // Suspense fallback component
 function PageLoader() {
   return <LoadingSpinner size="lg" message="Loading..." />
@@ -293,6 +297,10 @@ function App() {
           <Route path="document-projects" element={<Suspense fallback={<PageLoader />}><DocumentProjects /></Suspense>} />
           <Route path="document-projects/:projectId" element={<Suspense fallback={<PageLoader />}><DocumentProjectView /></Suspense>} />
           <Route path="document-projects/:projectId/documents/:documentId" element={<Suspense fallback={<PageLoader />}><DocumentEditor /></Suspense>} />
+
+          {/* Safety Declaration Module Routes - lazy-loaded */}
+          <Route path="safety-declarations" element={<Suspense fallback={<PageLoader />}><SafetyDeclarationHub /></Suspense>} />
+          <Route path="safety-declarations/:declarationId" element={<Suspense fallback={<PageLoader />}><SafetyDeclarationDetail /></Suspense>} />
         </Route>
 
         {/* Catch all - redirect to dashboard */}
