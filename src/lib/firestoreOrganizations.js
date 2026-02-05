@@ -536,9 +536,6 @@ export async function updateMemberDetails(memberId, details, updatedBy) {
     'department',
     'employeeId',
     'startDate',
-    'ptoAllowance',
-    'sickAllowance',
-    'hourlyRate',
     'notes'
   ]
 

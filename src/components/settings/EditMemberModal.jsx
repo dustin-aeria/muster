@@ -6,9 +6,10 @@
  */
 
 import { useState, useEffect } from 'react'
-import { X, Loader2, User, Briefcase, Calendar, DollarSign, FileText } from 'lucide-react'
-import { updateMemberDetails } from '../../lib/firestoreOrganizations'
+import { X, Loader2, Briefcase, Shield, FileText } from 'lucide-react'
+import { updateMemberDetails, updateMemberRole, ORGANIZATION_ROLES } from '../../lib/firestoreOrganizations'
 import { useAuth } from '../../contexts/AuthContext'
+import { useOrganization } from '../../hooks/useOrganization'
 
 export default function EditMemberModal({
   isOpen,
@@ -17,6 +18,7 @@ export default function EditMemberModal({
   onSuccess
 }) {
   const { user } = useAuth()
+  const { membership, canManageTeam } = useOrganization()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
@@ -25,11 +27,13 @@ export default function EditMemberModal({
     department: '',
     employeeId: '',
     startDate: '',
-    ptoAllowance: '',
-    sickAllowance: '',
-    hourlyRate: '',
+    role: '',
     notes: ''
   })
+
+  // Check if current user can change roles (admin or management)
+  const canChangeRole = canManageTeam || membership?.role === 'management'
+  const isEditingSelf = member?.userId === user?.uid
 
   // Initialize form with member data
   useEffect(() => {
@@ -39,9 +43,7 @@ export default function EditMemberModal({
         department: member.department || '',
         employeeId: member.employeeId || '',
         startDate: member.startDate || '',
-        ptoAllowance: member.ptoAllowance ?? '',
-        sickAllowance: member.sickAllowance ?? '',
-        hourlyRate: member.hourlyRate ?? '',
+        role: member.role || 'operator',
         notes: member.notes || ''
       })
     }
@@ -58,15 +60,22 @@ export default function EditMemberModal({
     setError(null)
 
     try {
-      // Convert numeric fields
+      // Update member details (job info, notes)
       const details = {
-        ...formData,
-        ptoAllowance: formData.ptoAllowance ? Number(formData.ptoAllowance) : null,
-        sickAllowance: formData.sickAllowance ? Number(formData.sickAllowance) : null,
-        hourlyRate: formData.hourlyRate ? Number(formData.hourlyRate) : null
+        jobTitle: formData.jobTitle,
+        department: formData.department,
+        employeeId: formData.employeeId,
+        startDate: formData.startDate,
+        notes: formData.notes
       }
 
       await updateMemberDetails(member.id, details, user?.uid)
+
+      // Update role if changed and user has permission
+      if (canChangeRole && !isEditingSelf && formData.role !== member.role) {
+        await updateMemberRole(member.id, formData.role, user?.uid)
+      }
+
       onSuccess?.()
       onClose()
     } catch (err) {
@@ -110,6 +119,38 @@ export default function EditMemberModal({
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
               {error}
+            </div>
+          )}
+
+          {/* Role Selection */}
+          {canChangeRole && !isEditingSelf && member?.status === 'active' && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-gray-500" />
+                Role & Permissions
+              </h3>
+              <div>
+                <label className="label">Role</label>
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  className="input"
+                >
+                  <option value="management">Management - Can approve, edit, delete</option>
+                  <option value="operator">Operator - Can view and edit</option>
+                  <option value="viewer">Viewer - Can view only</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Controls what this team member can do in the system
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isEditingSelf && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
+              You cannot change your own role. Contact an admin if you need role changes.
             </div>
           )}
 
@@ -163,66 +204,6 @@ export default function EditMemberModal({
                   className="input"
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Allowances */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              Time Off Allowances (days per year)
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label">PTO / Vacation Days</label>
-                <input
-                  type="number"
-                  name="ptoAllowance"
-                  value={formData.ptoAllowance}
-                  onChange={handleChange}
-                  placeholder="e.g., 15"
-                  min="0"
-                  step="0.5"
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="label">Sick Days</label>
-                <input
-                  type="number"
-                  name="sickAllowance"
-                  value={formData.sickAllowance}
-                  onChange={handleChange}
-                  placeholder="e.g., 5"
-                  min="0"
-                  step="0.5"
-                  className="input"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Compensation */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-gray-500" />
-              Compensation
-            </h3>
-            <div>
-              <label className="label">Hourly Rate ($)</label>
-              <input
-                type="number"
-                name="hourlyRate"
-                value={formData.hourlyRate}
-                onChange={handleChange}
-                placeholder="e.g., 35.00"
-                min="0"
-                step="0.01"
-                className="input w-48"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Used for time tracking cost calculations
-              </p>
             </div>
           </div>
 
