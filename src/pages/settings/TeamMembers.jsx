@@ -19,6 +19,7 @@ import {
 } from '../../lib/firestoreOrganizations'
 import { getOperator } from '../../lib/firestore'
 import InviteMemberModal from '../../components/settings/InviteMemberModal'
+import EditMemberModal from '../../components/settings/EditMemberModal'
 import RoleSelector from '../../components/settings/RoleSelector'
 import {
   Users,
@@ -32,7 +33,8 @@ import {
   X,
   Clock,
   UserX,
-  RefreshCw
+  RefreshCw,
+  Pencil
 } from 'lucide-react'
 
 const ROLE_COLORS = {
@@ -56,6 +58,8 @@ export default function TeamMembers() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedMember, setSelectedMember] = useState(null)
   const [actionMenuOpen, setActionMenuOpen] = useState(null)
   const [processing, setProcessing] = useState(null)
 
@@ -161,6 +165,18 @@ export default function TeamMembers() {
     loadMembers()
   }
 
+  const handleEditMember = (member) => {
+    setSelectedMember(member)
+    setShowEditModal(true)
+    setActionMenuOpen(null)
+  }
+
+  const handleEditSuccess = () => {
+    setShowEditModal(false)
+    setSelectedMember(null)
+    loadMembers()
+  }
+
   if (!organization) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -258,6 +274,11 @@ export default function TeamMembers() {
                         <Mail className="w-3 h-3" />
                         {member.email || member.userDetails?.email || 'No email'}
                       </div>
+                      {(member.jobTitle || member.department) && (
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {member.jobTitle}{member.jobTitle && member.department && ' • '}{member.department}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -305,6 +326,13 @@ export default function TeamMembers() {
                               onClick={() => setActionMenuOpen(null)}
                             />
                             <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                              <button
+                                onClick={() => handleEditMember(member)}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <Pencil className="w-4 h-4" />
+                                Edit Details
+                              </button>
                               {member.status === 'suspended' ? (
                                 <button
                                   onClick={() => handleReactivateMember(member.id)}
@@ -388,6 +416,19 @@ export default function TeamMembers() {
           onClose={() => setShowInviteModal(false)}
           onSuccess={handleInviteSuccess}
           organizationId={organizationId}
+        />
+      )}
+
+      {/* Edit Member Modal */}
+      {showEditModal && (
+        <EditMemberModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false)
+            setSelectedMember(null)
+          }}
+          member={selectedMember}
+          onSuccess={handleEditSuccess}
         />
       )}
     </div>

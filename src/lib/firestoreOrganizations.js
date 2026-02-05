@@ -514,6 +514,54 @@ export async function updateMemberRole(memberId, newRole, updatedBy) {
 }
 
 /**
+ * Update member details (job info, allowances, etc.)
+ * @param {string} memberId - Membership ID
+ * @param {Object} details - Details to update
+ * @param {string} updatedBy - User ID making the change
+ * @returns {Promise<void>}
+ */
+export async function updateMemberDetails(memberId, details, updatedBy) {
+  if (!memberId) {
+    throw new Error('Membership ID is required')
+  }
+
+  const docSnap = await getDoc(doc(organizationMembersRef, memberId))
+  if (!docSnap.exists()) {
+    throw new Error('Member not found')
+  }
+
+  // Allowed fields to update
+  const allowedFields = [
+    'jobTitle',
+    'department',
+    'employeeId',
+    'startDate',
+    'ptoAllowance',
+    'sickAllowance',
+    'hourlyRate',
+    'notes'
+  ]
+
+  // Filter to only allowed fields
+  const updateData = {}
+  for (const field of allowedFields) {
+    if (details[field] !== undefined) {
+      updateData[field] = details[field]
+    }
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    throw new Error('No valid fields to update')
+  }
+
+  await updateDoc(doc(organizationMembersRef, memberId), {
+    ...updateData,
+    updatedAt: serverTimestamp(),
+    updatedBy: updatedBy
+  })
+}
+
+/**
  * Remove a member from an organization
  * @param {string} memberId - Membership ID
  * @returns {Promise<void>}
@@ -717,6 +765,7 @@ export default {
   inviteMember,
   acceptInvitation,
   updateMemberRole,
+  updateMemberDetails,
   removeMember,
   suspendMember,
   reactivateMember,
