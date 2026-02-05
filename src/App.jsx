@@ -82,6 +82,7 @@ const MaintenanceItemDetail = lazy(() => import('./pages/MaintenanceItemDetail')
 // Document Generation Module Pages - lazy-loaded
 const DocumentProjects = lazy(() => import('./pages/DocumentProjects'))
 const DocumentProjectView = lazy(() => import('./pages/DocumentProjectView'))
+const DocumentEditor = lazy(() => import('./pages/DocumentEditor'))
 
 // Suspense fallback component
 function PageLoader() {
@@ -291,6 +292,7 @@ function App() {
           {/* Document Generation Module Routes - lazy-loaded */}
           <Route path="document-projects" element={<Suspense fallback={<PageLoader />}><DocumentProjects /></Suspense>} />
           <Route path="document-projects/:projectId" element={<Suspense fallback={<PageLoader />}><DocumentProjectView /></Suspense>} />
+          <Route path="document-projects/:projectId/documents/:documentId" element={<Suspense fallback={<PageLoader />}><DocumentEditor /></Suspense>} />
         </Route>
 
         {/* Catch all - redirect to dashboard */}
