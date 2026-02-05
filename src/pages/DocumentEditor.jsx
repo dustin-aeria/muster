@@ -21,7 +21,7 @@ import {
   GripVertical
 } from 'lucide-react'
 import {
-  getDocument,
+  getGeneratedDocument,
   getDocumentProject,
   subscribeToDocument,
   updateDocumentSection
@@ -132,7 +132,7 @@ export default function DocumentEditor() {
         setError(null)
 
         const [docData, projectData] = await Promise.all([
-          getDocument(documentId),
+          getGeneratedDocument(documentId),
           getDocumentProject(projectId)
         ])
 
