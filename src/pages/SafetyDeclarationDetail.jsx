@@ -2,7 +2,12 @@
  * SafetyDeclarationDetail.jsx
  * Detailed view and management of a Safety Assurance Declaration
  *
- * Phase 1: Placeholder - Full implementation in Phase 2-6
+ * Features:
+ * - Overview tab with RPAS details, operation types, and declarant info
+ * - Requirements tab with full compliance matrix (Phase 3)
+ * - Testing tab for session management (Phase 4 - placeholder)
+ * - Evidence tab for document management (Phase 5 - placeholder)
+ * - Settings tab for declaration configuration
  *
  * @location src/pages/SafetyDeclarationDetail.jsx
  */
@@ -35,6 +40,7 @@ import {
   RPAS_CATEGORIES,
   KINETIC_ENERGY_CATEGORIES
 } from '../lib/firestoreSafetyDeclaration'
+import RequirementsMatrix from '../components/safetyDeclaration/RequirementsMatrix'
 
 export default function SafetyDeclarationDetail() {
   const { declarationId } = useParams()
@@ -119,19 +125,6 @@ export default function SafetyDeclarationDetail() {
     { id: 'evidence', label: 'Evidence', icon: FileText },
     { id: 'settings', label: 'Settings', icon: Settings }
   ]
-
-  // Group requirements by section
-  const requirementsBySection = requirements.reduce((acc, req) => {
-    if (!acc[req.sectionId]) {
-      acc[req.sectionId] = {
-        sectionId: req.sectionId,
-        sectionTitle: req.sectionTitle,
-        requirements: []
-      }
-    }
-    acc[req.sectionId].requirements.push(req)
-    return acc
-  }, {})
 
   return (
     <div className="space-y-6">
@@ -333,56 +326,16 @@ export default function SafetyDeclarationDetail() {
         )}
 
         {activeTab === 'requirements' && (
-          <div className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">
-                Requirements ({requirements.length})
-              </h3>
-              <p className="text-sm text-gray-500">
-                Full requirements management coming in Phase 3
-              </p>
-            </div>
-
-            {Object.values(requirementsBySection).length > 0 ? (
-              <div className="space-y-4">
-                {Object.values(requirementsBySection).map((section) => (
-                  <div key={section.sectionId} className="border border-gray-200 rounded-lg">
-                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                      <h4 className="font-medium text-gray-900">
-                        CAR {section.sectionId}: {section.sectionTitle}
-                      </h4>
-                    </div>
-                    <div className="divide-y divide-gray-100">
-                      {section.requirements.map((req) => (
-                        <div key={req.id} className="px-4 py-3 flex items-center justify-between">
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-900">{req.text}</p>
-                            <p className="text-xs text-gray-500 mt-1">{req.requirementId}</p>
-                          </div>
-                          <span className={`ml-4 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            req.status === 'complete' ? 'bg-green-100 text-green-800' :
-                            req.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                            req.status === 'not_applicable' ? 'bg-gray-100 text-gray-500' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {req.status.replace(/_/g, ' ')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No requirements initialized yet.</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  Select operation types to auto-populate applicable requirements.
-                </p>
-              </div>
-            )}
-          </div>
+          <RequirementsMatrix
+            requirements={requirements}
+            declarationId={declarationId}
+            declaration={declaration}
+            onRequirementUpdate={(updatedReq) => {
+              // Requirements will auto-update via subscription
+              // Refresh stats after update
+              getDeclarationStats(declarationId).then(setStats)
+            }}
+          />
         )}
 
         {activeTab === 'testing' && (
