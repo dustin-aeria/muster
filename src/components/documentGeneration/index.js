@@ -23,3 +23,8 @@ export { default as KnowledgeBasePanel } from './KnowledgeBasePanel'
 export { default as SectionList } from './SectionList'
 export { default as SectionEditor } from './SectionEditor'
 export { default as ContentInsertModal } from './ContentInsertModal'
+
+// Phase 5: Cross-References & Context
+export { default as SharedContextPanel } from './SharedContextPanel'
+export { default as CrossReferenceManager } from './CrossReferenceManager'
+export { default as DocumentLinkPopover } from './DocumentLinkPopover'

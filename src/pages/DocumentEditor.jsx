@@ -4,40 +4,49 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   MessageSquare,
   Eye,
-  MoreVertical,
   ChevronLeft,
   ChevronRight,
   Loader2,
   AlertCircle,
   Download,
-  Settings
+  Settings,
+  Link2,
+  MoreVertical
 } from 'lucide-react'
 import {
   getGeneratedDocument,
   getDocumentProject,
   subscribeToDocument,
+  subscribeToProjectDocuments,
   updateDocumentSection,
   addDocumentSection,
   deleteDocumentSection,
-  reorderDocumentSections
+  reorderDocumentSections,
+  updateSharedContext,
+  addCrossReference,
+  removeCrossReference
 } from '../lib/firestoreDocumentGeneration'
 import {
   ConversationPanel,
   SectionList,
   SectionEditor,
-  ContentInsertModal
+  ContentInsertModal,
+  SharedContextPanel,
+  CrossReferenceManager
 } from '../components/documentGeneration'
 
 export default function DocumentEditor() {
   const { projectId, documentId } = useParams()
+  const navigate = useNavigate()
 
   const [document, setDocument] = useState(null)
   const [project, setProject] = useState(null)
+  const [projectDocuments, setProjectDocuments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedSection, setSelectedSection] = useState(null)
@@ -49,6 +58,14 @@ export default function DocumentEditor() {
   const [showInsertModal, setShowInsertModal] = useState(false)
   const [generatedContent, setGeneratedContent] = useState(null)
   const [generatingContent, setGeneratingContent] = useState(false)
+
+  // Phase 5: Context and cross-reference state
+  const [showContextPanel, setShowContextPanel] = useState(false)
+  const [showCrossRefManager, setShowCrossRefManager] = useState(false)
+  const [savingContext, setSavingContext] = useState(false)
+
+  // Header menu state
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false)
 
   // Load document and project
   useEffect(() => {
@@ -103,6 +120,17 @@ export default function DocumentEditor() {
 
     return () => unsubscribe()
   }, [documentId, selectedSection?.id])
+
+  // Subscribe to project documents for cross-references
+  useEffect(() => {
+    if (!projectId) return
+
+    const unsubscribe = subscribeToProjectDocuments(projectId, (docs) => {
+      setProjectDocuments(docs)
+    })
+
+    return () => unsubscribe()
+  }, [projectId])
 
   // Section management handlers
   const handleSaveSection = async (content) => {
@@ -211,6 +239,45 @@ export default function DocumentEditor() {
     }
   }
 
+  // Phase 5: Context handlers
+  const handleSaveContext = async (context) => {
+    try {
+      setSavingContext(true)
+      await updateSharedContext(projectId, context)
+      // Refresh project data
+      const updatedProject = await getDocumentProject(projectId)
+      setProject(updatedProject)
+    } catch (err) {
+      console.error('Error saving context:', err)
+    } finally {
+      setSavingContext(false)
+    }
+  }
+
+  // Phase 5: Cross-reference handlers
+  const handleAddCrossReference = async (refData) => {
+    try {
+      await addCrossReference(documentId, refData)
+    } catch (err) {
+      console.error('Error adding cross-reference:', err)
+    }
+  }
+
+  const handleRemoveCrossReference = async (refId) => {
+    if (!window.confirm('Remove this cross-reference?')) return
+
+    try {
+      await removeCrossReference(documentId, refId)
+    } catch (err) {
+      console.error('Error removing cross-reference:', err)
+    }
+  }
+
+  const handleNavigateToDocument = (docId, sectionId) => {
+    navigate(`/document-projects/${projectId}/documents/${docId}`)
+    setShowCrossRefManager(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -270,6 +337,22 @@ export default function DocumentEditor() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Cross-References Button */}
+            <button
+              onClick={() => setShowCrossRefManager(true)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+              title="Cross-References"
+            >
+              <Link2 className="w-4 h-4" />
+              <span className="hidden sm:inline">References</span>
+              {document?.crossReferences?.length > 0 && (
+                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                  {document.crossReferences.length}
+                </span>
+              )}
+            </button>
+
+            {/* AI Chat Toggle */}
             <button
               onClick={() => setShowChat(!showChat)}
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -281,15 +364,55 @@ export default function DocumentEditor() {
               <MessageSquare className="w-4 h-4" />
               AI Chat
             </button>
+
             <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Preview">
               <Eye className="w-5 h-5" />
             </button>
             <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Export">
               <Download className="w-5 h-5" />
             </button>
-            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Settings">
-              <Settings className="w-5 h-5" />
-            </button>
+
+            {/* More Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                title="More options"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+
+              {showHeaderMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowHeaderMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                    <button
+                      onClick={() => {
+                        setShowContextPanel(true)
+                        setShowHeaderMenu(false)
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Shared Context
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowCrossRefManager(true)
+                        setShowHeaderMenu(false)
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Link2 className="w-4 h-4" />
+                      Manage References
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -371,6 +494,27 @@ export default function DocumentEditor() {
         existingContent={selectedSection?.content}
         onInsert={handleInsertContent}
         loading={generatingContent}
+      />
+
+      {/* Shared Context Panel */}
+      <SharedContextPanel
+        project={project}
+        onSave={handleSaveContext}
+        saving={savingContext}
+        isOpen={showContextPanel}
+        onClose={() => setShowContextPanel(false)}
+      />
+
+      {/* Cross-Reference Manager */}
+      <CrossReferenceManager
+        currentDocument={document}
+        projectDocuments={projectDocuments}
+        crossReferences={document?.crossReferences || []}
+        onAddReference={handleAddCrossReference}
+        onRemoveReference={handleRemoveCrossReference}
+        onNavigateToDocument={handleNavigateToDocument}
+        isOpen={showCrossRefManager}
+        onClose={() => setShowCrossRefManager(false)}
       />
     </div>
   )
