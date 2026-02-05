@@ -120,19 +120,15 @@ function Sidebar({ mobile, onClose }) {
       <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
           <img
-            src="/images/muster-logo-mark.svg"
+            src="/images/muster-app-logo-horizontal.jpeg"
             alt="Muster"
-            className="w-8 h-8"
-            aria-hidden="true"
+            className="h-10 w-auto"
           />
-          <div className="flex flex-col">
-            <span className="font-display font-bold text-muster-navy leading-tight">Muster</span>
-            {organization && (
-              <span className="text-xs text-muster-slate truncate max-w-[140px]" title={organization.name}>
-                {organization.name}
-              </span>
-            )}
-          </div>
+          {organization && (
+            <span className="text-xs text-muster-slate truncate max-w-[100px] ml-1" title={organization.name}>
+              {organization.name}
+            </span>
+          )}
         </div>
         {mobile && (
           <button

@@ -108,11 +108,10 @@ export default function Login() {
         {/* Logo and header */}
         <div className="text-center mb-8">
           <img
-            src="/images/muster-logo-mark.svg"
+            src="/images/muster-app-logo-stacked.jpeg"
             alt="Muster"
-            className="w-16 h-16 mx-auto mb-4"
+            className="h-24 w-auto mx-auto mb-4"
           />
-          <h1 className="text-2xl font-display font-bold text-muster-navy">Muster</h1>
           <p className="text-muster-slate mt-1">Sign in to your account</p>
         </div>
 

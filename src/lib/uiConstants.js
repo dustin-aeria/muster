@@ -47,15 +47,16 @@ export const STATUS_COLORS = {
 // ============================================
 
 export const BUTTON_VARIANTS = {
-  primary: 'bg-blue-600 hover:bg-blue-700 text-white',
+  // Muster Brand Colors
+  primary: 'bg-muster-amber hover:bg-muster-amber-dark text-gray-900',
   secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800',
-  success: 'bg-green-600 hover:bg-green-700 text-white',
-  warning: 'bg-yellow-500 hover:bg-yellow-600 text-white',
+  success: 'bg-muster-success hover:bg-muster-success-dark text-white',
+  warning: 'bg-muster-amber hover:bg-muster-amber-dark text-gray-900',
   danger: 'bg-red-600 hover:bg-red-700 text-white',
-  ghost: 'bg-transparent hover:bg-gray-100 text-gray-700',
-  link: 'bg-transparent hover:underline text-blue-600',
+  ghost: 'bg-transparent hover:bg-muster-navy/10 text-muster-navy',
+  link: 'bg-transparent hover:underline text-muster-navy',
   outline: 'bg-transparent border border-gray-300 hover:bg-gray-50 text-gray-700',
-  'outline-primary': 'bg-transparent border border-blue-600 hover:bg-blue-50 text-blue-600',
+  'outline-primary': 'bg-transparent border-2 border-muster-navy hover:bg-muster-navy hover:text-white text-muster-navy',
   'outline-danger': 'bg-transparent border border-red-600 hover:bg-red-50 text-red-600'
 }
 
@@ -73,11 +74,11 @@ export const BUTTON_SIZES = {
 
 export const BADGE_VARIANTS = {
   default: 'bg-gray-100 text-gray-700',
-  primary: 'bg-blue-100 text-blue-700',
-  success: 'bg-green-100 text-green-700',
-  warning: 'bg-yellow-100 text-yellow-700',
+  primary: 'bg-muster-amber/20 text-muster-amber-dark',
+  success: 'bg-muster-success/20 text-muster-success',
+  warning: 'bg-muster-amber/20 text-muster-amber-dark',
   danger: 'bg-red-100 text-red-700',
-  info: 'bg-cyan-100 text-cyan-700',
+  info: 'bg-muster-navy/10 text-muster-navy',
   purple: 'bg-purple-100 text-purple-700',
   orange: 'bg-orange-100 text-orange-700',
   indigo: 'bg-indigo-100 text-indigo-700',
@@ -94,7 +95,7 @@ export const BADGE_SIZES = {
 // INPUT STYLES
 // ============================================
 
-export const INPUT_BASE = 'block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
+export const INPUT_BASE = 'block w-full rounded-md border-gray-300 shadow-sm focus:border-muster-amber focus:ring-muster-amber'
 
 export const INPUT_SIZES = {
   sm: 'px-2.5 py-1.5 text-sm',
@@ -103,9 +104,9 @@ export const INPUT_SIZES = {
 }
 
 export const INPUT_STATES = {
-  default: 'border-gray-300 focus:border-blue-500 focus:ring-blue-500',
+  default: 'border-gray-300 focus:border-muster-amber focus:ring-muster-amber',
   error: 'border-red-300 focus:border-red-500 focus:ring-red-500',
-  success: 'border-green-300 focus:border-green-500 focus:ring-green-500',
+  success: 'border-muster-success focus:border-muster-success focus:ring-muster-success',
   disabled: 'bg-gray-100 cursor-not-allowed text-gray-500'
 }
 
@@ -207,22 +208,22 @@ export const TABLE_STYLES = {
 
 export const ALERT_VARIANTS = {
   info: {
-    container: 'bg-blue-50 border-blue-200',
-    icon: 'text-blue-500',
-    title: 'text-blue-800',
-    message: 'text-blue-700'
+    container: 'bg-muster-navy/10 border-muster-navy/30',
+    icon: 'text-muster-navy',
+    title: 'text-muster-navy',
+    message: 'text-muster-navy-light'
   },
   success: {
-    container: 'bg-green-50 border-green-200',
-    icon: 'text-green-500',
-    title: 'text-green-800',
-    message: 'text-green-700'
+    container: 'bg-muster-success/10 border-muster-success/30',
+    icon: 'text-muster-success',
+    title: 'text-muster-success-dark',
+    message: 'text-muster-success'
   },
   warning: {
-    container: 'bg-yellow-50 border-yellow-200',
-    icon: 'text-yellow-500',
-    title: 'text-yellow-800',
-    message: 'text-yellow-700'
+    container: 'bg-muster-amber/20 border-muster-amber',
+    icon: 'text-muster-amber-dark',
+    title: 'text-muster-amber-dark',
+    message: 'text-muster-amber-dark'
   },
   error: {
     container: 'bg-red-50 border-red-200',

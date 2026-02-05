@@ -13,17 +13,18 @@ import { Loader2 } from 'lucide-react'
 // ============================================
 
 const BUTTON_VARIANTS = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
+  // Muster Brand Colors
+  primary: 'bg-muster-amber text-gray-900 hover:bg-muster-amber-dark focus:ring-muster-amber',
   secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-500',
-  success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
-  warning: 'bg-yellow-500 text-white hover:bg-yellow-600 focus:ring-yellow-500',
+  success: 'bg-muster-success text-white hover:bg-muster-success-dark focus:ring-muster-success',
+  warning: 'bg-muster-amber text-gray-900 hover:bg-muster-amber-dark focus:ring-muster-amber',
   danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-  ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
-  link: 'bg-transparent text-blue-600 hover:text-blue-700 hover:underline focus:ring-blue-500 p-0',
+  ghost: 'bg-transparent text-muster-navy hover:bg-muster-navy/10 focus:ring-muster-navy',
+  link: 'bg-transparent text-muster-navy hover:text-muster-navy-light hover:underline focus:ring-muster-navy p-0',
   outline: 'bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-500',
-  'outline-primary': 'bg-transparent border border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500',
+  'outline-primary': 'bg-transparent border-2 border-muster-navy text-muster-navy hover:bg-muster-navy hover:text-white focus:ring-muster-navy',
   'outline-danger': 'bg-transparent border border-red-600 text-red-600 hover:bg-red-50 focus:ring-red-500',
-  'outline-success': 'bg-transparent border border-green-600 text-green-600 hover:bg-green-50 focus:ring-green-500'
+  'outline-success': 'bg-transparent border border-muster-success text-muster-success hover:bg-green-50 focus:ring-muster-success'
 }
 
 const BUTTON_SIZES = {
@@ -367,7 +368,7 @@ export function ToggleButton({
   className = ''
 }) {
   const activeClasses = pressed
-    ? 'bg-blue-100 border-blue-500 text-blue-700'
+    ? 'bg-muster-amber/20 border-muster-amber text-muster-amber-dark'
     : ''
 
   return (
