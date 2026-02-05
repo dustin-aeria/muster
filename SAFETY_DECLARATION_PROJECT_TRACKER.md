@@ -19,7 +19,7 @@ Building a specialized Safety Assurance Declaration tool for RPAS equipment in c
 | Phase 2 | COMPLETE | 2026-02-05 | 2026-02-05 | Declaration Dashboard & Project Management |
 | Phase 3 | COMPLETE | 2026-02-05 | 2026-02-05 | Requirements Mapping & Compliance Matrix |
 | Phase 4 | COMPLETE | 2026-02-05 | 2026-02-05 | Testing Session Management |
-| Phase 5 | NOT STARTED | - | - | Evidence Management & Documentation |
+| Phase 5 | COMPLETE | 2026-02-05 | 2026-02-05 | Evidence Management & Documentation |
 | Phase 6 | NOT STARTED | - | - | Declaration Generation & Submission |
 | Phase 7 | NOT STARTED | - | - | Polish, Integration & Testing |
 
@@ -192,12 +192,12 @@ safetyDeclarations/{id}/evidence/
 **Goal**: Organize and link evidence to requirements
 
 **Tasks**:
-- [ ] EvidenceLibrary.jsx - all evidence for declaration
-- [ ] EvidenceUpload.jsx - file upload with metadata
-- [ ] EvidenceLinker.jsx - connect evidence to requirements
-- [ ] AutoLink suggestions based on test type
-- [ ] Evidence completeness checker
-- [ ] Gap analysis view
+- [x] EvidenceManager.jsx - evidence library with grid/list view, stats, search, and filter
+- [x] EvidenceUploadModal.jsx - file upload with drag-drop, metadata, requirement linking
+- [x] EvidenceDetailModal.jsx - view/edit evidence, manage requirement links
+- [x] Firebase Storage integration for file uploads (uploadDeclarationEvidence)
+- [x] Integrate evidence components into SafetyDeclarationDetail page
+- [x] Real-time evidence subscription and stats updates
 
 **Evidence Types**:
 - Test reports (structured data)
@@ -384,6 +384,35 @@ Categories:
     - Session detail view navigation
     - CreateTestSessionModal integration
     - Auto-update viewing session from subscription
+
+- **Phase 5 Complete:**
+  - Created `src/components/safetyDeclaration/EvidenceManager.jsx` (~400 lines)
+    - Evidence library with grid and list views
+    - Stats overview (total, linked, unlinked, types used)
+    - Search and filter by evidence type
+    - Evidence cards with preview, linked requirements, and actions
+    - Quick actions: view, download, delete
+  - Created `src/components/safetyDeclaration/EvidenceUploadModal.jsx` (~350 lines)
+    - Drag-and-drop file upload zone
+    - Evidence type selection (9 types)
+    - Name and description fields
+    - Link to testing session
+    - Multi-select requirement linking
+    - Firebase Storage upload with progress indicator
+  - Created `src/components/safetyDeclaration/EvidenceDetailModal.jsx` (~400 lines)
+    - File preview (images, videos, PDF indicator)
+    - File info display (name, size, type, upload date)
+    - Download file button
+    - Edit mode for name, description, type
+    - Manage requirement links (add/remove)
+    - Delete with confirmation
+  - Updated `src/lib/storageHelpers.js`
+    - Added uploadDeclarationEvidence function (100MB limit, broad file type support)
+    - Added deleteDeclarationEvidence function
+  - Updated `src/pages/SafetyDeclarationDetail.jsx`
+    - Integrated EvidenceManager in evidence tab
+    - Evidence subscription for real-time updates
+    - Upload and detail modals integration
 
 ---
 

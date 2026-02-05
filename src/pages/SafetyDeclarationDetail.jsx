@@ -6,7 +6,7 @@
  * - Overview tab with RPAS details, operation types, and declarant info
  * - Requirements tab with full compliance matrix (Phase 3)
  * - Testing tab with full session management (Phase 4)
- * - Evidence tab for document management (Phase 5 - placeholder)
+ * - Evidence tab with full evidence management (Phase 5)
  * - Settings tab for declaration configuration
  *
  * @location src/pages/SafetyDeclarationDetail.jsx
@@ -34,6 +34,7 @@ import {
   subscribeToSafetyDeclaration,
   subscribeToDeclarationRequirements,
   subscribeToTestingSessions,
+  subscribeToDeclarationEvidence,
   getDeclarationStats,
   DECLARATION_STATUSES,
   DECLARATION_TYPES,
@@ -44,6 +45,9 @@ import RequirementsMatrix from '../components/safetyDeclaration/RequirementsMatr
 import TestingSessionManager from '../components/safetyDeclaration/TestingSessionManager'
 import CreateTestSessionModal from '../components/safetyDeclaration/CreateTestSessionModal'
 import TestSessionDetail from '../components/safetyDeclaration/TestSessionDetail'
+import EvidenceManager from '../components/safetyDeclaration/EvidenceManager'
+import EvidenceUploadModal from '../components/safetyDeclaration/EvidenceUploadModal'
+import EvidenceDetailModal from '../components/safetyDeclaration/EvidenceDetailModal'
 
 export default function SafetyDeclarationDetail() {
   const { declarationId } = useParams()
@@ -60,6 +64,11 @@ export default function SafetyDeclarationDetail() {
   // Testing session state
   const [showCreateSession, setShowCreateSession] = useState(false)
   const [viewingSession, setViewingSession] = useState(null)
+
+  // Evidence state
+  const [evidence, setEvidence] = useState([])
+  const [showUploadEvidence, setShowUploadEvidence] = useState(false)
+  const [viewingEvidence, setViewingEvidence] = useState(null)
 
   // Subscribe to declaration data
   useEffect(() => {
@@ -78,6 +87,10 @@ export default function SafetyDeclarationDetail() {
       setSessions(data)
     })
 
+    const unsubEvidence = subscribeToDeclarationEvidence(declarationId, (data) => {
+      setEvidence(data)
+    })
+
     // Load stats
     getDeclarationStats(declarationId).then(setStats)
 
@@ -85,15 +98,16 @@ export default function SafetyDeclarationDetail() {
       unsubDeclaration()
       unsubRequirements()
       unsubSessions()
+      unsubEvidence()
     }
   }, [declarationId])
 
-  // Refresh stats when requirements or sessions change
+  // Refresh stats when requirements, sessions, or evidence change
   useEffect(() => {
-    if (declarationId && (requirements.length > 0 || sessions.length > 0)) {
+    if (declarationId && (requirements.length > 0 || sessions.length > 0 || evidence.length > 0)) {
       getDeclarationStats(declarationId).then(setStats)
     }
-  }, [declarationId, requirements, sessions])
+  }, [declarationId, requirements, sessions, evidence])
 
   // Update viewing session when sessions list updates
   useEffect(() => {
@@ -104,6 +118,16 @@ export default function SafetyDeclarationDetail() {
       }
     }
   }, [sessions, viewingSession?.id])
+
+  // Update viewing evidence when evidence list updates
+  useEffect(() => {
+    if (viewingEvidence && evidence.length > 0) {
+      const updatedEvidence = evidence.find(e => e.id === viewingEvidence.id)
+      if (updatedEvidence) {
+        setViewingEvidence(updatedEvidence)
+      }
+    }
+  }, [evidence, viewingEvidence?.id])
 
   if (loading) {
     return (
@@ -139,7 +163,7 @@ export default function SafetyDeclarationDetail() {
     { id: 'overview', label: 'Overview', icon: FileCheck },
     { id: 'requirements', label: 'Requirements', icon: ClipboardList, count: requirements.length },
     { id: 'testing', label: 'Testing', icon: TestTube, count: sessions.length },
-    { id: 'evidence', label: 'Evidence', icon: FileText },
+    { id: 'evidence', label: 'Evidence', icon: FileText, count: evidence.length },
     { id: 'settings', label: 'Settings', icon: Settings }
   ]
 
@@ -388,13 +412,16 @@ export default function SafetyDeclarationDetail() {
 
         {activeTab === 'evidence' && (
           <div className="p-6">
-            <div className="text-center py-12">
-              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Evidence Management</h3>
-              <p className="text-gray-500">
-                Full evidence upload, linking, and management coming in Phase 5.
-              </p>
-            </div>
+            <EvidenceManager
+              evidence={evidence}
+              requirements={requirements}
+              declarationId={declarationId}
+              onUploadClick={() => setShowUploadEvidence(true)}
+              onViewEvidence={(item) => setViewingEvidence(item)}
+              onEvidenceUpdate={() => {
+                getDeclarationStats(declarationId).then(setStats)
+              }}
+            />
           </div>
         )}
 
@@ -420,6 +447,36 @@ export default function SafetyDeclarationDetail() {
         requirements={requirements}
         onCreated={() => {
           getDeclarationStats(declarationId).then(setStats)
+        }}
+      />
+
+      {/* Evidence Upload Modal */}
+      <EvidenceUploadModal
+        isOpen={showUploadEvidence}
+        onClose={() => setShowUploadEvidence(false)}
+        declarationId={declarationId}
+        requirements={requirements}
+        sessions={sessions}
+        onUploaded={() => {
+          getDeclarationStats(declarationId).then(setStats)
+        }}
+      />
+
+      {/* Evidence Detail Modal */}
+      <EvidenceDetailModal
+        isOpen={!!viewingEvidence}
+        onClose={() => setViewingEvidence(null)}
+        evidence={viewingEvidence}
+        declarationId={declarationId}
+        requirements={requirements}
+        sessions={sessions}
+        onUpdate={() => {
+          getDeclarationStats(declarationId).then(setStats)
+          // Refresh viewing evidence from list
+          if (viewingEvidence) {
+            const updated = evidence.find(e => e.id === viewingEvidence.id)
+            if (updated) setViewingEvidence(updated)
+          }
         }}
       />
     </div>

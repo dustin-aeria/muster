@@ -894,3 +894,92 @@ export async function deleteExpenseReceipt(storagePath) {
   const storageRef = ref(storage, storagePath)
   await deleteObject(storageRef)
 }
+
+// ============================================
+// SAFETY DECLARATION EVIDENCE
+// ============================================
+
+/**
+ * Upload safety declaration evidence file
+ * @param {File} file - The file to upload
+ * @param {string} declarationId - Safety declaration ID
+ * @param {string} evidenceType - Type of evidence (test_report, analysis_document, etc.)
+ * @returns {Promise<{url: string, path: string, name: string, size: number, type: string}>}
+ */
+export async function uploadDeclarationEvidence(file, declarationId, evidenceType = 'document') {
+  if (!file) throw new Error('No file provided')
+  if (!declarationId) throw new Error('Declaration ID required')
+
+  // Validate file type - broad support for evidence documents
+  const validTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'text/csv',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'video/mp4',
+    'video/quicktime',
+    'video/webm',
+    'application/zip',
+    'application/x-zip-compressed'
+  ]
+
+  if (!validTypes.includes(file.type)) {
+    throw new Error('Invalid file type. Supported: PDF, Word, Excel, CSV, images, videos, and ZIP files.')
+  }
+
+  // Validate file size (max 100MB for evidence files)
+  const maxSize = 100 * 1024 * 1024
+  if (file.size > maxSize) {
+    throw new Error('File too large. Maximum size is 100MB.')
+  }
+
+  // Generate unique filename
+  const timestamp = Date.now()
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filename = `${timestamp}_${safeName}`
+
+  // Create storage path: safetyDeclarations/{declarationId}/evidence/{evidenceType}/{filename}
+  const storagePath = `safetyDeclarations/${declarationId}/evidence/${evidenceType}/${filename}`
+  const storageRef = ref(storage, storagePath)
+
+  // Upload file
+  const snapshot = await uploadBytes(storageRef, file, {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name,
+      uploadedAt: new Date().toISOString(),
+      declarationId,
+      evidenceType
+    }
+  })
+
+  // Get download URL
+  const url = await getDownloadURL(snapshot.ref)
+
+  return {
+    url,
+    path: storagePath,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    uploadedAt: new Date().toISOString()
+  }
+}
+
+/**
+ * Delete safety declaration evidence from Firebase Storage
+ * @param {string} storagePath - The storage path of the file to delete
+ */
+export async function deleteDeclarationEvidence(storagePath) {
+  if (!storagePath) throw new Error('Storage path required')
+
+  const storageRef = ref(storage, storagePath)
+  await deleteObject(storageRef)
+}
