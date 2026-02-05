@@ -79,6 +79,10 @@ const MaintenanceSchedulesPage = lazy(() => import('./pages/MaintenanceSchedules
 const MaintenanceItemDetail = lazy(() => import('./pages/MaintenanceItemDetail'))
 // MaintenanceCalendar removed - now redirects to unified Calendar
 
+// Document Generation Module Pages - lazy-loaded
+const DocumentProjects = lazy(() => import('./pages/DocumentProjects'))
+const DocumentProjectView = lazy(() => import('./pages/DocumentProjectView'))
+
 // Suspense fallback component
 function PageLoader() {
   return <LoadingSpinner size="lg" message="Loading..." />
@@ -283,6 +287,10 @@ function App() {
           {/* Maintenance calendar now redirects to unified calendar */}
           <Route path="maintenance/calendar" element={<Navigate to="/calendar" replace />} />
           <Route path="maintenance/item/:itemType/:itemId" element={<Suspense fallback={<PageLoader />}><MaintenanceItemDetail /></Suspense>} />
+
+          {/* Document Generation Module Routes - lazy-loaded */}
+          <Route path="document-projects" element={<Suspense fallback={<PageLoader />}><DocumentProjects /></Suspense>} />
+          <Route path="document-projects/:projectId" element={<Suspense fallback={<PageLoader />}><DocumentProjectView /></Suspense>} />
         </Route>
 
         {/* Catch all - redirect to dashboard */}

@@ -30,7 +30,8 @@ import {
   Briefcase,
   Wrench,
   Clock,
-  CheckSquare
+  CheckSquare,
+  Sparkles
 } from 'lucide-react'
 import FeedbackModal from './FeedbackModal'
 import NotificationBell from './NotificationBell'
@@ -63,6 +64,7 @@ const trainingNavigation = [
 
 const complianceNavigation = [
   { name: 'Policies & Procedures', href: '/policies', icon: BookOpen },
+  { name: 'Document Generator', href: '/document-projects', icon: Sparkles },
 ]
 
 const maintenanceNavigation = [
