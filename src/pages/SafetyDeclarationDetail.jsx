@@ -51,6 +51,8 @@ import EvidenceUploadModal from '../components/safetyDeclaration/EvidenceUploadM
 import EvidenceDetailModal from '../components/safetyDeclaration/EvidenceDetailModal'
 import DeclarationGenerator from '../components/safetyDeclaration/DeclarationGenerator'
 import Form26_0882E from '../components/safetyDeclaration/Form26_0882E'
+import ActivityTimeline from '../components/safetyDeclaration/ActivityTimeline'
+import DeclarationSettings from '../components/safetyDeclaration/DeclarationSettings'
 
 export default function SafetyDeclarationDetail() {
   const { declarationId } = useParams()
@@ -367,6 +369,14 @@ export default function SafetyDeclarationDetail() {
                 </div>
               </div>
             )}
+
+            {/* Recent Activity */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <ActivityTimeline declarationId={declarationId} limit={10} compact />
+              </div>
+            </div>
           </div>
         )}
 
@@ -443,13 +453,13 @@ export default function SafetyDeclarationDetail() {
 
         {activeTab === 'settings' && (
           <div className="p-6">
-            <div className="text-center py-12">
-              <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Declaration Settings</h3>
-              <p className="text-gray-500">
-                Declaration settings and configuration options coming in later phases.
-              </p>
-            </div>
+            <DeclarationSettings
+              declaration={declaration}
+              declarationId={declarationId}
+              onUpdate={() => {
+                getDeclarationStats(declarationId).then(setStats)
+              }}
+            />
           </div>
         )}
       </div>

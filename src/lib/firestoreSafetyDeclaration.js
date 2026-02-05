@@ -1440,6 +1440,89 @@ export async function getDeclarationStats(declarationId) {
 }
 
 // ============================================
+// ACTIVITY LOG (AUDIT TRAIL)
+// ============================================
+
+/**
+ * Activity log action types
+ */
+export const ACTIVITY_TYPES = {
+  declaration_created: { label: 'Declaration Created', icon: 'Plus', color: 'green' },
+  declaration_updated: { label: 'Declaration Updated', icon: 'Edit', color: 'blue' },
+  status_changed: { label: 'Status Changed', icon: 'RefreshCw', color: 'blue' },
+  requirement_updated: { label: 'Requirement Updated', icon: 'CheckSquare', color: 'blue' },
+  requirement_completed: { label: 'Requirement Completed', icon: 'CheckCircle', color: 'green' },
+  session_created: { label: 'Test Session Created', icon: 'Plus', color: 'blue' },
+  session_started: { label: 'Test Session Started', icon: 'Play', color: 'yellow' },
+  session_completed: { label: 'Test Session Completed', icon: 'CheckCircle', color: 'green' },
+  session_cancelled: { label: 'Test Session Cancelled', icon: 'XCircle', color: 'red' },
+  evidence_uploaded: { label: 'Evidence Uploaded', icon: 'Upload', color: 'blue' },
+  evidence_deleted: { label: 'Evidence Deleted', icon: 'Trash', color: 'red' },
+  evidence_linked: { label: 'Evidence Linked', icon: 'Link', color: 'blue' },
+  comment_added: { label: 'Comment Added', icon: 'MessageSquare', color: 'gray' }
+}
+
+/**
+ * Log an activity to the declaration's activity log
+ */
+export async function logActivity(declarationId, activityData) {
+  const activity = {
+    declarationId,
+    type: activityData.type,
+    description: activityData.description || '',
+    details: activityData.details || {},
+    userId: activityData.userId || 'system',
+    userName: activityData.userName || 'System',
+    createdAt: serverTimestamp()
+  }
+
+  const docRef = await addDoc(
+    collection(db, 'safetyDeclarations', declarationId, 'activityLog'),
+    activity
+  )
+
+  return { id: docRef.id, ...activity }
+}
+
+/**
+ * Get activity log for a declaration
+ */
+export async function getActivityLog(declarationId, limitCount = 50) {
+  const q = query(
+    collection(db, 'safetyDeclarations', declarationId, 'activityLog'),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  )
+
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: doc.data().createdAt?.toDate()
+  }))
+}
+
+/**
+ * Subscribe to activity log for real-time updates
+ */
+export function subscribeToActivityLog(declarationId, callback, limitCount = 50) {
+  const q = query(
+    collection(db, 'safetyDeclarations', declarationId, 'activityLog'),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  )
+
+  return onSnapshot(q, (snapshot) => {
+    const activities = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate()
+    }))
+    callback(activities)
+  })
+}
+
+// ============================================
 // DEFAULT EXPORT
 // ============================================
 
@@ -1502,5 +1585,11 @@ export default {
   deleteEvidence,
 
   // Statistics
-  getDeclarationStats
+  getDeclarationStats,
+
+  // Activity Log
+  ACTIVITY_TYPES,
+  logActivity,
+  getActivityLog,
+  subscribeToActivityLog
 }
