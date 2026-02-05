@@ -243,6 +243,10 @@ export default function TeamMembers() {
               const isCurrentUser = member.userId === user?.uid
               const canManage = canManageMember(member.role) && !isCurrentUser
 
+              // canManage = admin-level actions (suspend, remove, role change)
+              // canEdit = management+ can edit details
+              const canEdit = canManageTeam || (membership?.role === 'management') || isCurrentUser
+
               return (
                 <div
                   key={member.id}
@@ -250,7 +254,7 @@ export default function TeamMembers() {
                 >
                   <div className="flex items-center gap-4">
                     {/* Avatar */}
-                    <div className="w-10 h-10 bg-aeria-blue rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-muster-navy rounded-full flex items-center justify-center">
                       <span className="text-white font-medium">
                         {member.userDetails?.firstName?.[0] ||
                          member.email?.[0]?.toUpperCase() ||
@@ -304,7 +308,18 @@ export default function TeamMembers() {
                       </span>
                     )}
 
-                    {/* Actions Menu */}
+                    {/* Edit Button - visible to management+ or self */}
+                    {canEdit && !canManage && (
+                      <button
+                        onClick={() => handleEditMember(member)}
+                        className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-700"
+                        title="Edit Details"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    {/* Actions Menu - only for admins */}
                     {canManage && (
                       <div className="relative">
                         <button
