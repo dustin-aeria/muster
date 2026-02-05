@@ -107,11 +107,13 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo and header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-aeria-navy rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl">A</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Muster</h1>
-          <p className="text-gray-600 mt-1">Sign in to your account</p>
+          <img
+            src="/images/muster-logo-mark.svg"
+            alt="Muster"
+            className="w-16 h-16 mx-auto mb-4"
+          />
+          <h1 className="text-2xl font-display font-bold text-muster-navy">Muster</h1>
+          <p className="text-muster-slate mt-1">Sign in to your account</p>
         </div>
 
         {/* Login form */}
@@ -156,7 +158,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={openResetModal}
-                  className="text-xs text-aeria-navy hover:text-aeria-navy/80 hover:underline"
+                  className="text-xs text-muster-navy hover:text-muster-navy-light hover:underline"
                 >
                   Forgot password?
                 </button>
