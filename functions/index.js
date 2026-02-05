@@ -670,3 +670,13 @@ exports.processReceiptOCR = functions.firestore
       return { success: false, error: error.message }
     }
   })
+
+// ============================================
+// Document Generation Functions
+// ============================================
+
+const documentGeneration = require('./documentGeneration')
+
+exports.sendDocumentMessage = documentGeneration.sendDocumentMessage
+exports.generateSectionContent = documentGeneration.generateSectionContent
+exports.getOrganizationTokenUsage = documentGeneration.getOrganizationTokenUsage

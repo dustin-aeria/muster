@@ -808,6 +808,44 @@ service cloud.firestore {
     }
 
     // ============================================
+    // Document Generation Collections
+    // ============================================
+
+    // Document Projects - Client documentation projects
+    match /documentProjects/{projectId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+    }
+
+    // Generated Documents - Individual documents within projects
+    match /generatedDocuments/{documentId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+    }
+
+    // Document Conversations - Chat history subcollection
+    match /documentConversations/{documentId}/messages/{messageId} {
+      // Read: check parent document's organization access
+      allow read: if isAuthenticated();
+      // Write: only Cloud Functions can write (messages created via callable functions)
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ============================================
     // Portal Collections (Client Portal)
     // ============================================
 
