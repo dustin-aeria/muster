@@ -846,6 +846,44 @@ service cloud.firestore {
     }
 
     // ============================================
+    // Safety Declarations Collection (CAR 922)
+    // ============================================
+    match /safetyDeclarations/{declarationId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+
+      // Requirements subcollection
+      match /requirements/{requirementId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+
+      // Testing Sessions subcollection
+      match /testingSessions/{sessionId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+
+      // Evidence subcollection
+      match /evidence/{evidenceId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+
+      // Activity Log subcollection (audit trail)
+      match /activityLog/{activityId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+    }
+
+    // ============================================
     // Portal Collections (Client Portal)
     // ============================================
 
