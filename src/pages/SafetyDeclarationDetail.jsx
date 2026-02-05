@@ -28,7 +28,8 @@ import {
   Clock,
   ChevronRight,
   Play,
-  Pause
+  Pause,
+  FileOutput
 } from 'lucide-react'
 import {
   subscribeToSafetyDeclaration,
@@ -48,6 +49,8 @@ import TestSessionDetail from '../components/safetyDeclaration/TestSessionDetail
 import EvidenceManager from '../components/safetyDeclaration/EvidenceManager'
 import EvidenceUploadModal from '../components/safetyDeclaration/EvidenceUploadModal'
 import EvidenceDetailModal from '../components/safetyDeclaration/EvidenceDetailModal'
+import DeclarationGenerator from '../components/safetyDeclaration/DeclarationGenerator'
+import Form26_0882E from '../components/safetyDeclaration/Form26_0882E'
 
 export default function SafetyDeclarationDetail() {
   const { declarationId } = useParams()
@@ -164,6 +167,7 @@ export default function SafetyDeclarationDetail() {
     { id: 'requirements', label: 'Requirements', icon: ClipboardList, count: requirements.length },
     { id: 'testing', label: 'Testing', icon: TestTube, count: sessions.length },
     { id: 'evidence', label: 'Evidence', icon: FileText, count: evidence.length },
+    { id: 'generate', label: 'Generate', icon: FileOutput },
     { id: 'settings', label: 'Settings', icon: Settings }
   ]
 
@@ -421,6 +425,18 @@ export default function SafetyDeclarationDetail() {
               onEvidenceUpdate={() => {
                 getDeclarationStats(declarationId).then(setStats)
               }}
+            />
+          </div>
+        )}
+
+        {activeTab === 'generate' && (
+          <div className="p-6">
+            <DeclarationGenerator
+              declaration={declaration}
+              requirements={requirements}
+              sessions={sessions}
+              evidence={evidence}
+              stats={stats}
             />
           </div>
         )}
