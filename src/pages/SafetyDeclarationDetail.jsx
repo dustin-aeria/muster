@@ -5,7 +5,7 @@
  * Features:
  * - Overview tab with RPAS details, operation types, and declarant info
  * - Requirements tab with full compliance matrix (Phase 3)
- * - Testing tab for session management (Phase 4 - placeholder)
+ * - Testing tab with full session management (Phase 4)
  * - Evidence tab for document management (Phase 5 - placeholder)
  * - Settings tab for declaration configuration
  *
@@ -41,6 +41,9 @@ import {
   KINETIC_ENERGY_CATEGORIES
 } from '../lib/firestoreSafetyDeclaration'
 import RequirementsMatrix from '../components/safetyDeclaration/RequirementsMatrix'
+import TestingSessionManager from '../components/safetyDeclaration/TestingSessionManager'
+import CreateTestSessionModal from '../components/safetyDeclaration/CreateTestSessionModal'
+import TestSessionDetail from '../components/safetyDeclaration/TestSessionDetail'
 
 export default function SafetyDeclarationDetail() {
   const { declarationId } = useParams()
@@ -53,6 +56,10 @@ export default function SafetyDeclarationDetail() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
+
+  // Testing session state
+  const [showCreateSession, setShowCreateSession] = useState(false)
+  const [viewingSession, setViewingSession] = useState(null)
 
   // Subscribe to declaration data
   useEffect(() => {
@@ -87,6 +94,16 @@ export default function SafetyDeclarationDetail() {
       getDeclarationStats(declarationId).then(setStats)
     }
   }, [declarationId, requirements, sessions])
+
+  // Update viewing session when sessions list updates
+  useEffect(() => {
+    if (viewingSession && sessions.length > 0) {
+      const updatedSession = sessions.find(s => s.id === viewingSession.id)
+      if (updatedSession) {
+        setViewingSession(updatedSession)
+      }
+    }
+  }, [sessions, viewingSession?.id])
 
   if (loading) {
     return (
@@ -340,89 +357,32 @@ export default function SafetyDeclarationDetail() {
 
         {activeTab === 'testing' && (
           <div className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">
-                Testing Sessions ({sessions.length})
-              </h3>
-              <button
-                onClick={() => {/* TODO: Add create session modal in Phase 4 */}}
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Play className="w-4 h-4" />
-                New Test Session
-              </button>
-            </div>
-
-            {sessions.length > 0 ? (
-              <div className="space-y-3">
-                {sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${
-                          session.status === 'complete' ? 'bg-green-100' :
-                          session.status === 'in_progress' ? 'bg-yellow-100' :
-                          session.status === 'paused' ? 'bg-orange-100' :
-                          'bg-gray-100'
-                        }`}>
-                          {session.status === 'paused' ? (
-                            <Pause className="w-5 h-5 text-orange-600" />
-                          ) : session.status === 'in_progress' ? (
-                            <Play className="w-5 h-5 text-yellow-600" />
-                          ) : session.status === 'complete' ? (
-                            <CheckCircle2 className="w-5 h-5 text-green-600" />
-                          ) : (
-                            <Clock className="w-5 h-5 text-gray-600" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{session.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {session.testType || 'General Test'} &bull;{' '}
-                            {session.scheduledDate || session.createdAt?.toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          session.status === 'complete' ? 'bg-green-100 text-green-800' :
-                          session.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                          session.status === 'paused' ? 'bg-orange-100 text-orange-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {session.status.replace(/_/g, ' ')}
-                        </span>
-                        <ChevronRight className="w-5 h-5 text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {viewingSession ? (
+              <TestSessionDetail
+                session={viewingSession}
+                declarationId={declarationId}
+                onBack={() => setViewingSession(null)}
+                onUpdate={() => {
+                  // Refresh stats and find updated session in list
+                  getDeclarationStats(declarationId).then(setStats)
+                  // Session will auto-update via subscription
+                  const updatedSession = sessions.find(s => s.id === viewingSession.id)
+                  if (updatedSession) setViewingSession(updatedSession)
+                }}
+              />
             ) : (
-              <div className="text-center py-12">
-                <TestTube className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No testing sessions yet.</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  Create your first test session to start recording results.
-                </p>
-              </div>
+              <TestingSessionManager
+                sessions={sessions}
+                declarationId={declarationId}
+                declaration={declaration}
+                requirements={requirements}
+                onCreateSession={() => setShowCreateSession(true)}
+                onViewSession={(session) => setViewingSession(session)}
+                onSessionUpdate={() => {
+                  getDeclarationStats(declarationId).then(setStats)
+                }}
+              />
             )}
-
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-medium text-blue-900">Testing Session Management</h4>
-                  <p className="mt-1 text-sm text-blue-700">
-                    Full testing session management with pause/resume, multi-day tracking,
-                    and real-time logging coming in Phase 4.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -450,6 +410,18 @@ export default function SafetyDeclarationDetail() {
           </div>
         )}
       </div>
+
+      {/* Create Test Session Modal */}
+      <CreateTestSessionModal
+        isOpen={showCreateSession}
+        onClose={() => setShowCreateSession(false)}
+        declarationId={declarationId}
+        declaration={declaration}
+        requirements={requirements}
+        onCreated={() => {
+          getDeclarationStats(declarationId).then(setStats)
+        }}
+      />
     </div>
   )
 }
