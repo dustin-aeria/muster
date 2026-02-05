@@ -28,3 +28,8 @@ export { default as ContentInsertModal } from './ContentInsertModal'
 export { default as SharedContextPanel } from './SharedContextPanel'
 export { default as CrossReferenceManager } from './CrossReferenceManager'
 export { default as DocumentLinkPopover } from './DocumentLinkPopover'
+
+// Phase 6: Export & Branding
+export { default as DocumentExportModal } from './DocumentExportModal'
+export { default as DocumentPreview } from './DocumentPreview'
+export { default as BrandingPreview } from './BrandingPreview'

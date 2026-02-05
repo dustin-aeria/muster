@@ -16,7 +16,8 @@ import {
   Download,
   Settings,
   Link2,
-  MoreVertical
+  MoreVertical,
+  Palette
 } from 'lucide-react'
 import {
   getGeneratedDocument,
@@ -29,7 +30,8 @@ import {
   reorderDocumentSections,
   updateSharedContext,
   addCrossReference,
-  removeCrossReference
+  removeCrossReference,
+  updateProjectBranding
 } from '../lib/firestoreDocumentGeneration'
 import {
   ConversationPanel,
@@ -37,7 +39,10 @@ import {
   SectionEditor,
   ContentInsertModal,
   SharedContextPanel,
-  CrossReferenceManager
+  CrossReferenceManager,
+  DocumentExportModal,
+  DocumentPreview,
+  BrandingPreview
 } from '../components/documentGeneration'
 
 export default function DocumentEditor() {
@@ -63,6 +68,12 @@ export default function DocumentEditor() {
   const [showContextPanel, setShowContextPanel] = useState(false)
   const [showCrossRefManager, setShowCrossRefManager] = useState(false)
   const [savingContext, setSavingContext] = useState(false)
+
+  // Phase 6: Export and branding state
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const [showBrandingPreview, setShowBrandingPreview] = useState(false)
+  const [savingBranding, setSavingBranding] = useState(false)
 
   // Header menu state
   const [showHeaderMenu, setShowHeaderMenu] = useState(false)
@@ -278,6 +289,28 @@ export default function DocumentEditor() {
     setShowCrossRefManager(false)
   }
 
+  // Phase 6: Branding handlers
+  const handleSaveBranding = async (branding) => {
+    try {
+      setSavingBranding(true)
+      await updateProjectBranding(projectId, branding)
+      // Refresh project data
+      const updatedProject = await getDocumentProject(projectId)
+      setProject(updatedProject)
+      setShowBrandingPreview(false)
+    } catch (err) {
+      console.error('Error saving branding:', err)
+    } finally {
+      setSavingBranding(false)
+    }
+  }
+
+  // Phase 6: Export handler
+  const handleExport = (doc, proj) => {
+    setShowExportModal(true)
+    setShowPreview(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -365,10 +398,18 @@ export default function DocumentEditor() {
               AI Chat
             </button>
 
-            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Preview">
+            <button
+              onClick={() => setShowPreview(true)}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Preview"
+            >
               <Eye className="w-5 h-5" />
             </button>
-            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Export">
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Export"
+            >
               <Download className="w-5 h-5" />
             </button>
 
@@ -408,6 +449,16 @@ export default function DocumentEditor() {
                     >
                       <Link2 className="w-4 h-4" />
                       Manage References
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowBrandingPreview(true)
+                        setShowHeaderMenu(false)
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Palette className="w-4 h-4" />
+                      Document Branding
                     </button>
                   </div>
                 </>
@@ -515,6 +566,37 @@ export default function DocumentEditor() {
         onNavigateToDocument={handleNavigateToDocument}
         isOpen={showCrossRefManager}
         onClose={() => setShowCrossRefManager(false)}
+      />
+
+      {/* Document Export Modal */}
+      <DocumentExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        document={document}
+        project={project}
+        onPreview={() => {
+          setShowExportModal(false)
+          setShowPreview(true)
+        }}
+      />
+
+      {/* Document Preview */}
+      <DocumentPreview
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        document={document}
+        project={project}
+        onExport={handleExport}
+      />
+
+      {/* Branding Preview */}
+      <BrandingPreview
+        isOpen={showBrandingPreview}
+        onClose={() => setShowBrandingPreview(false)}
+        branding={project?.branding}
+        onSave={handleSaveBranding}
+        saving={savingBranding}
+        clientName={project?.clientName}
       />
     </div>
   )
