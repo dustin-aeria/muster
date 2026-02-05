@@ -18,3 +18,8 @@ export { default as ConversationMessage } from './ConversationMessage'
 export { default as MessageInput } from './MessageInput'
 export { default as ContextStatusBar } from './ContextStatusBar'
 export { default as KnowledgeBasePanel } from './KnowledgeBasePanel'
+
+// Phase 4: Document Editing
+export { default as SectionList } from './SectionList'
+export { default as SectionEditor } from './SectionEditor'
+export { default as ContentInsertModal } from './ContentInsertModal'

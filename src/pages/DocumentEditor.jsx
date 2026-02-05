@@ -4,116 +4,37 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft,
-  FileText,
   MessageSquare,
   Eye,
-  Save,
   MoreVertical,
   ChevronLeft,
   ChevronRight,
   Loader2,
   AlertCircle,
-  CheckCircle,
-  Plus,
-  GripVertical
+  Download,
+  Settings
 } from 'lucide-react'
 import {
   getGeneratedDocument,
   getDocumentProject,
   subscribeToDocument,
-  updateDocumentSection
+  updateDocumentSection,
+  addDocumentSection,
+  deleteDocumentSection,
+  reorderDocumentSections
 } from '../lib/firestoreDocumentGeneration'
-import { ConversationPanel } from '../components/documentGeneration'
-
-// Simple section editor placeholder - will be enhanced in Phase 4
-function SectionEditor({ section, onChange, onSave, saving }) {
-  const [content, setContent] = useState(section?.content || '')
-  const [hasChanges, setHasChanges] = useState(false)
-
-  useEffect(() => {
-    setContent(section?.content || '')
-    setHasChanges(false)
-  }, [section?.id])
-
-  const handleContentChange = (e) => {
-    setContent(e.target.value)
-    setHasChanges(true)
-    onChange?.(e.target.value)
-  }
-
-  const handleSave = () => {
-    onSave?.(content)
-    setHasChanges(false)
-  }
-
-  if (!section) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center px-4">
-        <FileText className="w-12 h-12 text-gray-300 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          No Section Selected
-        </h3>
-        <p className="text-sm text-gray-500">
-          Select a section from the sidebar to start editing.
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Section Header */}
-      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">{section.title}</h2>
-            {section.generatedFrom && (
-              <p className="text-xs text-gray-500 mt-0.5">
-                Generated from AI conversation
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {hasChanges && (
-              <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
-                Unsaved changes
-              </span>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || saving}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Save
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Editor Area */}
-      <div className="flex-1 p-4 overflow-hidden">
-        <textarea
-          value={content}
-          onChange={handleContentChange}
-          placeholder="Start writing or use AI to generate content..."
-          className="w-full h-full p-4 border border-gray-200 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-        />
-      </div>
-    </div>
-  )
-}
+import {
+  ConversationPanel,
+  SectionList,
+  SectionEditor,
+  ContentInsertModal
+} from '../components/documentGeneration'
 
 export default function DocumentEditor() {
   const { projectId, documentId } = useParams()
-  const navigate = useNavigate()
 
   const [document, setDocument] = useState(null)
   const [project, setProject] = useState(null)
@@ -123,6 +44,11 @@ export default function DocumentEditor() {
   const [showChat, setShowChat] = useState(true)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // Content insert modal state
+  const [showInsertModal, setShowInsertModal] = useState(false)
+  const [generatedContent, setGeneratedContent] = useState(null)
+  const [generatingContent, setGeneratingContent] = useState(false)
 
   // Load document and project
   useEffect(() => {
@@ -178,6 +104,7 @@ export default function DocumentEditor() {
     return () => unsubscribe()
   }, [documentId, selectedSection?.id])
 
+  // Section management handlers
   const handleSaveSection = async (content) => {
     if (!selectedSection) return
 
@@ -191,9 +118,97 @@ export default function DocumentEditor() {
     }
   }
 
+  const handleReorderSections = async (newOrder) => {
+    try {
+      await reorderDocumentSections(documentId, newOrder)
+    } catch (err) {
+      console.error('Error reordering sections:', err)
+    }
+  }
+
+  const handleAddSection = async () => {
+    try {
+      const newSection = await addDocumentSection(documentId, {
+        title: 'New Section'
+      })
+      if (newSection) {
+        setSelectedSection(newSection)
+      }
+    } catch (err) {
+      console.error('Error adding section:', err)
+    }
+  }
+
+  const handleDeleteSection = async (sectionId) => {
+    if (!window.confirm('Are you sure you want to delete this section?')) return
+
+    try {
+      await deleteDocumentSection(documentId, sectionId)
+
+      // If deleted section was selected, select first available
+      if (selectedSection?.id === sectionId) {
+        const remaining = document?.sections?.filter(s => s.id !== sectionId)
+        setSelectedSection(remaining?.[0] || null)
+      }
+    } catch (err) {
+      console.error('Error deleting section:', err)
+    }
+  }
+
+  const handleRenameSection = async (sectionId, newTitle) => {
+    try {
+      await updateDocumentSection(documentId, sectionId, { title: newTitle })
+    } catch (err) {
+      console.error('Error renaming section:', err)
+    }
+  }
+
+  const handleDuplicateSection = async (sectionId) => {
+    const section = document?.sections?.find(s => s.id === sectionId)
+    if (!section) return
+
+    try {
+      const newSection = await addDocumentSection(documentId, {
+        title: `${section.title} (Copy)`,
+        content: section.content
+      })
+      if (newSection) {
+        setSelectedSection(newSection)
+      }
+    } catch (err) {
+      console.error('Error duplicating section:', err)
+    }
+  }
+
+  // AI content generation handlers
+  const handleRequestAI = (section) => {
+    // Open chat panel and focus on the section
+    setShowChat(true)
+  }
+
   const handleContentGenerated = ({ sectionId, content }) => {
-    // This will be handled more robustly in Phase 4
-    console.log('Content generated for section:', sectionId, content)
+    // Show content insert modal
+    setGeneratedContent(content)
+    setShowInsertModal(true)
+    setGeneratingContent(false)
+  }
+
+  const handleInsertContent = async (content) => {
+    if (!selectedSection) return
+
+    try {
+      setSaving(true)
+      await updateDocumentSection(documentId, selectedSection.id, {
+        content,
+        generatedFrom: new Date().toISOString()
+      })
+    } catch (err) {
+      console.error('Error inserting content:', err)
+    } finally {
+      setSaving(false)
+      setShowInsertModal(false)
+      setGeneratedContent(null)
+    }
   }
 
   if (loading) {
@@ -244,6 +259,9 @@ export default function DocumentEditor() {
                 }`}>
                   {document?.status || 'draft'}
                 </span>
+                <span className="text-xs text-gray-400">
+                  v{document?.version || '1.0'}
+                </span>
               </div>
               <p className="text-sm text-gray-500">
                 {project?.clientName} • {document?.type?.replace(/_/g, ' ')}
@@ -263,11 +281,14 @@ export default function DocumentEditor() {
               <MessageSquare className="w-4 h-4" />
               AI Chat
             </button>
-            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Preview">
               <Eye className="w-5 h-5" />
             </button>
-            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <MoreVertical className="w-5 h-5" />
+            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Export">
+              <Download className="w-5 h-5" />
+            </button>
+            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Settings">
+              <Settings className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -296,68 +317,30 @@ export default function DocumentEditor() {
             </button>
           </div>
 
-          {/* Section List */}
-          {!sidebarCollapsed && (
-            <nav className="flex-1 overflow-y-auto p-2">
-              {document?.sections?.length === 0 ? (
-                <div className="text-center py-8 text-sm text-gray-500">
-                  No sections yet
-                </div>
-              ) : (
-                <ul className="space-y-1">
-                  {document?.sections?.map((section, index) => (
-                    <li key={section.id}>
-                      <button
-                        onClick={() => setSelectedSection(section)}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors ${
-                          selectedSection?.id === section.id
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {section.title}
-                          </p>
-                          {section.content && (
-                            <p className="text-xs text-gray-500 truncate">
-                              {section.content.substring(0, 50)}...
-                            </p>
-                          )}
-                        </div>
-                        {section.content ? (
-                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        ) : (
-                          <span className="w-2 h-2 bg-gray-300 rounded-full flex-shrink-0" />
-                        )}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </nav>
-          )}
-
-          {/* Add Section Button */}
-          {!sidebarCollapsed && (
-            <div className="p-2 border-t border-gray-200">
-              <button className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">
-                <Plus className="w-4 h-4" />
-                Add Section
-              </button>
-            </div>
-          )}
+          {/* Section List Component */}
+          <SectionList
+            sections={document?.sections || []}
+            selectedSectionId={selectedSection?.id}
+            onSelectSection={setSelectedSection}
+            onReorderSections={handleReorderSections}
+            onAddSection={handleAddSection}
+            onDeleteSection={handleDeleteSection}
+            onRenameSection={handleRenameSection}
+            onDuplicateSection={handleDuplicateSection}
+            collapsed={sidebarCollapsed}
+          />
         </aside>
 
         {/* Editor Panel */}
-        <main className={`flex-1 flex overflow-hidden ${showChat ? '' : ''}`}>
+        <main className="flex-1 flex overflow-hidden">
           <div className={`flex-1 bg-white ${showChat ? 'border-r border-gray-200' : ''}`}>
             <SectionEditor
               section={selectedSection}
-              onChange={() => {}}
               onSave={handleSaveSection}
+              onRequestAI={handleRequestAI}
               saving={saving}
+              autoSave={true}
+              autoSaveDelay={2000}
             />
           </div>
 
@@ -375,6 +358,20 @@ export default function DocumentEditor() {
           )}
         </main>
       </div>
+
+      {/* Content Insert Modal */}
+      <ContentInsertModal
+        isOpen={showInsertModal}
+        onClose={() => {
+          setShowInsertModal(false)
+          setGeneratedContent(null)
+        }}
+        generatedContent={generatedContent}
+        sectionTitle={selectedSection?.title}
+        existingContent={selectedSection?.content}
+        onInsert={handleInsertContent}
+        loading={generatingContent}
+      />
     </div>
   )
 }
