@@ -10,7 +10,7 @@
 
 import { useState, useEffect } from 'react'
 import { useOrganization } from '../../hooks/useOrganization'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 import {
   X,
   ChevronRight,

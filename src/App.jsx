@@ -97,6 +97,10 @@ const SFOCDetail = lazy(() => import('./pages/SFOCDetail'))
 const ManufacturerDeclarationHub = lazy(() => import('./pages/ManufacturerDeclarationHub'))
 const ManufacturerDeclarationDetail = lazy(() => import('./pages/ManufacturerDeclarationDetail'))
 
+// SORA Assessment Module Pages - lazy-loaded
+const SORAHub = lazy(() => import('./pages/SORAHub'))
+const SORADetail = lazy(() => import('./pages/SORADetail'))
+
 // Suspense fallback component
 function PageLoader() {
   return <LoadingSpinner size="lg" message="Loading..." />
@@ -319,6 +323,10 @@ function App() {
           {/* Manufacturer Declaration Module Routes - lazy-loaded */}
           <Route path="manufacturer-declarations" element={<Suspense fallback={<PageLoader />}><ManufacturerDeclarationHub /></Suspense>} />
           <Route path="manufacturer-declarations/:declarationId" element={<Suspense fallback={<PageLoader />}><ManufacturerDeclarationDetail /></Suspense>} />
+
+          {/* SORA Assessment Module Routes - lazy-loaded */}
+          <Route path="sora" element={<Suspense fallback={<PageLoader />}><SORAHub /></Suspense>} />
+          <Route path="sora/:assessmentId" element={<Suspense fallback={<PageLoader />}><SORADetail /></Suspense>} />
         </Route>
 
         {/* Catch all - redirect to dashboard */}
