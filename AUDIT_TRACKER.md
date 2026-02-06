@@ -429,6 +429,27 @@ This document tracks the comprehensive audit of all Muster application features,
 | Status badges | [x] | Color-coded status display |
 | Create new declaration | [x] | Via hub page button |
 
+### 7.2.1 CAR 922 Regulatory Accuracy Audit
+**Audit Date:** February 6, 2026
+**Reference:** Transport Canada Advisory Circular AC 922-001
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Weight category definitions | [x] | Micro (≤250g), Small (250g-25kg), Medium (25kg-150kg), Large (>150kg) verified |
+| Kinetic energy categories | [x] | Low (<700J), Medium (<34kJ), High (<1084kJ), Very High (≥1084kJ) verified |
+| Reliability targets | [x] | Per-category targets (10^-4 to 10^-6) match AC 922-001 specs |
+| Small RPAS operation types | [x] | controlled_airspace, near_people, over_people correctly map to 922.04-922.06 |
+| Medium RPAS operation types | [F] | FIXED: Added missing types (away_from_people, controlled_airspace, bvlos_isolated) |
+| Medium RPAS standards mapping | [F] | FIXED: Corrected to 922.07 only per AC 922-001 Table 1 |
+| BVLOS operation standards | [F] | FIXED: Added missing 922.10 (DAA) requirement |
+| Weight-based filtering | [F] | FIXED: Added rpasCategories and getOperationTypesForCategory() helper |
+| Pre-validation detection | [x] | Added requiresPreValidation() and anyRequiresPreValidation() helpers |
+| UI operation type filtering | [F] | FIXED: CreateDeclarationModal now filters by RPAS weight category |
+| Pre-validation warnings | [x] | Added visual badges and warnings for PVD operations |
+| Declaration type tracking | [x] | declarationType field distinguishes regular vs pre-validated declarations |
+| CAR reference citations | [x] | car_reference field added to all operation types |
+| Backwards compatibility | [x] | Deprecated aliases maintained (bvlos_non_isolated → bvlos_near_populated) |
+
 ### 7.3 Policy & Procedure Library
 | Item | Status | Notes |
 |------|--------|-------|
@@ -1392,6 +1413,10 @@ This document tracks the comprehensive audit of all Muster application features,
 | 3 | 3 | ExpenseForm | Form required project but page allowed general costs | Medium | Fixed | Made project field optional |
 | 4 | 9 | DocumentCard | Naming collision: `document` prop shadowed global `document` object causing click-outside handler to fail | Medium | Fixed | Changed to `window.document` for DOM access |
 | 5 | 12 | Insurance.jsx | Missing organizationId: Page didn't use useOrganization hook, so Firestore queries and creates lacked org scoping | High | Fixed | Added useOrganization hook, pass organizationId to all API calls |
+| 6 | 7 | firestoreSafetyDeclaration.js | No weight-based filtering: UI displayed all operation types regardless of RPAS weight category (micro/small/medium) | High | Fixed | Added rpasCategories field to OPERATION_TYPES and getOperationTypesForCategory() helper |
+| 7 | 7 | firestoreSafetyDeclaration.js | Incorrect medium RPAS standards: medium_rpas_near_people had ['922.05', '922.07'] but per AC 922-001 should only be ['922.07'] | High | Fixed | Corrected applicableStandards to ['922.07'] for medium RPAS operations |
+| 8 | 7 | firestoreSafetyDeclaration.js | Missing operation types: Medium RPAS lacked away_from_people, controlled_airspace, and BVLOS options per AC 922-001 Table 1 | High | Fixed | Added medium_rpas_away_from_people, medium_rpas_controlled_airspace, medium_bvlos_isolated operation types |
+| 9 | 7 | firestoreSafetyDeclaration.js | Missing 922.10 (DAA): bvlos_isolated was missing DAA requirement per CAR Standard 922 | Medium | Fixed | Added 922.10 to applicableStandards for BVLOS operations |
 
 ---
 
@@ -1436,14 +1461,15 @@ This document tracks the comprehensive audit of all Muster application features,
 | Feb 6, 2026 | 13 | Audit Phase 13: Settings & Configuration verified | Settings (8 tabs), OrgSettings, TeamMembers, Regulatory, Emergency, Branding, RBAC |
 | Feb 6, 2026 | 14 | Audit Phase 14: Cloud Functions & Integrations verified | Cloud functions, email/SMS, receipt OCR, AI services, Firebase config |
 | Feb 6, 2026 | 15 | Audit Phase 15: UI Components & UX verified | 50+ UI components, Mapbox maps, HeadlessUI, comprehensive component library |
+| Feb 6, 2026 | 7 | Fix Safety Declaration CAR 922 regulatory accuracy issues | Weight-based operation filtering, corrected 922.xx mappings, added missing operation types, UI pre-validation warnings |
 
 ---
 
 ## Audit Complete Summary
 
 **Total Phases Completed:** 15
-**Total Issues Found:** 5
-**Issues Fixed:** 5 (100%)
+**Total Issues Found:** 9
+**Issues Fixed:** 9 (100%)
 **Components Audited:** 365+
 **Lines of Code Reviewed:** ~50,000+
 
@@ -1462,7 +1488,11 @@ This document tracks the comprehensive audit of all Muster application features,
 1. **Phase 3:** ExpenseForm required project but page allowed general costs → Made project optional
 2. **Phase 9:** DocumentCard naming collision (document prop vs window.document) → Changed to window.document
 3. **Phase 12:** Insurance.jsx missing organizationId → Added useOrganization hook
+4. **Phase 7:** Safety Declaration no weight-based filtering → Added rpasCategories and getOperationTypesForCategory()
+5. **Phase 7:** Medium RPAS incorrect standards (had 922.05/922.07, should be 922.07 only) → Corrected per AC 922-001
+6. **Phase 7:** Missing medium RPAS operation types → Added away_from_people, controlled_airspace, bvlos_isolated
+7. **Phase 7:** BVLOS operations missing 922.10 (DAA) → Added to applicableStandards
 
 ---
 
-*Last Updated: February 6, 2026 - Comprehensive Audit Complete*
+*Last Updated: February 6, 2026 - Comprehensive Audit Complete + Safety Declaration Regulatory Accuracy Audit*
