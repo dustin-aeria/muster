@@ -583,19 +583,23 @@ This plan adds comprehensive tooling to Muster for managing both processes, inte
 - [ ] Timeline component - placeholder in SFOCDetail
 - [ ] TC communication tracking - placeholder in SFOCDetail
 
-### Sprint 4: Manufacturer Declaration (Phase 3)
-- [ ] ManufacturerDeclarationHub.jsx
-- [ ] ManufacturerDeclarationWizard.jsx
-- [ ] System design section
-- [ ] Safety analysis section
-- [ ] Custom software declaration
+### Sprint 4: Manufacturer Declaration (Phase 3) - COMPLETE
+- [x] ManufacturerDeclarationHub.jsx main page (~420 lines)
+- [x] CreateMPDModal.jsx wizard (4 steps) (~520 lines)
+- [x] MPDCard.jsx component (~280 lines)
+- [x] System design section (in MPDSectionChecklist)
+- [x] Safety analysis section (in MPDSectionChecklist)
+- [x] Custom software declaration (in CreateMPDModal + detail view)
 
-### Sprint 5: MPD Complete (Phase 3 cont.)
-- [ ] ManufacturerDeclarationDetail.jsx
-- [ ] Performance testing section
-- [ ] Environmental qualification section
-- [ ] Kinetic energy calculator
-- [ ] Evidence management
+### Sprint 5: MPD Complete (Phase 3 cont.) - COMPLETE
+- [x] ManufacturerDeclarationDetail.jsx (~420 lines)
+- [x] MPDSectionChecklist.jsx (~340 lines)
+- [x] Performance testing section tracking
+- [x] Environmental qualification section tracking
+- [x] Kinetic energy calculator (integrated in CreateMPDModal)
+- [x] Evidence management (basic - in section checklist)
+- [x] Routes added to App.jsx
+- [x] Navigation link added to Layout.jsx
 
 ### Sprint 6: SORA Tool (Phase 4)
 - [ ] SORAAssessmentWizard.jsx

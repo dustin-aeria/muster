@@ -93,6 +93,10 @@ const SafetyDeclarationDetail = lazy(() => import('./pages/SafetyDeclarationDeta
 const SFOCHub = lazy(() => import('./pages/SFOCHub'))
 const SFOCDetail = lazy(() => import('./pages/SFOCDetail'))
 
+// Manufacturer Declaration Module Pages - lazy-loaded
+const ManufacturerDeclarationHub = lazy(() => import('./pages/ManufacturerDeclarationHub'))
+const ManufacturerDeclarationDetail = lazy(() => import('./pages/ManufacturerDeclarationDetail'))
+
 // Suspense fallback component
 function PageLoader() {
   return <LoadingSpinner size="lg" message="Loading..." />
@@ -311,6 +315,10 @@ function App() {
           {/* SFOC Module Routes - lazy-loaded */}
           <Route path="sfoc" element={<Suspense fallback={<PageLoader />}><SFOCHub /></Suspense>} />
           <Route path="sfoc/:applicationId" element={<Suspense fallback={<PageLoader />}><SFOCDetail /></Suspense>} />
+
+          {/* Manufacturer Declaration Module Routes - lazy-loaded */}
+          <Route path="manufacturer-declarations" element={<Suspense fallback={<PageLoader />}><ManufacturerDeclarationHub /></Suspense>} />
+          <Route path="manufacturer-declarations/:declarationId" element={<Suspense fallback={<PageLoader />}><ManufacturerDeclarationDetail /></Suspense>} />
         </Route>
 
         {/* Catch all - redirect to dashboard */}

@@ -70,6 +70,7 @@ const complianceNavigation = [
   { name: 'Document Generator', href: '/document-projects', icon: Sparkles },
   { name: 'Safety Declarations', href: '/safety-declarations', icon: FileCheck },
   { name: 'SFOC Applications', href: '/sfoc', icon: Scale },
+  { name: 'Manufacturer Declarations', href: '/manufacturer-declarations', icon: FileCheck },
 ]
 
 const maintenanceNavigation = [
