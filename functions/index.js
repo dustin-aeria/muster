@@ -680,3 +680,16 @@ const documentGeneration = require('./documentGeneration')
 exports.sendDocumentMessage = documentGeneration.sendDocumentMessage
 exports.generateSectionContent = documentGeneration.generateSectionContent
 exports.getOrganizationTokenUsage = documentGeneration.getOrganizationTokenUsage
+
+// ============================================
+// Safety Declaration AI Functions
+// ============================================
+
+const safetyDeclarationAI = require('./safetyDeclarationAI')
+
+exports.askDeclarationQuestion = safetyDeclarationAI.askDeclarationQuestion
+exports.verifyCalculation = safetyDeclarationAI.verifyCalculation
+exports.recommendComplianceMethod = safetyDeclarationAI.recommendComplianceMethod
+exports.generateRequirementGuidance = safetyDeclarationAI.generateRequirementGuidance
+exports.analyzeEvidence = safetyDeclarationAI.analyzeEvidence
+exports.getPreDeclarationGuidance = safetyDeclarationAI.getPreDeclarationGuidance
