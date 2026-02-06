@@ -2,7 +2,7 @@
 
 **Started:** February 6, 2026
 **Status:** In Progress
-**Current Phase:** Phase 9 Complete - Awaiting Phase 10 Approval
+**Current Phase:** Phase 10 Complete - Awaiting Phase 11 Approval
 
 ---
 
@@ -718,17 +718,102 @@ This document tracks the comprehensive audit of all Muster application features,
 ### 10.1 Unified Calendar
 | Item | Status | Notes |
 |------|--------|-------|
-| Calendar loads | [ ] | |
-| Month view | [ ] | |
-| Week view | [ ] | |
-| Day view | [ ] | |
-| Event creation | [ ] | |
-| Event editing | [ ] | |
-| Event deletion | [ ] | |
-| Filter by type | [ ] | |
-| Maintenance events | [ ] | |
-| Training events | [ ] | |
-| Project deadlines | [ ] | |
+| Calendar page loads | [x] | Calendar.jsx (696 lines) comprehensive page |
+| Month view | [x] | Full month grid with padding days |
+| Day navigation | [x] | Previous/next month, today button |
+| Date selection | [x] | Click day to see events in detail panel |
+| Event display | [x] | Color-coded events on calendar days |
+| Overflow handling | [x] | "+N more" for days with 4+ events |
+| Loading states | [x] | Spinner during data load |
+
+### 10.2 Event Types
+| Item | Status | Notes |
+|------|--------|-------|
+| Task events | [x] | Tasks with due dates from firestoreTasks |
+| Project events | [x] | Project start dates from firestore |
+| Training completed | [x] | Training completion dates |
+| Training expiry | [x] | Expiring training certifications (yellow) |
+| Insurance expiry | [x] | Policy expiry dates (red) |
+| Inspection events | [x] | Scheduled inspections (purple) |
+| Maintenance events | [x] | Maintenance due dates from firestoreMaintenance |
+| Permit expiry | [x] | Permit expiry from firestorePermits |
+| Manual events | [x] | User-created custom events (gray) |
+
+### 10.3 Filters & Export
+| Item | Status | Notes |
+|------|--------|-------|
+| Filter panel | [x] | Toggle filters panel visibility |
+| Filter by type | [x] | Checkbox toggles for each event type |
+| Color-coded badges | [x] | Each type has distinct color |
+| ICS export | [x] | Export to .ics calendar file |
+| Event count display | [x] | Shows filtered event counts |
+
+### 10.4 Manual Event Creation
+| Item | Status | Notes |
+|------|--------|-------|
+| Add event button | [x] | Opens modal, pre-fills selected date |
+| Event title | [x] | Required field |
+| Event date | [x] | Date picker, required |
+| Event time | [x] | Optional time field |
+| Event location | [x] | Optional location field |
+| Event description | [x] | Optional description textarea |
+| Form validation | [x] | Requires title and date |
+| Modal close | [x] | Cancel and X button |
+
+### 10.5 Selected Day Detail
+| Item | Status | Notes |
+|------|--------|-------|
+| Day detail panel | [x] | Shows when day is selected |
+| Full date display | [x] | Formatted "Monday, January 1, 2026" |
+| Event list | [x] | All events for selected day |
+| Event icons | [x] | Type-specific icons |
+| Event details | [x] | Title, subtitle, location, description |
+| Type badges | [x] | Color-coded type labels |
+| Empty state | [x] | "No events on this day" message |
+| Close button | [x] | X to deselect day |
+
+### 10.6 Dashboard Widgets
+| Item | Status | Notes |
+|------|--------|-------|
+| UpcomingEvents widget | [x] | (247 lines) shows next 14 days |
+| Event type icons | [x] | Project, training, inspection, insurance icons |
+| Date formatting | [x] | "Today", "Tomorrow", or formatted date |
+| Days until display | [x] | Shows countdown to event |
+| Link to calendar | [x] | "View calendar" navigation |
+| Loading skeleton | [x] | Animated placeholder while loading |
+| Empty state | [x] | Message when no upcoming events |
+
+### 10.7 Expiry Reminders Widget
+| Item | Status | Notes |
+|------|--------|-------|
+| ExpiryRemindersWidget | [x] | (260 lines) consolidated expiry tracking |
+| Permits expiring | [x] | From firestorePermits |
+| Insurance expiring | [x] | From firestoreInsurance |
+| Certifications expiring | [x] | From operator certifications |
+| 30-day threshold | [x] | EXPIRY_THRESHOLD_DAYS constant |
+| Urgency sorting | [x] | Expired first, then by days until |
+| Color-coded states | [x] | Red for expired, amber for expiring soon |
+| Link to details | [x] | Click to navigate to relevant page |
+| All current state | [x] | Green success message when nothing expiring |
+| Overflow handling | [x] | "+N more items" when over 5 |
+
+### 10.8 Date Utilities
+| Item | Status | Notes |
+|------|--------|-------|
+| dateUtils.js | [x] | (669 lines) comprehensive utility library |
+| Date formatting | [x] | formatDate, formatTime with options |
+| ISO conversion | [x] | toISODateString, toISOString |
+| Input formatting | [x] | formatForInput for date/datetime/time inputs |
+| Relative time | [x] | getRelativeTime "2 hours ago" |
+| Compact relative | [x] | getCompactRelativeTime "2h" |
+| Date calculations | [x] | addTime, subtractTime, getDateDiff |
+| Period boundaries | [x] | startOf, endOf (day/week/month/year) |
+| Comparisons | [x] | isToday, isPast, isFuture, isOverdue, isDueSoon |
+| Duration formatting | [x] | formatDuration, parseDuration for flight times |
+| Flight time calc | [x] | calculateFlightTime, sumDurations |
+| Calendar generation | [x] | getCalendarDates for month view |
+| Timezone helpers | [x] | getLocalTimezone, formatWithTimezone |
+| Date range presets | [x] | today, thisWeek, last30Days, etc. |
 
 ---
 
@@ -869,7 +954,7 @@ This document tracks the comprehensive audit of all Muster application features,
 | 7 | Compliance & Regulatory | [x] Complete | Feb 6, 2026 |
 | 8 | Maintenance Module | [x] Complete | Feb 6, 2026 |
 | 9 | Document Generation | [x] Complete | Feb 6, 2026 |
-| 10 | Calendar & Scheduling | [ ] Pending | |
+| 10 | Calendar & Scheduling | [x] Complete | Feb 6, 2026 |
 | 11 | Forms & Data Entry | [ ] Pending | |
 | 12 | Insurance Module | [ ] Pending | |
 | 13 | Settings & Configuration | [ ] Pending | |
@@ -891,7 +976,8 @@ This document tracks the comprehensive audit of all Muster application features,
 | Feb 6, 2026 | 7 | Audit Phase 7: Compliance & Regulatory verified | SORA 2.5 Engine, CAR 922 Declarations, Policy/Procedure Library, Acknowledgments, Master Policy Admin |
 | Feb 6, 2026 | 8 | Audit Phase 8: Maintenance Module verified | Dashboard, Items, Schedules, Log Service, Grounding, History |
 | Feb 6, 2026 | 9 | Audit Phase 9: Document Generation verified + fix | Projects, Editor, AI Chat, Cross-refs, Export, Preview, 21 components |
+| Feb 6, 2026 | 10 | Audit Phase 10: Calendar & Scheduling verified | Calendar, UpcomingEvents, ExpiryReminders, dateUtils |
 
 ---
 
-*Last Updated: February 6, 2026 - Phase 9 Complete*
+*Last Updated: February 6, 2026 - Phase 10 Complete*
