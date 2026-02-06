@@ -50,8 +50,8 @@ export default function DocumentCard({ document, projectId, onDelete, onDuplicat
         setShowMenu(false)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    window.document.addEventListener('mousedown', handleClickOutside)
+    return () => window.document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const typeInfo = DOCUMENT_TYPES[document.type] || { label: document.type, icon: 'FileText' }
