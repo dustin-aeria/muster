@@ -2,7 +2,7 @@
 
 **Started:** February 6, 2026
 **Status:** In Progress
-**Current Phase:** Phase 13 Complete - Awaiting Phase 14 Approval
+**Current Phase:** Phase 14 Complete - Awaiting Phase 15 Approval
 
 ---
 
@@ -1124,33 +1124,147 @@ This document tracks the comprehensive audit of all Muster application features,
 
 ## Phase 14: Cloud Functions & Integrations
 
-### 14.1 Email Functions
+### 14.1 Cloud Functions Index
 | Item | Status | Notes |
 |------|--------|-------|
-| sendEmail function | [ ] | |
-| Email templates | [ ] | |
-| Portal invite emails | [ ] | |
+| functions/index.js | [x] | (696 lines) main cloud functions entry |
+| Firebase Admin init | [x] | admin.initializeApp() correctly configured |
+| Resend email client | [x] | Initialized with RESEND_API_KEY from env |
+| Security helpers | [x] | escapeHtml() for XSS prevention |
+| Rate limiting | [x] | checkRateLimit() with 1-hour window, 5 resends max |
+| sendInvitationEmail trigger | [x] | Firestore onCreate for organizationMembers with status 'invited' |
+| resendInvitationEmail callable | [x] | With auth, rate limit, authorization checks |
+| HTML email templates | [x] | Professional styled invitation emails |
 
-### 14.2 OCR Functions
+### 14.2 Receipt OCR Functions
 | Item | Status | Notes |
 |------|--------|-------|
-| processReceipt function | [ ] | |
-| Google Cloud Vision integration | [ ] | |
-| Data extraction accuracy | [ ] | |
+| Google Cloud Vision | [x] | @google-cloud/vision v4.3.2 |
+| processReceiptOCR trigger | [x] | Firestore onWrite for expenses with ocrStatus 'pending' |
+| extractAmount | [x] | Regex patterns for currency, returns largest (total) |
+| extractDate | [x] | Multiple date format patterns (MM/DD/YYYY, YYYY-MM-DD, Month DD, YYYY) |
+| extractVendor | [x] | First lines parsing, skip common headers |
+| Reprocess prevention | [x] | Checks if URL changed before processing |
+| Status tracking | [x] | pending → processing → completed/failed/skipped |
+| ocrData storage | [x] | rawText, extractedVendor, extractedAmount, extractedDate, confidence |
 
 ### 14.3 Document Generation Functions
 | Item | Status | Notes |
 |------|--------|-------|
-| generateDocument function | [ ] | |
-| Claude AI integration | [ ] | |
-| Token tracking | [ ] | |
-| Rate limiting | [ ] | |
+| documentGeneration.js | [x] | (663 lines) Claude API integration |
+| Anthropic SDK | [x] | @anthropic-ai/sdk v0.24.0, model: claude-sonnet-4-20250514 |
+| Rate limiting | [x] | 100 messages per hour per organization |
+| verifyDocumentAccess | [x] | Org membership + active status + role check |
+| Document type prompts | [x] | 10 types: sms, training_manual, maintenance_plan, ops_manual, safety_declaration, hse_manual, risk_assessment, sop, erp, compliance_matrix |
+| buildSystemPrompt | [x] | Document + project + knowledge base context |
+| searchKnowledgeBase | [x] | Keyword-based relevance scoring |
+| getConversationHistory | [x] | Last 20 messages for context |
+| sendDocumentMessage | [x] | Callable: user message → Claude response |
+| generateSectionContent | [x] | Callable: section-specific content generation |
+| getOrganizationTokenUsage | [x] | Callable: aggregate token usage stats |
+| Token tracking | [x] | promptTokens + completionTokens stored per message |
 
-### 14.4 Safety Declaration Functions
+### 14.4 Safety Declaration AI Functions
 | Item | Status | Notes |
 |------|--------|-------|
-| Declaration AI function | [ ] | |
-| Risk assessment AI | [ ] | |
+| safetyDeclarationAI.js | [x] | (851 lines) CAR Standard 922 AI assistance |
+| CAR_922_SYSTEM_PROMPT | [x] | Comprehensive knowledge: 922.04-922.12 sections |
+| Kinetic energy categories | [x] | Low (<700J), Medium (<34kJ), High (<1084kJ), Very High |
+| Reliability targets | [x] | Per KE category and failure severity |
+| Rate limiting | [x] | 150 messages per hour per organization |
+| verifyDeclarationAccess | [x] | Same pattern as document generation |
+| askDeclarationQuestion | [x] | Callable: context-aware Q&A with RPAS context |
+| verifyCalculation | [x] | Callable: KE and reliability calculation verification |
+| recommendComplianceMethod | [x] | Callable: compliance method recommendation |
+| generateRequirementGuidance | [x] | Callable: detailed requirement guidance |
+| analyzeEvidence | [x] | Callable: evidence completeness analysis |
+| getPreDeclarationGuidance | [x] | Callable: pre-declaration roadmap |
+| Conversation storage | [x] | aiConversations subcollection per declaration |
+
+### 14.5 Email Service
+| Item | Status | Notes |
+|------|--------|-------|
+| sendEmail.js | [x] | (195 lines) SendGrid integration |
+| SendGrid SDK | [x] | @sendgrid/mail |
+| Single email | [x] | sendEmail() with to, subject, text, html, replyTo |
+| Batch emails | [x] | sendBatchEmails() up to 1000 per batch |
+| Tracking settings | [x] | Open tracking enabled, click tracking disabled |
+| isValidEmail | [x] | Email format validation |
+| stripHtml | [x] | HTML to plain text conversion |
+
+### 14.6 SMS Service
+| Item | Status | Notes |
+|------|--------|-------|
+| sendSMS.js | [x] | (237 lines) Twilio integration |
+| Twilio SDK | [x] | twilio package |
+| Single SMS | [x] | sendSMS() with E.164 phone formatting |
+| Bulk SMS | [x] | sendBulkSMS() with batch rate limiting |
+| formatPhoneNumber | [x] | E.164 conversion, assumes North American if no country code |
+| isValidPhone | [x] | Phone number validation |
+| getSegmentCount | [x] | GSM vs Unicode character detection for segment calculation |
+| Message truncation | [x] | 1600 character limit enforcement |
+
+### 14.7 Firebase Configuration
+| Item | Status | Notes |
+|------|--------|-------|
+| firebase.json | [x] | Functions source, firestore rules/indexes |
+| functions/package.json | [x] | Node 20, all dependencies listed |
+| Dependencies | [x] | @anthropic-ai/sdk, @google-cloud/vision, firebase-admin, firebase-functions, resend |
+
+### 14.8 Frontend Firebase Integration
+| Item | Status | Notes |
+|------|--------|-------|
+| src/lib/firebase.js | [x] | (26 lines) Firebase initialization |
+| Auth, Firestore, Storage, Functions | [x] | All services exported |
+| Environment variables | [x] | VITE_FIREBASE_* config from env |
+
+### 14.9 Frontend Storage Helpers
+| Item | Status | Notes |
+|------|--------|-------|
+| storageHelpers.js | [x] | (986 lines) comprehensive file uploads |
+| uploadSitePhoto | [x] | 10MB max, JPEG/PNG/WebP/HEIC |
+| uploadPolicyAttachment | [x] | 25MB max, PDF/Word/Excel/text/images |
+| uploadEquipmentImage | [x] | 10MB max, images only |
+| uploadFHAAttachment | [x] | 25MB max, documents and images |
+| uploadFHADocument | [x] | 50MB max, PDF/Word only |
+| uploadFormAttachment | [x] | 50MB max, including videos |
+| uploadInspectionPhoto | [x] | 10MB max, with optional itemId |
+| uploadInsuranceDocument | [x] | 20MB max, PDF/JPEG/PNG/Word |
+| uploadPermitDocument | [x] | 50MB max, documents and images |
+| uploadExpenseReceipt | [x] | 10MB max, images only |
+| uploadDeclarationEvidence | [x] | 100MB max, broad format support including ZIP |
+| Delete functions | [x] | Matching delete for each upload type |
+| Bulk upload functions | [x] | With progress callbacks |
+
+### 14.10 Frontend AI Services
+| Item | Status | Notes |
+|------|--------|-------|
+| safetyDeclarationAI.js (frontend) | [x] | (487 lines) client-side AI wrapper |
+| httpsCallable usage | [x] | All 6 cloud functions wrapped |
+| Conversation cache | [x] | In-memory with 1-hour auto-cleanup |
+| useSafetyDeclarationAI hook | [x] | React hook with loading, error, lastResponse state |
+| Error handling | [x] | Code-specific user-friendly messages |
+| parseAIResponse | [x] | Markdown section extraction |
+| firestoreDocumentGeneration.js | [x] | (791 lines) document generation data layer |
+| Document types | [x] | 10 types with sections, icons, descriptions |
+| Project CRUD | [x] | Create, read, update, delete with org scoping |
+| Document CRUD | [x] | Full lifecycle management |
+| Real-time subscriptions | [x] | onSnapshot for projects, documents, conversations |
+| Cross-references | [x] | Add/remove document cross-references |
+| Export tracking | [x] | Record document exports |
+| sendDocumentMessage wrapper | [x] | Frontend callable wrapper |
+| generateSectionContent wrapper | [x] | Frontend callable wrapper |
+
+### 14.11 Firestore Security Rules
+| Item | Status | Notes |
+|------|--------|-------|
+| firestore.rules | [x] | Comprehensive RBAC-based rules |
+| Helper functions | [x] | isAuthenticated, isMemberOf, getMembership |
+| Role checks | [x] | hasRole, canManageTeam, canDelete, canEdit, canApprove |
+| Organization rules | [x] | Read: members, Create: auth, Update: admin, Delete: admin |
+| Member rules | [x] | Proper invite/accept/manage permissions |
+| Collection rules | [x] | Projects, clients, equipment, aircraft, incidents, capas, training covered |
+| Organization scoping | [x] | All queries require organization membership |
 
 ---
 
