@@ -32,7 +32,8 @@ import {
   Clock,
   CheckSquare,
   Sparkles,
-  DollarSign
+  DollarSign,
+  Scale
 } from 'lucide-react'
 import FeedbackModal from './FeedbackModal'
 import NotificationBell from './NotificationBell'
@@ -68,6 +69,7 @@ const complianceNavigation = [
   { name: 'Policies & Procedures', href: '/policies', icon: BookOpen },
   { name: 'Document Generator', href: '/document-projects', icon: Sparkles },
   { name: 'Safety Declarations', href: '/safety-declarations', icon: FileCheck },
+  { name: 'SFOC Applications', href: '/sfoc', icon: Scale },
 ]
 
 const maintenanceNavigation = [

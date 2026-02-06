@@ -89,6 +89,10 @@ const DocumentEditor = lazy(() => import('./pages/DocumentEditor'))
 const SafetyDeclarationHub = lazy(() => import('./pages/SafetyDeclarationHub'))
 const SafetyDeclarationDetail = lazy(() => import('./pages/SafetyDeclarationDetail'))
 
+// SFOC Module Pages - lazy-loaded
+const SFOCHub = lazy(() => import('./pages/SFOCHub'))
+const SFOCDetail = lazy(() => import('./pages/SFOCDetail'))
+
 // Suspense fallback component
 function PageLoader() {
   return <LoadingSpinner size="lg" message="Loading..." />
@@ -303,6 +307,10 @@ function App() {
           {/* Safety Declaration Module Routes - lazy-loaded */}
           <Route path="safety-declarations" element={<Suspense fallback={<PageLoader />}><SafetyDeclarationHub /></Suspense>} />
           <Route path="safety-declarations/:declarationId" element={<Suspense fallback={<PageLoader />}><SafetyDeclarationDetail /></Suspense>} />
+
+          {/* SFOC Module Routes - lazy-loaded */}
+          <Route path="sfoc" element={<Suspense fallback={<PageLoader />}><SFOCHub /></Suspense>} />
+          <Route path="sfoc/:applicationId" element={<Suspense fallback={<PageLoader />}><SFOCDetail /></Suspense>} />
         </Route>
 
         {/* Catch all - redirect to dashboard */}
