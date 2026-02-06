@@ -39,7 +39,9 @@ import {
   calculateKineticEnergy,
   getKineticEnergyCategory,
   getRPASCategory,
-  getApplicableRequirements
+  getApplicableRequirements,
+  getOperationTypesForCategory,
+  anyRequiresPreValidation
 } from '../../lib/firestoreSafetyDeclaration'
 
 const STEPS = [
@@ -115,6 +117,16 @@ export default function CreateDeclarationModal({ isOpen, onClose, onSuccess }) {
     return getApplicableRequirements(formData.operationTypes)
   }, [formData.operationTypes])
 
+  // Filter operation types based on RPAS category (weight-based filtering)
+  const filteredOperationTypes = useMemo(() => {
+    return getOperationTypesForCategory(rpasCategory)
+  }, [rpasCategory])
+
+  // Check if any selected operations require pre-validation
+  const needsPreValidation = useMemo(() => {
+    return anyRequiresPreValidation(formData.operationTypes)
+  }, [formData.operationTypes])
+
   // Load clients
   useEffect(() => {
     if (isOpen && organization?.id) {
@@ -171,6 +183,15 @@ export default function CreateDeclarationModal({ isOpen, onClose, onSuccess }) {
       }))
     }
   }, [organization, formData.isClientDeclaration])
+
+  // Clear invalid operation types when RPAS category changes
+  useEffect(() => {
+    const validOpTypes = Object.keys(filteredOperationTypes)
+    setFormData(prev => ({
+      ...prev,
+      operationTypes: prev.operationTypes.filter(opType => validOpTypes.includes(opType))
+    }))
+  }, [rpasCategory]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFieldChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -581,9 +602,19 @@ export default function CreateDeclarationModal({ isOpen, onClose, onSuccess }) {
                   triggers specific CAR Standard 922 requirements.
                 </p>
 
-                {/* Operation Type Cards */}
+                {/* RPAS Category Notice */}
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Info className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm text-blue-800">
+                      Showing operations for <strong>{RPAS_CATEGORIES[rpasCategory]?.label}</strong> ({RPAS_CATEGORIES[rpasCategory]?.description})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Operation Type Cards - Filtered by RPAS Category */}
                 <div className="space-y-3">
-                  {Object.entries(OPERATION_TYPES).map(([key, opType]) => (
+                  {Object.entries(filteredOperationTypes).map(([key, opType]) => (
                     <button
                       key={key}
                       type="button"
@@ -596,7 +627,14 @@ export default function CreateDeclarationModal({ isOpen, onClose, onSuccess }) {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="font-medium text-gray-900">{opType.label}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900">{opType.label}</p>
+                            {opType.declarationType === 'pre_validated' && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800 font-medium">
+                                Pre-Validation Required
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500 mt-1">{opType.description}</p>
                           <div className="flex flex-wrap gap-1 mt-2">
                             {opType.applicableStandards.map(std => (
@@ -607,6 +645,11 @@ export default function CreateDeclarationModal({ isOpen, onClose, onSuccess }) {
                                 {std}
                               </span>
                             ))}
+                            {opType.car_reference && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-600">
+                                {opType.car_reference}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ml-4 ${
@@ -645,9 +688,27 @@ export default function CreateDeclarationModal({ isOpen, onClose, onSuccess }) {
                   </div>
                 )}
 
-                {/* Robustness Level */}
+                {/* Pre-Validation Warning */}
+                {needsPreValidation && formData.declarationType !== 'pre_validated' && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-medium text-amber-900">Pre-Validation Required</h4>
+                        <p className="mt-1 text-sm text-amber-700">
+                          One or more selected operations require a Pre-Validated Declaration.
+                          Consider going back to Step 1 to change the declaration type.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Robustness Level - shown for operations that include 922.08 containment */}
                 {(formData.operationTypes.includes('bvlos_isolated') ||
-                  formData.operationTypes.includes('bvlos_non_isolated')) && (
+                  formData.operationTypes.includes('bvlos_near_populated') ||
+                  formData.operationTypes.includes('medium_bvlos_isolated') ||
+                  formData.operationTypes.includes('medium_rpas_away_from_people')) && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Containment Robustness Level (922.08)
@@ -664,7 +725,7 @@ export default function CreateDeclarationModal({ isOpen, onClose, onSuccess }) {
                       >
                         <p className="font-medium text-gray-900">Low Robustness</p>
                         <p className="text-sm text-gray-500 mt-1">
-                          Single-failure protection for containment
+                          Single-failure protection for containment (sRPAS)
                         </p>
                       </button>
                       <button
@@ -678,7 +739,7 @@ export default function CreateDeclarationModal({ isOpen, onClose, onSuccess }) {
                       >
                         <p className="font-medium text-gray-900">High Robustness</p>
                         <p className="text-sm text-gray-500 mt-1">
-                          Multi-failure protection, DO-178/254 compliance
+                          Multi-failure protection, DO-178/254 (mRPAS)
                         </p>
                       </button>
                     </div>

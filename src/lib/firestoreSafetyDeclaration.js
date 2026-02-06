@@ -163,56 +163,137 @@ export const KINETIC_ENERGY_CATEGORIES = {
 
 /**
  * Operation types that trigger specific 922.xx requirements
+ * Per Transport Canada AC 922-001 tables (lines 1079-1227)
+ *
+ * Each operation type specifies:
+ * - rpasCategories: which RPAS weight classes can use this operation
+ * - applicableStandards: the 922.xx sections required
+ * - declarationType: 'declaration' or 'pre_validated'
  */
 export const OPERATION_TYPES = {
+  // ============================================
+  // Small RPAS (sRPAS) VLOS Operations
+  // ============================================
   controlled_airspace: {
     id: 'controlled_airspace',
-    label: 'Controlled Airspace Operations',
-    description: 'Operations within controlled airspace',
+    label: 'Small RPAS - Controlled Airspace',
+    description: 'sRPAS operations within controlled airspace',
     applicableStandards: ['922.04'],
+    rpasCategories: ['small'],
+    declarationType: 'declaration',
     car_reference: 'CAR 901.69(a)'
   },
   near_people_30m: {
     id: 'near_people_30m',
-    label: 'Operations Near People (5-30m)',
-    description: 'Operations within 30m horizontal distance of uninvolved persons',
+    label: 'Small RPAS - Near People (5-30m)',
+    description: 'sRPAS within 30m but not less than 5m of uninvolved persons',
     applicableStandards: ['922.05'],
+    rpasCategories: ['small'],
+    declarationType: 'declaration',
     car_reference: 'CAR 901.69(b)'
   },
   over_people: {
     id: 'over_people',
-    label: 'Operations Over People',
-    description: 'Operations within 5m horizontal distance of uninvolved persons',
+    label: 'Small RPAS - Over People (<5m)',
+    description: 'sRPAS within 5m horizontal distance of uninvolved persons',
     applicableStandards: ['922.06'],
+    rpasCategories: ['small'],
+    declarationType: 'declaration',
     car_reference: 'CAR 901.69(c)'
   },
-  bvlos_isolated: {
-    id: 'bvlos_isolated',
-    label: 'BVLOS - Isolated Areas',
-    description: 'Beyond visual line of sight in sparsely populated areas',
-    applicableStandards: ['922.08', '922.09', '922.11'],
-    car_reference: 'CAR 901.97'
-  },
-  bvlos_non_isolated: {
-    id: 'bvlos_non_isolated',
-    label: 'BVLOS - Non-Isolated Areas',
-    description: 'Beyond visual line of sight near populated areas',
-    applicableStandards: ['922.07', '922.08', '922.09', '922.10', '922.11', '922.12'],
-    car_reference: 'CAR 901.97'
+
+  // ============================================
+  // Medium RPAS (mRPAS) VLOS Operations
+  // Per AC 922-001 lines 1134-1167
+  // ============================================
+  medium_rpas_away_from_people: {
+    id: 'medium_rpas_away_from_people',
+    label: 'Medium RPAS - Away from People (>500ft)',
+    description: 'mRPAS VLOS operations more than 500ft from uninvolved persons',
+    applicableStandards: ['922.08'],
+    rpasCategories: ['medium'],
+    declarationType: 'declaration',
+    car_reference: 'CAR 901.69(e)'
   },
   medium_rpas_near_people: {
     id: 'medium_rpas_near_people',
-    label: 'Medium RPAS Near People',
-    description: 'Medium RPAS (>25kg) operations near uninvolved persons',
-    applicableStandards: ['922.05', '922.07'],
-    car_reference: 'CAR 901.69(b)'
+    label: 'Medium RPAS - Near People (100-500ft)',
+    description: 'mRPAS within 500ft but not less than 100ft of uninvolved persons',
+    applicableStandards: ['922.07'],
+    rpasCategories: ['medium'],
+    declarationType: 'pre_validated',
+    car_reference: 'CAR 901.69(f)'
   },
   medium_rpas_over_people: {
     id: 'medium_rpas_over_people',
-    label: 'Medium RPAS Over People',
-    description: 'Medium RPAS (>25kg) operations over uninvolved persons',
-    applicableStandards: ['922.06', '922.07'],
-    car_reference: 'CAR 901.69(c)'
+    label: 'Medium RPAS - Over People (<100ft)',
+    description: 'mRPAS within 100ft of uninvolved persons',
+    applicableStandards: ['922.07'],
+    rpasCategories: ['medium'],
+    declarationType: 'pre_validated',
+    car_reference: 'CAR 901.69(g)'
+  },
+  medium_rpas_controlled_airspace: {
+    id: 'medium_rpas_controlled_airspace',
+    label: 'Medium RPAS - Controlled Airspace',
+    description: 'mRPAS operations within controlled airspace',
+    applicableStandards: ['922.04'],
+    rpasCategories: ['medium'],
+    declarationType: 'declaration',
+    car_reference: 'CAR 901.69(h)'
+  },
+
+  // ============================================
+  // Small RPAS (sRPAS) BVLOS Operations
+  // Per AC 922-001 lines 1183-1225
+  // ============================================
+  bvlos_isolated: {
+    id: 'bvlos_isolated',
+    label: 'Small RPAS - BVLOS Isolated (>1km)',
+    description: 'sRPAS BVLOS more than 1km from populated areas',
+    applicableStandards: ['922.08', '922.09', '922.10', '922.11'],
+    rpasCategories: ['small'],
+    declarationType: 'declaration',
+    car_reference: 'CAR 901.87(a)'
+  },
+  bvlos_near_populated: {
+    id: 'bvlos_near_populated',
+    label: 'Small RPAS - BVLOS Near Populated (<1km)',
+    description: 'sRPAS BVLOS within 1km of populated areas or over sparsely populated',
+    applicableStandards: ['922.07', '922.09', '922.10', '922.11', '922.12'],
+    rpasCategories: ['small'],
+    declarationType: 'pre_validated',
+    car_reference: 'CAR 901.87(a)'
+  },
+
+  // ============================================
+  // Medium RPAS (mRPAS) BVLOS Operations
+  // Per AC 922-001 lines 1197-1210
+  // ============================================
+  medium_bvlos_isolated: {
+    id: 'medium_bvlos_isolated',
+    label: 'Medium RPAS - BVLOS Isolated (>1km)',
+    description: 'mRPAS BVLOS more than 1km from populated areas',
+    applicableStandards: ['922.08', '922.09', '922.10', '922.11'],
+    rpasCategories: ['medium'],
+    declarationType: 'declaration',
+    car_reference: 'CAR 901.87(a)'
+  },
+
+  // ============================================
+  // Backwards Compatibility Aliases
+  // For existing Firestore data with old keys
+  // ============================================
+  bvlos_non_isolated: {
+    id: 'bvlos_non_isolated',
+    label: 'Small RPAS - BVLOS Near Populated (<1km)',
+    description: '(Legacy) sRPAS BVLOS within 1km of populated areas',
+    applicableStandards: ['922.07', '922.09', '922.10', '922.11', '922.12'],
+    rpasCategories: ['small'],
+    declarationType: 'pre_validated',
+    car_reference: 'CAR 901.87(a)',
+    _deprecated: true,
+    _useInstead: 'bvlos_near_populated'
   }
 }
 
@@ -629,6 +710,46 @@ export function getApplicableRequirements(operationTypeIds) {
   })
 
   return Array.from(requirements).sort()
+}
+
+/**
+ * Get operation types filtered by RPAS category
+ * @param {string} rpasCategory - RPAS category (micro, small, medium, large)
+ * @returns {Object} Filtered operation types applicable to the given category
+ */
+export function getOperationTypesForCategory(rpasCategory) {
+  const filtered = {}
+
+  Object.entries(OPERATION_TYPES).forEach(([key, opType]) => {
+    // Skip deprecated operation types (only kept for backwards compatibility with existing data)
+    if (opType._deprecated) return
+
+    // If no rpasCategories specified, show for all (backwards compatibility)
+    if (!opType.rpasCategories || opType.rpasCategories.includes(rpasCategory)) {
+      filtered[key] = opType
+    }
+  })
+
+  return filtered
+}
+
+/**
+ * Check if operation type requires pre-validated declaration
+ * @param {string} operationTypeId - The operation type ID
+ * @returns {boolean} True if pre-validation required
+ */
+export function requiresPreValidation(operationTypeId) {
+  const opType = OPERATION_TYPES[operationTypeId]
+  return opType?.declarationType === 'pre_validated'
+}
+
+/**
+ * Check if any selected operations require pre-validation
+ * @param {string[]} operationTypeIds - Array of operation type IDs
+ * @returns {boolean} True if any operation requires pre-validation
+ */
+export function anyRequiresPreValidation(operationTypeIds) {
+  return operationTypeIds.some(id => requiresPreValidation(id))
 }
 
 /**
