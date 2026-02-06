@@ -22,6 +22,7 @@ import {
   DollarSign,
   FileText
 } from 'lucide-react'
+import { useOrganization } from '../hooks/useOrganization'
 import {
   getInsurancePolicies,
   createInsurancePolicy,
@@ -148,6 +149,7 @@ function PolicyModal({ isOpen, onClose, policy, onSave }) {
 
       const data = {
         ...formData,
+        organizationId,
         coverageAmount: formData.coverageAmount ? parseFloat(formData.coverageAmount) : null,
         premium: formData.premium ? parseFloat(formData.premium) : null
       }
@@ -307,6 +309,7 @@ function PolicyModal({ isOpen, onClose, policy, onSave }) {
 }
 
 export default function Insurance() {
+  const { organizationId } = useOrganization()
   const [policies, setPolicies] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -316,8 +319,9 @@ export default function Insurance() {
   const [editingPolicy, setEditingPolicy] = useState(null)
 
   const loadPolicies = async () => {
+    if (!organizationId) return
     try {
-      const data = await getInsurancePolicies()
+      const data = await getInsurancePolicies(organizationId)
       setPolicies(data)
     } catch (err) {
       console.error('Failed to load policies:', err)
@@ -327,8 +331,10 @@ export default function Insurance() {
   }
 
   useEffect(() => {
-    loadPolicies()
-  }, [])
+    if (organizationId) {
+      loadPolicies()
+    }
+  }, [organizationId])
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this policy?')) return

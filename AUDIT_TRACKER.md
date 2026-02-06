@@ -2,7 +2,7 @@
 
 **Started:** February 6, 2026
 **Status:** In Progress
-**Current Phase:** Phase 11 Complete - Awaiting Phase 12 Approval
+**Current Phase:** Phase 12 Complete - Awaiting Phase 13 Approval
 
 ---
 
@@ -956,15 +956,61 @@ This document tracks the comprehensive audit of all Muster application features,
 
 ## Phase 12: Insurance Module
 
-### 12.1 Insurance Tracking
+### 12.1 Insurance Page
 | Item | Status | Notes |
 |------|--------|-------|
-| Insurance page loads | [ ] | |
-| Add policy | [ ] | |
-| Edit policy | [ ] | |
-| Policy documents | [ ] | |
-| Expiry tracking | [ ] | |
-| Renewal reminders | [ ] | |
+| Insurance page loads | [F] | Insurance.jsx (546 lines) - FIXED missing organizationId |
+| Policy list view | [x] | Table with Provider, Coverage, Expiry, Status columns |
+| Create policy modal | [x] | PolicyModal with full form |
+| Edit policy | [x] | Same modal, pre-populated data |
+| Delete policy | [x] | With confirmation dialog |
+| Policy types | [x] | 10 types (liability, aviation, hull, professional, etc.) |
+| Status calculation | [x] | getPolicyStatus: active/expiring/expired |
+| Status badges | [x] | StatusBadge with color-coded icons |
+| Search policies | [x] | By provider, policy number, type |
+| Filter by type | [x] | All Types + 10 policy types |
+| Filter by status | [x] | All/Active/Expiring Soon/Expired |
+| Metrics cards | [x] | Total, Active, Expiring Soon, Expired, Total Coverage, Annual Premiums |
+| Empty state | [x] | Message when no policies found |
+
+### 12.2 InsuranceManager Component
+| Item | Status | Notes |
+|------|--------|-------|
+| Component loads | [x] | InsuranceManager.jsx (554 lines) |
+| Organization scoping | [x] | Uses organizationId prop correctly |
+| Metrics display | [x] | 4 stat cards (Total, Active, Expiring Soon, Expired) |
+| Policy cards | [x] | Status-colored left border, comprehensive details |
+| Policy type icons | [x] | Color-coded status icons |
+| Document management | [x] | Upload/view/delete policy documents |
+| Document upload | [x] | File input with PDF/DOC/image support |
+| External document links | [x] | Opens in new tab |
+| Date formatting | [x] | Uses date-fns for consistent format |
+| Add/edit modal | [x] | Full form with validation |
+
+### 12.3 Firestore Data Layer
+| Item | Status | Notes |
+|------|--------|-------|
+| firestoreInsurance.js | [x] | (388 lines) comprehensive data layer |
+| INSURANCE_TYPES constant | [x] | 8 types with labels, descriptions, icons |
+| INSURANCE_STATUS constant | [x] | 4 statuses with labels and colors |
+| EXPIRY_WARNING_DAYS | [x] | 30-day warning threshold |
+| calculateInsuranceStatus | [x] | Date-based status calculation |
+| createInsurancePolicy | [x] | With auto status calculation |
+| updateInsurancePolicy | [x] | Recalculates status if expiry changed |
+| getInsurancePolicy | [x] | Get single policy by ID |
+| getInsurancePolicies | [x] | Get all for organization, ordered by expiry |
+| deleteInsurancePolicy | [x] | Cleans up associated documents |
+| addPolicyDocument | [x] | Upload to storage + update policy |
+| removePolicyDocument | [x] | Delete from storage + update policy |
+| getInsuranceMetrics | [x] | Active, expiring, expired counts + by type |
+| getInsuranceSummary | [x] | Summary for compliance reports |
+
+### 12.4 Bug Fix
+| Item | Status | Notes |
+|------|--------|-------|
+| Missing organizationId | [F] | Insurance.jsx didn't import/use useOrganization hook |
+| Query without org filter | [F] | getInsurancePolicies() called without organizationId |
+| Create without org | [F] | createInsurancePolicy() data didn't include organizationId |
 
 ---
 
@@ -1062,6 +1108,7 @@ This document tracks the comprehensive audit of all Muster application features,
 | 2 | 1 | Navigation | Breadcrumb navigation not present | Low | Noted | Enhancement opportunity for future |
 | 3 | 3 | ExpenseForm | Form required project but page allowed general costs | Medium | Fixed | Made project field optional |
 | 4 | 9 | DocumentCard | Naming collision: `document` prop shadowed global `document` object causing click-outside handler to fail | Medium | Fixed | Changed to `window.document` for DOM access |
+| 5 | 12 | Insurance.jsx | Missing organizationId: Page didn't use useOrganization hook, so Firestore queries and creates lacked org scoping | High | Fixed | Added useOrganization hook, pass organizationId to all API calls |
 
 ---
 
@@ -1080,7 +1127,7 @@ This document tracks the comprehensive audit of all Muster application features,
 | 9 | Document Generation | [x] Complete | Feb 6, 2026 |
 | 10 | Calendar & Scheduling | [x] Complete | Feb 6, 2026 |
 | 11 | Forms & Data Entry | [x] Complete | Feb 6, 2026 |
-| 12 | Insurance Module | [ ] Pending | |
+| 12 | Insurance Module | [x] Complete | Feb 6, 2026 |
 | 13 | Settings & Configuration | [ ] Pending | |
 | 14 | Cloud Functions & Integrations | [ ] Pending | |
 | 15 | UI Components & UX | [ ] Pending | |
@@ -1102,7 +1149,8 @@ This document tracks the comprehensive audit of all Muster application features,
 | Feb 6, 2026 | 9 | Audit Phase 9: Document Generation verified + fix | Projects, Editor, AI Chat, Cross-refs, Export, Preview, 21 components |
 | Feb 6, 2026 | 10 | Audit Phase 10: Calendar & Scheduling verified | Calendar, UpcomingEvents, ExpiryReminders, dateUtils |
 | Feb 6, 2026 | 11 | Audit Phase 11: Forms & Data Entry verified | Forms, FormBuilder, TemplateLibrary, 23+ templates, 40+ field types |
+| Feb 6, 2026 | 12 | Audit Phase 12: Insurance Module verified + fix | Insurance page, InsuranceManager, firestoreInsurance, organizationId fix |
 
 ---
 
-*Last Updated: February 6, 2026 - Phase 11 Complete*
+*Last Updated: February 6, 2026 - Phase 12 Complete*
