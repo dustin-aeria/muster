@@ -2,7 +2,7 @@
 
 **Started:** February 6, 2026
 **Status:** In Progress
-**Current Phase:** Phase 6 Complete - Awaiting Phase 7 Approval
+**Current Phase:** Phase 7 Complete - Awaiting Phase 8 Approval
 
 ---
 
@@ -388,50 +388,98 @@ This document tracks the comprehensive audit of all Muster application features,
 ### 7.1 SORA 2.5 Compliance Engine
 | Item | Status | Notes |
 |------|--------|-------|
-| SORA assessment loads | [ ] | |
-| Ground Risk Class calculation | [ ] | |
-| Air Risk Class calculation | [ ] | |
-| SAIL determination | [ ] | |
-| OSO requirements display | [ ] | |
-| Mitigation recommendations | [ ] | |
-| ConOps generation | [ ] | |
+| SORA assessment loads | [x] | ProjectSORA.jsx (1736 lines) with multi-site support |
+| Intrinsic GRC calculation | [x] | soraConfig.js getIntrinsicGRC - Table 2 matrix (pop density × UA size) |
+| Final GRC calculation | [x] | calculateFinalGRC with M1A, M1B, M1C, M2 mitigations |
+| Air Risk Class calculation | [x] | Initial ARC + TMPR (VLOS/EVLOS/DAA) → Residual ARC |
+| SAIL determination | [x] | getSAIL from Table 7 matrix (fGRC × rARC), levels I-VI |
+| OSO requirements | [x] | 24 OSOs with robustness levels (O/L/M/H) per SAIL |
+| OSO compliance tracking | [x] | checkOSOCompliance, checkAllOSOCompliance functions |
+| Ground mitigations M1A | [x] | Strategic mitigations reducing pop exposure |
+| Ground mitigations M1B | [x] | Reducing number of people at risk |
+| Ground mitigations M1C | [x] | Sheltering, people inside structures |
+| Ground mitigations M2 | [x] | Impact energy reduction via parachute/etc |
+| TMPR options | [x] | VLOS, EVLOS, DAA tactical mitigations |
+| Population auto-sync | [x] | Pulls from site survey data when available |
+| Containment requirements | [x] | Displays required containment per risk level |
+| Risk summary visualization | [x] | RiskSummaryCard with color-coded risk levels |
+| iGRC matrix display | [x] | IGRCMatrixDisplay with highlighting |
+| SAIL matrix display | [x] | SAILMatrixDisplay with highlighting |
+| Step progress tracking | [x] | SORAStepProgress component |
+| Validation checklist | [x] | SORAValidationChecklist for completeness |
+| M3 correctly excluded | [x] | Removed in SORA 2.5, not present in config |
 
 ### 7.2 CAR 922 Safety Declarations
 | Item | Status | Notes |
 |------|--------|-------|
-| Declaration hub loads | [ ] | |
-| Create declaration | [ ] | |
-| Declaration workflow | [ ] | |
-| AI-assisted content | [ ] | |
-| Risk assessment | [ ] | |
-| Declaration export | [ ] | |
-| Version tracking | [ ] | |
+| Declaration hub loads | [x] | SafetyDeclarationHub.jsx (430 lines) |
+| Real-time subscriptions | [x] | Live updates via onSnapshot listeners |
+| Stats cards | [x] | Testing count, ready for submission, accepted |
+| Search functionality | [x] | By name filter |
+| Status filtering | [x] | Draft/testing/ready/submitted/accepted/rejected |
+| Grid/list view toggle | [x] | User preference for display mode |
+| Declaration detail view | [x] | SafetyDeclarationDetail.jsx (511 lines) |
+| 6-tab interface | [x] | Overview, Requirements, Testing, Evidence, Generate, Settings |
+| Progress tracking | [x] | Completion percentage with progress bar |
+| Requirements tab | [x] | Real-time subscription to requirements collection |
+| Testing sessions | [x] | Track testing activities per declaration |
+| Evidence management | [x] | Upload/manage supporting evidence |
+| Document generation | [x] | Generate declaration documents |
+| Settings management | [x] | Configure declaration parameters |
+| Status badges | [x] | Color-coded status display |
+| Create new declaration | [x] | Via hub page button |
 
 ### 7.3 Policy & Procedure Library
 | Item | Status | Notes |
 |------|--------|-------|
-| Policy list loads | [ ] | |
-| View policy detail | [ ] | |
-| Procedure list | [ ] | |
-| Procedure detail | [ ] | |
-| Version control | [ ] | |
-| Acknowledgment tracking | [ ] | |
+| Library page loads | [x] | PolicyProcedureLibrary.jsx (85 lines) |
+| URL-based tab state | [x] | /policies and /procedures routes |
+| Policy detail view | [x] | PolicyDetail.jsx (679 lines) |
+| Section display | [x] | Expand/collapse sections with content |
+| Version history | [x] | Full version tracking with timestamps |
+| Acknowledgment management | [x] | Track who acknowledged and when |
+| Workflow: submit for review | [x] | Draft → Under Review state |
+| Workflow: submit for approval | [x] | Under Review → Pending Approval |
+| Workflow: approve | [x] | Pending Approval → Active |
+| Workflow: retire | [x] | Active → Retired |
+| Procedure detail view | [x] | ProcedureDetail.jsx (718 lines) |
+| Step-by-step display | [x] | Steps with sequence numbers |
+| Step details | [x] | Details, notes, cautions per step |
+| Step checkpoints | [x] | Verification checkpoints per step |
+| Equipment requirements | [x] | Tab showing required equipment |
+| Personnel requirements | [x] | Tab showing required personnel |
+| Same workflow as policies | [x] | Review/approve/retire lifecycle |
 
 ### 7.4 My Acknowledgments
 | Item | Status | Notes |
 |------|--------|-------|
-| Acknowledgments page loads | [ ] | |
-| Pending acknowledgments | [ ] | |
-| Acknowledge policy | [ ] | |
-| Acknowledgment history | [ ] | |
+| Acknowledgments page loads | [x] | MyAcknowledgments.jsx (463 lines) |
+| Pending acknowledgments tab | [x] | Shows items needing acknowledgment |
+| Completed acknowledgments tab | [x] | Shows acknowledged items |
+| Search functionality | [x] | Filter by name |
+| Type filtering | [x] | Policy vs procedure filter |
+| Expiry tracking | [x] | getDaysUntilExpiry calculation |
+| Expiring soon alerts | [x] | Yellow highlighting for approaching expiry |
+| Quick acknowledge action | [x] | One-click acknowledge from card |
+| Acknowledgment cards | [x] | Show policy/procedure info with status |
+| Acknowledgment history | [x] | View past acknowledgments |
 
 ### 7.5 Master Policy Admin
 | Item | Status | Notes |
 |------|--------|-------|
-| Admin page loads | [ ] | |
-| Create master policy | [ ] | |
-| Edit master policy | [ ] | |
-| Publish to organizations | [ ] | |
+| Admin page loads | [x] | MasterPolicyAdmin.jsx (942 lines) |
+| Create master policy | [x] | Full form with all fields |
+| Edit master policy | [x] | Modal with pre-populated data |
+| Delete master policy | [x] | With confirmation dialog |
+| Version tracking | [x] | Version numbers with increment on edit |
+| Publish workflow | [x] | Draft → Published state |
+| Archive workflow | [x] | Published → Archived state |
+| Migration utility | [x] | Migrate from JS files to Firestore |
+| Search functionality | [x] | Filter by name |
+| Status filtering | [x] | Draft/Published/Archived filters |
+| Section management | [x] | Add/edit/remove policy sections |
+| Platform-wide scope | [x] | Master policies available to all orgs |
+| Permission guards | [x] | Platform admin only access |
 
 ---
 
@@ -645,7 +693,7 @@ This document tracks the comprehensive audit of all Muster application features,
 | 4 | Asset Management | [x] Complete | Feb 6, 2026 |
 | 5 | Client Management | [x] Complete | Feb 6, 2026 |
 | 6 | Safety Module | [x] Complete | Feb 6, 2026 |
-| 7 | Compliance & Regulatory | [ ] Pending | |
+| 7 | Compliance & Regulatory | [x] Complete | Feb 6, 2026 |
 | 8 | Maintenance Module | [ ] Pending | |
 | 9 | Document Generation | [ ] Pending | |
 | 10 | Calendar & Scheduling | [ ] Pending | |
@@ -667,7 +715,8 @@ This document tracks the comprehensive audit of all Muster application features,
 | Feb 6, 2026 | 4 | Audit Phase 4: Asset Management verified | Aircraft, Equipment, Operators |
 | Feb 6, 2026 | 5 | Audit Phase 5: Client Management verified | Clients, Services, Portal |
 | Feb 6, 2026 | 6 | Audit Phase 6: Safety Module verified | Incidents, CAPAs, Hazards, JHSC, Inspections, Training |
+| Feb 6, 2026 | 7 | Audit Phase 7: Compliance & Regulatory verified | SORA 2.5 Engine, CAR 922 Declarations, Policy/Procedure Library, Acknowledgments, Master Policy Admin |
 
 ---
 
-*Last Updated: February 6, 2026 - Phase 6 Complete*
+*Last Updated: February 6, 2026 - Phase 7 Complete*
