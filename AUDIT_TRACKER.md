@@ -2,7 +2,7 @@
 
 **Started:** February 6, 2026
 **Status:** In Progress
-**Current Phase:** Phase 5 Complete - Awaiting Phase 6 Approval
+**Current Phase:** Phase 6 Complete - Awaiting Phase 7 Approval
 
 ---
 
@@ -275,68 +275,111 @@ This document tracks the comprehensive audit of all Muster application features,
 ### 6.1 Safety Dashboard
 | Item | Status | Notes |
 |------|--------|-------|
-| Dashboard loads | [ ] | |
-| Safety metrics | [ ] | |
-| Incident summary | [ ] | |
-| CAPA summary | [ ] | |
-| Risk indicators | [ ] | |
+| Dashboard loads | [x] | SafetyDashboard.jsx (568 lines) |
+| Days since incident hero | [x] | Green/red gradient based on streak |
+| Safety metrics KPIs | [x] | Incidents, CAPAs, inspections, training compliance |
+| COR report export | [x] | PDF export for COR audit |
+| Incident summary cards | [x] | By status and severity |
+| CAPA summary | [x] | Open, overdue counts |
+| Quick action buttons | [x] | Report incident, new CAPA, schedule inspection |
+| Recent incidents list | [x] | Clickable with severity badges |
 
 ### 6.2 Incidents
 | Item | Status | Notes |
 |------|--------|-------|
-| Incidents list loads | [ ] | |
-| Report new incident | [ ] | |
-| Edit incident | [ ] | |
-| Incident detail view | [ ] | |
-| Incident classification | [ ] | |
-| Severity levels | [ ] | |
-| Status workflow | [ ] | |
+| Incidents list loads | [x] | Incidents.jsx (482 lines) |
+| Report new incident | [x] | IncidentReport.jsx (1004 lines) multi-section form |
+| Edit incident | [x] | Same form with pre-populated data |
+| Incident detail view | [x] | IncidentDetail.jsx (1109 lines) |
+| Incident classification | [x] | Type: injury, damage, near-miss, regulatory, other |
+| Severity levels | [x] | 4 levels with color coding |
+| Status workflow | [x] | Draft→Reported→Under Investigation→Closed |
+| Regulatory notifications | [x] | TSB, Transport Canada, WorkSafeBC warning banners |
+| Photo attachments | [x] | Multiple photos with preview |
+| Investigation workflow | [x] | Root cause, contributing factors, timeline |
+| Linked CAPAs | [x] | Create CAPA from incident, bidirectional link |
+| Activity timeline | [x] | Chronological event log |
 
 ### 6.3 CAPA (Corrective/Preventive Actions)
 | Item | Status | Notes |
 |------|--------|-------|
-| CAPA list loads | [ ] | |
-| Create CAPA | [ ] | |
-| Edit CAPA | [ ] | |
-| CAPA detail view | [ ] | |
-| Root cause analysis | [ ] | |
-| Action tracking | [ ] | |
-| Effectiveness verification | [ ] | |
+| CAPA list loads | [x] | Capas.jsx (495 lines) with filters |
+| Create CAPA | [x] | CapaNew.jsx (629 lines) |
+| Edit CAPA | [x] | Same form with pre-populated data |
+| CAPA detail view | [x] | CapaDetail.jsx (1234 lines) |
+| Root cause analysis | [x] | 5-why, fishbone templates |
+| Action tracking | [x] | Tasks with assignees and due dates |
+| Implementation phase | [x] | Status: open→in_progress→pending_verification |
+| Verification phase | [x] | VOE (Verification of Effectiveness) |
+| Recurrence tracking | [x] | 30/60/90 day recurrence checks |
+| Incident linking | [x] | Link to source incident |
+| Overdue highlighting | [x] | Red row for overdue CAPAs |
+| Notes/comments | [x] | Activity log with timestamps |
 
-### 6.4 Hazard Library
+### 6.4 Formal Hazard Library
 | Item | Status | Notes |
 |------|--------|-------|
-| Hazard list loads | [ ] | |
-| Add hazard | [ ] | |
-| Edit hazard | [ ] | |
-| Risk assessment matrix | [ ] | |
-| Mitigation tracking | [ ] | |
+| Hazard list loads | [x] | FormalHazardLibrary.jsx (542 lines) |
+| Add hazard | [x] | Modal with full FHA form |
+| Edit hazard | [x] | Via modal, same form |
+| Hazard categories | [x] | 8 categories (ground, air, weather, etc.) |
+| Risk assessment matrix | [x] | 5x5 likelihood × severity grid |
+| Control measures | [x] | Hierarchy of controls |
+| Field hazard reviews | [x] | Project-specific hazard assessments |
+| Residual risk calculation | [x] | Post-mitigation risk level |
+| Search and filter | [x] | By category, risk level |
 
 ### 6.5 JHSC (Joint Health & Safety Committee)
 | Item | Status | Notes |
 |------|--------|-------|
-| JHSC page loads | [ ] | |
-| Meeting records | [ ] | |
-| Member management | [ ] | |
-| Action items | [ ] | |
+| JHSC page loads | [x] | JHSC.jsx (710 lines) |
+| COR Element 8 score | [x] | Percentage compliance display |
+| Committee composition | [x] | Worker/employer rep tracking, co-chair requirement |
+| Member management | [x] | Add/edit members, role assignments |
+| Training compliance | [x] | JHSC training status per member |
+| Meeting scheduling | [x] | Schedule with location, attendees |
+| Meeting records | [x] | Attendance, quorum tracking, minutes |
+| Recommendations | [x] | Priority, assignee, target date, status |
+| Overdue recommendations | [x] | Highlighted in overview |
+| Tab navigation | [x] | Overview, Members, Meetings, Recommendations |
 
 ### 6.6 Inspections
 | Item | Status | Notes |
 |------|--------|-------|
-| Inspections list loads | [ ] | |
-| Create inspection | [ ] | |
-| Inspection checklists | [ ] | |
-| Inspection results | [ ] | |
-| Deficiency tracking | [ ] | |
+| Inspections list loads | [x] | Inspections.jsx (633 lines) |
+| COR Element 5 score | [x] | Workplace inspection compliance |
+| Create inspection | [x] | Schedule from template |
+| Template management | [x] | Create/edit inspection templates |
+| Default templates | [x] | Auto-seeded on first load |
+| Inspection checklists | [x] | Checklist items per template |
+| Start inspection | [x] | In-progress status with checklist |
+| Inspection results | [x] | Pass/conditional/fail |
+| Finding tracking | [x] | Create findings from inspections |
+| Risk levels | [x] | Low/medium/high/critical |
+| Finding status | [x] | Open→in_progress→corrected→verified |
+| Overdue findings | [x] | Red highlighting, count display |
+| COR recommendations | [x] | AI suggestions for compliance |
+| Summary cards | [x] | Scheduled, overdue, completed, pass rate |
 
 ### 6.7 Training
 | Item | Status | Notes |
 |------|--------|-------|
-| Training page loads | [ ] | |
-| Training records | [ ] | |
-| Add training | [ ] | |
-| Certification tracking | [ ] | |
-| Expiry notifications | [ ] | |
+| Training page loads | [x] | Training.jsx (712 lines) |
+| Compliance rate metric | [x] | Percentage with color thresholds |
+| Course library | [x] | Courses by category |
+| Add course | [x] | TrainingCourseModal component |
+| Edit course | [x] | Via modal |
+| Default courses | [x] | Auto-seeded on first load |
+| Training records | [x] | Per crew member completion tracking |
+| Add training record | [x] | TrainingRecordModal component |
+| Edit training record | [x] | View/update completion details |
+| Certification tracking | [x] | Course code, validity period |
+| Expiring soon alerts | [x] | Yellow highlighting with count |
+| Expired alerts | [x] | Red highlighting with count |
+| Training by category | [x] | Overview grid with clickable cards |
+| Grid/list view toggle | [x] | User preference for display |
+| PDF export | [x] | Training report via safetyExportService |
+| Permission guards | [x] | canRecordTraining, canEdit checks |
 
 ---
 
@@ -601,7 +644,7 @@ This document tracks the comprehensive audit of all Muster application features,
 | 3 | Financial Modules | [x] Complete | Feb 6, 2026 |
 | 4 | Asset Management | [x] Complete | Feb 6, 2026 |
 | 5 | Client Management | [x] Complete | Feb 6, 2026 |
-| 6 | Safety Module | [ ] Pending | |
+| 6 | Safety Module | [x] Complete | Feb 6, 2026 |
 | 7 | Compliance & Regulatory | [ ] Pending | |
 | 8 | Maintenance Module | [ ] Pending | |
 | 9 | Document Generation | [ ] Pending | |
@@ -623,7 +666,8 @@ This document tracks the comprehensive audit of all Muster application features,
 | Feb 6, 2026 | 3 | Audit Phase 3: Financial Modules verified + fix | Expenses, Time, Approvals |
 | Feb 6, 2026 | 4 | Audit Phase 4: Asset Management verified | Aircraft, Equipment, Operators |
 | Feb 6, 2026 | 5 | Audit Phase 5: Client Management verified | Clients, Services, Portal |
+| Feb 6, 2026 | 6 | Audit Phase 6: Safety Module verified | Incidents, CAPAs, Hazards, JHSC, Inspections, Training |
 
 ---
 
-*Last Updated: February 6, 2026 - Phase 5 Complete*
+*Last Updated: February 6, 2026 - Phase 6 Complete*
