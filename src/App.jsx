@@ -40,6 +40,7 @@ const PortalDocuments = lazy(() => import('./pages/portal/PortalDocuments'))
 
 // Lazy-loaded pages - secondary features
 const Tasks = lazy(() => import('./pages/Tasks'))
+const Expenses = lazy(() => import('./pages/Expenses'))
 const Forms = lazy(() => import('./pages/Forms'))
 const TimeTracking = lazy(() => import('./pages/TimeTracking'))
 const TimeApproval = lazy(() => import('./pages/TimeApproval'))
@@ -250,6 +251,7 @@ function App() {
 
           {/* Lazy-loaded pages - wrapped in Suspense */}
           <Route path="tasks" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
+          <Route path="expenses" element={<Suspense fallback={<PageLoader />}><Expenses /></Suspense>} />
           <Route path="time-tracking" element={<Suspense fallback={<PageLoader />}><TimeTracking /></Suspense>} />
           <Route path="time-approval" element={<Suspense fallback={<PageLoader />}><TimeApproval /></Suspense>} />
           <Route path="expense-approval" element={<Suspense fallback={<PageLoader />}><ExpenseApproval /></Suspense>} />

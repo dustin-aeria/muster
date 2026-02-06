@@ -31,7 +31,8 @@ import {
   Wrench,
   Clock,
   CheckSquare,
-  Sparkles
+  Sparkles,
+  DollarSign
 } from 'lucide-react'
 import FeedbackModal from './FeedbackModal'
 import NotificationBell from './NotificationBell'
@@ -43,6 +44,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
+  { name: 'Expenses', href: '/expenses', icon: DollarSign },
   { name: 'Time Tracking', href: '/time-tracking', icon: Clock },
   { name: 'Time Approval', href: '/time-approval', icon: ClipboardCheck },
   { name: 'Calendar', href: '/calendar', icon: CalendarDays },
