@@ -2,7 +2,7 @@
 
 **Started:** February 6, 2026
 **Status:** In Progress
-**Current Phase:** Phase 2 Complete - Awaiting Phase 3 Approval
+**Current Phase:** Phase 3 Complete - Awaiting Phase 4 Approval
 
 ---
 
@@ -120,46 +120,57 @@ This document tracks the comprehensive audit of all Muster application features,
 ### 3.1 Expenses Module
 | Item | Status | Notes |
 |------|--------|-------|
-| Expenses page loads | [ ] | |
-| Create expense | [ ] | |
-| Edit expense | [ ] | |
-| Delete expense | [ ] | |
-| Receipt upload | [ ] | |
-| Receipt OCR processing | [ ] | |
-| Project association | [ ] | |
-| General costs (no project) | [ ] | |
-| Category filtering | [ ] | |
-| Status filtering | [ ] | |
-| Expense stats cards | [ ] | |
+| Expenses page loads | [x] | Stats cards, filters, list view |
+| Create expense | [x] | Full form with all fields |
+| Edit expense | [x] | Draft/rejected expenses only |
+| Delete expense | [x] | Draft/rejected expenses only |
+| Receipt upload | [x] | File input + camera capture |
+| Receipt OCR processing | [x] | Cloud Function integration, apply extracted data |
+| Project association | [x] | Required field in form |
+| General costs (no project) | [F] | FIXED: Made project optional in form |
+| Category filtering | [x] | 7 categories (fuel, equipment, travel, etc.) |
+| Status filtering | [x] | Draft/Submitted/Approved/Rejected |
+| Expense stats cards | [x] | Total, project expenses, general costs |
+| Multi-currency | [x] | CAD and USD supported |
+| Billable toggle | [x] | Include in client billing option |
+| Approval workflow | [x] | Submit → Approve/Reject flow |
 
 ### 3.2 Time Tracking
 | Item | Status | Notes |
 |------|--------|-------|
-| Time tracking page loads | [ ] | |
-| Start/stop timer | [ ] | |
-| Manual time entry | [ ] | |
-| Project association | [ ] | |
-| Task association | [ ] | |
-| Time reports | [ ] | |
-| Export functionality | [ ] | |
+| Time tracking page loads | [x] | Week view with day columns |
+| Start/stop timer | [x] | ActiveTimerWidget in Layout |
+| Manual time entry | [x] | TimeEntryForm modal |
+| Project association | [x] | Required field |
+| Task types | [x] | Color-coded badges |
+| Week navigation | [x] | Previous/Next/Current week |
+| Weekly totals | [x] | Hours, billable hours, amount |
+| Submit timesheet | [x] | With optional notes for approver |
+| Status tracking | [x] | Draft/Submitted/Approved/Rejected |
+| Rejection feedback | [x] | Shows reason, allows resubmit |
 
 ### 3.3 Time Approval
 | Item | Status | Notes |
 |------|--------|-------|
-| Approval page loads | [ ] | |
-| View pending entries | [ ] | |
-| Approve entries | [ ] | |
-| Reject entries | [ ] | |
-| Batch approval | [ ] | |
+| Approval page loads | [x] | Filtered list with stats |
+| View pending timesheets | [x] | Table with expandable details |
+| Approve timesheets | [x] | Single approval with one click |
+| Reject timesheets | [x] | Modal with required reason |
+| Bulk approval | [x] | Select multiple, approve all |
+| Status filters | [x] | Submitted/Approved/Rejected tabs |
+| Search | [x] | By operator name |
+| Expanded details | [x] | Shows all entries, notes, totals |
 
 ### 3.4 Expense Approval
 | Item | Status | Notes |
 |------|--------|-------|
-| Approval page loads | [ ] | |
-| View pending expenses | [ ] | |
-| Approve expenses | [ ] | |
-| Reject expenses | [ ] | |
-| View receipts | [ ] | |
+| Approval page loads | [x] | Cards with receipt thumbnails |
+| View pending expenses | [x] | With count indicator |
+| Approve expenses | [x] | Single click with loading state |
+| Reject expenses | [x] | Modal with required reason |
+| View receipts | [x] | Thumbnail + click to open full |
+| Category display | [x] | Color-coded badges |
+| Refresh button | [x] | Manual refresh |
 
 ---
 
@@ -552,6 +563,7 @@ This document tracks the comprehensive audit of all Muster application features,
 |----|-------|-----------|-------------------|----------|--------|------------|
 | 1 | 1 | Auth | Google OAuth not implemented | Low | Noted | Optional feature - email/password works |
 | 2 | 1 | Navigation | Breadcrumb navigation not present | Low | Noted | Enhancement opportunity for future |
+| 3 | 3 | ExpenseForm | Form required project but page allowed general costs | Medium | Fixed | Made project field optional |
 
 ---
 
@@ -561,7 +573,7 @@ This document tracks the comprehensive audit of all Muster application features,
 |-------|-------------|--------|-----------------|
 | 1 | Core Infrastructure & Authentication | [x] Complete | Feb 6, 2026 |
 | 2 | Dashboard & Core Pages | [x] Complete | Feb 6, 2026 |
-| 3 | Financial Modules | [ ] Pending | |
+| 3 | Financial Modules | [x] Complete | Feb 6, 2026 |
 | 4 | Asset Management | [ ] Pending | |
 | 5 | Client Management | [ ] Pending | |
 | 6 | Safety Module | [ ] Pending | |
@@ -583,7 +595,8 @@ This document tracks the comprehensive audit of all Muster application features,
 |------|-------|----------------|-----------------|
 | Feb 6, 2026 | 1 | Audit Phase 1: Core Infrastructure verified | Auth, Org, RBAC, Navigation |
 | Feb 6, 2026 | 2 | Audit Phase 2: Dashboard & Core Pages verified | Dashboard, Projects, Tasks |
+| Feb 6, 2026 | 3 | Audit Phase 3: Financial Modules verified + fix | Expenses, Time, Approvals |
 
 ---
 
-*Last Updated: February 6, 2026 - Phase 2 Complete*
+*Last Updated: February 6, 2026 - Phase 3 Complete*

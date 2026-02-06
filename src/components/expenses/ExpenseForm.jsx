@@ -178,11 +178,7 @@ export default function ExpenseForm({
     e.preventDefault()
     setError(null)
 
-    // Validation
-    if (!formData.projectId) {
-      setError('Please select a project')
-      return
-    }
+    // Validation - project is optional (for general costs)
     if (!formData.vendor) {
       setError('Please enter a vendor name')
       return
@@ -218,7 +214,7 @@ export default function ExpenseForm({
       }
 
       const expenseData = {
-        projectId: formData.projectId,
+        projectId: formData.projectId || null,
         projectName: selectedProject?.name || '',
         siteId: formData.siteId || null,
         siteName: availableSites.find(s => s.value === formData.siteId)?.label || '',
@@ -367,14 +363,14 @@ export default function ExpenseForm({
           </div>
 
           {/* Project */}
-          <FormField label="Project" required>
+          <FormField label="Project">
             <select
               value={formData.projectId}
               onChange={(e) => handleChange('projectId', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               disabled={loadingProjects}
             >
-              <option value="">Select a project</option>
+              <option value="">General Cost (No Project)</option>
               {projects.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
