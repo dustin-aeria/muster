@@ -38,6 +38,7 @@ import ExpiryRemindersWidget from '../components/dashboard/ExpiryRemindersWidget
 import MaintenanceAlertWidget from '../components/maintenance/MaintenanceAlertWidget'
 import OnboardingChecklist from '../components/onboarding/OnboardingChecklist'
 import TimeSummaryWidget from '../components/time/TimeSummaryWidget'
+import SFOCStatusWidget from '../components/dashboard/SFOCStatusWidget'
 
 export default function Dashboard() {
   const { userProfile } = useAuth()
@@ -528,14 +529,22 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Alerts Section */}
+      {/* SFOC & Compliance Row */}
       {!loading && (
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Consolidated Expiry Reminders */}
-          <ExpiryRemindersWidget />
+          {/* SFOC Status Widget */}
+          <SFOCStatusWidget />
 
           {/* Maintenance alerts */}
           <MaintenanceAlertWidget compact />
+        </div>
+      )}
+
+      {/* Alerts Section */}
+      {!loading && (
+        <div className="grid lg:grid-cols-1 gap-6">
+          {/* Consolidated Expiry Reminders */}
+          <ExpiryRemindersWidget />
         </div>
       )}
 

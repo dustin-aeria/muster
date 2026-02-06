@@ -38,6 +38,7 @@ import { getInspections } from '../lib/firestoreInspections'
 import { getUpcomingMaintenance, getAllMaintainableItems } from '../lib/firestoreMaintenance'
 import { getPermitExpiryEvents } from '../lib/firestorePermits'
 import { getTasksWithDueDates } from '../lib/firestoreTasks'
+import { getSFOCApplications } from '../lib/firestoreSFOC'
 import { logger } from '../lib/logger'
 
 // Event types with colors
@@ -50,6 +51,7 @@ const EVENT_TYPES = {
   insurance_expiry: { label: 'Insurance Expiry', color: 'bg-red-500', icon: Shield, bgLight: 'bg-red-100 text-red-800' },
   maintenance: { label: 'Maintenance', color: 'bg-orange-500', icon: Settings, bgLight: 'bg-orange-100 text-orange-800' },
   permit_expiry: { label: 'Permit Expiry', color: 'bg-cyan-500', icon: FileCheck, bgLight: 'bg-cyan-100 text-cyan-800' },
+  sfoc_expiry: { label: 'SFOC Expiry', color: 'bg-violet-500', icon: FileCheck, bgLight: 'bg-violet-100 text-violet-800' },
   manual: { label: 'Event', color: 'bg-gray-500', icon: CalendarIcon, bgLight: 'bg-gray-100 text-gray-800' }
 }
 
@@ -72,6 +74,7 @@ export default function Calendar() {
     insurance_expiry: true,
     maintenance: true,
     permit_expiry: true,
+    sfoc_expiry: true,
     manual: true
   })
 
@@ -255,6 +258,31 @@ export default function Calendar() {
       })
       permitEvents.forEach(event => {
         allEvents.push(event)
+      })
+
+      // Load SFOC expiry events
+      const sfocs = await getSFOCApplications(organizationId).catch(err => {
+        logger.error('Failed to load SFOC applications for calendar:', err)
+        return []
+      })
+      sfocs.forEach(sfoc => {
+        // Add approved SFOC expiry dates
+        if (sfoc.status === 'approved' && sfoc.approvedEndDate) {
+          const expiryDate = sfoc.approvedEndDate?.toDate?.() || new Date(sfoc.approvedEndDate)
+          allEvents.push({
+            id: `sfoc-expiry-${sfoc.id}`,
+            title: `SFOC Expiry: ${sfoc.name}`,
+            subtitle: sfoc.sfocNumber ? `#${sfoc.sfocNumber}` : 'Authorization expires',
+            date: expiryDate,
+            type: 'sfoc_expiry',
+            source: 'sfoc',
+            sourceId: sfoc.id,
+            details: {
+              sfocNumber: sfoc.sfocNumber,
+              complexity: sfoc.complexityLevel
+            }
+          })
+        }
       })
 
       // Add manual events

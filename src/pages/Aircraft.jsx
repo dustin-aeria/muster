@@ -26,7 +26,9 @@ import {
   DollarSign,
   RotateCcw,
   Calendar,
-  XOctagon
+  XOctagon,
+  Scale,
+  FileCheck
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getAircraft, deleteAircraft } from '../lib/firestore'
@@ -361,6 +363,17 @@ export default function Aircraft() {
                             <Wrench className="w-4 h-4" />
                             Maintenance Details
                           </Link>
+                          {/* MPD link for large RPAS */}
+                          {ac.mtow > 150 && (
+                            <Link
+                              to="/manufacturer-declarations"
+                              className="w-full px-4 py-2 text-left text-sm text-purple-700 hover:bg-purple-50 flex items-center gap-2"
+                              onClick={() => setMenuOpen(null)}
+                            >
+                              <FileCheck className="w-4 h-4" />
+                              Manufacturer Declaration
+                            </Link>
+                          )}
                           {(canEdit || canDelete) && <hr className="my-1 border-gray-200" />}
                           {canEdit && (
                             <button
@@ -398,6 +411,13 @@ export default function Aircraft() {
                       {maintConfig.label}
                     </span>
                   )}
+                  {/* Large RPAS indicator for >150kg */}
+                  {ac.mtow > 150 && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                      <Scale className="w-3.5 h-3.5" />
+                      Large RPAS
+                    </span>
+                  )}
                 </div>
 
                 {/* Maintenance warning */}
@@ -426,6 +446,17 @@ export default function Aircraft() {
                   >
                     <Clock className="w-4 h-4" />
                     <span className="text-xs font-medium">Maintenance Due Soon</span>
+                  </Link>
+                )}
+
+                {/* Large RPAS SFOC requirement banner */}
+                {ac.mtow > 150 && (
+                  <Link
+                    to="/sfoc"
+                    className="flex items-center gap-2 p-2 rounded-lg mb-3 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors border border-purple-200"
+                  >
+                    <Scale className="w-4 h-4" />
+                    <span className="text-xs font-medium">SFOC Required - Large RPAS ({ac.mtow}kg)</span>
                   </Link>
                 )}
 
@@ -532,7 +563,7 @@ export default function Aircraft() {
                 )}
 
                 {/* Quick actions */}
-                <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+                <div className={`flex gap-2 mt-3 pt-3 border-t border-gray-100 ${ac.mtow > 150 ? 'flex-wrap' : ''}`}>
                   <button
                     onClick={() => handleViewSpec(ac)}
                     className="flex-1 text-sm text-aeria-blue hover:text-aeria-navy flex items-center justify-center gap-1"
@@ -547,6 +578,16 @@ export default function Aircraft() {
                     <Wrench className="w-4 h-4" />
                     Maintenance
                   </Link>
+                  {/* MPD link for large RPAS */}
+                  {ac.mtow > 150 && (
+                    <Link
+                      to="/manufacturer-declarations"
+                      className="flex-1 text-sm text-purple-600 hover:text-purple-700 flex items-center justify-center gap-1"
+                    >
+                      <FileCheck className="w-4 h-4" />
+                      MPD
+                    </Link>
+                  )}
                 </div>
               </div>
             )

@@ -15,12 +15,15 @@ import {
   Shield,
   ArrowRight,
   Clock,
-  MapPin
+  MapPin,
+  FileCheck,
+  Scale
 } from 'lucide-react'
 import { getProjects } from '../../lib/firestore'
 import { getAllTrainingRecords } from '../../lib/firestoreTraining'
 import { getInspections } from '../../lib/firestoreInspections'
 import { getInsurancePolicies } from '../../lib/firestoreInsurance'
+import { getSFOCApplications } from '../../lib/firestoreSFOC'
 import { useAuth } from '../../contexts/AuthContext'
 import { useOrganization } from '../../hooks/useOrganization'
 import { addDays, isBefore, isAfter, startOfDay, format } from 'date-fns'
@@ -29,7 +32,9 @@ const EVENT_TYPES = {
   project: { icon: FolderKanban, color: 'bg-blue-100 text-blue-700', label: 'Project' },
   training: { icon: GraduationCap, color: 'bg-green-100 text-green-700', label: 'Training' },
   inspection: { icon: ClipboardCheck, color: 'bg-purple-100 text-purple-700', label: 'Inspection' },
-  insurance: { icon: Shield, color: 'bg-orange-100 text-orange-700', label: 'Insurance' }
+  insurance: { icon: Shield, color: 'bg-orange-100 text-orange-700', label: 'Insurance' },
+  sfoc: { icon: FileCheck, color: 'bg-indigo-100 text-indigo-700', label: 'SFOC' },
+  sora: { icon: Scale, color: 'bg-violet-100 text-violet-700', label: 'SORA' }
 }
 
 export default function UpcomingEvents({ daysAhead = 14, limit = 5 }) {
@@ -130,6 +135,45 @@ export default function UpcomingEvents({ daysAhead = 14, limit = 5 }) {
           })
         } catch (err) {
           // Insurance data optional
+        }
+
+        // Load SFOC expiry dates
+        try {
+          const sfocs = await getSFOCApplications(organizationId)
+          sfocs.forEach(sfoc => {
+            // Add expiring SFOCs
+            if (sfoc.status === 'approved' && sfoc.approvedEndDate) {
+              const expiryDate = sfoc.approvedEndDate?.toDate ? sfoc.approvedEndDate.toDate() : new Date(sfoc.approvedEndDate)
+              // Show SFOC expiry in calendar view (extend to 60 days for better visibility)
+              const sfocEndDate = addDays(today, 60)
+              if (isAfter(expiryDate, today) && isBefore(expiryDate, sfocEndDate)) {
+                allEvents.push({
+                  id: `sfoc-${sfoc.id}`,
+                  type: 'sfoc',
+                  title: `SFOC Expiry: ${sfoc.name}`,
+                  date: expiryDate,
+                  description: sfoc.sfocNumber ? `SFOC #${sfoc.sfocNumber} expires` : 'SFOC authorization expires',
+                  link: `/sfoc/${sfoc.id}`
+                })
+              }
+            }
+            // Add submitted SFOCs awaiting review
+            if (sfoc.status === 'submitted' && sfoc.submissionDate) {
+              const submissionDate = sfoc.submissionDate?.toDate ? sfoc.submissionDate.toDate() : new Date(sfoc.submissionDate)
+              if (isAfter(submissionDate, addDays(today, -30))) {
+                allEvents.push({
+                  id: `sfoc-pending-${sfoc.id}`,
+                  type: 'sfoc',
+                  title: `SFOC Pending: ${sfoc.name}`,
+                  date: submissionDate,
+                  description: 'Awaiting TC review',
+                  link: `/sfoc/${sfoc.id}`
+                })
+              }
+            }
+          })
+        } catch (err) {
+          // SFOC data optional
         }
 
         // Sort by date and limit
