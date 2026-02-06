@@ -959,6 +959,281 @@ export function checkAllOSOCompliance(sail, osoStatuses = {}) {
 }
 
 // ============================================
+// SFOC & LARGE RPAS EXTENSIONS
+// For RPAS >150kg requiring SFOC per CAR 903.01(a)
+// ============================================
+
+/**
+ * SFOC requirement triggers based on operation characteristics
+ * Per Transport Canada CAR 903.01
+ */
+export const sfocTriggers = {
+  weight_over_150kg: {
+    id: 'weight_over_150kg',
+    label: 'RPAS Weight >150kg',
+    description: 'Operating an RPAS with weight exceeding 150kg',
+    car_reference: 'CAR 903.01(a)',
+    complexity: 'medium',
+    requiresMPD: true
+  },
+  altitude_over_400ft: {
+    id: 'altitude_over_400ft',
+    label: 'Altitude >400ft AGL',
+    description: 'Operating above 400 feet in uncontrolled airspace',
+    car_reference: 'CAR 903.01(b)',
+    complexity: 'medium',
+    requiresMPD: false
+  },
+  bvlos_extended: {
+    id: 'bvlos_extended',
+    label: 'Extended BVLOS',
+    description: 'BVLOS beyond sheltered/EVLOS/lower-risk categories',
+    car_reference: 'CAR 903.01(g)',
+    complexity: 'high',
+    requiresMPD: true
+  },
+  bvlos_aerodrome: {
+    id: 'bvlos_aerodrome',
+    label: 'BVLOS in Aerodrome Environment',
+    description: 'BVLOS within aerodrome boundaries',
+    car_reference: 'CAR 903.01(h)',
+    complexity: 'high',
+    requiresMPD: true
+  },
+  hazardous_payload: {
+    id: 'hazardous_payload',
+    label: 'Hazardous Payload',
+    description: 'Operating with dangerous or hazardous payloads',
+    car_reference: 'CAR 903.01(j)',
+    complexity: 'high',
+    requiresMPD: false
+  }
+}
+
+/**
+ * Manufacturer Performance Declaration requirements by SAIL level
+ * Per TC guidance: "At SAIL III and IV, TC is looking for more details
+ * on the means of compliance used"
+ */
+export const mpdRequirementsBySAIL = {
+  'I': {
+    label: 'SAIL I - Minimal',
+    declarationType: 'self',
+    description: 'Self-declaration by operator/manufacturer sufficient',
+    evidenceLevel: 'low',
+    thirdPartyRequired: false,
+    notes: 'Straightforward declaration with basic documentation'
+  },
+  'II': {
+    label: 'SAIL II - Low',
+    declarationType: 'self',
+    description: 'Self-declaration with supporting documentation',
+    evidenceLevel: 'low',
+    thirdPartyRequired: false,
+    notes: 'Declaration with means of compliance documented'
+  },
+  'III': {
+    label: 'SAIL III - Medium',
+    declarationType: 'detailed',
+    description: 'Detailed declaration with means of compliance',
+    evidenceLevel: 'medium',
+    thirdPartyRequired: false,
+    notes: 'TC will want to see details on compliance methods used'
+  },
+  'IV': {
+    label: 'SAIL IV - Medium-High',
+    declarationType: 'detailed',
+    description: 'Detailed declaration with verification evidence',
+    evidenceLevel: 'medium',
+    thirdPartyRequired: false,
+    notes: 'May request test reports and supporting evidence'
+  },
+  'V': {
+    label: 'SAIL V - High',
+    declarationType: 'verified',
+    description: 'Third-party verified declaration',
+    evidenceLevel: 'high',
+    thirdPartyRequired: true,
+    notes: 'Third-party audit or verification typically required'
+  },
+  'VI': {
+    label: 'SAIL VI - Highest',
+    declarationType: 'certified',
+    description: 'Full airworthiness-level certification',
+    evidenceLevel: 'high',
+    thirdPartyRequired: true,
+    notes: 'Equivalent to traditional airworthiness certification'
+  }
+}
+
+/**
+ * OSOs requiring HIGH robustness at each SAIL level
+ * Used to identify critical compliance areas
+ */
+export const highRobustnessOSOsBySAIL = {
+  'I': [],
+  'II': [],
+  'III': ['OSO-08'],
+  'IV': ['OSO-01', 'OSO-08', 'OSO-13', 'OSO-24'],
+  'V': ['OSO-01', 'OSO-02', 'OSO-03', 'OSO-04', 'OSO-05', 'OSO-06', 'OSO-07', 'OSO-08',
+        'OSO-09', 'OSO-10', 'OSO-11', 'OSO-12', 'OSO-13', 'OSO-16', 'OSO-17',
+        'OSO-18', 'OSO-19', 'OSO-21', 'OSO-22', 'OSO-23', 'OSO-24'],
+  'VI': ['OSO-01', 'OSO-02', 'OSO-03', 'OSO-04', 'OSO-05', 'OSO-06', 'OSO-07', 'OSO-08',
+         'OSO-09', 'OSO-10', 'OSO-11', 'OSO-12', 'OSO-13', 'OSO-16', 'OSO-17', 'OSO-18',
+         'OSO-19', 'OSO-20', 'OSO-21', 'OSO-22', 'OSO-23', 'OSO-24']
+}
+
+/**
+ * Large RPAS specific guidance
+ * For RPAS >150kg that fall outside standard 922 framework
+ */
+export const largeRPASGuidance = {
+  applicability: {
+    minWeight: 150, // kg
+    description: 'RPAS with operating weight exceeding 150kg',
+    note: 'Falls outside standard CAR Part IX / Standard 922 framework'
+  },
+  regulatoryPath: {
+    primary: 'SFOC-RPAS',
+    secondary: 'Manufacturer Performance Declaration',
+    description: 'Requires SFOC application with manufacturer declaration accepted by TC'
+  },
+  contactInfo: {
+    sfoc: 'TC.RPASCentre-CentreSATP.TC@tc.gc.ca',
+    declaration: 'TC.RPASDeclaration-DeclarationSATP.TC@tc.gc.ca',
+    processingTime: '60 business days'
+  },
+  kineticEnergyNote: 'Kinetic energy likely exceeds 1084kJ - contact TC directly for guidance'
+}
+
+/**
+ * Check if operation requires SFOC
+ * @param {object} operationParams - Operation parameters
+ * @returns {object} SFOC requirement info
+ */
+export function checkSFOCRequired(operationParams) {
+  const triggers = []
+  let complexity = 'medium'
+  let requiresMPD = false
+
+  // Check weight
+  if (operationParams.weightKg > 150) {
+    triggers.push(sfocTriggers.weight_over_150kg)
+    requiresMPD = true
+  }
+
+  // Check altitude
+  if (operationParams.maxAltitudeFt > 400 && !operationParams.controlledAirspace) {
+    triggers.push(sfocTriggers.altitude_over_400ft)
+  }
+
+  // Check BVLOS type
+  if (operationParams.isBVLOS && operationParams.bvlosType === 'extended') {
+    triggers.push(sfocTriggers.bvlos_extended)
+    complexity = 'high'
+    requiresMPD = true
+  }
+
+  if (operationParams.isBVLOS && operationParams.nearAerodrome) {
+    triggers.push(sfocTriggers.bvlos_aerodrome)
+    complexity = 'high'
+    requiresMPD = true
+  }
+
+  // Check payload
+  if (operationParams.hasHazardousPayload) {
+    triggers.push(sfocTriggers.hazardous_payload)
+    complexity = 'high'
+  }
+
+  // Determine highest complexity
+  if (triggers.some(t => t.complexity === 'high')) {
+    complexity = 'high'
+  }
+
+  return {
+    required: triggers.length > 0,
+    triggers,
+    complexity,
+    requiresMPD,
+    processingDays: 60,
+    contactEmail: largeRPASGuidance.contactInfo.sfoc
+  }
+}
+
+/**
+ * Get MPD requirements based on SAIL level
+ * @param {string} sail - SAIL level (I-VI)
+ * @returns {object} MPD requirements
+ */
+export function getMPDRequirements(sail) {
+  const requirements = mpdRequirementsBySAIL[sail]
+  if (!requirements) return null
+
+  const highRobustnessOSOs = highRobustnessOSOsBySAIL[sail] || []
+  const criticalOSOs = osoDefinitions.filter(oso =>
+    highRobustnessOSOs.includes(oso.id)
+  )
+
+  return {
+    ...requirements,
+    sail,
+    criticalOSOCount: criticalOSOs.length,
+    criticalOSOs: criticalOSOs.map(oso => ({
+      id: oso.id,
+      name: oso.name,
+      category: oso.category
+    }))
+  }
+}
+
+/**
+ * Calculate estimated SAIL for large RPAS operation
+ * Large RPAS typically operate in SAIL IV-VI range
+ * @param {object} operationParams - Operation parameters
+ * @returns {object} Estimated SAIL info
+ */
+export function estimateLargeRPASSAIL(operationParams) {
+  // Start with base SAIL based on population density
+  let baseSAIL = 'IV'
+
+  // Increase for populated areas
+  if (operationParams.populationCategory === 'suburban' ||
+      operationParams.populationCategory === 'highdensity') {
+    baseSAIL = 'V'
+  }
+
+  if (operationParams.populationCategory === 'assembly') {
+    baseSAIL = 'VI'
+  }
+
+  // BVLOS typically increases SAIL
+  if (operationParams.isBVLOS && !operationParams.hasDAA) {
+    const sailOrder = ['I', 'II', 'III', 'IV', 'V', 'VI']
+    const currentIndex = sailOrder.indexOf(baseSAIL)
+    if (currentIndex < 5) {
+      baseSAIL = sailOrder[currentIndex + 1]
+    }
+  }
+
+  // Kinetic energy consideration
+  const keCategory = operationParams.kineticEnergyCategory
+  if (keCategory === 'very_high') {
+    return {
+      sail: 'VI',
+      note: 'Very high kinetic energy (>1084kJ) - maximum SAIL',
+      recommendation: 'Contact TC directly for specific guidance'
+    }
+  }
+
+  return {
+    sail: baseSAIL,
+    note: `Estimated based on operation parameters`,
+    recommendation: getMPDRequirements(baseSAIL)?.notes
+  }
+}
+
+// ============================================
 // DEFAULT EXPORTS
 // ============================================
 export default {
@@ -985,5 +1260,13 @@ export default {
   calculateAdjacentAreaDistance,
   getContainmentRequirement,
   checkOSOCompliance,
-  checkAllOSOCompliance
+  checkAllOSOCompliance,
+  // SFOC & Large RPAS extensions
+  sfocTriggers,
+  mpdRequirementsBySAIL,
+  highRobustnessOSOsBySAIL,
+  largeRPASGuidance,
+  checkSFOCRequired,
+  getMPDRequirements,
+  estimateLargeRPASSAIL
 }
