@@ -36,6 +36,7 @@ import {
 } from '../lib/firestoreSora'
 import { sailColors, sailDescriptions } from '../lib/soraConfig'
 import SORAAssessmentWizard from '../components/sora/SORAAssessmentWizard'
+import DocumentExportPanel from '../components/sora/DocumentExportPanel'
 
 export default function SORADetail() {
   const { assessmentId } = useParams()
@@ -45,6 +46,7 @@ export default function SORADetail() {
   const [loading, setLoading] = useState(true)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showExportPanel, setShowExportPanel] = useState(false)
 
   // Subscribe to assessment
   useEffect(() => {
@@ -143,6 +145,7 @@ export default function SORADetail() {
             <Trash2 className="w-5 h-5" />
           </button>
           <button
+            onClick={() => setShowExportPanel(true)}
             className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Download className="w-4 h-4" />
@@ -236,6 +239,15 @@ export default function SORADetail() {
         osoStatuses={osoStatuses}
         currentStep={assessment.currentStep}
       />
+
+      {/* Document Export Panel */}
+      {showExportPanel && (
+        <DocumentExportPanel
+          assessment={assessment}
+          osoStatuses={osoStatuses}
+          onClose={() => setShowExportPanel(false)}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
