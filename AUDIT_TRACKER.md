@@ -2,7 +2,7 @@
 
 **Started:** February 6, 2026
 **Status:** In Progress
-**Current Phase:** Phase 12 Complete - Awaiting Phase 13 Approval
+**Current Phase:** Phase 13 Complete - Awaiting Phase 14 Approval
 
 ---
 
@@ -1016,23 +1016,109 @@ This document tracks the comprehensive audit of all Muster application features,
 
 ## Phase 13: Settings & Configuration
 
-### 13.1 User Settings
+### 13.1 Main Settings Page
 | Item | Status | Notes |
 |------|--------|-------|
-| Settings page loads | [ ] | |
-| Profile update | [ ] | |
-| Password change | [ ] | |
-| Notification preferences | [ ] | |
-| Theme settings | [ ] | |
+| Settings page loads | [x] | Settings.jsx (756 lines) - 8 tabs |
+| Permission-based tabs | [x] | Tabs filtered by role (admin-only, settings-only) |
+| Profile tab | [x] | First name, last name, phone, certifications |
+| Email change | [x] | Re-authentication required, updates both Auth and Operator |
+| Password change | [x] | Re-authentication + validation (6+ chars, match confirm) |
+| Notification preferences | [x] | Project updates, approval requests, maintenance reminders, weekly summary |
+| Security tab | [x] | Password update + 2FA placeholder |
+| Data tab | [x] | Admin elevation tool + Firebase info |
 
 ### 13.2 Organization Settings
 | Item | Status | Notes |
 |------|--------|-------|
-| Org settings load | [ ] | |
-| Update org info | [ ] | |
-| Branding settings | [ ] | |
-| Member management | [ ] | |
-| Role assignments | [ ] | |
+| Org settings load | [x] | OrganizationSettings.jsx (558 lines) |
+| Permission check | [x] | Requires canManageSettings |
+| Business information | [x] | Operating name, legal name, tax ID, operator license |
+| Regulatory authority | [x] | 11 options (TC, FAA, EASA, CASA, CAA UK, etc.) |
+| Contact information | [x] | Phone, email, website |
+| Business address | [x] | Street, city, state/province, postal, country |
+| Regional settings | [x] | Timezone (7 Canadian zones + UTC), date format (3 options), measurement system |
+| Subscription display | [x] | Read-only plan, status, max users |
+| Save functionality | [x] | Updates org via firestoreOrganizations |
+
+### 13.3 Team Members
+| Item | Status | Notes |
+|------|--------|-------|
+| Team page loads | [x] | TeamMembers.jsx (452 lines) |
+| Member list | [x] | Avatar, name, email, job title, department |
+| Status badges | [x] | Active (green), Invited (yellow), Suspended (red) |
+| Role badges | [x] | Admin (purple), Management (blue), Operator (green), Viewer (gray) |
+| Invite member | [x] | InviteMemberModal.jsx (219 lines) - email + role selection |
+| Edit member | [x] | EditMemberModal.jsx (293 lines) - job info, department, employee ID |
+| Role change | [x] | RoleSelector.jsx (101 lines) dropdown |
+| Suspend/reactivate | [x] | Toggle member status |
+| Remove member | [x] | With confirmation |
+| Self-edit restrictions | [x] | Cannot change own role |
+| Role permissions info | [x] | Visual grid showing what each role can do |
+
+### 13.4 Regulatory Compliance Settings
+| Item | Status | Notes |
+|------|--------|-------|
+| Compliance page loads | [x] | RegulatoryComplianceSettings.jsx (616 lines) |
+| 8 regulatory domains | [x] | Aviation, Data Privacy, Environmental, RF, Export, Land Access, OHS, Insurance |
+| Enable/disable tracking | [x] | Toggle per domain |
+| Collapsible sections | [x] | Expand to edit domain fields |
+| Aviation fields | [x] | Authority, license number, expiry, additional authorities |
+| Data privacy fields | [x] | GDPR, CCPA, PIPEDA compliance, DPO, retention policy |
+| Environmental fields | [x] | Permits, wildlife restrictions, protected areas |
+| RF fields | [x] | Licenses, equipment certifications (FCC/CE/ISED), frequency bands |
+| Export controls fields | [x] | ITAR, EAR, ATA Carnet, customs broker |
+| Land access fields | [x] | Property access, critical infrastructure, trespass protocol |
+| OHS fields | [x] | SMS, PPE, training, incident reporting, ERP |
+| Insurance fields | [x] | Liability, professional indemnity, equipment, workers comp |
+| External resources | [x] | Links to regulatory websites per domain |
+| Compliance overview | [x] | Domains tracked, fields completed, resources linked |
+
+### 13.5 Emergency Contacts
+| Item | Status | Notes |
+|------|--------|-------|
+| Contacts page loads | [x] | EmergencyContactsManager.jsx (544 lines) |
+| Contact roles | [x] | 8 categories (emergency, aviation, regulatory, medical, manager, safety, client, other) |
+| Contact CRUD | [x] | Add, edit, delete contacts |
+| Primary contact toggle | [x] | Star icon to mark primary per role |
+| Default contacts | [x] | Load 911, NAV CANADA, Transport Canada, Poison Control |
+| Grouped display | [x] | Contacts organized by role category |
+| Clickable phone links | [x] | tel: links for quick calling |
+
+### 13.6 Branding Settings
+| Item | Status | Notes |
+|------|--------|-------|
+| Branding page loads | [x] | BrandingSettings.jsx (699 lines) |
+| Operator branding | [x] | Company name, registration, tagline, website, email, phone, address |
+| Logo upload | [x] | Base64 storage, 500KB max, image validation |
+| Brand colors | [x] | Primary, secondary, accent, light - color picker + hex input |
+| Live preview | [x] | PDF header preview with logo and colors |
+| Client branding | [x] | Add multiple clients with name + logo |
+| useBranding hook | [x] | Access branding from any component |
+| applyCompanyName | [x] | Replace placeholders in policy content |
+
+### 13.7 RBAC System
+| Item | Status | Notes |
+|------|--------|-------|
+| firestoreOrganizations.js | [x] | (778 lines) comprehensive RBAC |
+| 4 roles | [x] | Admin, Management, Operator, Viewer |
+| ROLE_HIERARCHY | [x] | Admin > Management > Operator > Viewer |
+| ROLE_PERMISSIONS | [x] | 8 permissions per role |
+| hasPermission helper | [x] | Check specific permission |
+| isRoleHigherOrEqual | [x] | Compare roles in hierarchy |
+| canAssignRole | [x] | Verify assignment permissions |
+| Role migration | [x] | Auto-migrates owner→admin, manager→management |
+
+### 13.8 Organization Context
+| Item | Status | Notes |
+|------|--------|-------|
+| OrganizationContext.jsx | [x] | (261 lines) central state management |
+| Auto-load organization | [x] | Fetches on user change |
+| Link pending invitations | [x] | Auto-links invites by email on login |
+| Convenience flags | [x] | isAdmin, isManagement, canEdit, canDelete, canApprove, canManageTeam, canManageSettings |
+| refreshOrganization | [x] | Reload org data |
+| refreshMemberships | [x] | Reload all memberships |
+| useOrganization hook | [x] | (51 lines) wrapper for context |
 
 ---
 
@@ -1128,7 +1214,7 @@ This document tracks the comprehensive audit of all Muster application features,
 | 10 | Calendar & Scheduling | [x] Complete | Feb 6, 2026 |
 | 11 | Forms & Data Entry | [x] Complete | Feb 6, 2026 |
 | 12 | Insurance Module | [x] Complete | Feb 6, 2026 |
-| 13 | Settings & Configuration | [ ] Pending | |
+| 13 | Settings & Configuration | [x] Complete | Feb 6, 2026 |
 | 14 | Cloud Functions & Integrations | [ ] Pending | |
 | 15 | UI Components & UX | [ ] Pending | |
 
@@ -1150,7 +1236,8 @@ This document tracks the comprehensive audit of all Muster application features,
 | Feb 6, 2026 | 10 | Audit Phase 10: Calendar & Scheduling verified | Calendar, UpcomingEvents, ExpiryReminders, dateUtils |
 | Feb 6, 2026 | 11 | Audit Phase 11: Forms & Data Entry verified | Forms, FormBuilder, TemplateLibrary, 23+ templates, 40+ field types |
 | Feb 6, 2026 | 12 | Audit Phase 12: Insurance Module verified + fix | Insurance page, InsuranceManager, firestoreInsurance, organizationId fix |
+| Feb 6, 2026 | 13 | Audit Phase 13: Settings & Configuration verified | Settings (8 tabs), OrgSettings, TeamMembers, Regulatory, Emergency, Branding, RBAC |
 
 ---
 
-*Last Updated: February 6, 2026 - Phase 12 Complete*
+*Last Updated: February 6, 2026 - Phase 13 Complete*
