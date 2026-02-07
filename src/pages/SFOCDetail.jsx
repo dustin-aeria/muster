@@ -31,7 +31,8 @@ import {
   RefreshCw,
   FileText,
   Trash2,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Sparkles
 } from 'lucide-react'
 import {
   subscribeToSFOCApplication,
@@ -51,6 +52,7 @@ import {
   calculateDocumentCompletion
 } from '../lib/firestoreSFOC'
 import SFOCDocumentChecklist from '../components/sfoc/SFOCDocumentChecklist'
+import SFOCAIPanel from '../components/sfoc/SFOCAIPanel'
 
 export default function SFOCDetail() {
   const { applicationId } = useParams()
@@ -379,6 +381,7 @@ export default function SFOCDetail() {
           {[
             { id: 'documents', label: 'Documents', icon: FileText },
             { id: 'details', label: 'Details', icon: FileCheck },
+            { id: 'ai', label: 'AI Assistant', icon: Sparkles },
             { id: 'communications', label: 'TC Communications', icon: MessageSquare },
             { id: 'activity', label: 'Activity', icon: Activity }
           ].map(tab => (
@@ -543,6 +546,10 @@ export default function SFOCDetail() {
               </div>
             )}
           </div>
+        )}
+
+        {activeTab === 'ai' && (
+          <SFOCAIPanel sfocId={applicationId} application={application} />
         )}
 
         {activeTab === 'communications' && (

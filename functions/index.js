@@ -693,3 +693,20 @@ exports.recommendComplianceMethod = safetyDeclarationAI.recommendComplianceMetho
 exports.generateRequirementGuidance = safetyDeclarationAI.generateRequirementGuidance
 exports.analyzeEvidence = safetyDeclarationAI.analyzeEvidence
 exports.getPreDeclarationGuidance = safetyDeclarationAI.getPreDeclarationGuidance
+
+// ============================================
+// SFOC & SORA AI Functions
+// ============================================
+
+const sfocSoraAI = require('./sfocSoraAI')
+
+// SFOC Application Assistance
+exports.askSFOCQuestion = sfocSoraAI.askSFOCQuestion
+exports.getSFOCDocumentGuidance = sfocSoraAI.getSFOCDocumentGuidance
+
+// SORA Assessment Assistance
+exports.askSORAQuestion = sfocSoraAI.askSORAQuestion
+exports.getSORAStepGuidance = sfocSoraAI.getSORAStepGuidance
+exports.recommendMitigations = sfocSoraAI.recommendMitigations
+exports.getOSOGuidance = sfocSoraAI.getOSOGuidance
+exports.analyzeConOps = sfocSoraAI.analyzeConOps

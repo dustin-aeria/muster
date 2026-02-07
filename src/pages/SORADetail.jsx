@@ -25,7 +25,8 @@ import {
   Download,
   Link as LinkIcon,
   Settings,
-  Trash2
+  Trash2,
+  Sparkles
 } from 'lucide-react'
 import {
   subscribeToSORAAssessment,
@@ -37,6 +38,7 @@ import {
 import { sailColors, sailDescriptions } from '../lib/soraConfig'
 import SORAAssessmentWizard from '../components/sora/SORAAssessmentWizard'
 import DocumentExportPanel from '../components/sora/DocumentExportPanel'
+import SORAIPanel from '../components/sora/SORAIPanel'
 
 export default function SORADetail() {
   const { assessmentId } = useParams()
@@ -47,6 +49,7 @@ export default function SORADetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showExportPanel, setShowExportPanel] = useState(false)
+  const [showAIPanel, setShowAIPanel] = useState(false)
 
   // Subscribe to assessment
   useEffect(() => {
@@ -143,6 +146,13 @@ export default function SORADetail() {
             title="Delete Assessment"
           >
             <Trash2 className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setShowAIPanel(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            AI Assistant
           </button>
           <button
             onClick={() => setShowExportPanel(true)}
@@ -246,6 +256,15 @@ export default function SORADetail() {
           assessment={assessment}
           osoStatuses={osoStatuses}
           onClose={() => setShowExportPanel(false)}
+        />
+      )}
+
+      {/* AI Assistant Panel */}
+      {showAIPanel && (
+        <SORAIPanel
+          soraId={assessmentId}
+          assessment={assessment}
+          onClose={() => setShowAIPanel(false)}
         />
       )}
 

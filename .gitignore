@@ -31,15 +31,15 @@ npm-debug.log*
 scripts/serviceAccountKey.json
 scripts/*firebase-adminsdk*.json
 
-# Document directories (stored separately)
-COR/
-EASA and FAA Regulations/
-Formal Hazard Assessments/
-JARUS/
-Policies/
-Procedures/
-Regulations/
-SFOC/
+# Document directories (stored separately - root level only)
+/COR/
+/EASA and FAA Regulations/
+/Formal Hazard Assessments/
+/JARUS/
+/Policies/
+/Procedures/
+/Regulations/
+/SFOC/
 BUSINESS_CASE.md
 *.pdf
 *.docx
