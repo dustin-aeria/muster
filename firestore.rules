@@ -884,6 +884,58 @@ service cloud.firestore {
     }
 
     // ============================================
+    // SFOC Applications Collection
+    // ============================================
+    match /sfocApplications/{applicationId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+
+      // Documents subcollection
+      match /documents/{documentId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+
+      // AI Conversations subcollection
+      match /aiConversations/{conversationId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+    }
+
+    // ============================================
+    // SORA Assessments Collection
+    // ============================================
+    match /soraAssessments/{assessmentId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+
+      // OSO Statuses subcollection
+      match /osoStatuses/{osoId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+
+      // AI Conversations subcollection
+      match /aiConversations/{conversationId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+    }
+
+    // ============================================
     // Portal Collections (Client Portal)
     // ============================================
 
