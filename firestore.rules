@@ -884,6 +884,38 @@ service cloud.firestore {
     }
 
     // ============================================
+    // Manufacturer Declarations Collection (MPD)
+    // ============================================
+    match /manufacturerDeclarations/{declarationId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canEdit(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canEdit(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canDelete(resource.data.organizationId);
+
+      // Sections subcollection
+      match /sections/{sectionId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+
+      // Evidence subcollection
+      match /evidence/{evidenceId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+
+      // Activity Log subcollection
+      match /activityLog/{activityId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+    }
+
+    // ============================================
     // SFOC Applications Collection
     // ============================================
     match /sfocApplications/{applicationId} {
