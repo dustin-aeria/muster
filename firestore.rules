@@ -1003,5 +1003,132 @@ service cloud.firestore {
       // Sessions should be cleaned up by Cloud Functions
       allow delete: if false;
     }
+
+    // ============================================
+    // Export Enhancements Cache Collection (AI-Enhanced Exports)
+    // ============================================
+    match /exportEnhancements/{cacheId} {
+      // Members can read cached enhancements for their org's projects
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      // Enhancements are created by Cloud Functions
+      allow create: if isAuthenticated() &&
+        isMemberOf(request.resource.data.organizationId);
+      // Allow updates (cache refresh)
+      allow update: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      // Allow deletion (cache invalidation)
+      allow delete: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+    }
+
+    // ============================================
+    // Rate Limiting Collection (Shared across AI features)
+    // ============================================
+    match /rateLimits/{limitId} {
+      // Only Cloud Functions should access rate limits
+      // Users can read their own org's rate limit status
+      allow read: if isAuthenticated();
+      // Write operations handled by Cloud Functions only
+      allow write: if false;
+    }
+
+    // ============================================
+    // AI Usage Tracking Collection
+    // ============================================
+    match /aiUsage/{usageId} {
+      // Org members can read usage data
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      // Usage tracking is written by Cloud Functions
+      allow write: if false;
+    }
+
+    // ============================================
+    // Branding Settings Collection
+    // ============================================
+    match /brandingSettings/{orgId} {
+      allow read: if isAuthenticated() && isMemberOf(orgId);
+      allow write: if isAuthenticated() && canManageTeam(orgId);
+    }
+
+    // ============================================
+    // Invitations Collection
+    // ============================================
+    match /invitations/{inviteId} {
+      // Allow reading invitations by email (for accepting) or by org members
+      allow read: if isAuthenticated();
+      // Admins/managers can create invitations
+      allow create: if isAuthenticated() &&
+        canManageTeam(request.resource.data.organizationId);
+      // Allow updates (accepting invitation)
+      allow update: if isAuthenticated();
+      // Admins can delete invitations
+      allow delete: if isAuthenticated() &&
+        canManageTeam(resource.data.organizationId);
+    }
+
+    // ============================================
+    // Audit Logs Collection
+    // ============================================
+    match /auditLogs/{logId} {
+      // Admins/managers can read audit logs
+      allow read: if isAuthenticated() &&
+        hasRole(resource.data.organizationId, ['admin', 'management']);
+      // Audit logs are created by the system/Cloud Functions
+      allow create: if isAuthenticated() &&
+        isMemberOf(request.resource.data.organizationId);
+      // Audit logs should never be modified or deleted
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ============================================
+    // Webhooks Collection
+    // ============================================
+    match /webhooks/{webhookId} {
+      allow read: if isAuthenticated() &&
+        isMemberOf(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canManageTeam(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canManageTeam(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canManageTeam(resource.data.organizationId);
+    }
+
+    // ============================================
+    // API Keys Collection
+    // ============================================
+    match /apiKeys/{keyId} {
+      allow read: if isAuthenticated() &&
+        canManageTeam(resource.data.organizationId);
+      allow create: if isAuthenticated() &&
+        canManageTeam(request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+        canManageTeam(resource.data.organizationId);
+      allow delete: if isAuthenticated() &&
+        canManageTeam(resource.data.organizationId);
+    }
+
+    // ============================================
+    // Subscriptions/Billing Collection
+    // ============================================
+    match /subscriptions/{subId} {
+      allow read: if isAuthenticated() &&
+        canManageTeam(resource.data.organizationId);
+      // Subscriptions managed by Cloud Functions/Stripe webhooks
+      allow write: if false;
+    }
+
+    // ============================================
+    // Feature Flags Collection
+    // ============================================
+    match /featureFlags/{flagId} {
+      // Everyone can read feature flags
+      allow read: if isAuthenticated();
+      // Only system can write
+      allow write: if false;
+    }
   }
 }
