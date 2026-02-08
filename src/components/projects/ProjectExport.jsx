@@ -31,7 +31,10 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
-  Layers
+  Layers,
+  Sparkles,
+  RefreshCw,
+  Clock
 } from 'lucide-react'
 import { useBranding } from '../BrandingSettings'
 import { 
@@ -50,6 +53,7 @@ import {
 import { sailColors } from '../../lib/soraConfig'
 import { logger } from '../../lib/logger'
 import { getActivitiesForReport, formatDuration } from '../../lib/firestoreActivities'
+import { useExportEnhancement } from '../../hooks/useExportEnhancement'
 
 // ============================================
 // EXPORT SECTIONS CONFIGURATION
@@ -245,6 +249,20 @@ export default function ProjectExport({ project, onUpdate }) {
   const [selectedSite, setSelectedSite] = useState(null) // null = all sites
   const [showSiteSelector, setShowSiteSelector] = useState(false)
   const [activities, setActivities] = useState([])
+  const [aiEnhanced, setAiEnhanced] = useState(true) // AI enhancement toggle
+
+  // AI Enhancement hook
+  const {
+    enhance,
+    isEnhancing,
+    enhancingType,
+    isCached,
+    getCachedAt,
+    getEnhanced,
+    forceRefresh,
+    error: enhancementError,
+    clearError
+  } = useExportEnhancement(project?.id)
 
   // Load activities for report
   useState(() => {
@@ -598,16 +616,16 @@ export default function ProjectExport({ project, onUpdate }) {
   }
 
   // ============================================
-  // PDF EXPORT HANDLER (UPDATED FOR MULTI-SITE)
+  // PDF EXPORT HANDLER (UPDATED FOR MULTI-SITE + AI ENHANCEMENT)
   // ============================================
   const handlePDFExport = async (pdfType) => {
     setExporting(true)
     setExportType(pdfType)
-    setPdfExportProgress('Generating PDF...')
+    setPdfExportProgress('Preparing export...')
 
     try {
       // Get client branding if applicable
-      const clientBranding = project.clientId 
+      const clientBranding = project.clientId
         ? branding?.clients?.find(c => c.id === project.clientId)
         : null
 
@@ -616,6 +634,23 @@ export default function ProjectExport({ project, onUpdate }) {
         client: clientBranding
       }
 
+      let enhancedContent = null
+
+      // Get AI enhancement if enabled
+      if (aiEnhanced) {
+        setPdfExportProgress('Generating AI-enhanced content...')
+        try {
+          const result = await enhance(pdfType)
+          if (result?.enhanced) {
+            enhancedContent = result.enhanced
+          }
+        } catch (enhanceErr) {
+          logger.warn('Enhancement failed, continuing with standard export:', enhanceErr)
+        }
+      }
+
+      setPdfExportProgress('Generating PDF...')
+
       let pdf
       const siteSuffix = isMultiSite ? (selectedSite ? `_site-${selectedSite}` : '_all-sites') : ''
       const filename = `${pdfType}${siteSuffix}_${project.projectCode || project.name || 'export'}_${new Date().toISOString().split('T')[0]}.pdf`
@@ -623,26 +658,28 @@ export default function ProjectExport({ project, onUpdate }) {
       // Use multi-site export for supported types when project has multiple sites
       if (isMultiSite && (pdfType === 'operations-plan' || pdfType === 'sora')) {
         setPdfExportProgress('Generating multi-site PDF...')
-        
+
         if (pdfType === 'operations-plan') {
           pdf = await generateMultiSiteOperationsPlanPDF(
             selectedSite ? { ...project, sites: sites.filter(s => s.id === selectedSite) } : project,
             exportBranding,
-            clientBranding
+            clientBranding,
+            enhancedContent
           )
         } else if (pdfType === 'sora') {
           pdf = await generateMultiSiteSORA_PDF(
             selectedSite ? { ...project, sites: sites.filter(s => s.id === selectedSite) } : project,
-            exportBranding
+            exportBranding,
+            enhancedContent
           )
         }
       } else {
         // Use original single-site export functions
         switch (pdfType) {
           case 'operations-plan':
-            pdf = await generateOperationsPlanPDF(project, exportBranding)
+            pdf = await generateOperationsPlanPDF(project, exportBranding, clientBranding, enhancedContent)
             break
-          
+
           case 'sora':
             const soraCalcs = {
               intrinsicGRC: project.soraAssessment?.intrinsicGRC || 3,
@@ -650,22 +687,22 @@ export default function ProjectExport({ project, onUpdate }) {
               residualARC: project.soraAssessment?.residualARC || project.soraAssessment?.initialARC || 'ARC-b',
               sail: project.soraAssessment?.sail || 'II'
             }
-            pdf = await generateSORAPDF(project, soraCalcs, exportBranding)
+            pdf = await generateSORAPDF(project, soraCalcs, exportBranding, enhancedContent)
             break
-          
+
           case 'hse-risk':
-            pdf = await generateHSERiskPDF(project, exportBranding)
+            pdf = await generateHSERiskPDF(project, exportBranding, enhancedContent)
             break
-          
+
           default:
-            pdf = await generateOperationsPlanPDF(project, exportBranding)
+            pdf = await generateOperationsPlanPDF(project, exportBranding, clientBranding, enhancedContent)
         }
       }
 
       setPdfExportProgress('Saving...')
       pdf.save(filename)
       setPdfExportProgress(null)
-      
+
     } catch (err) {
       logger.error('PDF export failed:', err)
       setPdfExportProgress('Export failed')
@@ -818,6 +855,87 @@ export default function ProjectExport({ project, onUpdate }) {
           />
         )}
 
+        {/* AI Enhancement Toggle */}
+        <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <span className="font-medium text-purple-900">AI-Enhanced Export</span>
+                <p className="text-sm text-purple-600">Professional narratives and summaries</p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={aiEnhanced}
+                onChange={(e) => setAiEnhanced(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          {aiEnhanced && (
+            <div className="mt-3 pt-3 border-t border-purple-200">
+              <div className="flex flex-wrap gap-2 text-xs">
+                {['operations-plan', 'sora', 'hse-risk'].map(type => {
+                  const cached = isCached(type)
+                  const cachedTime = getCachedAt(type)
+                  return (
+                    <div
+                      key={type}
+                      className={`px-2 py-1 rounded-full flex items-center gap-1 ${
+                        cached ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {cached ? (
+                        <>
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>{type.replace('-', ' ')}</span>
+                          {cachedTime && (
+                            <span className="text-green-600">
+                              ({cachedTime.toLocaleDateString()})
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3 h-3" />
+                          <span>{type.replace('-', ' ')}</span>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-xs text-purple-600">
+                Enhanced content is cached for faster subsequent exports.
+                {isEnhancing && (
+                  <span className="ml-2 inline-flex items-center gap-1 text-purple-700">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Generating {enhancingType?.replace('-', ' ')}...
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
+
+          {enhancementError && (
+            <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700 flex items-center justify-between">
+              <span>{enhancementError.message || 'Enhancement failed'}</span>
+              <button
+                onClick={clearError}
+                className="text-red-500 hover:text-red-700"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {pdfExportTypes.map((pdfType) => {
             const Icon = pdfType.icon
@@ -857,6 +975,13 @@ export default function ProjectExport({ project, onUpdate }) {
                 <p className="text-sm text-gray-500">{pdfType.description}</p>
                 {isDisabled && (
                   <p className="text-xs text-gray-400 mt-2">Section not enabled</p>
+                )}
+                {/* Show cached badge if AI enhanced and cached */}
+                {aiEnhanced && isCached(pdfType.id) && !exporting && (
+                  <div className="flex items-center gap-1 mt-2 text-xs text-purple-600">
+                    <Sparkles className="w-3 h-3" />
+                    <span>AI-enhanced (cached)</span>
+                  </div>
                 )}
                 {exporting && exportType === pdfType.id && (
                   <div className="flex items-center gap-2 mt-2">

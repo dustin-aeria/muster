@@ -34,9 +34,9 @@ import {
 // MULTI-SITE OPERATIONS PLAN PDF
 // ============================================
 
-export async function generateMultiSiteOperationsPlanPDF(project, branding = null, clientBranding = null) {
+export async function generateMultiSiteOperationsPlanPDF(project, branding = null, clientBranding = null, enhancedContent = null) {
   const sites = Array.isArray(project?.sites) ? project.sites : []
-  
+
   const pdf = new BrandedPDF({
     title: 'Multi-Site Operations Plan',
     subtitle: `${sites.length} Operation Site${sites.length !== 1 ? 's' : ''}`,
@@ -46,17 +46,22 @@ export async function generateMultiSiteOperationsPlanPDF(project, branding = nul
     branding,
     clientBranding
   })
-  
+
   await pdf.init()
   pdf.addCoverPage()
   pdf.addTableOfContents()
-  
+
   // ============================================
   // EXECUTIVE SUMMARY
   // ============================================
   pdf.addNewSection('Executive Summary')
-  
-  pdf.addParagraph(`This operations plan covers ${sites.length} operation site${sites.length !== 1 ? 's' : ''} for the ${project?.name || 'unnamed'} project.`)
+
+  // Use enhanced executive summary if available
+  if (enhancedContent?.executiveSummary) {
+    pdf.addEnhancedParagraph(enhancedContent.executiveSummary)
+  } else {
+    pdf.addParagraph(`This operations plan covers ${sites.length} operation site${sites.length !== 1 ? 's' : ''} for the ${project?.name || 'unnamed'} project.`)
+  }
   pdf.addSpacer(5)
   
   // Project Overview KPIs
@@ -90,7 +95,14 @@ export async function generateMultiSiteOperationsPlanPDF(project, branding = nul
   // ============================================
   sites.forEach((site, index) => {
     pdf.addNewSection(`Site ${index + 1}: ${site.name || 'Unnamed Site'}`)
-    
+
+    // Add site-specific enhanced introduction if available
+    const siteIntro = enhancedContent?.sectionIntroductions?.[site.id || `site_${index}`]
+    if (siteIntro) {
+      pdf.addEnhancedParagraph(siteIntro)
+      pdf.addSpacer(5)
+    }
+
     // Site Survey Data
     pdf.addSubsectionTitle('Site Survey')
     const survey = site.siteSurvey || {}
@@ -159,8 +171,16 @@ export async function generateMultiSiteOperationsPlanPDF(project, branding = nul
     // SORA Summary for this site
     pdf.checkNewPage(40)
     pdf.addSubsectionTitle('SORA Assessment')
+
+    // Add site-specific risk narrative if available
+    const siteRiskNarrative = enhancedContent?.riskNarrative?.[site.id || `site_${index}`]
+    if (siteRiskNarrative) {
+      pdf.addEnhancedParagraph(siteRiskNarrative)
+      pdf.addSpacer(5)
+    }
+
     const calc = calculateSiteSORA(site)
-    
+
     pdf.addKPIRow([
       { label: 'iGRC', value: calc.iGRC ?? 'N/A' },
       { label: 'fGRC', value: calc.fGRC ?? 'N/A' },
@@ -168,18 +188,18 @@ export async function generateMultiSiteOperationsPlanPDF(project, branding = nul
       { label: 'Residual ARC', value: calc.residualARC || 'N/A' },
       { label: 'SAIL', value: calc.sail || 'N/A' }
     ])
-    
+
     // Mitigations applied
     const sora = site.soraAssessment || {}
     const appliedMitigations = Object.entries(sora.mitigations || {})
       .filter(([_, v]) => v?.enabled)
       .map(([k, v]) => `${k} (${v.robustness})`)
-    
+
     if (appliedMitigations.length > 0) {
       pdf.addSpacer(5)
       pdf.addParagraph(`Ground Mitigations: ${appliedMitigations.join(', ')}`)
     }
-    
+
     if (sora.tmpr?.enabled) {
       pdf.addParagraph(`Tactical Mitigation: ${sora.tmpr.type} (${sora.tmpr.robustness} robustness)`)
     }
@@ -254,12 +274,32 @@ export async function generateMultiSiteOperationsPlanPDF(project, branding = nul
     }
   }
   
+  // Add enhanced recommendations if available
+  if (enhancedContent?.recommendations) {
+    pdf.addNewSection('Recommendations')
+    if (Array.isArray(enhancedContent.recommendations)) {
+      enhancedContent.recommendations.forEach((rec, i) => {
+        pdf.addParagraph(`${i + 1}. ${rec}`, { fontSize: 9 })
+      })
+    } else {
+      pdf.addEnhancedParagraph(enhancedContent.recommendations)
+    }
+  }
+
   // ============================================
   // APPROVALS
   // ============================================
   pdf.addNewSection('Approvals')
-  pdf.addParagraph('This operations plan has been reviewed and approved by the following personnel:')
-  pdf.addSpacer(10)
+
+  // Add enhanced closing statement if available
+  if (enhancedContent?.closingStatement) {
+    pdf.addEnhancedParagraph(enhancedContent.closingStatement)
+    pdf.addSpacer(10)
+  } else {
+    pdf.addParagraph('This operations plan has been reviewed and approved by the following personnel:')
+    pdf.addSpacer(10)
+  }
+
   pdf.addSignatureBlock([
     { role: 'Pilot in Command (PIC)', name: '' },
     { role: 'Operations Manager', name: '' },
@@ -284,9 +324,9 @@ export async function generateMultiSiteOperationsPlanPDF(project, branding = nul
 // MULTI-SITE SORA PDF
 // ============================================
 
-export async function generateMultiSiteSORA_PDF(project, branding = null) {
+export async function generateMultiSiteSORA_PDF(project, branding = null, enhancedContent = null) {
   const sites = Array.isArray(project?.sites) ? project.sites : []
-  
+
   const pdf = new BrandedPDF({
     title: 'SORA Risk Assessment',
     subtitle: `Multi-Site Assessment - ${sites.length} Sites`,
@@ -295,27 +335,33 @@ export async function generateMultiSiteSORA_PDF(project, branding = null) {
     clientName: project?.clientName || '',
     branding
   })
-  
+
   await pdf.init()
   pdf.addCoverPage()
   pdf.addTableOfContents()
-  
+
   // ============================================
   // ASSESSMENT SUMMARY
   // ============================================
   pdf.addNewSection('Assessment Summary')
-  
+
+  // Use enhanced executive summary if available
+  if (enhancedContent?.executiveSummary) {
+    pdf.addEnhancedParagraph(enhancedContent.executiveSummary)
+    pdf.addSpacer(5)
+  }
+
   const maxSAIL = calculateMaxSAIL(sites)
   const allWithinScope = sites.every(s => {
     const calc = calculateSiteSORA(s)
     return calc.fGRC !== null && calc.fGRC <= 7
   })
-  
+
   pdf.addInfoBox(
     'Governing SAIL Level',
     `Based on the multi-site assessment, this operation is governed by SAIL Level ${maxSAIL || 'N/A'}. ${
-      allWithinScope 
-        ? 'All sites are within SORA scope.' 
+      allWithinScope
+        ? 'All sites are within SORA scope.'
         : 'WARNING: One or more sites are outside SORA scope.'
     }`,
     allWithinScope ? 'info' : 'warning'
@@ -354,10 +400,17 @@ export async function generateMultiSiteSORA_PDF(project, branding = null) {
   // ============================================
   sites.forEach((site, index) => {
     pdf.addNewSection(`Site ${index + 1}: ${site.name || 'Unnamed'} - SORA`)
-    
+
     const sora = site.soraAssessment || {}
     const calc = calculateSiteSORA(site)
-    
+
+    // Add site-specific risk narrative if available
+    const siteRiskNarrative = enhancedContent?.riskNarrative?.[site.id || `site_${index}`] || enhancedContent?.riskNarrative
+    if (siteRiskNarrative && typeof siteRiskNarrative === 'string') {
+      pdf.addEnhancedParagraph(siteRiskNarrative)
+      pdf.addSpacer(5)
+    }
+
     // Step 2: iGRC
     pdf.addSubsectionTitle('Step 2: Intrinsic Ground Risk Class (iGRC)')
     pdf.addKeyValueGrid([
@@ -462,26 +515,26 @@ export async function generateMultiSiteSORA_PDF(project, branding = null) {
 // SINGLE-SITE EXPORT
 // ============================================
 
-export async function generateSingleSiteExport(project, siteId, exportType, branding = null) {
+export async function generateSingleSiteExport(project, siteId, exportType, branding = null, enhancedContent = null) {
   const sites = Array.isArray(project?.sites) ? project.sites : []
   const site = sites.find(s => s.id === siteId)
-  
+
   if (!site) {
     throw new Error(`Site ${siteId} not found`)
   }
-  
+
   // Create a pseudo-project with just this site
   const singleSiteProject = {
     ...project,
     name: `${project.name} - ${site.name}`,
     sites: [site]
   }
-  
+
   switch (exportType) {
     case 'operations-plan':
-      return generateMultiSiteOperationsPlanPDF(singleSiteProject, branding)
+      return generateMultiSiteOperationsPlanPDF(singleSiteProject, branding, null, enhancedContent)
     case 'sora':
-      return generateMultiSiteSORA_PDF(singleSiteProject, branding)
+      return generateMultiSiteSORA_PDF(singleSiteProject, branding, enhancedContent)
     default:
       throw new Error(`Unknown export type: ${exportType}`)
   }
@@ -545,26 +598,26 @@ function formatCoordinates(coords) {
 // ============================================
 
 export async function exportMultiSitePDF(type, project, options = {}) {
-  const { branding, clientBranding, siteId } = options
+  const { branding, clientBranding, siteId, enhancedContent } = options
   let pdf
-  
+
   // If siteId provided, export single site
   if (siteId) {
-    pdf = await generateSingleSiteExport(project, siteId, type, branding)
+    pdf = await generateSingleSiteExport(project, siteId, type, branding, enhancedContent)
   } else {
     // Export all sites
     switch (type) {
       case 'operations-plan':
-        pdf = await generateMultiSiteOperationsPlanPDF(project, branding, clientBranding)
+        pdf = await generateMultiSiteOperationsPlanPDF(project, branding, clientBranding, enhancedContent)
         break
       case 'sora':
-        pdf = await generateMultiSiteSORA_PDF(project, branding)
+        pdf = await generateMultiSiteSORA_PDF(project, branding, enhancedContent)
         break
       default:
         throw new Error(`Unknown export type: ${type}`)
     }
   }
-  
+
   const siteSuffix = siteId ? `_site-${siteId}` : '_all-sites'
   const filename = `${type}${siteSuffix}_${project?.projectCode || project?.name || 'export'}_${new Date().toISOString().split('T')[0]}.pdf`
   pdf.save(filename)

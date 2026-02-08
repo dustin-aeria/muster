@@ -609,21 +609,21 @@ export class BrandedPDF {
     this.checkNewPage(50)
     this.addSubsectionTitle('Signatures & Approvals')
     this.currentY += 5
-    
+
     signers.forEach(signer => {
       this.checkNewPage(30)
       this.setDrawColor('textLight')
       this.doc.setLineWidth(0.3)
       this.doc.line(this.margin, this.currentY + 12, this.margin + 65, this.currentY + 12)
-      
+
       this.setColor('text')
       this.doc.setFontSize(8)
       this.doc.setFont('helvetica', 'normal')
       this.doc.text(signer.role || 'Signature', this.margin, this.currentY + 17)
-      
+
       this.doc.line(this.margin + 85, this.currentY + 12, this.margin + 130, this.currentY + 12)
       this.doc.text('Date', this.margin + 85, this.currentY + 17)
-      
+
       if (signer.name) {
         this.setColor('textLight')
         this.doc.setFontSize(7)
@@ -631,6 +631,73 @@ export class BrandedPDF {
       }
       this.currentY += 30
     })
+    return this
+  }
+
+  /**
+   * Add an AI-enhanced section with professional prose
+   */
+  addEnhancedSection(title, enhancedText, options = {}) {
+    if (!enhancedText) return this
+    const { dataTable, showBadge = true } = options
+    if (title) {
+      if (options.isSubsection) {
+        this.addSubsectionTitle(title)
+      } else {
+        this.addSectionTitle(title)
+      }
+    }
+    if (showBadge) {
+      this.setFillColor('#f3e8ff')
+      this.doc.roundedRect(this.margin, this.currentY - 2, this.contentWidth, 6, 1, 1, 'F')
+      this.setColor('#7c3aed')
+      this.doc.setFontSize(6)
+      this.doc.setFont('helvetica', 'italic')
+      this.doc.text('AI-Enhanced Content', this.margin + 2, this.currentY + 2)
+      this.currentY += 8
+    }
+    this.addParagraph(enhancedText, { fontSize: 9 })
+    if (dataTable && dataTable.headers && dataTable.rows?.length > 0) {
+      this.addSpacer(5)
+      this.addTable(dataTable.headers, dataTable.rows, dataTable.options || {})
+    }
+    return this
+  }
+
+  /**
+   * Add enhanced prose paragraph with visual distinction
+   */
+  addEnhancedParagraph(text, options = {}) {
+    if (!text) return this
+    this.setDrawColor('#a78bfa')
+    this.doc.setLineWidth(0.8)
+    const startY = this.currentY
+    this.addParagraph(text, { fontSize: 9, ...options })
+    this.doc.line(this.margin - 3, startY, this.margin - 3, this.currentY - 4)
+    return this
+  }
+
+  /**
+   * Add an enhanced info callout box
+   */
+  addEnhancedInfoBox(title, content) {
+    if (!content) return this
+    this.checkNewPage(35)
+    this.setFillColor('#faf5ff')
+    this.doc.roundedRect(this.margin, this.currentY, this.contentWidth, 25, 2, 2, 'F')
+    this.setDrawColor('#a78bfa')
+    this.doc.setLineWidth(0.5)
+    this.doc.line(this.margin, this.currentY, this.margin, this.currentY + 25)
+    this.setColor('#6d28d9')
+    this.doc.setFontSize(9)
+    this.doc.setFont('helvetica', 'bold')
+    this.doc.text(title, this.margin + 5, this.currentY + 7)
+    this.setColor('#374151')
+    this.doc.setFont('helvetica', 'normal')
+    this.doc.setFontSize(8)
+    const lines = this.doc.splitTextToSize(content, this.contentWidth - 10)
+    this.doc.text(lines.slice(0, 2).join(' '), this.margin + 5, this.currentY + 15)
+    this.currentY += 32
     return this
   }
 
@@ -651,7 +718,7 @@ export class BrandedPDF {
 }
 
 // FIX #7: Fixed clientName field reference (project?.clientName instead of project?.client)
-export async function generateOperationsPlanPDF(project, branding = null, clientBranding = null) {
+export async function generateOperationsPlanPDF(project, branding = null, clientBranding = null, enhancedContent = null) {
   const pdf = new BrandedPDF({
     title: 'RPAS Operations Plan',
     subtitle: project?.name || 'Operations Plan',
@@ -661,13 +728,17 @@ export async function generateOperationsPlanPDF(project, branding = null, client
     branding,
     clientBranding
   })
-  
+
   await pdf.init()
   pdf.addCoverPage()
   pdf.addTableOfContents()
-  
+
   pdf.addNewSection('Executive Summary')
-  pdf.addParagraph(`This RPAS Operations Plan details the planned flight operations for ${project?.name || 'this project'}. It includes site assessment, flight parameters, risk mitigations, and emergency procedures.`)
+  if (enhancedContent?.executiveSummary) {
+    pdf.addEnhancedParagraph(enhancedContent.executiveSummary)
+  } else {
+    pdf.addParagraph(`This RPAS Operations Plan details the planned flight operations for ${project?.name || 'this project'}. It includes site assessment, flight parameters, risk mitigations, and emergency procedures.`)
+  }
   
   if (project?.overview?.description || project?.description) {
     pdf.addSubsectionTitle('Project Description')
@@ -715,21 +786,29 @@ export async function generateOperationsPlanPDF(project, branding = null, client
   if (project?.hseRiskAssessment || project?.hseRisk) {
     pdf.addNewSection('HSE Risk Assessment')
     const risk = project?.hseRiskAssessment || project?.hseRisk
+    if (enhancedContent?.riskNarrative) {
+      pdf.addEnhancedParagraph(enhancedContent.riskNarrative)
+      pdf.addSpacer(5)
+    }
     if (risk?.hazards?.length > 0) {
       pdf.addSubsectionTitle('Identified Hazards')
       const hazardRows = risk.hazards.map(h => [
-        h.category || 'General', 
-        h.description || '', 
-        h.riskLevel?.toUpperCase() || `${h.likelihood || '?'}x${h.severity || '?'}`, 
+        h.category || 'General',
+        h.description || '',
+        h.riskLevel?.toUpperCase() || `${h.likelihood || '?'}x${h.severity || '?'}`,
         h.residualRisk?.toUpperCase() || `${h.residualLikelihood || '?'}x${h.residualSeverity || '?'}`
       ])
       pdf.addTable(['Category', 'Hazard', 'Initial Risk', 'Residual Risk'], hazardRows)
     }
   }
-  
+
   if (project?.emergencyPlan || project?.emergency) {
     pdf.addNewSection('Emergency Procedures')
     const ep = project?.emergencyPlan || project?.emergency
+    if (enhancedContent?.emergencyProcedures) {
+      pdf.addEnhancedParagraph(enhancedContent.emergencyProcedures)
+      pdf.addSpacer(5)
+    }
     if (ep?.primaryEmergencyContact || ep?.musterPoint) {
       pdf.addLabelValue('Muster Point', ep.musterPoint || ep.rallyPoint)
       pdf.addLabelValue('Emergency Contact', ep.primaryEmergencyContact?.name)
@@ -742,29 +821,44 @@ export async function generateOperationsPlanPDF(project, branding = null, client
       pdf.addTable(['Name', 'Role', 'Phone'], contactRows)
     }
   }
-  
+
   if (project?.crew?.length > 0) {
     pdf.addNewSection('Crew Roster')
     const crewRows = project.crew.map(m => [
-      m.name || `${m.firstName || ''} ${m.lastName || ''}`.trim(), 
-      m.role || '', 
+      m.name || `${m.firstName || ''} ${m.lastName || ''}`.trim(),
+      m.role || '',
       m.certifications?.join?.(', ') || m.certifications || 'N/A'
     ])
     pdf.addTable(['Name', 'Role', 'Certifications'], crewRows)
   }
-  
+
+  if (enhancedContent?.recommendations) {
+    pdf.addNewSection('Recommendations')
+    if (Array.isArray(enhancedContent.recommendations)) {
+      enhancedContent.recommendations.forEach((rec, i) => {
+        pdf.addParagraph(`${i + 1}. ${rec}`, { fontSize: 9 })
+      })
+    } else {
+      pdf.addEnhancedParagraph(enhancedContent.recommendations)
+    }
+  }
+
   pdf.addNewSection('Approvals')
+  if (enhancedContent?.closingStatement) {
+    pdf.addEnhancedParagraph(enhancedContent.closingStatement)
+    pdf.addSpacer(10)
+  }
   pdf.addSignatureBlock([
     { role: 'Pilot in Command (PIC)', name: '' },
     { role: 'Operations Manager', name: '' },
     { role: 'Client Representative', name: '' }
   ])
-  
+
   return pdf
 }
 
 // FIX #7: Fixed clientName field reference
-export async function generateSORAPDF(project, calculations, branding = null) {
+export async function generateSORAPDF(project, calculations, branding = null, enhancedContent = null) {
   const pdf = new BrandedPDF({
     title: 'SORA Risk Assessment',
     subtitle: 'JARUS SORA 2.5 Methodology',
@@ -773,12 +867,16 @@ export async function generateSORAPDF(project, calculations, branding = null) {
     clientName: project?.clientName || '', // FIX #7
     branding
   })
-  
+
   await pdf.init()
   pdf.addCoverPage()
   pdf.addTableOfContents()
-  
+
   pdf.addNewSection('Assessment Summary')
+  if (enhancedContent?.executiveSummary) {
+    pdf.addEnhancedParagraph(enhancedContent.executiveSummary)
+    pdf.addSpacer(5)
+  }
   pdf.addInfoBox('SAIL Level Determination', `Based on the assessment, this operation has been assigned SAIL Level ${calculations?.sailLevel || calculations?.sail || 'N/A'}`, 'info')
   pdf.addKPIRow([
     { label: 'Initial GRC', value: calculations?.initialGRC || calculations?.intrinsicGRC || 'N/A' },
@@ -786,26 +884,39 @@ export async function generateSORAPDF(project, calculations, branding = null) {
     { label: 'Air Risk Class', value: calculations?.airRiskClass || calculations?.residualARC || 'N/A' },
     { label: 'SAIL Level', value: calculations?.sailLevel || calculations?.sail || 'N/A' }
   ])
-  
+
   pdf.addNewSection('Ground Risk Assessment')
   pdf.addSubsectionTitle('Intrinsic Ground Risk Class (iGRC)')
-  pdf.addParagraph('The initial ground risk is determined by the characteristic UA dimension and the population density of the operational area.')
-  
+  if (enhancedContent?.riskNarrative) {
+    pdf.addEnhancedParagraph(enhancedContent.riskNarrative)
+  } else {
+    pdf.addParagraph('The initial ground risk is determined by the characteristic UA dimension and the population density of the operational area.')
+  }
+
   pdf.addNewSection('Ground Risk Mitigations')
-  pdf.addParagraph('Ground risk mitigations reduce the final GRC based on operational measures.')
-  
+  if (enhancedContent?.mitigationsSummary) {
+    pdf.addEnhancedParagraph(enhancedContent.mitigationsSummary)
+  } else {
+    pdf.addParagraph('Ground risk mitigations reduce the final GRC based on operational measures.')
+  }
+
   pdf.addNewSection('Air Risk Assessment')
   pdf.addSubsectionTitle('Air Risk Class (ARC)')
   pdf.addParagraph('The air risk class is determined by the airspace classification and the type of operation.')
-  
+
+  if (enhancedContent?.osoNarrative) {
+    pdf.addNewSection('Operational Safety Objectives')
+    pdf.addEnhancedParagraph(enhancedContent.osoNarrative)
+  }
+
   pdf.addNewSection('Assessment Approval')
   pdf.addSignatureBlock([{ role: 'Assessor' }, { role: 'Reviewer' }])
-  
+
   return pdf
 }
 
 // FIX #7: Fixed clientName field reference
-export async function generateHSERiskPDF(project, branding = null) {
+export async function generateHSERiskPDF(project, branding = null, enhancedContent = null) {
   const pdf = new BrandedPDF({
     title: 'HSE Risk Assessment',
     subtitle: 'Workplace Hazard Analysis',
@@ -814,33 +925,41 @@ export async function generateHSERiskPDF(project, branding = null) {
     clientName: project?.clientName || '', // FIX #7
     branding
   })
-  
+
   await pdf.init()
   pdf.addCoverPage()
   pdf.addTableOfContents()
-  
+
   const risk = project?.hseRiskAssessment || project?.hseRisk || {}
-  
+
   pdf.addNewSection('Assessment Summary')
+  if (enhancedContent?.executiveSummary) {
+    pdf.addEnhancedParagraph(enhancedContent.executiveSummary)
+    pdf.addSpacer(5)
+  }
   const hazards = risk.hazards || []
-  // Risk thresholds: Low (1-4), Medium (5-9), High (10-16), Critical (17-25)
   const criticalRisks = hazards.filter(h => h.riskLevel === 'critical' || (h.likelihood * h.severity >= 17)).length
   const highRisks = hazards.filter(h => h.riskLevel === 'high' || (h.likelihood * h.severity >= 10 && h.likelihood * h.severity <= 16)).length
   const mediumRisks = hazards.filter(h => h.riskLevel === 'medium' || (h.likelihood * h.severity >= 5 && h.likelihood * h.severity <= 9)).length
   const lowRisks = hazards.filter(h => h.riskLevel === 'low' || (h.likelihood * h.severity <= 4)).length
-  
+
   pdf.addKPIRow([
     { label: 'Total Hazards', value: hazards.length || 0 },
     { label: 'Critical/High', value: criticalRisks + highRisks },
     { label: 'Medium Risk', value: mediumRisks },
     { label: 'Low Risk', value: lowRisks }
   ])
-  
+
   pdf.addNewSection('Hazard Register')
   if (hazards.length > 0) {
     hazards.forEach((hazard, index) => {
       pdf.checkNewPage(40)
       pdf.addSubsectionTitle(`${index + 1}. ${hazard.description || 'Hazard'}`)
+      const enhancedHazardDesc = enhancedContent?.hazardDescriptions?.[hazard.id || index]
+      if (enhancedHazardDesc) {
+        pdf.addEnhancedParagraph(enhancedHazardDesc)
+        pdf.addSpacer(3)
+      }
       pdf.addKeyValueGrid([
         { label: 'Category', value: hazard.category },
         { label: 'Initial Risk', value: hazard.riskLevel?.toUpperCase() || `L${hazard.likelihood} x S${hazard.severity}` },
@@ -855,10 +974,21 @@ export async function generateHSERiskPDF(project, branding = null) {
   } else {
     pdf.addParagraph('No hazards identified.')
   }
-  
+
+  if (enhancedContent?.recommendations) {
+    pdf.addNewSection('Recommendations')
+    if (Array.isArray(enhancedContent.recommendations)) {
+      enhancedContent.recommendations.forEach((rec, i) => {
+        pdf.addParagraph(`${i + 1}. ${rec}`, { fontSize: 9 })
+      })
+    } else {
+      pdf.addEnhancedParagraph(enhancedContent.recommendations)
+    }
+  }
+
   pdf.addNewSection('Approvals')
   pdf.addSignatureBlock([{ role: 'Assessor' }, { role: 'Reviewer' }])
-  
+
   return pdf
 }
 
@@ -910,23 +1040,23 @@ export async function generateFormPDF(form, formTemplate, project, operators = [
 }
 
 export async function exportToPDF(type, project, options = {}) {
-  const { branding, calculations, clientBranding } = options
+  const { branding, calculations, clientBranding, enhancedContent } = options
   let pdf
-  
+
   switch (type) {
     case 'operations-plan':
-      pdf = await generateOperationsPlanPDF(project, branding, clientBranding)
+      pdf = await generateOperationsPlanPDF(project, branding, clientBranding, enhancedContent)
       break
     case 'sora':
-      pdf = await generateSORAPDF(project, calculations, branding)
+      pdf = await generateSORAPDF(project, calculations, branding, enhancedContent)
       break
     case 'hse-risk':
-      pdf = await generateHSERiskPDF(project, branding)
+      pdf = await generateHSERiskPDF(project, branding, enhancedContent)
       break
     default:
       throw new Error(`Unknown export type: ${type}`)
   }
-  
+
   const filename = `${type}_${project?.projectCode || project?.name || 'export'}_${new Date().toISOString().split('T')[0]}.pdf`
   pdf.save(filename)
   return filename

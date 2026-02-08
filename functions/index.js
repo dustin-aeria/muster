@@ -710,3 +710,13 @@ exports.getSORAStepGuidance = sfocSoraAI.getSORAStepGuidance
 exports.recommendMitigations = sfocSoraAI.recommendMitigations
 exports.getOSOGuidance = sfocSoraAI.getOSOGuidance
 exports.analyzeConOps = sfocSoraAI.analyzeConOps
+
+// ============================================
+// Export Enhancement Functions
+// ============================================
+
+const exportEnhancement = require('./exportEnhancement')
+
+exports.enhanceExportContent = exportEnhancement.enhanceExportContent
+exports.invalidateExportCache = exportEnhancement.invalidateExportCache
+exports.getExportCacheStatus = exportEnhancement.getExportCacheStatus
