@@ -94,6 +94,20 @@ function SiteWeatherWidget({ activeSite }) {
   )
 }
 
+// Briefing sections for in-app review
+const BRIEFING_SECTIONS = [
+  { id: 'projectOverview', label: 'Project Overview', icon: FileText, required: true },
+  { id: 'weather', label: 'Weather Conditions', icon: Wind, required: true },
+  { id: 'crew', label: 'Crew & Roles', icon: Users, required: true },
+  { id: 'aircraft', label: 'Aircraft & Equipment', icon: Plane, required: true },
+  { id: 'flightPlan', label: 'Flight Plan', icon: MapPin, required: true },
+  { id: 'siteInfo', label: 'Site Details', icon: MapPin, required: false },
+  { id: 'hazards', label: 'Hazards & Controls', icon: AlertTriangle, required: true },
+  { id: 'ppe', label: 'PPE Requirements', icon: HardHat, required: true },
+  { id: 'emergency', label: 'Emergency Procedures', icon: Phone, required: true },
+  { id: 'communications', label: 'Communications', icon: Radio, required: true }
+]
+
 // Default sections to include in tailgate briefing
 const DEFAULT_INCLUDED_SECTIONS = {
   projectOverview: true,
@@ -110,6 +124,20 @@ const DEFAULT_INCLUDED_SECTIONS = {
   siteInfo: true
 }
 
+// Default section review status
+const DEFAULT_SECTION_REVIEWS = {
+  projectOverview: false,
+  weather: false,
+  crew: false,
+  aircraft: false,
+  flightPlan: false,
+  siteInfo: false,
+  hazards: false,
+  ppe: false,
+  emergency: false,
+  communications: false
+}
+
 // Default tailgate data structure
 const createDefaultTailgateDay = (date) => ({
   date: date || new Date().toISOString().split('T')[0],
@@ -124,6 +152,8 @@ const createDefaultTailgateDay = (date) => ({
     conditions: '',
     ceiling: ''
   },
+  // Section review tracking - for in-app briefing workflow
+  sectionReviews: { ...DEFAULT_SECTION_REVIEWS },
   checklistCompleted: {
     siteSecured: false,
     equipmentChecked: false,
@@ -141,6 +171,7 @@ const createDefaultTailgateDay = (date) => ({
   briefingEndTime: '',
   goNoGoDecision: null,
   goNoGoNotes: '',
+  distributedAt: null, // When GO was distributed
   flightLogs: [],
   includedSections: { ...DEFAULT_INCLUDED_SECTIONS }
 })
@@ -253,27 +284,67 @@ export default function ProjectTailgate({ project, onUpdate }) {
     })
   }
 
-  const includedSections = currentDay.includedSections || DEFAULT_INCLUDED_SECTIONS
+  // Toggle section review status (for in-app briefing workflow)
+  const toggleSectionReview = (sectionId) => {
+    const currentReviews = currentDay.sectionReviews || DEFAULT_SECTION_REVIEWS
+    updateCurrentDay({
+      sectionReviews: {
+        ...currentReviews,
+        [sectionId]: !currentReviews[sectionId]
+      }
+    })
+  }
 
-  // Handle GO/NO GO decision with notification
+  const includedSections = currentDay.includedSections || DEFAULT_INCLUDED_SECTIONS
+  const sectionReviews = currentDay.sectionReviews || DEFAULT_SECTION_REVIEWS
+
+  // Calculate review progress
+  const reviewedSections = BRIEFING_SECTIONS.filter(s => sectionReviews[s.id]).length
+  const totalSections = BRIEFING_SECTIONS.length
+  const allSectionsReviewed = reviewedSections === totalSections
+
+  // Handle GO/NO GO decision with notification and distribution
   const handleGoNoGoDecision = async (decision) => {
     const previousDecision = currentDay.goNoGoDecision
 
-    // Update the decision
-    updateCurrentDay({ goNoGoDecision: decision })
+    // Update the decision and mark distribution time if GO
+    updateCurrentDay({
+      goNoGoDecision: decision,
+      distributedAt: decision === true ? new Date().toISOString() : null
+    })
 
-    // Send notification if this is a new decision (not just toggling)
-    if (previousDecision !== decision && project.id) {
+    // Send notification if this is a new GO decision
+    if (decision === true && previousDecision !== true && project.id) {
       try {
         await sendTeamNotification(project.id, 'goNoGo', {
-          decision: decision ? 'GO' : 'NO-GO',
+          decision: 'GO',
           date: currentDay.date || new Date().toISOString(),
           pic: pic?.operatorName || pic?.name || 'Not assigned',
-          notes: decision === false ? currentDay.goNoGoNotes : ''
+          notes: '',
+          // Include briefing summary for distribution
+          briefingSummary: {
+            project: project.name,
+            client: project.clientName,
+            date: currentDay.date,
+            crewCount: allCrew.length,
+            sectionsReviewed: reviewedSections
+          }
+        })
+        logger.info('Tailgate briefing distributed successfully')
+      } catch (error) {
+        logger.error('Failed to distribute tailgate briefing:', error)
+      }
+    } else if (decision === false && previousDecision !== false && project.id) {
+      // Send NO-GO notification
+      try {
+        await sendTeamNotification(project.id, 'goNoGo', {
+          decision: 'NO-GO',
+          date: currentDay.date || new Date().toISOString(),
+          pic: pic?.operatorName || pic?.name || 'Not assigned',
+          notes: currentDay.goNoGoNotes || ''
         })
       } catch (error) {
-        // Log error but don't block the UI update
-        logger.error('Failed to send GO/NO GO notification:', error)
+        logger.error('Failed to send NO-GO notification:', error)
       }
     }
   }
@@ -688,113 +759,227 @@ export default function ProjectTailgate({ project, onUpdate }) {
         </div>
       )}
 
-      {/* Header Actions */}
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            {isMultiDay ? `Day ${selectedDayIndex + 1}: ` : ''}Pre-Deployment Briefing
+          <h2 className="text-xl font-bold text-gray-900">
+            {isMultiDay ? `Day ${selectedDayIndex + 1}: ` : ''}Tailgate Briefing
           </h2>
           <p className="text-sm text-gray-500">
-            {formatDate(currentDay.date)}
-            {currentDay.generatedAt && ` • Generated ${new Date(currentDay.generatedAt).toLocaleTimeString()}`}
+            {formatDate(currentDay.date)} • Review each section and check off when complete
           </p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={generateBriefing} className="btn-secondary inline-flex items-center gap-2">
-            <RefreshCw className="w-4 h-4" />
-            {currentDay.generatedAt ? 'Refresh' : 'Generate'}
-          </button>
-          <button onClick={copyBriefing} className="btn-secondary inline-flex items-center gap-2">
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            {copied ? 'Copied!' : 'Copy'}
-          </button>
-          <button onClick={exportToPDF} disabled={exporting} className="btn-primary inline-flex items-center gap-2">
-            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            {exporting ? 'Exporting...' : 'PDF'}
+        <div className="flex items-center gap-3">
+          {/* Progress indicator */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
+            <span className={`text-sm font-medium ${allSectionsReviewed ? 'text-green-600' : 'text-gray-600'}`}>
+              {reviewedSections}/{totalSections} reviewed
+            </span>
+          </div>
+          {/* Export options (secondary) */}
+          <button onClick={exportToPDF} disabled={exporting} className="btn-secondary text-sm inline-flex items-center gap-1">
+            {exporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+            PDF
           </button>
           {isMultiDay && days.length > 1 && (
-            <button 
+            <button
               onClick={() => removeDay(selectedDayIndex)}
-              className="btn-secondary text-red-600 hover:bg-red-50"
+              className="btn-secondary text-red-600 hover:bg-red-50 text-sm"
               title="Remove this day"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3 h-3" />
             </button>
           )}
         </div>
       </div>
 
-      {/* Readiness Status */}
+      {/* Briefing Progress */}
       <div className={`p-4 rounded-lg border-2 ${
-        isReadyForOps ? 'bg-green-50 border-green-500' : 'bg-amber-50 border-amber-300'
+        allSectionsReviewed && completedCount === totalChecklistItems ? 'bg-green-50 border-green-500' : 'bg-blue-50 border-blue-300'
       }`}>
-        <div className="flex items-center gap-3">
-          {isReadyForOps ? (
-            <CheckCircle2 className="w-8 h-8 text-green-600" />
-          ) : (
-            <AlertTriangle className="w-8 h-8 text-amber-600" />
-          )}
-          <div>
-            <h3 className={`font-semibold ${isReadyForOps ? 'text-green-800' : 'text-amber-800'}`}>
-              {isReadyForOps ? 'Ready for Operations' : 'Pre-Flight Items Pending'}
-            </h3>
-            <p className={`text-sm ${isReadyForOps ? 'text-green-600' : 'text-amber-600'}`}>
-              Checklist: {completedCount}/{totalChecklistItems} •
-              Crew: {attendedCount}/{allCrew.length} •
-              Decision: {currentDay.goNoGoDecision === true ? 'GO' : currentDay.goNoGoDecision === false ? 'NO-GO' : 'Pending'}
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {allSectionsReviewed ? (
+              <CheckCircle2 className="w-8 h-8 text-green-600" />
+            ) : (
+              <ClipboardCheck className="w-8 h-8 text-blue-600" />
+            )}
+            <div>
+              <h3 className={`font-semibold ${allSectionsReviewed ? 'text-green-800' : 'text-blue-800'}`}>
+                {allSectionsReviewed ? 'All Sections Reviewed' : 'Review Briefing Sections'}
+              </h3>
+              <p className={`text-sm ${allSectionsReviewed ? 'text-green-600' : 'text-blue-600'}`}>
+                Sections: {reviewedSections}/{totalSections} •
+                Checklist: {completedCount}/{totalChecklistItems} •
+                Crew: {attendedCount}/{allCrew.length}
+              </p>
+            </div>
           </div>
+          {currentDay.distributedAt && (
+            <div className="text-right">
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                <Check className="w-3 h-3" />
+                Distributed
+              </span>
+              <p className="text-xs text-gray-500 mt-1">{new Date(currentDay.distributedAt).toLocaleString()}</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Briefing Content Configuration */}
+      {/* BRIEFING REVIEW SECTIONS */}
       <div className="card">
-        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <FileText className="w-5 h-5 text-aeria-blue" />
-          Briefing Content
-          <span className="text-xs font-normal text-gray-500">Select items to include</span>
+        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Eye className="w-5 h-5 text-aeria-blue" />
+          Briefing Review
+          <span className="text-xs font-normal text-gray-500 ml-2">Click each section to expand and review</span>
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-          {[
-            { key: 'projectOverview', label: 'Project Overview', icon: FileText },
-            { key: 'crew', label: 'Crew & Roles', icon: Users },
-            { key: 'aircraft', label: 'Aircraft/Equipment', icon: Plane },
-            { key: 'flightPlan', label: 'Flight Plan', icon: MapPin },
-            { key: 'hazards', label: 'Hazards & Controls', icon: AlertTriangle },
-            { key: 'ppe', label: 'PPE Requirements', icon: HardHat },
-            { key: 'emergency', label: 'Emergency Contacts', icon: Phone },
-            { key: 'musterPoint', label: 'Muster Point', icon: MapPin },
-            { key: 'evacRoutes', label: 'Evacuation Routes', icon: AlertOctagon },
-            { key: 'communications', label: 'Communications', icon: Radio },
-            { key: 'weather', label: 'Weather Data', icon: Wind },
-            { key: 'siteInfo', label: 'Site Details', icon: MapPin }
-          ].map(item => {
-            const Icon = item.icon
-            const isIncluded = includedSections[item.key]
+
+        <div className="space-y-2">
+          {BRIEFING_SECTIONS.map(section => {
+            const Icon = section.icon
+            const isReviewed = sectionReviews[section.id]
+            const isExpanded = expandedSections[section.id]
+
             return (
-              <label
-                key={item.key}
-                className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors text-sm ${
-                  isIncluded
-                    ? 'bg-aeria-sky border-aeria-navy/30 text-aeria-navy'
-                    : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={isIncluded}
-                  onChange={() => toggleIncludedSection(item.key)}
-                  className="w-4 h-4 rounded border-gray-300 text-aeria-navy"
-                />
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">{item.label}</span>
-              </label>
+              <div key={section.id} className={`border rounded-lg overflow-hidden ${isReviewed ? 'border-green-300 bg-green-50/50' : 'border-gray-200'}`}>
+                <button
+                  onClick={() => setExpandedSections(prev => ({ ...prev, [section.id]: !prev[section.id] }))}
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className={`w-5 h-5 ${isReviewed ? 'text-green-600' : 'text-gray-400'}`} />
+                    <span className={`font-medium ${isReviewed ? 'text-green-800' : 'text-gray-700'}`}>{section.label}</span>
+                    {section.required && !isReviewed && (
+                      <span className="text-xs text-amber-600">Required</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isReviewed && <CheckCircle2 className="w-5 h-5 text-green-500" />}
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    {/* Section content rendered based on type */}
+                    <div className="py-3">
+                      {section.id === 'projectOverview' && (
+                        <div className="p-4 bg-gradient-to-r from-aeria-navy to-aeria-blue text-white rounded-lg">
+                          <h4 className="text-lg font-bold">{project.name || 'Untitled Project'}</h4>
+                          <div className="grid sm:grid-cols-4 gap-4 mt-3 text-sm">
+                            <div><p className="text-white/70">Date</p><p className="font-semibold">{formatShortDate(currentDay.date)}</p></div>
+                            <div><p className="text-white/70">Client</p><p className="font-semibold">{project.clientName || 'N/A'}</p></div>
+                            <div><p className="text-white/70">Operation</p><p className="font-semibold">{project.flightPlan?.operationType || 'VLOS'}</p></div>
+                            <div><p className="text-white/70">Max Alt</p><p className="font-semibold">{project.flightPlan?.maxAltitudeAGL || 120}m AGL</p></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {section.id === 'weather' && <SiteWeatherWidget activeSite={activeSite} />}
+
+                      {section.id === 'crew' && allCrew.length > 0 && (
+                        <div className="grid sm:grid-cols-2 gap-2 text-sm">
+                          {allCrew.map((member, i) => (
+                            <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                              <Users className="w-4 h-4 text-gray-400" />
+                              <span className="font-medium">{member.role}:</span>
+                              <span>{member.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {section.id === 'aircraft' && (
+                        <div className="text-sm space-y-1">
+                          <p><span className="font-medium">Aircraft:</span> {project.aircraft?.nickname || project.aircraft?.model || 'Not specified'}</p>
+                          {project.aircraft?.registration && <p><span className="font-medium">Registration:</span> {project.aircraft.registration}</p>}
+                        </div>
+                      )}
+
+                      {section.id === 'flightPlan' && (
+                        <div className="grid sm:grid-cols-2 gap-2 text-sm">
+                          <div><span className="font-medium">Operation:</span> {project.flightPlan?.operationType || 'VLOS'}</div>
+                          <div><span className="font-medium">Max Altitude:</span> {project.flightPlan?.maxAltitudeAGL || 120}m AGL</div>
+                          {project.flightPlan?.flightArea && <div><span className="font-medium">Area:</span> {project.flightPlan.flightArea}</div>}
+                        </div>
+                      )}
+
+                      {section.id === 'siteInfo' && activeSite && (
+                        <div className="text-sm">
+                          <p><span className="font-medium">Site:</span> {activeSite.name || 'Site 1'}</p>
+                          {activeSite.address && <p><span className="font-medium">Address:</span> {activeSite.address}</p>}
+                        </div>
+                      )}
+
+                      {section.id === 'hazards' && hazards.length > 0 && (
+                        <div className="space-y-2">
+                          {hazards.slice(0, 5).map((hazard, i) => (
+                            <div key={i} className="text-sm p-2 bg-amber-50 rounded">
+                              <p className="font-medium text-amber-900">{hazard.description || 'Unnamed'}</p>
+                              <p className="text-amber-700">→ {hazard.controls || 'None documented'}</p>
+                            </div>
+                          ))}
+                          {hazards.length > 5 && <p className="text-sm text-gray-500">+ {hazards.length - 5} more hazards</p>}
+                        </div>
+                      )}
+
+                      {section.id === 'ppe' && ppeItems.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {ppeItems.map((item, i) => (
+                            <span key={i} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">{item}</span>
+                          ))}
+                        </div>
+                      )}
+
+                      {section.id === 'emergency' && (
+                        <div className="grid sm:grid-cols-2 gap-2 text-sm">
+                          <div className="p-2 bg-red-50 rounded">
+                            <span className="text-red-700 font-medium">Emergency Contact: </span>
+                            <span className="text-red-900">{project.emergencyPlan?.primaryEmergencyContact?.name || 'Not set'} - {project.emergencyPlan?.primaryEmergencyContact?.phone || 'N/A'}</span>
+                          </div>
+                          <div className="p-2 bg-red-50 rounded">
+                            <span className="text-red-700 font-medium">Hospital: </span>
+                            <span className="text-red-900">{project.emergencyPlan?.nearestHospital || 'Not set'}</span>
+                          </div>
+                          {project.emergencyPlan?.rallyPoint && (
+                            <div className="p-2 bg-green-50 rounded sm:col-span-2">
+                              <span className="text-green-700 font-medium">Muster Point: </span>
+                              <span className="text-green-900">{project.emergencyPlan.rallyPoint}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {section.id === 'communications' && project.communications && (
+                        <div className="text-sm space-y-1">
+                          {project.communications.primaryChannel && <p><span className="font-medium">Primary Channel:</span> {project.communications.primaryChannel}</p>}
+                          {project.communications.emergencyChannel && <p><span className="font-medium">Emergency:</span> {project.communications.emergencyChannel}</p>}
+                          {project.communications.emergencyWord && <p><span className="font-medium">Emergency Word:</span> {project.communications.emergencyWord}</p>}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Mark as Reviewed button */}
+                    <button
+                      onClick={() => toggleSectionReview(section.id)}
+                      className={`w-full py-2 rounded-lg font-medium text-sm transition-colors ${
+                        isReviewed
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-aeria-navy text-white hover:bg-aeria-navy/90'
+                      }`}
+                    >
+                      {isReviewed ? '✓ Reviewed' : 'Mark as Reviewed'}
+                    </button>
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>
       </div>
 
-      {/* Date Picker (for current day) */}
+      {/* Date Picker moved here for quick access */}
       <div className="card">
         <label className="label">Operation Date</label>
         <input
@@ -804,58 +989,12 @@ export default function ProjectTailgate({ project, onUpdate }) {
           className="input max-w-xs"
         />
         {!isMultiDay && (
-          <button 
+          <button
             onClick={() => updateTailgate({ isMultiDay: true })}
             className="ml-4 text-sm text-blue-600 hover:text-blue-800"
           >
             + Enable multi-day operation
           </button>
-        )}
-      </div>
-
-      {/* Go / No-Go Decision */}
-      <div className="card border-2 border-gray-200">
-        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <ClipboardCheck className="w-5 h-5 text-aeria-blue" />
-          Go / No-Go Decision
-        </h3>
-        
-        <div className="flex flex-wrap gap-4 mb-4">
-          <button
-            onClick={() => handleGoNoGoDecision(true)}
-            className={`flex-1 min-w-[150px] p-4 rounded-lg border-2 transition-all flex items-center justify-center gap-3 ${
-              currentDay.goNoGoDecision === true
-                ? 'border-green-500 bg-green-50 text-green-700'
-                : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50'
-            }`}
-          >
-            <ThumbsUp className="w-6 h-6" />
-            <span className="text-lg font-semibold">GO</span>
-          </button>
-
-          <button
-            onClick={() => handleGoNoGoDecision(false)}
-            className={`flex-1 min-w-[150px] p-4 rounded-lg border-2 transition-all flex items-center justify-center gap-3 ${
-              currentDay.goNoGoDecision === false
-                ? 'border-red-500 bg-red-50 text-red-700'
-                : 'border-gray-200 hover:border-red-300 hover:bg-red-50/50'
-            }`}
-          >
-            <ThumbsDown className="w-6 h-6" />
-            <span className="text-lg font-semibold">NO-GO</span>
-          </button>
-        </div>
-        
-        {currentDay.goNoGoDecision === false && (
-          <div>
-            <label className="label">Reason for No-Go</label>
-            <textarea
-              value={currentDay.goNoGoNotes || ''}
-              onChange={(e) => updateCurrentDay({ goNoGoNotes: e.target.value })}
-              className="input min-h-[80px]"
-              placeholder="Document the reason for the No-Go decision..."
-            />
-          </div>
         )}
       </div>
 
@@ -1348,6 +1487,113 @@ export default function ProjectTailgate({ project, onUpdate }) {
                 placeholder="Any other items for today's briefing..."
               />
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================== */}
+      {/* GO / NO-GO DECISION - AT THE END */}
+      {/* ========================================== */}
+      <div className={`card border-4 ${
+        currentDay.goNoGoDecision === true
+          ? 'border-green-500 bg-green-50'
+          : currentDay.goNoGoDecision === false
+          ? 'border-red-500 bg-red-50'
+          : 'border-gray-300'
+      }`}>
+        <div className="text-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-2">
+            <ClipboardCheck className="w-6 h-6 text-aeria-blue" />
+            Final Decision
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            {allSectionsReviewed
+              ? 'All sections reviewed. Make your GO / NO-GO decision.'
+              : `Complete review of all sections first (${reviewedSections}/${totalSections} done)`
+            }
+          </p>
+        </div>
+
+        {/* Readiness checklist summary */}
+        <div className="grid sm:grid-cols-3 gap-4 mb-6 p-4 bg-white rounded-lg border border-gray-200">
+          <div className={`text-center p-3 rounded-lg ${allSectionsReviewed ? 'bg-green-100' : 'bg-gray-100'}`}>
+            <p className={`text-2xl font-bold ${allSectionsReviewed ? 'text-green-700' : 'text-gray-500'}`}>
+              {reviewedSections}/{totalSections}
+            </p>
+            <p className="text-xs text-gray-600">Sections Reviewed</p>
+          </div>
+          <div className={`text-center p-3 rounded-lg ${completedCount === totalChecklistItems ? 'bg-green-100' : 'bg-gray-100'}`}>
+            <p className={`text-2xl font-bold ${completedCount === totalChecklistItems ? 'text-green-700' : 'text-gray-500'}`}>
+              {completedCount}/{totalChecklistItems}
+            </p>
+            <p className="text-xs text-gray-600">Checklist Items</p>
+          </div>
+          <div className={`text-center p-3 rounded-lg ${attendedCount === allCrew.length ? 'bg-green-100' : 'bg-gray-100'}`}>
+            <p className={`text-2xl font-bold ${attendedCount === allCrew.length ? 'text-green-700' : 'text-gray-500'}`}>
+              {attendedCount}/{allCrew.length}
+            </p>
+            <p className="text-xs text-gray-600">Crew Present</p>
+          </div>
+        </div>
+
+        {/* GO / NO-GO Buttons */}
+        <div className="flex flex-wrap gap-4 mb-4">
+          <button
+            onClick={() => handleGoNoGoDecision(true)}
+            disabled={!allSectionsReviewed}
+            className={`flex-1 min-w-[200px] p-6 rounded-xl border-4 transition-all flex flex-col items-center justify-center gap-2 ${
+              currentDay.goNoGoDecision === true
+                ? 'border-green-500 bg-green-100 text-green-700 shadow-lg'
+                : !allSectionsReviewed
+                ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                : 'border-gray-200 hover:border-green-400 hover:bg-green-50/50'
+            }`}
+          >
+            <ThumbsUp className="w-10 h-10" />
+            <span className="text-2xl font-bold">GO</span>
+            <span className="text-xs opacity-75">Operation Approved</span>
+          </button>
+
+          <button
+            onClick={() => handleGoNoGoDecision(false)}
+            className={`flex-1 min-w-[200px] p-6 rounded-xl border-4 transition-all flex flex-col items-center justify-center gap-2 ${
+              currentDay.goNoGoDecision === false
+                ? 'border-red-500 bg-red-100 text-red-700 shadow-lg'
+                : 'border-gray-200 hover:border-red-400 hover:bg-red-50/50'
+            }`}
+          >
+            <ThumbsDown className="w-10 h-10" />
+            <span className="text-2xl font-bold">NO-GO</span>
+            <span className="text-xs opacity-75">Operation Cancelled</span>
+          </button>
+        </div>
+
+        {/* NO-GO Reason */}
+        {currentDay.goNoGoDecision === false && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <label className="label text-red-800">Reason for No-Go Decision</label>
+            <textarea
+              value={currentDay.goNoGoNotes || ''}
+              onChange={(e) => updateCurrentDay({ goNoGoNotes: e.target.value })}
+              className="input min-h-[100px] border-red-300"
+              placeholder="Document the reason for the No-Go decision..."
+            />
+          </div>
+        )}
+
+        {/* GO Confirmation */}
+        {currentDay.goNoGoDecision === true && (
+          <div className="mt-4 p-4 bg-green-100 border border-green-300 rounded-lg text-center">
+            <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-2" />
+            <p className="text-lg font-semibold text-green-800">Operations Approved</p>
+            <p className="text-sm text-green-700 mt-1">
+              Tailgate briefing has been distributed to the team.
+            </p>
+            {currentDay.distributedAt && (
+              <p className="text-xs text-green-600 mt-2">
+                Distributed at {new Date(currentDay.distributedAt).toLocaleString()}
+              </p>
+            )}
           </div>
         )}
       </div>

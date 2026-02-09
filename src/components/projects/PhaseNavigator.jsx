@@ -17,13 +17,14 @@ import {
 } from 'lucide-react'
 
 // Phase definitions with their associated tabs
+// Order: PLAN → SITES → SAFETY → DELIVER (planning completion) → FIELD (in-field operations)
 export const PHASES = [
   {
     id: 'plan',
     label: 'Plan',
     icon: ClipboardList,
     description: 'Project setup & preparation',
-    tabs: ['overview', 'needs', 'costs', 'time', 'expenses', 'sections', 'preField', 'templates', 'proposal', 'crew', 'equipment', 'review', 'team', 'notifications', 'forms']
+    tabs: ['overview', 'needs', 'costs', 'time', 'expenses', 'sections', 'preField', 'templates', 'crew', 'equipment', 'review', 'team', 'notifications', 'forms']
   },
   {
     id: 'sites',
@@ -40,18 +41,18 @@ export const PHASES = [
     tabs: ['hseRisk', 'sora', 'emergency', 'ppe', 'comms']
   },
   {
+    id: 'deliver',
+    label: 'Deliver',
+    icon: PackageCheck,
+    description: 'Proposal, post-field & export',
+    tabs: ['postField', 'proposal', 'export']
+  },
+  {
     id: 'field',
     label: 'Field',
     icon: Plane,
     description: 'In-field operations',
     tabs: ['tailgate', 'activities']
-  },
-  {
-    id: 'deliver',
-    label: 'Deliver',
-    icon: PackageCheck,
-    description: 'Post-field & export',
-    tabs: ['postField', 'export']
   }
 ]
 
