@@ -727,12 +727,47 @@ function EmergencyProceduresList({ procedures = [], onChange }) {
     onChange(proceduresArray.filter(p => p.id !== procId))
   }
 
+  const handleLoadDefaults = () => {
+    if (proceduresArray.length > 0) {
+      if (!confirm('This will replace existing procedures. Continue?')) return
+    }
+    const defaultProcedures = DEFAULT_PROCEDURES.filter(p => p.type !== 'custom').map(p => ({
+      id: `proc_${Date.now()}_${p.type}`,
+      type: p.type,
+      steps: p.steps,
+      notes: ''
+    }))
+    onChange(defaultProcedures)
+  }
+
   // Filter out existing types, but always allow 'custom' to be added multiple times
   const existingTypes = proceduresArray.map(p => p.type)
   const availableTypes = EMERGENCY_TYPES.filter(t => t.isCustom || !existingTypes.includes(t.id))
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-600">
+          Define emergency response procedures for site-specific situations
+        </p>
+        <button
+          type="button"
+          onClick={handleLoadDefaults}
+          className="text-sm text-aeria-navy hover:underline flex items-center gap-1"
+        >
+          <Copy className="w-3 h-3" />
+          Load All Defaults
+        </button>
+      </div>
+
+      {proceduresArray.length === 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <p className="text-sm text-amber-800">
+            No emergency response procedures defined. Click "Load All Defaults" to populate standard procedures, or add specific ones below.
+          </p>
+        </div>
+      )}
+
       {proceduresArray.map((procedure) => {
         const typeInfo = EMERGENCY_TYPES.find(t => t.id === procedure.type)
         const isExpanded = expandedId === procedure.id
