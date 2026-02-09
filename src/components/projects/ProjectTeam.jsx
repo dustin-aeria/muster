@@ -64,7 +64,7 @@ export default function ProjectTeam({ project, onUpdate }) {
   const loadDistributionLists = async () => {
     try {
       setLoading(true)
-      const lists = await getDistributionLists(project.id)
+      const lists = await getDistributionLists(project.id, project.organizationId)
       setDistributionLists(lists)
     } catch (error) {
       console.error('Failed to load distribution lists:', error)
@@ -120,6 +120,7 @@ export default function ProjectTeam({ project, onUpdate }) {
       } else {
         await createDistributionList({
           ...listData,
+          organizationId: project.organizationId,
           projectId: project.id
         })
       }
@@ -148,7 +149,7 @@ export default function ProjectTeam({ project, onUpdate }) {
   const handleCreateDefaultLists = async () => {
     try {
       setLoading(true)
-      await createDefaultListsForProject(project.id, project.crew || [])
+      await createDefaultListsForProject(project.id, project.organizationId, project.crew || [])
       await loadDistributionLists()
     } catch (error) {
       console.error('Failed to create default lists:', error)

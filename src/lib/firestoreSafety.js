@@ -2,6 +2,8 @@
  * Muster - Safety Data Operations
  * Firestore functions for incidents, CAPAs, and KPI calculations
  *
+ * UPDATED: All queries now require organizationId for Firestore security rules
+ *
  * Phase 1: Foundation for Safety KPI Dashboard
  * @version 1.0.0
  */
@@ -1019,9 +1021,15 @@ export function determineRegulatoryNotifications(incidentData) {
 
 /**
  * Get incidents requiring regulatory notification
+ * @param {string} organizationId - Required for security rules
  */
-export async function getIncidentsRequiringNotification() {
-  const incidents = await getIncidents({ status: 'reported' })
+export async function getIncidentsRequiringNotification(organizationId) {
+  if (!organizationId) {
+    console.warn('getIncidentsRequiringNotification called without organizationId')
+    return []
+  }
+
+  const incidents = await getIncidents(organizationId, { status: 'reported' })
   
   return incidents.filter(inc => {
     const notif = inc.regulatoryNotifications || {}
@@ -1067,44 +1075,66 @@ export async function markNotificationComplete(incidentId, notificationType, ref
 
 /**
  * Calculate days since last recordable incident
+ * @param {string} organizationId - Required for security rules
+ * @param {boolean} excludeNearMiss - Whether to exclude near misses
  */
-export async function getDaysSinceLastIncident(excludeNearMiss = true) {
-  let q = query(incidentsRef, orderBy('dateOccurred', 'desc'), limit(1))
-  
+export async function getDaysSinceLastIncident(organizationId, excludeNearMiss = true) {
+  if (!organizationId) {
+    console.warn('getDaysSinceLastIncident called without organizationId')
+    return { days: null, lastIncident: null, message: 'No organizationId provided' }
+  }
+
+  let q = query(
+    incidentsRef,
+    where('organizationId', '==', organizationId),
+    orderBy('dateOccurred', 'desc'),
+    limit(1)
+  )
+
   if (excludeNearMiss) {
     q = query(
       incidentsRef,
+      where('organizationId', '==', organizationId),
       where('severity', 'in', ['minor', 'moderate', 'serious', 'critical', 'fatal']),
       orderBy('dateOccurred', 'desc'),
       limit(1)
     )
   }
-  
+
   const snapshot = await getDocs(q)
-  
+
   if (snapshot.empty) {
     return { days: null, lastIncident: null, message: 'No incidents on record' }
   }
-  
+
   const lastIncident = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() }
-  const lastDate = lastIncident.dateOccurred?.toDate 
-    ? lastIncident.dateOccurred.toDate() 
+  const lastDate = lastIncident.dateOccurred?.toDate
+    ? lastIncident.dateOccurred.toDate()
     : new Date(lastIncident.dateOccurred)
-  
+
   const days = Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24))
-  
+
   return { days, lastIncident, message: null }
 }
 
 /**
  * Get incident statistics for a time period
+ * @param {string} organizationId - Required for security rules
+ * @param {string} startDate - Start date ISO string
+ * @param {string} endDate - End date ISO string
  */
-export async function getIncidentStats(startDate, endDate) {
+export async function getIncidentStats(organizationId, startDate, endDate) {
+  if (!organizationId) {
+    console.warn('getIncidentStats called without organizationId')
+    return { total: 0, byType: {}, bySeverity: {}, byStatus: {}, byRpasType: {}, totalRecordable: 0, totalNearMiss: 0, totalLostDays: 0, incidents: [] }
+  }
+
   const start = Timestamp.fromDate(new Date(startDate))
   const end = Timestamp.fromDate(new Date(endDate))
-  
+
   const q = query(
     incidentsRef,
+    where('organizationId', '==', organizationId),
     where('dateOccurred', '>=', start),
     where('dateOccurred', '<=', end),
     orderBy('dateOccurred', 'desc')
@@ -1173,13 +1203,14 @@ export async function getIncidentStats(startDate, endDate) {
 /**
  * Calculate TRIR (Total Recordable Incident Rate)
  * Formula: (Number of recordable incidents * 200,000) / Total hours worked
+ * @param {string} organizationId - Required for security rules
  */
-export async function calculateTRIR(startDate, endDate, totalHoursWorked) {
+export async function calculateTRIR(organizationId, startDate, endDate, totalHoursWorked) {
   if (!totalHoursWorked || totalHoursWorked === 0) {
     return { trir: 0, recordableCount: 0, message: 'No hours worked provided' }
   }
-  
-  const stats = await getIncidentStats(startDate, endDate)
+
+  const stats = await getIncidentStats(organizationId, startDate, endDate)
   const trir = (stats.totalRecordable * 200000) / totalHoursWorked
   
   return {
@@ -1192,17 +1223,24 @@ export async function calculateTRIR(startDate, endDate, totalHoursWorked) {
 /**
  * Calculate LTIFR (Lost Time Injury Frequency Rate)
  * Formula: (Number of LTIs * 1,000,000) / Total hours worked
+ * @param {string} organizationId - Required for security rules
  */
-export async function calculateLTIFR(startDate, endDate, totalHoursWorked) {
+export async function calculateLTIFR(organizationId, startDate, endDate, totalHoursWorked) {
   if (!totalHoursWorked || totalHoursWorked === 0) {
     return { ltifr: 0, ltiCount: 0, message: 'No hours worked provided' }
   }
-  
+
+  if (!organizationId) {
+    console.warn('calculateLTIFR called without organizationId')
+    return { ltifr: 0, ltiCount: 0, message: 'No organizationId provided' }
+  }
+
   const start = Timestamp.fromDate(new Date(startDate))
   const end = Timestamp.fromDate(new Date(endDate))
-  
+
   const q = query(
     incidentsRef,
+    where('organizationId', '==', organizationId),
     where('dateOccurred', '>=', start),
     where('dateOccurred', '<=', end),
     where('type', '==', 'lost_time')
@@ -1223,9 +1261,10 @@ export async function calculateLTIFR(startDate, endDate, totalHoursWorked) {
 /**
  * Calculate Near Miss Ratio
  * A healthy safety culture typically has 10:1 or higher near miss to incident ratio
+ * @param {string} organizationId - Required for security rules
  */
-export async function calculateNearMissRatio(startDate, endDate) {
-  const stats = await getIncidentStats(startDate, endDate)
+export async function calculateNearMissRatio(organizationId, startDate, endDate) {
+  const stats = await getIncidentStats(organizationId, startDate, endDate)
   
   const actualIncidents = stats.total - stats.totalNearMiss
   
@@ -1255,16 +1294,23 @@ export async function calculateNearMissRatio(startDate, endDate) {
 
 /**
  * Get CAPA statistics
+ * @param {string} organizationId - Required for security rules
+ * @param {Object} filters - Optional filters (startDate, endDate)
  */
-export async function getCapaStats(filters = {}) {
-  let q = query(capasRef)
-  
+export async function getCapaStats(organizationId, filters = {}) {
+  if (!organizationId) {
+    console.warn('getCapaStats called without organizationId')
+    return { total: 0, byStatus: {}, byType: {}, byPriority: {}, totalOverdue: 0, openCount: 0, closedCount: 0, onTimeRate: null, effectivenessRate: null, averageDaysToClose: null, capas: [] }
+  }
+
+  let q = query(capasRef, where('organizationId', '==', organizationId))
+
   if (filters.startDate && filters.endDate) {
     const start = Timestamp.fromDate(new Date(filters.startDate))
     const end = Timestamp.fromDate(new Date(filters.endDate))
-    q = query(capasRef, where('createdAt', '>=', start), where('createdAt', '<=', end))
+    q = query(capasRef, where('organizationId', '==', organizationId), where('createdAt', '>=', start), where('createdAt', '<=', end))
   }
-  
+
   const snapshot = await getDocs(q)
   const capas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
   
@@ -1343,12 +1389,19 @@ export async function getCapaStats(filters = {}) {
 
 /**
  * Get overdue CAPAs
+ * @param {string} organizationId - Required for security rules
  */
-export async function getOverdueCapas() {
+export async function getOverdueCapas(organizationId) {
+  if (!organizationId) {
+    console.warn('getOverdueCapas called without organizationId')
+    return []
+  }
+
   const now = Timestamp.now()
-  
+
   const q = query(
     capasRef,
+    where('organizationId', '==', organizationId),
     where('status', 'in', ['open', 'in_progress']),
     where('targetDate', '<', now),
     orderBy('targetDate', 'asc')
@@ -1365,13 +1418,21 @@ export async function getOverdueCapas() {
 
 /**
  * Get CAPAs due soon (next 7 days)
+ * @param {string} organizationId - Required for security rules
+ * @param {number} days - Number of days to look ahead
  */
-export async function getCapasDueSoon(days = 7) {
+export async function getCapasDueSoon(organizationId, days = 7) {
+  if (!organizationId) {
+    console.warn('getCapasDueSoon called without organizationId')
+    return []
+  }
+
   const now = new Date()
   const futureDate = new Date(now.getTime() + (days * 24 * 60 * 60 * 1000))
-  
+
   const q = query(
     capasRef,
+    where('organizationId', '==', organizationId),
     where('status', 'in', ['open', 'in_progress']),
     where('targetDate', '>=', Timestamp.fromDate(now)),
     where('targetDate', '<=', Timestamp.fromDate(futureDate)),
@@ -1393,37 +1454,43 @@ export async function getCapasDueSoon(days = 7) {
 
 /**
  * Get comprehensive safety dashboard data
+ * @param {string} organizationId - Required for security rules
  */
-export async function getSafetyDashboardData() {
+export async function getSafetyDashboardData(organizationId) {
+  if (!organizationId) {
+    console.warn('getSafetyDashboardData called without organizationId')
+    return null
+  }
+
   const now = new Date()
   const yearStart = new Date(now.getFullYear(), 0, 1)
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const lastYear = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
-  
+
   // Get days since last incident
-  const daysSinceIncident = await getDaysSinceLastIncident(true)
-  
+  const daysSinceIncident = await getDaysSinceLastIncident(organizationId, true)
+
   // Get YTD incident stats
-  const ytdIncidentStats = await getIncidentStats(yearStart.toISOString(), now.toISOString())
-  
+  const ytdIncidentStats = await getIncidentStats(organizationId, yearStart.toISOString(), now.toISOString())
+
   // Get MTD incident stats
-  const mtdIncidentStats = await getIncidentStats(monthStart.toISOString(), now.toISOString())
-  
+  const mtdIncidentStats = await getIncidentStats(organizationId, monthStart.toISOString(), now.toISOString())
+
   // Get CAPA stats
-  const capaStats = await getCapaStats()
-  
+  const capaStats = await getCapaStats(organizationId)
+
   // Get overdue items
-  const overdueCapas = await getOverdueCapas()
-  const capasDueSoon = await getCapasDueSoon(7)
-  
+  const overdueCapas = await getOverdueCapas(organizationId)
+  const capasDueSoon = await getCapasDueSoon(organizationId, 7)
+
   // Get incidents requiring notification
-  const pendingNotifications = await getIncidentsRequiringNotification()
-  
+  const pendingNotifications = await getIncidentsRequiringNotification(organizationId)
+
   // Calculate near miss ratio YTD
-  const nearMissRatio = await calculateNearMissRatio(yearStart.toISOString(), now.toISOString())
-  
+  const nearMissRatio = await calculateNearMissRatio(organizationId, yearStart.toISOString(), now.toISOString())
+
   // Get open incidents under investigation
-  const openIncidents = await getIncidents({ status: 'under_investigation' })
+  const openIncidents = await getIncidents(organizationId, { status: 'under_investigation' })
   
   return {
     // Hero Metric
@@ -1481,16 +1548,23 @@ export async function getSafetyDashboardData() {
 
 /**
  * Get trend data for charts (last 12 months)
+ * @param {string} organizationId - Required for security rules
+ * @param {number} months - Number of months to include
  */
-export async function getIncidentTrendData(months = 12) {
+export async function getIncidentTrendData(organizationId, months = 12) {
+  if (!organizationId) {
+    console.warn('getIncidentTrendData called without organizationId')
+    return []
+  }
+
   const trends = []
   const now = new Date()
-  
+
   for (let i = months - 1; i >= 0; i--) {
     const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0)
-    
-    const stats = await getIncidentStats(monthStart.toISOString(), monthEnd.toISOString())
+
+    const stats = await getIncidentStats(organizationId, monthStart.toISOString(), monthEnd.toISOString())
     
     trends.push({
       month: monthStart.toLocaleString('default', { month: 'short', year: '2-digit' }),

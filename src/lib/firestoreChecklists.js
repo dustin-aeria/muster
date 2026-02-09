@@ -2,6 +2,8 @@
  * Firestore Checklists Service
  * Manage operational checklists for flights and projects
  *
+ * UPDATED: All queries now require organizationId for Firestore security rules
+ *
  * @location src/lib/firestoreChecklists.js
  */
 
@@ -19,6 +21,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { requireOrgId } from './firestoreQueryUtils'
 
 // ============================================
 // CHECKLIST TYPES
@@ -109,6 +112,8 @@ export const DEFAULT_CHECKLISTS = {
  * Create a checklist template
  */
 export async function createChecklistTemplate(templateData) {
+  requireOrgId(templateData.organizationId, 'create checklist template')
+
   const template = {
     organizationId: templateData.organizationId,
     name: templateData.name,
@@ -127,12 +132,14 @@ export async function createChecklistTemplate(templateData) {
 }
 
 /**
- * Get checklist templates for an operator
+ * Get checklist templates for an organization
  */
 export async function getChecklistTemplates(organizationId, options = {}) {
+  requireOrgId(organizationId, 'get checklist templates')
+
   const { type = null } = options
 
-  let q = query(
+  const q = query(
     collection(db, 'checklistTemplates'),
     where('organizationId', '==', organizationId),
     orderBy('name', 'asc')
@@ -179,6 +186,8 @@ export async function deleteChecklistTemplate(templateId) {
  * Create a checklist instance (filled out checklist)
  */
 export async function createChecklistInstance(instanceData) {
+  requireOrgId(instanceData.organizationId, 'create checklist instance')
+
   const instance = {
     organizationId: instanceData.organizationId,
     templateId: instanceData.templateId || null,
@@ -211,10 +220,15 @@ export async function createChecklistInstance(instanceData) {
 
 /**
  * Get checklist instances for a project
+ * @param {string} organizationId - Required for security rules
+ * @param {string} projectId - Project ID
  */
-export async function getProjectChecklists(projectId) {
+export async function getProjectChecklists(organizationId, projectId) {
+  requireOrgId(organizationId, 'get project checklists')
+
   const q = query(
     collection(db, 'checklistInstances'),
+    where('organizationId', '==', organizationId),
     where('projectId', '==', projectId),
     orderBy('createdAt', 'desc')
   )
@@ -231,10 +245,15 @@ export async function getProjectChecklists(projectId) {
 
 /**
  * Get checklist instances for a flight
+ * @param {string} organizationId - Required for security rules
+ * @param {string} flightLogId - Flight log ID
  */
-export async function getFlightChecklists(flightLogId) {
+export async function getFlightChecklists(organizationId, flightLogId) {
+  requireOrgId(organizationId, 'get flight checklists')
+
   const q = query(
     collection(db, 'checklistInstances'),
+    where('organizationId', '==', organizationId),
     where('flightLogId', '==', flightLogId),
     orderBy('createdAt', 'desc')
   )

@@ -2,6 +2,8 @@
  * Firestore Equipment Assignments Service
  * Assign equipment to projects and track usage
  *
+ * UPDATED: All queries now require organizationId for Firestore security rules
+ *
  * @location src/lib/firestoreEquipmentAssignments.js
  */
 
@@ -18,6 +20,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { requireOrgId } from './firestoreQueryUtils'
 
 // ============================================
 // ASSIGNMENT STATUS
@@ -38,6 +41,8 @@ export const ASSIGNMENT_STATUS = {
  * Create an equipment assignment
  */
 export async function createEquipmentAssignment(assignmentData) {
+  requireOrgId(assignmentData.organizationId, 'create equipment assignment')
+
   const assignment = {
     equipmentId: assignmentData.equipmentId,
     equipmentName: assignmentData.equipmentName,
@@ -64,10 +69,15 @@ export async function createEquipmentAssignment(assignmentData) {
 
 /**
  * Get assignments for a project
+ * @param {string} organizationId - Required for security rules
+ * @param {string} projectId - Project ID
  */
-export async function getProjectAssignments(projectId) {
+export async function getProjectAssignments(organizationId, projectId) {
+  requireOrgId(organizationId, 'get project assignments')
+
   const q = query(
     collection(db, 'equipmentAssignments'),
+    where('organizationId', '==', organizationId),
     where('projectId', '==', projectId),
     orderBy('createdAt', 'desc')
   )
@@ -87,10 +97,15 @@ export async function getProjectAssignments(projectId) {
 
 /**
  * Get assignments for equipment
+ * @param {string} organizationId - Required for security rules
+ * @param {string} equipmentId - Equipment ID
  */
-export async function getEquipmentAssignments(equipmentId) {
+export async function getEquipmentAssignments(organizationId, equipmentId) {
+  requireOrgId(organizationId, 'get equipment assignments')
+
   const q = query(
     collection(db, 'equipmentAssignments'),
+    where('organizationId', '==', organizationId),
     where('equipmentId', '==', equipmentId),
     orderBy('createdAt', 'desc')
   )
@@ -189,9 +204,14 @@ export async function deleteEquipmentAssignment(assignmentId) {
 
 /**
  * Check if equipment is available for a date range
+ * @param {string} organizationId - Required for security rules
+ * @param {string} equipmentId - Equipment ID
+ * @param {Date} startDate - Start date
+ * @param {Date} endDate - End date
+ * @param {string} excludeAssignmentId - Assignment ID to exclude
  */
-export async function checkEquipmentAvailability(equipmentId, startDate, endDate, excludeAssignmentId = null) {
-  const assignments = await getEquipmentAssignments(equipmentId)
+export async function checkEquipmentAvailability(organizationId, equipmentId, startDate, endDate, excludeAssignmentId = null) {
+  const assignments = await getEquipmentAssignments(organizationId, equipmentId)
 
   // Filter out the assignment being edited
   const activeAssignments = assignments.filter(a =>
@@ -219,9 +239,13 @@ export async function checkEquipmentAvailability(equipmentId, startDate, endDate
 
 /**
  * Get equipment utilization stats
+ * @param {string} organizationId - Required for security rules
+ * @param {string} equipmentId - Equipment ID
+ * @param {Date} startDate - Start date
+ * @param {Date} endDate - End date
  */
-export async function getEquipmentUtilization(equipmentId, startDate, endDate) {
-  const assignments = await getEquipmentAssignments(equipmentId)
+export async function getEquipmentUtilization(organizationId, equipmentId, startDate, endDate) {
+  const assignments = await getEquipmentAssignments(organizationId, equipmentId)
 
   const periodStart = new Date(startDate)
   const periodEnd = new Date(endDate)

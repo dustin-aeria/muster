@@ -72,6 +72,7 @@ import {
   JOB_SYSTEM_FACTORS
 } from '../lib/formDefinitions'
 import { logger } from '../lib/logger'
+import { useOrganization } from '../hooks/useOrganization'
 
 // Collapsible section component
 function Section({ title, icon: Icon, children, defaultOpen = true, badge }) {
@@ -238,9 +239,10 @@ export default function IncidentDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { userProfile } = useAuth()
-  
+  const { organizationId } = useOrganization()
+
   // Get display name for current user
-  const currentUserName = userProfile 
+  const currentUserName = userProfile
     ? `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || userProfile.email
     : 'Unknown User'
   
@@ -277,8 +279,8 @@ export default function IncidentDetail() {
       setIncident(data)
       
       // Load linked CAPAs if any
-      if (data.linkedCapas?.length > 0) {
-        const capas = await getCapas({ incidentId: id })
+      if (data.linkedCapas?.length > 0 && organizationId) {
+        const capas = await getCapas(organizationId, { incidentId: id })
         setLinkedCapas(capas)
       }
       

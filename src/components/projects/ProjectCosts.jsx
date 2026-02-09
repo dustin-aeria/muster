@@ -57,7 +57,7 @@ export default function ProjectCosts({ project }) {
           getOperators(organizationId),
           getEquipment(organizationId),
           getAircraft(organizationId),
-          getExpensesByProject(project.id)
+          getExpensesByProject(organizationId, project.id)
         ])
         setFreshOperators(ops)
         setFreshEquipment(equip)

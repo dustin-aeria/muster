@@ -23,12 +23,14 @@ import {
   EXPENSE_STATUS
 } from '../../lib/firestoreExpenses'
 import { logger } from '../../lib/logger'
+import { useOrganization } from '../../hooks/useOrganization'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import ExpenseForm from '../expenses/ExpenseForm'
 import ExpenseList from '../expenses/ExpenseList'
 
 export default function ProjectExpenses({ project }) {
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [expenses, setExpenses] = useState([])
   const [showForm, setShowForm] = useState(false)
@@ -36,15 +38,15 @@ export default function ProjectExpenses({ project }) {
 
   // Load expenses
   useEffect(() => {
-    if (project?.id) {
+    if (organizationId && project?.id) {
       loadExpenses()
     }
-  }, [project?.id])
+  }, [organizationId, project?.id])
 
   const loadExpenses = async () => {
     try {
       setLoading(true)
-      const data = await getExpensesByProject(project.id)
+      const data = await getExpensesByProject(organizationId, project.id)
       setExpenses(data)
     } catch (err) {
       logger.error('Failed to load expenses:', err)

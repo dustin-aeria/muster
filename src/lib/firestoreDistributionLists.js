@@ -59,6 +59,7 @@ export const MEMBER_TYPES = {
  * Get default distribution list structure
  */
 export const getDefaultDistributionListStructure = () => ({
+  organizationId: '', // Required for Firestore security rules
   projectId: '',
   name: '',
   type: 'custom',
@@ -86,10 +87,16 @@ export const getDefaultMemberStructure = () => ({
 
 /**
  * Get all distribution lists for a project
+ * Note: organizationId is required for Firestore security rules to work with list queries
  */
-export async function getDistributionLists(projectId) {
+export async function getDistributionLists(projectId, organizationId) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to query distribution lists')
+  }
+
   const q = query(
     distributionListsRef,
+    where('organizationId', '==', organizationId),
     where('projectId', '==', projectId),
     orderBy('name', 'asc')
   )
@@ -116,6 +123,13 @@ export async function getDistributionList(id) {
  * Create a new distribution list
  */
 export async function createDistributionList(data) {
+  if (!data.organizationId) {
+    throw new Error('organizationId is required to create a distribution list')
+  }
+  if (!data.projectId) {
+    throw new Error('projectId is required to create a distribution list')
+  }
+
   const list = {
     ...getDefaultDistributionListStructure(),
     ...data,
@@ -137,8 +151,17 @@ export async function createDistributionList(data) {
 export async function updateDistributionList(id, data) {
   const docRef = doc(db, 'distributionLists', id)
 
+  // Get existing doc to preserve organizationId (required for security rules)
+  const existing = await getDoc(docRef)
+  if (!existing.exists()) {
+    throw new Error('Distribution list not found')
+  }
+
   const updateData = {
     ...data,
+    // Preserve organizationId and projectId (security rules require these)
+    organizationId: existing.data().organizationId,
+    projectId: existing.data().projectId,
     updatedAt: serverTimestamp()
   }
 
@@ -233,7 +256,14 @@ export async function updateMemberChannels(listId, memberIdentifier, channels) {
 /**
  * Create default distribution lists for a project
  */
-export async function createDefaultListsForProject(projectId, projectCrew = []) {
+export async function createDefaultListsForProject(projectId, organizationId, projectCrew = []) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to create distribution lists')
+  }
+  if (!projectId) {
+    throw new Error('projectId is required to create distribution lists')
+  }
+
   const batch = writeBatch(db)
   const createdLists = []
 
@@ -251,6 +281,7 @@ export async function createDefaultListsForProject(projectId, projectCrew = []) 
     }))
 
   batch.set(pilotsRef, {
+    organizationId,
     projectId,
     name: 'Pilots',
     type: 'pilots',
@@ -264,6 +295,7 @@ export async function createDefaultListsForProject(projectId, projectCrew = []) 
   // Create Safety Team list
   const safetyRef = doc(distributionListsRef)
   batch.set(safetyRef, {
+    organizationId,
     projectId,
     name: 'Safety Team',
     type: 'safety',
@@ -288,6 +320,7 @@ export async function createDefaultListsForProject(projectId, projectCrew = []) 
     }))
 
   batch.set(groundRef, {
+    organizationId,
     projectId,
     name: 'Ground Crew',
     type: 'ground',
@@ -301,6 +334,7 @@ export async function createDefaultListsForProject(projectId, projectCrew = []) 
   // Create Clients list (empty by default)
   const clientsRef = doc(distributionListsRef)
   batch.set(clientsRef, {
+    organizationId,
     projectId,
     name: 'Clients',
     type: 'clients',
@@ -318,8 +352,12 @@ export async function createDefaultListsForProject(projectId, projectCrew = []) 
 /**
  * Delete all distribution lists for a project
  */
-export async function deleteAllListsForProject(projectId) {
-  const lists = await getDistributionLists(projectId)
+export async function deleteAllListsForProject(projectId, organizationId) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to delete distribution lists')
+  }
+
+  const lists = await getDistributionLists(projectId, organizationId)
   const batch = writeBatch(db)
 
   lists.forEach(list => {
@@ -337,8 +375,12 @@ export async function deleteAllListsForProject(projectId) {
 /**
  * Get all members across all lists for a project (de-duplicated)
  */
-export async function getAllProjectMembers(projectId) {
-  const lists = await getDistributionLists(projectId)
+export async function getAllProjectMembers(projectId, organizationId) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to get project members')
+  }
+
+  const lists = await getDistributionLists(projectId, organizationId)
   const memberMap = new Map()
 
   lists.forEach(list => {
@@ -362,8 +404,12 @@ export async function getAllProjectMembers(projectId) {
 /**
  * Find lists containing a specific member
  */
-export async function getListsContainingMember(projectId, memberIdentifier) {
-  const lists = await getDistributionLists(projectId)
+export async function getListsContainingMember(projectId, organizationId, memberIdentifier) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to find lists')
+  }
+
+  const lists = await getDistributionLists(projectId, organizationId)
 
   return lists.filter(list =>
     list.members.some(m =>
@@ -375,8 +421,12 @@ export async function getListsContainingMember(projectId, memberIdentifier) {
 /**
  * Get members by channel preference
  */
-export async function getMembersByChannel(projectId, channel) {
-  const allMembers = await getAllProjectMembers(projectId)
+export async function getMembersByChannel(projectId, organizationId, channel) {
+  if (!organizationId) {
+    throw new Error('organizationId is required to get members by channel')
+  }
+
+  const allMembers = await getAllProjectMembers(projectId, organizationId)
   return allMembers.filter(member => member.channels.includes(channel))
 }
 

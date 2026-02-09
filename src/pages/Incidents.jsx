@@ -41,9 +41,11 @@ import {
   RPAS_INCIDENT_TYPES
 } from '../lib/firestoreSafety'
 import { usePermissions } from '../hooks/usePermissions'
+import { useOrganization } from '../hooks/useOrganization'
 import { logger } from '../lib/logger'
 
 export default function Incidents() {
+  const { organizationId } = useOrganization()
   const [searchParams, setSearchParams] = useSearchParams()
   const { canEdit, canDelete, can } = usePermissions()
   const canReportIncidents = can('reportIncidents')
@@ -56,8 +58,10 @@ export default function Incidents() {
   const [menuOpen, setMenuOpen] = useState(null)
 
   useEffect(() => {
-    loadIncidents()
-  }, [])
+    if (organizationId) {
+      loadIncidents()
+    }
+  }, [organizationId])
 
   useEffect(() => {
     // Update URL params when filters change
@@ -69,9 +73,10 @@ export default function Incidents() {
   }, [statusFilter, typeFilter, severityFilter])
 
   const loadIncidents = async () => {
+    if (!organizationId) return
     setLoading(true)
     try {
-      const data = await getIncidents()
+      const data = await getIncidents(organizationId)
       setIncidents(data)
     } catch (err) {
       logger.error('Error loading incidents:', err)

@@ -39,8 +39,10 @@ import {
   PRIORITY_LEVELS
 } from '../lib/firestoreSafety'
 import { logger } from '../lib/logger'
+import { useOrganization } from '../hooks/useOrganization'
 
 export default function Capas() {
+  const { organizationId } = useOrganization()
   const [searchParams, setSearchParams] = useSearchParams()
   const [capas, setCapas] = useState([])
   const [loading, setLoading] = useState(true)
@@ -51,8 +53,10 @@ export default function Capas() {
   const [menuOpen, setMenuOpen] = useState(null)
 
   useEffect(() => {
-    loadCapas()
-  }, [])
+    if (organizationId) {
+      loadCapas()
+    }
+  }, [organizationId])
 
   useEffect(() => {
     // Update URL params when filters change
@@ -64,9 +68,10 @@ export default function Capas() {
   }, [statusFilter, typeFilter, priorityFilter])
 
   const loadCapas = async () => {
+    if (!organizationId) return
     setLoading(true)
     try {
-      const data = await getCapas()
+      const data = await getCapas(organizationId)
       setCapas(data)
     } catch (err) {
       logger.error('Error loading CAPAs:', err)

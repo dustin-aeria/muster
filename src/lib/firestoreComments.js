@@ -2,6 +2,8 @@
  * Firestore Comments/Activity Service
  * Handles project comments and activity tracking for team collaboration
  *
+ * UPDATED: All queries now require organizationId for Firestore security rules
+ *
  * @location src/lib/firestoreComments.js
  */
 
@@ -19,6 +21,7 @@ import {
   onSnapshot
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { requireOrgId } from './firestoreQueryUtils'
 
 // ============================================
 // CONSTANTS
@@ -50,6 +53,8 @@ export const ACTIVITY_TYPES = {
  * Create a new comment on a project or entity
  */
 export async function createComment(commentData) {
+  requireOrgId(commentData.organizationId, 'create comment')
+
   const comment = {
     entityType: commentData.entityType || 'project', // project, incident, capa, etc.
     entityId: commentData.entityId,
@@ -86,12 +91,19 @@ export async function createComment(commentData) {
 
 /**
  * Get comments for an entity
+ * @param {string} organizationId - Required for security rules
+ * @param {string} entityType - Type of entity (project, incident, etc.)
+ * @param {string} entityId - ID of the entity
+ * @param {Object} options - Query options
  */
-export async function getComments(entityType, entityId, options = {}) {
+export async function getComments(organizationId, entityType, entityId, options = {}) {
+  requireOrgId(organizationId, 'get comments')
+
   const { includeResolved = true, pinnedFirst = true } = options
 
-  let q = query(
+  const q = query(
     collection(db, 'comments'),
+    where('organizationId', '==', organizationId),
     where('entityType', '==', entityType),
     where('entityId', '==', entityId),
     orderBy('createdAt', 'desc')
@@ -124,10 +136,17 @@ export async function getComments(entityType, entityId, options = {}) {
 
 /**
  * Subscribe to comments for real-time updates
+ * @param {string} organizationId - Required for security rules
+ * @param {string} entityType - Type of entity
+ * @param {string} entityId - ID of the entity
+ * @param {Function} callback - Callback function for updates
  */
-export function subscribeToComments(entityType, entityId, callback) {
+export function subscribeToComments(organizationId, entityType, entityId, callback) {
+  requireOrgId(organizationId, 'subscribe to comments')
+
   const q = query(
     collection(db, 'comments'),
+    where('organizationId', '==', organizationId),
     where('entityType', '==', entityType),
     where('entityId', '==', entityId),
     orderBy('createdAt', 'desc')
@@ -188,6 +207,8 @@ export async function toggleCommentPinned(commentId, isPinned) {
  * Log an activity
  */
 export async function logActivity(activityData) {
+  requireOrgId(activityData.organizationId, 'log activity')
+
   const activity = {
     entityType: activityData.entityType,
     entityId: activityData.entityId,
@@ -206,10 +227,17 @@ export async function logActivity(activityData) {
 
 /**
  * Get activity log for an entity
+ * @param {string} organizationId - Required for security rules
+ * @param {string} entityType - Type of entity
+ * @param {string} entityId - ID of the entity
+ * @param {number} limit - Max number of results
  */
-export async function getActivityLog(entityType, entityId, limit = 50) {
+export async function getActivityLog(organizationId, entityType, entityId, limit = 50) {
+  requireOrgId(organizationId, 'get activity log')
+
   const q = query(
     collection(db, 'activities'),
+    where('organizationId', '==', organizationId),
     where('entityType', '==', entityType),
     where('entityId', '==', entityId),
     orderBy('createdAt', 'desc')
@@ -225,10 +253,18 @@ export async function getActivityLog(entityType, entityId, limit = 50) {
 
 /**
  * Subscribe to activity log for real-time updates
+ * @param {string} organizationId - Required for security rules
+ * @param {string} entityType - Type of entity
+ * @param {string} entityId - ID of the entity
+ * @param {Function} callback - Callback function
+ * @param {number} limit - Max number of results
  */
-export function subscribeToActivityLog(entityType, entityId, callback, limit = 50) {
+export function subscribeToActivityLog(organizationId, entityType, entityId, callback, limit = 50) {
+  requireOrgId(organizationId, 'subscribe to activity log')
+
   const q = query(
     collection(db, 'activities'),
+    where('organizationId', '==', organizationId),
     where('entityType', '==', entityType),
     where('entityId', '==', entityId),
     orderBy('createdAt', 'desc')
@@ -248,6 +284,8 @@ export function subscribeToActivityLog(entityType, entityId, callback, limit = 5
  * Get all recent activity for an organization (across all entities)
  */
 export async function getRecentOrganizationActivity(organizationId, limit = 100) {
+  requireOrgId(organizationId, 'get organization activity')
+
   const q = query(
     collection(db, 'activities'),
     where('organizationId', '==', organizationId),
@@ -270,7 +308,7 @@ export async function getRecentOrganizationActivity(organizationId, limit = 100)
  * Get comments where user is mentioned
  */
 export async function getMentions(userId, organizationId, options = {}) {
-  const { unreadOnly = false } = options
+  requireOrgId(organizationId, 'get mentions')
 
   const q = query(
     collection(db, 'comments'),
@@ -294,10 +332,16 @@ export async function getMentions(userId, organizationId, options = {}) {
 
 /**
  * Get comment count for an entity
+ * @param {string} organizationId - Required for security rules
+ * @param {string} entityType - Type of entity
+ * @param {string} entityId - ID of the entity
  */
-export async function getCommentCount(entityType, entityId) {
+export async function getCommentCount(organizationId, entityType, entityId) {
+  requireOrgId(organizationId, 'get comment count')
+
   const q = query(
     collection(db, 'comments'),
+    where('organizationId', '==', organizationId),
     where('entityType', '==', entityType),
     where('entityId', '==', entityId)
   )

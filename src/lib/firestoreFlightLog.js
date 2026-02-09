@@ -2,6 +2,8 @@
  * Firestore Flight Log Service
  * Track flight records for aircraft and pilots
  *
+ * UPDATED: All queries now require organizationId for Firestore security rules
+ *
  * @location src/lib/firestoreFlightLog.js
  */
 
@@ -19,6 +21,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { requireOrgId } from './firestoreQueryUtils'
 
 // ============================================
 // FLIGHT LOG TYPES
@@ -58,6 +61,8 @@ export const WEATHER_CONDITIONS = {
  * Create a flight log entry
  */
 export async function createFlightLog(logData) {
+  requireOrgId(logData.organizationId, 'create flight log')
+
   const log = {
     // Project and organization info
     organizationId: logData.organizationId,
@@ -124,10 +129,15 @@ export async function createFlightLog(logData) {
 
 /**
  * Get flight logs for a project
+ * @param {string} organizationId - Required for security rules
+ * @param {string} projectId - Project ID
  */
-export async function getProjectFlightLogs(projectId) {
+export async function getProjectFlightLogs(organizationId, projectId) {
+  requireOrgId(organizationId, 'get project flight logs')
+
   const q = query(
     collection(db, 'flightLogs'),
+    where('organizationId', '==', organizationId),
     where('projectId', '==', projectId),
     orderBy('flightDate', 'desc')
   )
@@ -144,12 +154,18 @@ export async function getProjectFlightLogs(projectId) {
 
 /**
  * Get flight logs for an aircraft
+ * @param {string} organizationId - Required for security rules
+ * @param {string} aircraftId - Aircraft ID
+ * @param {Object} options - Query options
  */
-export async function getAircraftFlightLogs(aircraftId, options = {}) {
+export async function getAircraftFlightLogs(organizationId, aircraftId, options = {}) {
+  requireOrgId(organizationId, 'get aircraft flight logs')
+
   const { startDate = null, endDate = null, limit = 100 } = options
 
   let q = query(
     collection(db, 'flightLogs'),
+    where('organizationId', '==', organizationId),
     where('aircraftId', '==', aircraftId),
     orderBy('flightDate', 'desc')
   )
@@ -178,12 +194,18 @@ export async function getAircraftFlightLogs(aircraftId, options = {}) {
 
 /**
  * Get flight logs for a pilot
+ * @param {string} organizationId - Required for security rules
+ * @param {string} pilotId - Pilot ID
+ * @param {Object} options - Query options
  */
-export async function getPilotFlightLogs(pilotId, options = {}) {
+export async function getPilotFlightLogs(organizationId, pilotId, options = {}) {
+  requireOrgId(organizationId, 'get pilot flight logs')
+
   const { startDate = null, endDate = null, limit = 100 } = options
 
   let q = query(
     collection(db, 'flightLogs'),
+    where('organizationId', '==', organizationId),
     where('pilotId', '==', pilotId),
     orderBy('flightDate', 'desc')
   )
@@ -305,9 +327,11 @@ export async function deleteFlightLog(logId) {
 
 /**
  * Get aircraft flight statistics
+ * @param {string} organizationId - Required for security rules
+ * @param {string} aircraftId - Aircraft ID
  */
-export async function getAircraftFlightStats(aircraftId) {
-  const logs = await getAircraftFlightLogs(aircraftId, { limit: 1000 })
+export async function getAircraftFlightStats(organizationId, aircraftId) {
+  const logs = await getAircraftFlightLogs(organizationId, aircraftId, { limit: 1000 })
   const completedLogs = logs.filter(log => log.status === 'completed')
 
   const totalFlightTime = completedLogs.reduce((sum, log) => sum + (log.flightDuration || 0), 0)
@@ -329,9 +353,11 @@ export async function getAircraftFlightStats(aircraftId) {
 
 /**
  * Get pilot flight statistics
+ * @param {string} organizationId - Required for security rules
+ * @param {string} pilotId - Pilot ID
  */
-export async function getPilotFlightStats(pilotId) {
-  const logs = await getPilotFlightLogs(pilotId, { limit: 1000 })
+export async function getPilotFlightStats(organizationId, pilotId) {
+  const logs = await getPilotFlightLogs(organizationId, pilotId, { limit: 1000 })
   const completedLogs = logs.filter(log => log.status === 'completed')
 
   const totalFlightTime = completedLogs.reduce((sum, log) => sum + (log.flightDuration || 0), 0)

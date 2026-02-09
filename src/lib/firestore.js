@@ -1546,11 +1546,22 @@ export async function createForm(data, organizationId) {
 
 /**
  * Get forms linked to a specific project
+ * @param {string} organizationId - Required for security rules
  * @param {string} projectId - Project ID
  * @returns {Promise<Array>}
  */
-export async function getFormsByProject(projectId) {
-  const q = query(formsRef, where('projectId', '==', projectId), orderBy('createdAt', 'desc'))
+export async function getFormsByProject(organizationId, projectId) {
+  if (!organizationId) {
+    logger.warn('getFormsByProject called without organizationId')
+    return []
+  }
+
+  const q = query(
+    formsRef,
+    where('organizationId', '==', organizationId),
+    where('projectId', '==', projectId),
+    orderBy('createdAt', 'desc')
+  )
   const snapshot = await getDocs(q)
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 }

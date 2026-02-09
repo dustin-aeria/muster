@@ -2,6 +2,8 @@
  * firestoreExpenses.js
  * Firebase Firestore data access layer for Expense Tracking
  *
+ * UPDATED: All queries now require organizationId for Firestore security rules
+ *
  * Collections:
  * - expenses: Individual expense records with receipt data and approval workflow
  *
@@ -184,12 +186,19 @@ export async function getExpenseById(id) {
 
 /**
  * Get expenses for a specific project
+ * @param {string} organizationId - Required for security rules
  * @param {string} projectId - Project ID
  * @returns {Promise<Array>}
  */
-export async function getExpensesByProject(projectId) {
+export async function getExpensesByProject(organizationId, projectId) {
+  if (!organizationId) {
+    console.warn('getExpensesByProject called without organizationId')
+    return []
+  }
+
   const q = query(
     expensesRef,
+    where('organizationId', '==', organizationId),
     where('projectId', '==', projectId)
   )
   const snapshot = await getDocs(q)
@@ -486,11 +495,12 @@ export async function archiveReceipt(expenseId) {
 
 /**
  * Get expense summary for a project
+ * @param {string} organizationId - Required for security rules
  * @param {string} projectId - Project ID
  * @returns {Promise<Object>}
  */
-export async function getProjectExpenseSummary(projectId) {
-  const expenses = await getExpensesByProject(projectId)
+export async function getProjectExpenseSummary(organizationId, projectId) {
+  const expenses = await getExpensesByProject(organizationId, projectId)
   return calculateExpenseTotals(expenses)
 }
 

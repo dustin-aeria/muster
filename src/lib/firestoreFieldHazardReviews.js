@@ -2,6 +2,8 @@
  * firestoreFieldHazardReviews.js
  * Firestore functions for Field Hazard Review management
  *
+ * UPDATED: All queries now require organizationId for Firestore security rules
+ *
  * Field hazard reviews are created when field workers identify new hazards
  * during operations using the Field Level Hazard Assessment (FLHA) forms.
  * These submissions are queued for safety manager review and can be:
@@ -29,6 +31,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { createFormalHazard } from './firestoreFHA'
+import { requireOrgId } from './firestoreQueryUtils'
 
 // ============================================
 // COLLECTION REFERENCES
@@ -69,7 +72,11 @@ export const PRIORITY_LEVELS = [
  * @returns {Promise<Object>} Created review with ID
  */
 export async function createFieldHazardReview(reviewData) {
+  requireOrgId(reviewData.organizationId, 'create field hazard review')
+
   const docData = {
+    // Organization (REQUIRED for security rules)
+    organizationId: reviewData.organizationId,
     // Source information
     sourceType: reviewData.sourceType || 'flha', // 'flha', 'incident', 'observation'
     sourceId: reviewData.sourceId || null, // ID of the source form/incident
@@ -121,15 +128,17 @@ export async function createFieldHazardReview(reviewData) {
 }
 
 /**
- * Get all field hazard reviews for a user/organization
- * @param {string} userId - User ID
- * @param {Object} filters - Optional filters
+ * Get all field hazard reviews for an organization
+ * @param {string} organizationId - Required for security rules
+ * @param {Object} filters - Optional filters (status, userId)
  * @returns {Promise<Array>} Array of reviews
  */
-export async function getFieldHazardReviews(userId, filters = {}) {
+export async function getFieldHazardReviews(organizationId, filters = {}) {
+  requireOrgId(organizationId, 'get field hazard reviews')
+
   let q = query(
     fieldHazardReviewsRef,
-    where('userId', '==', userId),
+    where('organizationId', '==', organizationId),
     orderBy('createdAt', 'desc')
   )
 
@@ -137,25 +146,34 @@ export async function getFieldHazardReviews(userId, filters = {}) {
   if (filters.status) {
     q = query(
       fieldHazardReviewsRef,
-      where('userId', '==', userId),
+      where('organizationId', '==', organizationId),
       where('status', '==', filters.status),
       orderBy('createdAt', 'desc')
     )
   }
 
   const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  let reviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+  // Client-side filter by userId if specified
+  if (filters.userId) {
+    reviews = reviews.filter(r => r.userId === filters.userId)
+  }
+
+  return reviews
 }
 
 /**
  * Get pending reviews count for badge display
- * @param {string} userId - User ID
+ * @param {string} organizationId - Required for security rules
  * @returns {Promise<number>} Count of pending reviews
  */
-export async function getPendingReviewsCount(userId) {
+export async function getPendingReviewsCount(organizationId) {
+  requireOrgId(organizationId, 'get pending reviews count')
+
   const q = query(
     fieldHazardReviewsRef,
-    where('userId', '==', userId),
+    where('organizationId', '==', organizationId),
     where('status', 'in', ['pending', 'in_review'])
   )
 
@@ -285,11 +303,11 @@ export async function deleteFieldHazardReview(reviewId) {
 
 /**
  * Get review statistics
- * @param {string} userId - User ID
+ * @param {string} organizationId - Required for security rules
  * @returns {Promise<Object>} Review statistics
  */
-export async function getReviewStats(userId) {
-  const reviews = await getFieldHazardReviews(userId)
+export async function getReviewStats(organizationId) {
+  const reviews = await getFieldHazardReviews(organizationId)
 
   const stats = {
     total: reviews.length,
@@ -345,12 +363,16 @@ export async function getReviewStats(userId) {
 
 /**
  * Get field hazard reviews by project
+ * @param {string} organizationId - Required for security rules
  * @param {string} projectId - Project ID
  * @returns {Promise<Array>} Array of reviews
  */
-export async function getReviewsByProject(projectId) {
+export async function getReviewsByProject(organizationId, projectId) {
+  requireOrgId(organizationId, 'get reviews by project')
+
   const q = query(
     fieldHazardReviewsRef,
+    where('organizationId', '==', organizationId),
     where('projectId', '==', projectId),
     orderBy('createdAt', 'desc')
   )
@@ -361,13 +383,13 @@ export async function getReviewsByProject(projectId) {
 
 /**
  * Search field hazard reviews
- * @param {string} userId - User ID
+ * @param {string} organizationId - Required for security rules
  * @param {string} searchTerm - Search term
  * @returns {Promise<Array>} Matching reviews
  */
-export async function searchFieldHazardReviews(userId, searchTerm) {
+export async function searchFieldHazardReviews(organizationId, searchTerm) {
   // Get all reviews first (Firestore doesn't support full-text search)
-  const reviews = await getFieldHazardReviews(userId)
+  const reviews = await getFieldHazardReviews(organizationId)
 
   if (!searchTerm) return reviews
 

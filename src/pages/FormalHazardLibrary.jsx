@@ -97,7 +97,7 @@ export default function FormalHazardLibrary() {
       const [data, statsData, reviewCount] = await Promise.all([
         getUserFormalHazards(organizationId),
         getFHAStats(organizationId),
-        getPendingReviewsCount(user.uid)
+        getPendingReviewsCount(organizationId)
       ])
       setFhas(data)
       setStats(statsData)

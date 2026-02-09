@@ -25,6 +25,7 @@ import {
   TASK_TYPES
 } from '../../lib/firestoreTimeTracking'
 import { logger } from '../../lib/logger'
+import { useOrganization } from '../../hooks/useOrganization'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { Card } from '../ui/Card'
@@ -54,6 +55,7 @@ function formatDate(dateStr) {
 }
 
 export default function ProjectTimeEntries({ project }) {
+  const { organizationId } = useOrganization()
   const [loading, setLoading] = useState(true)
   const [entries, setEntries] = useState([])
   const [summary, setSummary] = useState(null)
@@ -62,17 +64,17 @@ export default function ProjectTimeEntries({ project }) {
   const [sortBy, setSortBy] = useState('date') // 'date' | 'operator' | 'hours'
 
   useEffect(() => {
-    if (project?.id) {
+    if (organizationId && project?.id) {
       loadData()
     }
-  }, [project?.id])
+  }, [organizationId, project?.id])
 
   const loadData = async () => {
     try {
       setLoading(true)
       const [entriesData, summaryData] = await Promise.all([
-        getTimeEntriesByProject(project.id),
-        getProjectTimeSummary(project.id)
+        getTimeEntriesByProject(organizationId, project.id),
+        getProjectTimeSummary(organizationId, project.id)
       ])
       setEntries(entriesData)
       setSummary(summaryData)

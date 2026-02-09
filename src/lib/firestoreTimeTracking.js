@@ -2,6 +2,8 @@
  * firestoreTimeTracking.js
  * Firebase Firestore data access layer for Time Tracking
  *
+ * UPDATED: All queries now require organizationId for Firestore security rules
+ *
  * Collections:
  * - timeEntries: Individual time entry records
  * - timesheets: Weekly aggregation for approval workflow
@@ -199,12 +201,19 @@ export async function getTimeEntryById(id) {
 
 /**
  * Get time entries for a specific project
+ * @param {string} organizationId - Required for security rules
  * @param {string} projectId - Project ID
  * @returns {Promise<Array>}
  */
-export async function getTimeEntriesByProject(projectId) {
+export async function getTimeEntriesByProject(organizationId, projectId) {
+  if (!organizationId) {
+    console.warn('getTimeEntriesByProject called without organizationId')
+    return []
+  }
+
   const q = query(
     timeEntriesRef,
+    where('organizationId', '==', organizationId),
     where('projectId', '==', projectId)
   )
   const snapshot = await getDocs(q)
@@ -857,11 +866,12 @@ export async function getTimesheetsByOperator(operatorId, filters = {}) {
 
 /**
  * Calculate weekly totals for a project
+ * @param {string} organizationId - Required for security rules
  * @param {string} projectId - Project ID
  * @returns {Promise<Object>}
  */
-export async function getProjectTimeSummary(projectId) {
-  const entries = await getTimeEntriesByProject(projectId)
+export async function getProjectTimeSummary(organizationId, projectId) {
+  const entries = await getTimeEntriesByProject(organizationId, projectId)
 
   const summary = {
     totalHours: 0,

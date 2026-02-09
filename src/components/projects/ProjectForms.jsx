@@ -1992,7 +1992,7 @@ export default function ProjectForms({ project, onUpdate }) {
           getOperators(organizationId).catch(() => []),
           getAircraft(organizationId).catch(() => []),
           getClients(organizationId).catch(() => []),
-          project?.id ? getFormsByProject(project.id).catch(() => []) : Promise.resolve([])
+          project?.id ? getFormsByProject(organizationId, project.id).catch(() => []) : Promise.resolve([])
         ])
         setOperators(ops || [])
         setAircraft(acs || [])

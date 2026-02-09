@@ -130,24 +130,28 @@ export default function SafetyDashboard() {
   const [emergencyContacts, setEmergencyContacts] = useState([])
 
   useEffect(() => {
-    loadDashboardData()
-  }, [])
+    if (organizationId) {
+      loadDashboardData()
+    }
+  }, [organizationId])
 
   const loadDashboardData = async () => {
+    if (!organizationId) return
+
     setLoading(true)
     setError(null)
-    
+
     try {
       // Import dynamically to handle potential errors
-      const { 
-        getIncidents, 
-        getCapas 
+      const {
+        getIncidents,
+        getCapas
       } = await import('../lib/firestoreSafety')
-      
+
       // Get basic counts - these are simple queries that don't need indexes
       const [incidents, capas] = await Promise.all([
-        getIncidents({}).catch(() => []),
-        getCapas({}).catch(() => [])
+        getIncidents(organizationId, {}).catch(() => []),
+        getCapas(organizationId, {}).catch(() => [])
       ])
       
       // Calculate stats from raw data
@@ -238,8 +242,8 @@ export default function SafetyDashboard() {
       
       // Gather all data
       const [incidents, capas, projects, operators, aircraft, clients] = await Promise.all([
-        getIncidents({}).catch(() => []),
-        getCapas({}).catch(() => []),
+        getIncidents(organizationId, {}).catch(() => []),
+        getCapas(organizationId, {}).catch(() => []),
         getProjects(organizationId).catch(() => []),
         getOperators(organizationId).catch(() => []),
         getAircraft(organizationId).catch(() => []),

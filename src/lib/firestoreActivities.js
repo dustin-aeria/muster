@@ -2,6 +2,8 @@
  * firestoreActivities.js
  * Firebase Firestore data access layer for In-Field Activities Tracking
  *
+ * UPDATED: All queries now require organizationId for Firestore security rules
+ *
  * Collections:
  * - activities: Individual activity records with timer data and notes
  *
@@ -24,6 +26,7 @@ import {
   Timestamp
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { requireOrgId } from './firestoreQueryUtils'
 
 // ============================================
 // CONSTANTS
@@ -197,10 +200,7 @@ export function calculateActivityTotals(activities) {
  * @returns {Promise<Array>}
  */
 export async function getActivities(organizationId, filters = {}) {
-  if (!organizationId) {
-    console.warn('getActivities called without organizationId')
-    return []
-  }
+  requireOrgId(organizationId, 'get activities')
 
   const constraints = [
     where('organizationId', '==', organizationId)
@@ -256,12 +256,16 @@ export async function getActivityById(id) {
 
 /**
  * Get activities for a specific project
+ * @param {string} organizationId - Organization ID (required for security rules)
  * @param {string} projectId - Project ID
  * @returns {Promise<Array>}
  */
-export async function getActivitiesByProject(projectId) {
+export async function getActivitiesByProject(organizationId, projectId) {
+  requireOrgId(organizationId, 'get project activities')
+
   const q = query(
     activitiesRef,
+    where('organizationId', '==', organizationId),
     where('projectId', '==', projectId)
   )
   const snapshot = await getDocs(q)
@@ -282,6 +286,8 @@ export async function getActivitiesByProject(projectId) {
  * @returns {Promise<Array>}
  */
 export async function getActiveActivities(organizationId, operatorId) {
+  requireOrgId(organizationId, 'get active activities')
+
   const q = query(
     activitiesRef,
     where('organizationId', '==', organizationId),
@@ -299,9 +305,7 @@ export async function getActiveActivities(organizationId, operatorId) {
  * @returns {Promise<Object>}
  */
 export async function startActivity(data, organizationId) {
-  if (!organizationId) {
-    throw new Error('organizationId is required to start an activity')
-  }
+  requireOrgId(organizationId, 'start activity')
 
   const activity = {
     // Organization (REQUIRED for security rules)
@@ -499,22 +503,24 @@ export async function deleteActivity(activityId) {
 
 /**
  * Get activity summary for a project
+ * @param {string} organizationId - Organization ID (required for security rules)
  * @param {string} projectId - Project ID
  * @returns {Promise<Object>}
  */
-export async function getProjectActivitySummary(projectId) {
-  const activities = await getActivitiesByProject(projectId)
+export async function getProjectActivitySummary(organizationId, projectId) {
+  const activities = await getActivitiesByProject(organizationId, projectId)
   return calculateActivityTotals(activities)
 }
 
 /**
  * Get activities for report inclusion
+ * @param {string} organizationId - Organization ID (required for security rules)
  * @param {string} projectId - Project ID
  * @param {string} section - Optional report section filter
  * @returns {Promise<Array>}
  */
-export async function getActivitiesForReport(projectId, section = null) {
-  const activities = await getActivitiesByProject(projectId)
+export async function getActivitiesForReport(organizationId, projectId, section = null) {
+  const activities = await getActivitiesByProject(organizationId, projectId)
 
   let filtered = activities.filter(a => a.includeInReport && a.status === 'completed')
 
@@ -533,6 +539,8 @@ export async function getActivitiesForReport(projectId, section = null) {
  * @returns {Promise<Object>}
  */
 export async function getOperatorActivityStats(organizationId, operatorId, days = 30) {
+  requireOrgId(organizationId, 'get operator stats')
+
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - days)
 

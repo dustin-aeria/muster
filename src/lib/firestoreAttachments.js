@@ -2,6 +2,8 @@
  * Firestore Attachments Service
  * Manage document and file attachments
  *
+ * UPDATED: All queries now require organizationId for Firestore security rules
+ *
  * @location src/lib/firestoreAttachments.js
  */
 
@@ -22,11 +24,11 @@ import {
   ref,
   uploadBytes,
   getDownloadURL,
-  deleteObject,
-  getMetadata
+  deleteObject
 } from 'firebase/storage'
 import { db, storage } from './firebase'
 import { logger } from './logger'
+import { requireOrgId } from './firestoreQueryUtils'
 
 // ============================================
 // ATTACHMENT TYPES
@@ -167,6 +169,8 @@ export async function deleteFile(path) {
  * Create an attachment record
  */
 export async function createAttachment(attachmentData, file = null) {
+  requireOrgId(attachmentData.organizationId, 'create attachment')
+
   let fileData = {}
 
   // Upload file if provided
@@ -209,10 +213,16 @@ export async function createAttachment(attachmentData, file = null) {
 
 /**
  * Get attachments for an entity
+ * @param {string} organizationId - Required for security rules
+ * @param {string} entityType - Type of entity
+ * @param {string} entityId - ID of the entity
  */
-export async function getEntityAttachments(entityType, entityId) {
+export async function getEntityAttachments(organizationId, entityType, entityId) {
+  requireOrgId(organizationId, 'get attachments')
+
   const q = query(
     collection(db, 'attachments'),
+    where('organizationId', '==', organizationId),
     where('entityType', '==', entityType),
     where('entityId', '==', entityId),
     orderBy('createdAt', 'desc')
@@ -231,6 +241,8 @@ export async function getEntityAttachments(entityType, entityId) {
  * Get attachments by category
  */
 export async function getAttachmentsByCategory(organizationId, category) {
+  requireOrgId(organizationId, 'get attachments by category')
+
   const q = query(
     collection(db, 'attachments'),
     where('organizationId', '==', organizationId),
@@ -251,6 +263,8 @@ export async function getAttachmentsByCategory(organizationId, category) {
  * Search attachments
  */
 export async function searchAttachments(organizationId, searchQuery) {
+  requireOrgId(organizationId, 'search attachments')
+
   const q = query(
     collection(db, 'attachments'),
     where('organizationId', '==', organizationId),
@@ -328,6 +342,8 @@ export async function deleteAttachment(attachmentId) {
  * Get total storage used by organization
  */
 export async function getStorageUsage(organizationId) {
+  requireOrgId(organizationId, 'get storage usage')
+
   const q = query(
     collection(db, 'attachments'),
     where('organizationId', '==', organizationId)
@@ -351,9 +367,12 @@ export async function getStorageUsage(organizationId) {
 
 /**
  * Delete all attachments for an entity
+ * @param {string} organizationId - Required for security rules
+ * @param {string} entityType - Type of entity
+ * @param {string} entityId - ID of the entity
  */
-export async function deleteEntityAttachments(entityType, entityId) {
-  const attachments = await getEntityAttachments(entityType, entityId)
+export async function deleteEntityAttachments(organizationId, entityType, entityId) {
+  const attachments = await getEntityAttachments(organizationId, entityType, entityId)
 
   const deletePromises = attachments.map(att => deleteAttachment(att.id))
   await Promise.all(deletePromises)

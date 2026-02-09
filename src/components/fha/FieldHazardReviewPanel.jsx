@@ -30,6 +30,7 @@ import {
   Search
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useOrganizationContext } from '../../contexts/OrganizationContext'
 import {
   getFieldHazardReviews,
   getPendingReviewsCount,
@@ -646,6 +647,7 @@ function ReviewDetail({ review, onAction, existingFHAs }) {
  */
 export default function FieldHazardReviewPanel({ isOpen, onClose, onReviewComplete }) {
   const { user, userProfile } = useAuth()
+  const { organizationId } = useOrganizationContext()
   const [reviews, setReviews] = useState([])
   const [existingFHAs, setExistingFHAs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -654,17 +656,17 @@ export default function FieldHazardReviewPanel({ isOpen, onClose, onReviewComple
 
   // Load reviews and FHAs
   useEffect(() => {
-    if (isOpen && user) {
+    if (isOpen && user && organizationId) {
       loadData()
     }
-  }, [isOpen, user])
+  }, [isOpen, user, organizationId])
 
   const loadData = async () => {
     setLoading(true)
     try {
       const [reviewsData, fhasData] = await Promise.all([
-        getFieldHazardReviews(user.uid),
-        getUserFormalHazards(user.uid)
+        getFieldHazardReviews(organizationId),
+        getUserFormalHazards(organizationId)
       ])
       setReviews(reviewsData)
       setExistingFHAs(fhasData)
