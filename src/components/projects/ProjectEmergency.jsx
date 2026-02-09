@@ -606,31 +606,34 @@ function NearestFacilitiesForm({ facilities = {}, onChange }) {
 
 function EmergencyProceduresList({ procedures = [], onChange }) {
   const [expandedId, setExpandedId] = useState(null)
-  
+
+  // Ensure procedures is always an array (handles legacy data that might be objects)
+  const proceduresArray = Array.isArray(procedures) ? procedures : []
+
   const handleAdd = (type) => {
     const defaultProcedure = DEFAULT_PROCEDURES.find(p => p.type === type)
-    onChange([...procedures, {
+    onChange([...proceduresArray, {
       id: `proc_${Date.now()}`,
       type,
       steps: defaultProcedure?.steps || [''],
       notes: ''
     }])
   }
-  
+
   const handleUpdateSteps = (procId, steps) => {
-    onChange(procedures.map(p => p.id === procId ? { ...p, steps } : p))
+    onChange(proceduresArray.map(p => p.id === procId ? { ...p, steps } : p))
   }
-  
+
   const handleRemove = (procId) => {
-    onChange(procedures.filter(p => p.id !== procId))
+    onChange(proceduresArray.filter(p => p.id !== procId))
   }
-  
-  const existingTypes = procedures.map(p => p.type)
+
+  const existingTypes = proceduresArray.map(p => p.type)
   const availableTypes = EMERGENCY_TYPES.filter(t => !existingTypes.includes(t.id))
-  
+
   return (
     <div className="space-y-3">
-      {procedures.map((procedure) => {
+      {proceduresArray.map((procedure) => {
         const typeInfo = EMERGENCY_TYPES.find(t => t.id === procedure.type)
         const isExpanded = expandedId === procedure.id
         
