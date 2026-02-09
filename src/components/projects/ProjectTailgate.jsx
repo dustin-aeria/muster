@@ -445,10 +445,14 @@ export default function ProjectTailgate({ project, onUpdate }) {
     return items
   }
 
-  // Get hazards
+  // Get hazards - check multiple possible data paths
   const getHazards = () => {
-    const hazards = project.hseRiskAssessment?.hazards || project.riskAssessment?.hazards || []
-    return hazards.slice(0, 6)
+    const hazards = project.hseRisk?.hazards ||
+                    project.hseRiskAssessment?.hazards ||
+                    project.riskAssessment?.hazards ||
+                    project.hazards ||
+                    []
+    return Array.isArray(hazards) ? hazards.slice(0, 6) : []
   }
 
   // Copy briefing text
@@ -878,84 +882,143 @@ export default function ProjectTailgate({ project, onUpdate }) {
 
                       {section.id === 'weather' && <SiteWeatherWidget activeSite={activeSite} />}
 
-                      {section.id === 'crew' && allCrew.length > 0 && (
+                      {section.id === 'crew' && (
                         <div className="grid sm:grid-cols-2 gap-2 text-sm">
-                          {allCrew.map((member, i) => (
+                          {allCrew.length > 0 ? allCrew.map((member, i) => (
                             <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                               <Users className="w-4 h-4 text-gray-400" />
-                              <span className="font-medium">{member.role}:</span>
-                              <span>{member.name}</span>
+                              <span className="font-medium">{member.role || 'Crew'}:</span>
+                              <span>{member.operatorName || member.name || `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown'}</span>
                             </div>
-                          ))}
+                          )) : (
+                            <p className="text-gray-500 italic col-span-2">No crew assigned. Add crew in the Crew tab.</p>
+                          )}
                         </div>
                       )}
 
                       {section.id === 'aircraft' && (
-                        <div className="text-sm space-y-1">
-                          <p><span className="font-medium">Aircraft:</span> {project.aircraft?.nickname || project.aircraft?.model || 'Not specified'}</p>
-                          {project.aircraft?.registration && <p><span className="font-medium">Registration:</span> {project.aircraft.registration}</p>}
+                        <div className="text-sm space-y-2">
+                          {(() => {
+                            const aircraftList = Array.isArray(project.aircraft) ? project.aircraft : (project.aircraft ? [project.aircraft] : [])
+                            if (aircraftList.length === 0) {
+                              return <p className="text-gray-500 italic">No aircraft assigned. Add aircraft in the Equipment tab.</p>
+                            }
+                            return aircraftList.map((ac, i) => (
+                              <div key={i} className="p-2 bg-gray-50 rounded">
+                                <p><span className="font-medium">Aircraft:</span> {ac.nickname || ac.model || ac.name || 'Not specified'}</p>
+                                {ac.registration && <p><span className="font-medium">Registration:</span> {ac.registration}</p>}
+                                {ac.serialNumber && <p><span className="font-medium">Serial:</span> {ac.serialNumber}</p>}
+                              </div>
+                            ))
+                          })()}
                         </div>
                       )}
 
                       {section.id === 'flightPlan' && (
                         <div className="grid sm:grid-cols-2 gap-2 text-sm">
-                          <div><span className="font-medium">Operation:</span> {project.flightPlan?.operationType || 'VLOS'}</div>
+                          <div><span className="font-medium">Operation Type:</span> {project.flightPlan?.operationType || 'VLOS'}</div>
                           <div><span className="font-medium">Max Altitude:</span> {project.flightPlan?.maxAltitudeAGL || 120}m AGL</div>
-                          {project.flightPlan?.flightArea && <div><span className="font-medium">Area:</span> {project.flightPlan.flightArea}</div>}
-                        </div>
-                      )}
-
-                      {section.id === 'siteInfo' && activeSite && (
-                        <div className="text-sm">
-                          <p><span className="font-medium">Site:</span> {activeSite.name || 'Site 1'}</p>
-                          {activeSite.address && <p><span className="font-medium">Address:</span> {activeSite.address}</p>}
-                        </div>
-                      )}
-
-                      {section.id === 'hazards' && hazards.length > 0 && (
-                        <div className="space-y-2">
-                          {hazards.slice(0, 5).map((hazard, i) => (
-                            <div key={i} className="text-sm p-2 bg-amber-50 rounded">
-                              <p className="font-medium text-amber-900">{hazard.description || 'Unnamed'}</p>
-                              <p className="text-amber-700">→ {hazard.controls || 'None documented'}</p>
-                            </div>
-                          ))}
-                          {hazards.length > 5 && <p className="text-sm text-gray-500">+ {hazards.length - 5} more hazards</p>}
-                        </div>
-                      )}
-
-                      {section.id === 'ppe' && ppeItems.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {ppeItems.map((item, i) => (
-                            <span key={i} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">{item}</span>
-                          ))}
-                        </div>
-                      )}
-
-                      {section.id === 'emergency' && (
-                        <div className="grid sm:grid-cols-2 gap-2 text-sm">
-                          <div className="p-2 bg-red-50 rounded">
-                            <span className="text-red-700 font-medium">Emergency Contact: </span>
-                            <span className="text-red-900">{project.emergencyPlan?.primaryEmergencyContact?.name || 'Not set'} - {project.emergencyPlan?.primaryEmergencyContact?.phone || 'N/A'}</span>
-                          </div>
-                          <div className="p-2 bg-red-50 rounded">
-                            <span className="text-red-700 font-medium">Hospital: </span>
-                            <span className="text-red-900">{project.emergencyPlan?.nearestHospital || 'Not set'}</span>
-                          </div>
-                          {project.emergencyPlan?.rallyPoint && (
-                            <div className="p-2 bg-green-50 rounded sm:col-span-2">
-                              <span className="text-green-700 font-medium">Muster Point: </span>
-                              <span className="text-green-900">{project.emergencyPlan.rallyPoint}</span>
+                          {project.flightPlan?.weatherMinimums?.minVisibility && (
+                            <div><span className="font-medium">Min Visibility:</span> {project.flightPlan.weatherMinimums.minVisibility}m</div>
+                          )}
+                          {project.flightPlan?.weatherMinimums?.maxWind && (
+                            <div><span className="font-medium">Max Wind:</span> {project.flightPlan.weatherMinimums.maxWind} m/s</div>
+                          )}
+                          {project.description && (
+                            <div className="sm:col-span-2 mt-2 p-2 bg-gray-50 rounded">
+                              <span className="font-medium">Description:</span> {project.description}
                             </div>
                           )}
                         </div>
                       )}
 
-                      {section.id === 'communications' && project.communications && (
+                      {section.id === 'siteInfo' && (
+                        <div className="text-sm">
+                          {activeSite ? (
+                            <>
+                              <p><span className="font-medium">Site:</span> {activeSite.name || 'Site 1'}</p>
+                              {activeSite.address && <p><span className="font-medium">Address:</span> {activeSite.address}</p>}
+                              {activeSite.siteSurvey?.access?.landOwner && (
+                                <p><span className="font-medium">Land Owner:</span> {activeSite.siteSurvey.access.landOwner}</p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-gray-500 italic">No site configured. Add a site in Site Survey.</p>
+                          )}
+                        </div>
+                      )}
+
+                      {section.id === 'hazards' && (
+                        <div className="space-y-2">
+                          {hazards.length > 0 ? (
+                            <>
+                              {hazards.slice(0, 5).map((hazard, i) => (
+                                <div key={i} className="text-sm p-2 bg-amber-50 rounded">
+                                  <p className="font-medium text-amber-900">{hazard.hazard || hazard.description || hazard.name || 'Hazard'}</p>
+                                  <p className="text-amber-700">→ {hazard.control || hazard.controls || hazard.mitigation || 'Controls not documented'}</p>
+                                </div>
+                              ))}
+                              {hazards.length > 5 && <p className="text-sm text-gray-500">+ {hazards.length - 5} more hazards</p>}
+                            </>
+                          ) : (
+                            <p className="text-gray-500 italic">No hazards documented. Complete HSE Risk Assessment.</p>
+                          )}
+                        </div>
+                      )}
+
+                      {section.id === 'ppe' && (
+                        <div className="flex flex-wrap gap-2">
+                          {ppeItems.length > 0 ? ppeItems.map((item, i) => (
+                            <span key={i} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">{item}</span>
+                          )) : (
+                            <p className="text-gray-500 italic">No PPE requirements set. Configure in PPE tab.</p>
+                          )}
+                        </div>
+                      )}
+
+                      {section.id === 'emergency' && (
+                        <div className="space-y-2 text-sm">
+                          <div className="grid sm:grid-cols-2 gap-2">
+                            <div className="p-2 bg-red-50 rounded">
+                              <span className="text-red-700 font-medium">Emergency Contact: </span>
+                              <span className="text-red-900">
+                                {project.emergencyPlan?.primaryEmergencyContact?.name || project.emergencyPlan?.contacts?.[0]?.name || 'Not set'}
+                                {(project.emergencyPlan?.primaryEmergencyContact?.phone || project.emergencyPlan?.contacts?.[0]?.phone) &&
+                                  ` - ${project.emergencyPlan?.primaryEmergencyContact?.phone || project.emergencyPlan?.contacts?.[0]?.phone}`}
+                              </span>
+                            </div>
+                            <div className="p-2 bg-red-50 rounded">
+                              <span className="text-red-700 font-medium">Hospital: </span>
+                              <span className="text-red-900">{project.emergencyPlan?.nearestFacilities?.hospital || project.emergencyPlan?.nearestHospital || 'Not set'}</span>
+                            </div>
+                          </div>
+                          {(project.emergencyPlan?.musterPoints?.length > 0 || project.emergencyPlan?.rallyPoint) && (
+                            <div className="p-2 bg-green-50 rounded">
+                              <span className="text-green-700 font-medium">Muster Point: </span>
+                              <span className="text-green-900">
+                                {project.emergencyPlan?.musterPoints?.[0]?.name || project.emergencyPlan?.rallyPoint || 'Not set'}
+                              </span>
+                            </div>
+                          )}
+                          {project.emergencyPlan?.procedures?.length > 0 && (
+                            <p className="text-gray-600">{project.emergencyPlan.procedures.length} emergency procedures documented</p>
+                          )}
+                        </div>
+                      )}
+
+                      {section.id === 'communications' && (
                         <div className="text-sm space-y-1">
-                          {project.communications.primaryChannel && <p><span className="font-medium">Primary Channel:</span> {project.communications.primaryChannel}</p>}
-                          {project.communications.emergencyChannel && <p><span className="font-medium">Emergency:</span> {project.communications.emergencyChannel}</p>}
-                          {project.communications.emergencyWord && <p><span className="font-medium">Emergency Word:</span> {project.communications.emergencyWord}</p>}
+                          {project.communications ? (
+                            <>
+                              {project.communications.primaryChannel && <p><span className="font-medium">Primary Channel:</span> {project.communications.primaryChannel}</p>}
+                              {project.communications.backupChannel && <p><span className="font-medium">Backup:</span> {project.communications.backupChannel}</p>}
+                              {project.communications.emergencyChannel && <p><span className="font-medium">Emergency:</span> {project.communications.emergencyChannel}</p>}
+                              {project.communications.emergencyWord && <p><span className="font-medium">Emergency Word:</span> <span className="text-red-600 font-bold">{project.communications.emergencyWord}</span></p>}
+                              {project.communications.stopWord && <p><span className="font-medium">Stop Word:</span> <span className="text-amber-600 font-bold">{project.communications.stopWord}</span></p>}
+                            </>
+                          ) : (
+                            <p className="text-gray-500 italic">No communications configured. Set up in Communications tab.</p>
+                          )}
                         </div>
                       )}
                     </div>
