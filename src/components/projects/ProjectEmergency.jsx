@@ -60,7 +60,8 @@ const EMERGENCY_TYPES = [
   { id: 'wildlife', label: 'Wildlife Encounter', icon: '🐻', color: 'amber' },
   { id: 'weather', label: 'Severe Weather', icon: '⛈️', color: 'blue' },
   { id: 'security', label: 'Security Threat', icon: '🚨', color: 'purple' },
-  { id: 'environmental', label: 'Environmental Spill', icon: '☢️', color: 'green' }
+  { id: 'environmental', label: 'Environmental Spill', icon: '☢️', color: 'green' },
+  { id: 'custom', label: 'Custom Procedure', icon: '📋', color: 'gray', isCustom: true }
 ]
 
 const DEFAULT_EMERGENCY_CONTACTS = [
@@ -105,6 +106,98 @@ const DEFAULT_PROCEDURES = [
       'Collect witness statements',
       'Report to Transport Canada within 24 hours if required'
     ]
+  },
+  {
+    type: 'fire',
+    steps: [
+      'Cease all flight operations immediately and land/secure aircraft',
+      'Alert all personnel - shout "FIRE" and indicate location',
+      'Call 911 and provide exact location and nature of fire',
+      'If safe and trained, attempt to extinguish using appropriate fire extinguisher',
+      'If fire cannot be controlled, evacuate to designated muster point',
+      'Account for all personnel at muster point',
+      'Do not re-enter area until cleared by fire services',
+      'Preserve evidence and document for incident report'
+    ]
+  },
+  {
+    type: 'medical',
+    steps: [
+      'Stop all flight operations and secure aircraft',
+      'Assess patient responsiveness - check airway, breathing, circulation',
+      'Call 911 immediately for serious conditions (chest pain, difficulty breathing, unconsciousness, severe bleeding)',
+      'Retrieve first aid kit and AED if available',
+      'Administer first aid within your training level',
+      'Keep patient calm, warm, and still',
+      'Designate crew member to guide emergency services to location',
+      'Provide EMS with patient information and what occurred',
+      'Document incident and complete required reporting'
+    ]
+  },
+  {
+    type: 'wildlife',
+    steps: [
+      'Cease flight operations - land aircraft at safe location',
+      'Do NOT approach, feed, or provoke the animal',
+      'Slowly back away while facing the animal - do not run',
+      'Make noise to alert others without startling the animal',
+      'If animal is aggressive, group together and appear large',
+      'For bears: Do not make eye contact, speak calmly, back away slowly',
+      'For large predators: If attacked, fight back (do not play dead for cougars/wolves)',
+      'Call local conservation/wildlife officers if animal poses ongoing threat',
+      'Document encounter and report to site supervisor',
+      'Do not resume operations until area is confirmed clear'
+    ]
+  },
+  {
+    type: 'weather',
+    steps: [
+      'Monitor weather conditions continuously - check radar and forecasts',
+      'If conditions deteriorate rapidly, cease operations immediately',
+      'Land aircraft and secure against wind/precipitation',
+      'Secure all loose equipment and gear',
+      'If lightning within 10km, suspend operations and seek shelter',
+      'Move personnel to vehicles or designated shelter - avoid open areas and tall objects',
+      'Wait 30 minutes after last lightning/thunder before resuming',
+      'If severe weather warning issued, evacuate site if safe to travel',
+      'Maintain communication with operations base',
+      'Document weather conditions and decisions made'
+    ]
+  },
+  {
+    type: 'security',
+    steps: [
+      'Cease operations and secure all aircraft and equipment',
+      'Do NOT confront or engage with threatening individuals',
+      'Move personnel to safe location - vehicle or secure area',
+      'Call 911 if threat is imminent or active',
+      'For unauthorized persons: Politely inform them of restricted area and request they leave',
+      'Document description, vehicle info, and behavior of individuals',
+      'If theft/vandalism, do not touch anything - preserve evidence',
+      'Notify site owner/manager and company security',
+      'Do not resume operations until area is secured',
+      'Complete security incident report'
+    ]
+  },
+  {
+    type: 'environmental',
+    steps: [
+      'Stop all operations immediately',
+      'Identify the substance and quantity spilled',
+      'Ensure personnel safety - evacuate if hazardous fumes or contact risk',
+      'Prevent spill from spreading - use absorbent materials, create barriers',
+      'Do NOT wash spill into drains, waterways, or soil',
+      'Retrieve spill kit and appropriate PPE',
+      'Contain and absorb spill following SDS guidelines',
+      'For large spills or hazardous materials, call emergency spill response',
+      'Notify site owner and environmental authorities as required',
+      'Document spill details, response actions, and cleanup for reporting',
+      'Properly dispose of contaminated materials'
+    ]
+  },
+  {
+    type: 'custom',
+    steps: ['']
   }
 ]
 
@@ -612,9 +705,11 @@ function EmergencyProceduresList({ procedures = [], onChange }) {
 
   const handleAdd = (type) => {
     const defaultProcedure = DEFAULT_PROCEDURES.find(p => p.type === type)
+    const typeInfo = EMERGENCY_TYPES.find(t => t.id === type)
     onChange([...proceduresArray, {
       id: `proc_${Date.now()}`,
       type,
+      customName: typeInfo?.isCustom ? '' : null, // Allow custom name for custom procedures
       steps: defaultProcedure?.steps || [''],
       notes: ''
     }])
@@ -624,19 +719,26 @@ function EmergencyProceduresList({ procedures = [], onChange }) {
     onChange(proceduresArray.map(p => p.id === procId ? { ...p, steps } : p))
   }
 
+  const handleUpdateCustomName = (procId, customName) => {
+    onChange(proceduresArray.map(p => p.id === procId ? { ...p, customName } : p))
+  }
+
   const handleRemove = (procId) => {
     onChange(proceduresArray.filter(p => p.id !== procId))
   }
 
+  // Filter out existing types, but always allow 'custom' to be added multiple times
   const existingTypes = proceduresArray.map(p => p.type)
-  const availableTypes = EMERGENCY_TYPES.filter(t => !existingTypes.includes(t.id))
+  const availableTypes = EMERGENCY_TYPES.filter(t => t.isCustom || !existingTypes.includes(t.id))
 
   return (
     <div className="space-y-3">
       {proceduresArray.map((procedure) => {
         const typeInfo = EMERGENCY_TYPES.find(t => t.id === procedure.type)
         const isExpanded = expandedId === procedure.id
-        
+        const isCustom = typeInfo?.isCustom
+        const displayName = isCustom && procedure.customName ? procedure.customName : (typeInfo?.label || procedure.type)
+
         return (
           <div key={procedure.id} className="border border-gray-200 rounded-lg overflow-hidden">
             <button
@@ -645,7 +747,10 @@ function EmergencyProceduresList({ procedures = [], onChange }) {
             >
               <div className="flex items-center gap-3">
                 <span className="text-xl">{typeInfo?.icon || '⚠️'}</span>
-                <span className="font-medium text-gray-900">{typeInfo?.label || procedure.type}</span>
+                <span className="font-medium text-gray-900">{displayName}</span>
+                {isCustom && !procedure.customName && (
+                  <span className="text-xs text-amber-600">(click to name)</span>
+                )}
                 <span className="text-sm text-gray-500">({procedure.steps?.length || 0} steps)</span>
               </div>
               <div className="flex items-center gap-2">
@@ -661,9 +766,23 @@ function EmergencyProceduresList({ procedures = [], onChange }) {
                 {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </div>
             </button>
-            
+
             {isExpanded && (
               <div className="p-4 space-y-3">
+                {isCustom && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Procedure Name
+                    </label>
+                    <input
+                      type="text"
+                      value={procedure.customName || ''}
+                      onChange={(e) => handleUpdateCustomName(procedure.id, e.target.value)}
+                      placeholder="Enter custom procedure name (e.g., Battery Fire, Drone Recovery)"
+                      className="input text-sm w-full"
+                    />
+                  </div>
+                )}
                 <p className="text-sm text-gray-500">
                   Define step-by-step response procedure:
                 </p>
@@ -713,7 +832,7 @@ function EmergencyProceduresList({ procedures = [], onChange }) {
       {availableTypes.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-2">
           <span className="text-sm text-gray-500 py-1">Add procedure:</span>
-          {availableTypes.map(type => (
+          {availableTypes.filter(t => !t.isCustom).map(type => (
             <button
               key={type.id}
               onClick={() => handleAdd(type.id)}
@@ -723,6 +842,14 @@ function EmergencyProceduresList({ procedures = [], onChange }) {
               {type.label}
             </button>
           ))}
+          {/* Custom procedure button - always available */}
+          <button
+            onClick={() => handleAdd('custom')}
+            className="px-3 py-1 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-full flex items-center gap-1"
+          >
+            <Plus className="w-3 h-3" />
+            Custom Procedure
+          </button>
         </div>
       )}
     </div>
