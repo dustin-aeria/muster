@@ -39,17 +39,27 @@ export default function ProjectPreField({ project, onUpdate }) {
   }, [organizationId])
 
   // Merge crew assignments with fresh operator rates
+  // Note: crew members store operator ID in 'organizationId' field (legacy naming)
   const crewWithFreshRates = (project?.crew || []).map(crewMember => {
-    const freshOp = freshOperators.find(op => op.id === crewMember.operatorId)
+    const opId = crewMember.operatorId || crewMember.organizationId
+    const freshOp = freshOperators.find(op => op.id === opId)
     if (freshOp) {
       return {
         ...crewMember,
+        operatorId: opId, // Ensure operatorId is set for AddTaskModal
         hourlyRate: freshOp.hourlyRate || 0,
         dailyRate: freshOp.dailyRate || 0,
         weeklyRate: freshOp.weeklyRate || 0
       }
     }
-    return crewMember
+    // If no fresh match, ensure rates from crew member are used (or 0)
+    return {
+      ...crewMember,
+      operatorId: opId,
+      hourlyRate: crewMember.hourlyRate || 0,
+      dailyRate: crewMember.dailyRate || 0,
+      weeklyRate: crewMember.weeklyRate || 0
+    }
   })
 
   // Update phase data
