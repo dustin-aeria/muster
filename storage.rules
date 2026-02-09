@@ -1,0 +1,82 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to read and write to all paths
+    // Files are organized by type and include organizationId where applicable
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Project site photos: projects/{projectId}/sites/{siteId}/photos/...
+    match /projects/{projectId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Policy attachments: policies/{policyId}/attachments/...
+    match /policies/{policyId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Equipment images: equipment/{equipmentId}/images/...
+    match /equipment/{equipmentId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // FHA attachments and documents: fha/{fhaId}/...
+    match /fha/{fhaId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Form attachments: forms/{formId}/attachments/...
+    match /forms/{formId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Inspection photos: inspections/{inspectionId}/photos/...
+    match /inspections/{inspectionId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Insurance documents: insurance/{policyId}/...
+    match /insurance/{policyId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Permit documents: permits/{organizationId}/{permitId}/...
+    match /permits/{organizationId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Expense receipts: receipts/{organizationId}/{projectId}/{expenseId}/...
+    match /receipts/{organizationId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Safety declaration evidence: safetyDeclarations/{declarationId}/evidence/...
+    match /safetyDeclarations/{declarationId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Incident attachments
+    match /incidents/{incidentId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // CAPA attachments
+    match /capas/{capaId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Organization branding/logos
+    match /organizations/{organizationId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // User profile images
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
