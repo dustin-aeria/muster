@@ -70,6 +70,71 @@ const DEFAULT_EMERGENCY_CONTACTS = [
   { name: 'Transport Canada', phone: '1-888-463-0521', role: 'regulatory', notes: 'Civil Aviation - Serious incident reporting' }
 ]
 
+// Pre-populated emergency contacts library for quick add
+const EMERGENCY_CONTACTS_LIBRARY = {
+  fic: {
+    label: 'Flight Information Centres (FIC)',
+    contacts: [
+      { name: 'NAV CANADA FIC (National)', phone: '1-866-541-4101', role: 'aviation', notes: 'Toll-free - Report fly-away/incidents, file flight plans' },
+      { name: 'Gander FIR', phone: '(709) 651-5207', role: 'aviation', notes: 'Flight Information Region - Newfoundland & Labrador' },
+      { name: 'Moncton FIR', phone: '(506) 867-7173', role: 'aviation', notes: 'Flight Information Region - Atlantic Provinces' },
+      { name: 'Montreal FIR', phone: '(514) 633-3365', role: 'aviation', notes: 'Flight Information Region - Quebec' },
+      { name: 'Toronto FIR', phone: '(905) 676-4509', role: 'aviation', notes: 'Flight Information Region - Ontario' },
+      { name: 'Winnipeg FIR', phone: '(204) 983-8338', role: 'aviation', notes: 'Flight Information Region - Manitoba, Saskatchewan, NW Ontario' },
+      { name: 'Edmonton FIR', phone: '(780) 890-8397', role: 'aviation', notes: 'Flight Information Region - Alberta, NWT, Nunavut' },
+      { name: 'Vancouver FIR', phone: '(604) 586-4500', role: 'aviation', notes: 'Flight Information Region - British Columbia, Yukon' }
+    ]
+  },
+  airports: {
+    label: 'Major Airport Operations',
+    contacts: [
+      { name: 'Toronto Pearson (YYZ) Ops', phone: '(416) 247-7682', role: 'aviation', notes: 'Airport Operations Centre' },
+      { name: 'Vancouver (YVR) Ops', phone: '(604) 207-7077', role: 'aviation', notes: 'Airport Operations' },
+      { name: 'Montreal Trudeau (YUL) Ops', phone: '(514) 394-7377', role: 'aviation', notes: 'Airport Operations' },
+      { name: 'Calgary (YYC) Ops', phone: '(403) 735-1200', role: 'aviation', notes: 'Airport Authority Operations' },
+      { name: 'Edmonton (YEG) Ops', phone: '(780) 890-8900', role: 'aviation', notes: 'Airport Operations' },
+      { name: 'Ottawa (YOW) Ops', phone: '(613) 248-2125', role: 'aviation', notes: 'Airport Authority' },
+      { name: 'Winnipeg (YWG) Ops', phone: '(204) 987-9402', role: 'aviation', notes: 'Airport Authority' },
+      { name: 'Halifax (YHZ) Ops', phone: '(902) 873-4422', role: 'aviation', notes: 'Airport Authority' },
+      { name: 'St. John\'s (YYT) Ops', phone: '(709) 758-8515', role: 'aviation', notes: 'Airport Authority' },
+      { name: 'Victoria (YYJ) Ops', phone: '(250) 953-7500', role: 'aviation', notes: 'Airport Authority' }
+    ]
+  },
+  regulatory: {
+    label: 'Regulatory & Reporting',
+    contacts: [
+      { name: 'Transport Canada Civil Aviation', phone: '1-888-463-0521', role: 'regulatory', notes: 'Serious incident reporting, regulatory inquiries' },
+      { name: 'CADORS (Incident Reporting)', phone: '1-866-266-8555', role: 'regulatory', notes: 'Civil Aviation Daily Occurrence Report System' },
+      { name: 'TSB (Transportation Safety Board)', phone: '1-800-387-3557', role: 'regulatory', notes: 'Reportable accidents & incidents' },
+      { name: 'Transport Canada Prairie & Northern', phone: '(780) 495-3871', role: 'regulatory', notes: 'Regional office - AB, SK, MB, NWT, NU' },
+      { name: 'Transport Canada Pacific', phone: '(604) 666-3518', role: 'regulatory', notes: 'Regional office - BC, YT' },
+      { name: 'Transport Canada Ontario', phone: '(416) 952-0230', role: 'regulatory', notes: 'Regional office - Ontario' },
+      { name: 'Transport Canada Quebec', phone: '(514) 633-2714', role: 'regulatory', notes: 'Regional office - Quebec' },
+      { name: 'Transport Canada Atlantic', phone: '(506) 851-7316', role: 'regulatory', notes: 'Regional office - NB, NS, PE, NL' }
+    ]
+  },
+  emergency: {
+    label: 'Emergency Services',
+    contacts: [
+      { name: 'Emergency Services', phone: '911', role: 'emergency', notes: 'Police, Fire, Ambulance', isPrimary: true },
+      { name: 'Poison Control (National)', phone: '1-800-268-9017', role: 'medical', notes: '24/7 poison information' },
+      { name: 'CANUTEC (Hazmat)', phone: '1-888-226-8832', role: 'emergency', notes: 'Canadian Transport Emergency Centre - hazardous materials' },
+      { name: 'Coast Guard (Marine/SAR)', phone: '1-800-267-6687', role: 'emergency', notes: 'Marine emergencies & search and rescue' },
+      { name: 'RCMP (Non-Emergency)', phone: '1-800-830-3118', role: 'emergency', notes: 'Non-emergency police services' }
+    ]
+  },
+  environmental: {
+    label: 'Environmental & Spills',
+    contacts: [
+      { name: 'Environment Canada Emergencies', phone: '1-866-283-2333', role: 'regulatory', notes: 'Environmental emergencies & spills' },
+      { name: 'BC Spill Reporting', phone: '1-800-663-3456', role: 'regulatory', notes: 'Provincial spill line - BC' },
+      { name: 'Alberta Spill Reporting', phone: '1-800-222-6514', role: 'regulatory', notes: 'Provincial spill line - Alberta' },
+      { name: 'Ontario Spill Reporting', phone: '1-800-268-6060', role: 'regulatory', notes: 'Provincial spill line - Ontario' },
+      { name: 'Quebec Spill Reporting', phone: '1-866-694-5454', role: 'regulatory', notes: 'Urgence-Environnement' }
+    ]
+  }
+}
+
 const DEFAULT_PROCEDURES = [
   {
     type: 'flyaway',
@@ -471,27 +536,30 @@ function EvacuationRoutesList({ routes = [], onUpdate, onRemove, onSetPrimary })
 // ============================================
 
 function EmergencyContactsList({ contacts = [], onChange }) {
+  const [showLibrary, setShowLibrary] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState(null)
+
   const handleAdd = () => {
-    onChange([...contacts, { 
+    onChange([...contacts, {
       id: `contact_${Date.now()}`,
-      name: '', 
-      phone: '', 
-      role: '', 
+      name: '',
+      phone: '',
+      role: '',
       notes: '',
       isPrimary: contacts.length === 0
     }])
   }
-  
+
   const handleUpdate = (index, field, value) => {
     const updated = [...contacts]
     updated[index] = { ...updated[index], [field]: value }
     onChange(updated)
   }
-  
+
   const handleRemove = (index) => {
     onChange(contacts.filter((_, i) => i !== index))
   }
-  
+
   const handleLoadDefaults = () => {
     if (contacts.length > 0) {
       if (!confirm('This will add default emergency contacts. Continue?')) return
@@ -501,23 +569,168 @@ function EmergencyContactsList({ contacts = [], onChange }) {
       id: `contact_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
     }))])
   }
-  
+
+  const handleAddFromLibrary = (contact) => {
+    // Check if contact already exists
+    const exists = contacts.some(c => c.phone === contact.phone)
+    if (exists) {
+      alert('This contact is already in your list.')
+      return
+    }
+
+    onChange([...contacts, {
+      ...contact,
+      id: `contact_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      isPrimary: contacts.length === 0 && contact.isPrimary
+    }])
+  }
+
+  const handleAddAllFromCategory = (categoryKey) => {
+    const category = EMERGENCY_CONTACTS_LIBRARY[categoryKey]
+    if (!category) return
+
+    const newContacts = category.contacts
+      .filter(c => !contacts.some(existing => existing.phone === c.phone))
+      .map(c => ({
+        ...c,
+        id: `contact_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
+      }))
+
+    if (newContacts.length === 0) {
+      alert('All contacts from this category are already in your list.')
+      return
+    }
+
+    onChange([...contacts, ...newContacts])
+  }
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-gray-600">
           Key contacts for emergency response
         </p>
-        <button
-          type="button"
-          onClick={handleLoadDefaults}
-          className="text-sm text-aeria-navy hover:underline flex items-center gap-1"
-        >
-          <Copy className="w-3 h-3" />
-          Add Default Contacts
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowLibrary(!showLibrary)}
+            className={`text-sm px-3 py-1.5 rounded-lg flex items-center gap-1 ${
+              showLibrary
+                ? 'bg-aeria-navy text-white'
+                : 'bg-aeria-navy/10 text-aeria-navy hover:bg-aeria-navy/20'
+            }`}
+          >
+            <Phone className="w-3 h-3" />
+            Quick Add Numbers
+            <ChevronDown className={`w-3 h-3 transition-transform ${showLibrary ? 'rotate-180' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={handleLoadDefaults}
+            className="text-sm text-aeria-navy hover:underline flex items-center gap-1"
+          >
+            <Copy className="w-3 h-3" />
+            Add Defaults
+          </button>
+        </div>
       </div>
-      
+
+      {/* Quick Add Library Dropdown */}
+      {showLibrary && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-gray-900">Emergency Contacts Library</h4>
+            <button
+              onClick={() => setShowLibrary(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Category Tabs */}
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(EMERGENCY_CONTACTS_LIBRARY).map(([key, category]) => (
+              <button
+                key={key}
+                onClick={() => setSelectedCategory(selectedCategory === key ? null : key)}
+                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                  selectedCategory === key
+                    ? 'bg-aeria-navy text-white'
+                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {category.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Selected Category Contacts */}
+          {selectedCategory && EMERGENCY_CONTACTS_LIBRARY[selectedCategory] && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">
+                  {EMERGENCY_CONTACTS_LIBRARY[selectedCategory].label}
+                </span>
+                <button
+                  onClick={() => handleAddAllFromCategory(selectedCategory)}
+                  className="text-xs text-aeria-navy hover:underline flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add All
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                {EMERGENCY_CONTACTS_LIBRARY[selectedCategory].contacts.map((contact, idx) => {
+                  const isAdded = contacts.some(c => c.phone === contact.phone)
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => !isAdded && handleAddFromLibrary(contact)}
+                      disabled={isAdded}
+                      className={`p-3 rounded-lg text-left transition-colors ${
+                        isAdded
+                          ? 'bg-green-50 border border-green-200 cursor-default'
+                          : 'bg-white border border-gray-200 hover:border-aeria-navy hover:bg-blue-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className={`font-medium text-sm truncate ${isAdded ? 'text-green-700' : 'text-gray-900'}`}>
+                            {contact.name}
+                          </p>
+                          <p className={`text-sm ${isAdded ? 'text-green-600' : 'text-aeria-navy'}`}>
+                            {contact.phone}
+                          </p>
+                          {contact.notes && (
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                              {contact.notes}
+                            </p>
+                          )}
+                        </div>
+                        {isAdded ? (
+                          <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded ml-2">
+                            Added
+                          </span>
+                        ) : (
+                          <Plus className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" />
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {!selectedCategory && (
+            <p className="text-sm text-gray-500 text-center py-4">
+              Select a category above to view available contacts
+            </p>
+          )}
+        </div>
+      )}
+
       {contacts.map((contact, index) => (
         <div key={contact.id || index} className="p-3 bg-gray-50 rounded-lg space-y-2">
           <div className="grid grid-cols-3 gap-2">
@@ -568,7 +781,7 @@ function EmergencyContactsList({ contacts = [], onChange }) {
           />
         </div>
       ))}
-      
+
       <button
         type="button"
         onClick={handleAdd}
