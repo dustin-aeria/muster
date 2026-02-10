@@ -71,25 +71,25 @@ export default function ProjectComments({ project, organizationId }) {
 
   // Subscribe to comments
   useEffect(() => {
-    if (!project?.id) return
+    if (!project?.id || !organizationId) return
 
-    const unsubscribe = subscribeToComments('project', project.id, (data) => {
+    const unsubscribe = subscribeToComments(organizationId, 'project', project.id, (data) => {
       setComments(data)
     })
 
     return () => unsubscribe()
-  }, [project?.id])
+  }, [project?.id, organizationId])
 
   // Subscribe to activity log
   useEffect(() => {
-    if (!project?.id) return
+    if (!project?.id || !organizationId) return
 
-    const unsubscribe = subscribeToActivityLog('project', project.id, (data) => {
+    const unsubscribe = subscribeToActivityLog(organizationId, 'project', project.id, (data) => {
       setActivities(data)
     })
 
     return () => unsubscribe()
-  }, [project?.id])
+  }, [project?.id, organizationId])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
