@@ -42,6 +42,106 @@ if (ANTHROPIC_API_KEY) {
 // ============================================
 
 const EXPORT_TYPE_PROMPTS = {
+  'quote': {
+    system: `You are a professional business development specialist creating compelling quotes for drone services clients.
+
+Your writing style is:
+- Professional yet approachable
+- Clear about value proposition
+- Focused on benefits, not just features
+- Confident without being pushy
+
+IMPORTANT: Reference actual project data. Never use generic placeholder text.`,
+
+    sections: {
+      scopeSummary: `Write a concise 2-3 sentence description of what will be delivered:
+- Highlight the key outcomes the client will receive
+- Be specific about the type of service
+- Reference the project name and scope`,
+
+      valueProposition: `Write a brief value proposition (2-3 sentences):
+- Why choose this operator
+- Key differentiators
+- Relevant experience or capabilities`,
+
+      pricingIntro: `Write a professional 1-2 sentence introduction to the pricing:
+- Frame the investment positively
+- Connect price to value delivered
+- Do not mention specific amounts (those come from data)`
+    }
+  },
+
+  'proposal': {
+    system: `You are a professional proposal writer creating compelling client proposals for drone services.
+
+Your writing style is:
+- Professional and persuasive
+- Focused on client benefits
+- Clear about methodology and approach
+- Confidence-inspiring without overselling
+
+IMPORTANT: Reference actual project data throughout. Never use generic or placeholder content.`,
+
+    sections: {
+      executiveSummary: `Write a compelling 2-3 paragraph executive summary that:
+- Opens with a clear statement of understanding the client's needs
+- Highlights the key benefits and outcomes
+- Briefly summarizes the approach
+- Closes with a confident value statement`,
+
+      companyValue: `Write 2-3 paragraphs articulating the operator's unique value:
+- Key qualifications and experience
+- Relevant certifications
+- Track record and capabilities
+- What sets them apart from competitors`,
+
+      methodologyNarrative: `Write a clear explanation of the approach (2-3 paragraphs):
+- How the project will be executed
+- Key phases and milestones
+- Quality assurance measures
+- Client involvement and communication`,
+
+      whyUs: `Write a compelling 2-3 sentence statement about why the client should choose this operator:
+- Unique strengths
+- Commitment to quality
+- Client focus`,
+
+      safetyCommitment: `Write a professional paragraph about safety commitment:
+- Regulatory compliance
+- Safety protocols
+- Risk management approach`
+    }
+  },
+
+  'project-report': {
+    system: `You are a professional technical writer creating post-project reports for drone services clients.
+
+Your writing style is:
+- Professional and objective
+- Clear about findings and outcomes
+- Factual with appropriate recommendations
+- Suitable for client executives and technical staff
+
+IMPORTANT: Reference actual project data and outcomes.`,
+
+    sections: {
+      executiveSummary: `Write an executive summary of the completed project:
+- Work completed and objectives achieved
+- Key findings or results
+- Overall outcome`,
+
+      findingsNarrative: `Describe the key findings or results:
+- What was discovered or delivered
+- Notable observations
+- Quality metrics if applicable`,
+
+      recommendations: `Provide professional recommendations:
+- Follow-up actions if needed
+- Future considerations
+- Additional services that could add value`
+    }
+  },
+
   'operations-plan': {
     system: `You are a professional aviation documentation specialist creating RPAS operations documentation for regulatory submission and client deliverables.
 
@@ -493,7 +593,7 @@ const enhanceExportContent = functions.https.onCall(async (data, context) => {
     )
   }
 
-  const validExportTypes = ['operations-plan', 'sora', 'hse-risk', 'site-survey', 'flight-plan', 'tailgate']
+  const validExportTypes = ['quote', 'proposal', 'project-report', 'operations-plan', 'sora', 'hse-risk', 'site-survey', 'flight-plan', 'tailgate']
   if (!exportType || !validExportTypes.includes(exportType)) {
     throw new functions.https.HttpsError(
       'invalid-argument',

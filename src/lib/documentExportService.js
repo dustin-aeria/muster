@@ -617,9 +617,497 @@ export function exportToDocx(document, project, options = {}) {
   return { success: true, filename, content }
 }
 
+/**
+ * Generate Quote PDF
+ * Simple pricing document with scope summary
+ */
+export async function generateQuotePDF(project, branding, options = {}) {
+  const jsPDF = await loadJsPDF()
+  const { sections = [], sectionOrder = [], enhanced = null, tone = 'professional' } = options
+
+  const colors = {
+    ...DEFAULT_COLORS,
+    ...(branding?.operator?.colors || {})
+  }
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'letter'
+  })
+
+  const pageWidth = 215.9
+  const pageHeight = 279.4
+  const margin = 20
+  const contentWidth = pageWidth - (margin * 2)
+  let currentY = margin
+
+  // Helper to convert hex to RGB
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 30, g: 58, b: 95 }
+  }
+
+  const primaryRgb = hexToRgb(colors.primary)
+
+  // Header with branding
+  if (branding?.operator?.logo) {
+    try {
+      doc.addImage(branding.operator.logo, 'PNG', margin, currentY, 40, 20)
+    } catch (e) {
+      logger.warn('Failed to add logo:', e)
+    }
+  }
+
+  // Company name
+  doc.setFontSize(10)
+  doc.setTextColor(100, 100, 100)
+  doc.text(branding?.operator?.name || 'Operator', pageWidth - margin, currentY + 5, { align: 'right' })
+  doc.text(new Date().toLocaleDateString(), pageWidth - margin, currentY + 10, { align: 'right' })
+
+  currentY += 35
+
+  // Title
+  doc.setFillColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+  doc.rect(margin, currentY, contentWidth, 15, 'F')
+
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(16)
+  doc.setFont('helvetica', 'bold')
+  doc.text('QUOTATION', margin + 5, currentY + 10)
+
+  // Quote reference
+  doc.setFontSize(10)
+  doc.text(`Ref: ${project?.projectCode || project?.id?.slice(0, 8) || 'QT-XXXX'}`, pageWidth - margin - 5, currentY + 10, { align: 'right' })
+
+  currentY += 25
+
+  // Client info
+  doc.setTextColor(30, 30, 30)
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Prepared for:', margin, currentY)
+  currentY += 6
+
+  doc.setFont('helvetica', 'normal')
+  doc.text(project?.clientName || 'Client Name', margin, currentY)
+  currentY += 15
+
+  // Project name
+  doc.setFont('helvetica', 'bold')
+  doc.text('Project:', margin, currentY)
+  doc.setFont('helvetica', 'normal')
+  doc.text(project?.name || 'Project Name', margin + 25, currentY)
+  currentY += 10
+
+  // Scope section
+  if (sections.includes('scope')) {
+    currentY += 5
+    doc.setFillColor(245, 245, 245)
+    doc.rect(margin, currentY, contentWidth, 8, 'F')
+    doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('Scope of Work', margin + 3, currentY + 6)
+    currentY += 12
+
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+
+    const scopeContent = enhanced?.scopeSummary || project?.needsAnalysis?.requirements || project?.description || 'Scope details to be confirmed.'
+    const scopeLines = doc.splitTextToSize(scopeContent, contentWidth)
+    doc.text(scopeLines, margin, currentY)
+    currentY += scopeLines.length * 5 + 10
+  }
+
+  // Deliverables section
+  if (sections.includes('deliverables')) {
+    doc.setFillColor(245, 245, 245)
+    doc.rect(margin, currentY, contentWidth, 8, 'F')
+    doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('Deliverables', margin + 3, currentY + 6)
+    currentY += 12
+
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+
+    const deliverables = project?.needsAnalysis?.deliverables || ['Final data/imagery', 'Documentation', 'Flight logs']
+    deliverables.forEach(d => {
+      doc.text(`• ${d}`, margin + 3, currentY)
+      currentY += 5
+    })
+    currentY += 10
+  }
+
+  // Pricing section
+  if (sections.includes('pricing')) {
+    doc.setFillColor(245, 245, 245)
+    doc.rect(margin, currentY, contentWidth, 8, 'F')
+    doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('Investment', margin + 3, currentY + 6)
+    currentY += 15
+
+    // Price intro if enhanced
+    if (enhanced?.pricingIntro) {
+      doc.setTextColor(30, 30, 30)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      const introLines = doc.splitTextToSize(enhanced.pricingIntro, contentWidth)
+      doc.text(introLines, margin, currentY)
+      currentY += introLines.length * 5 + 5
+    }
+
+    // Price amount
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+    const price = project?.estimatedCost
+      ? `$${project.estimatedCost.toLocaleString('en-CA', { minimumFractionDigits: 2 })}`
+      : 'Price on request'
+    doc.text(price, margin, currentY)
+    currentY += 15
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 100, 100)
+    doc.text('* Plus applicable taxes', margin, currentY)
+    currentY += 10
+  }
+
+  // Terms section
+  if (sections.includes('terms')) {
+    currentY += 5
+    doc.setFillColor(245, 245, 245)
+    doc.rect(margin, currentY, contentWidth, 8, 'F')
+    doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('Terms', margin + 3, currentY + 6)
+    currentY += 12
+
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.text('• 50% deposit required upon acceptance', margin + 3, currentY)
+    currentY += 4
+    doc.text('• Balance due upon completion', margin + 3, currentY)
+    currentY += 4
+    doc.text('• Subject to weather and site conditions', margin + 3, currentY)
+    currentY += 4
+    doc.text('• All operations conducted per Transport Canada regulations', margin + 3, currentY)
+  }
+
+  // Validity section
+  if (sections.includes('validity')) {
+    currentY += 15
+    doc.setTextColor(100, 100, 100)
+    doc.setFontSize(9)
+    doc.text(`This quote is valid for 30 days from ${new Date().toLocaleDateString()}`, margin, currentY)
+  }
+
+  // Footer
+  doc.setDrawColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+  doc.setLineWidth(0.5)
+  doc.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20)
+
+  doc.setFontSize(8)
+  doc.setTextColor(100, 100, 100)
+  doc.text(branding?.operator?.name || 'Operator', margin, pageHeight - 12)
+  doc.text(branding?.operator?.registration || '', pageWidth - margin, pageHeight - 12, { align: 'right' })
+
+  return doc
+}
+
+/**
+ * Generate Proposal PDF
+ * Full client proposal with all sections
+ */
+export async function generateProposalPDF(project, branding, options = {}) {
+  const jsPDF = await loadJsPDF()
+  const { sections = [], sectionOrder = [], enhanced = null, tone = 'professional' } = options
+
+  const colors = {
+    ...DEFAULT_COLORS,
+    ...(branding?.operator?.colors || {})
+  }
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'letter'
+  })
+
+  const pageWidth = 215.9
+  const pageHeight = 279.4
+  const margin = 20
+  const contentWidth = pageWidth - (margin * 2)
+  let currentY = margin
+  let pageNumber = 1
+
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 30, g: 58, b: 95 }
+  }
+
+  const primaryRgb = hexToRgb(colors.primary)
+
+  const addFooter = () => {
+    doc.setFontSize(8)
+    doc.setTextColor(128, 128, 128)
+    doc.text(`Page ${pageNumber}`, pageWidth / 2, pageHeight - 10, { align: 'center' })
+    doc.text(branding?.operator?.name || 'Operator', margin, pageHeight - 10)
+    doc.text(new Date().toLocaleDateString(), pageWidth - margin, pageHeight - 10, { align: 'right' })
+  }
+
+  const checkPageBreak = (needed) => {
+    if (currentY + needed > pageHeight - 30) {
+      addFooter()
+      doc.addPage()
+      pageNumber++
+      currentY = margin
+      return true
+    }
+    return false
+  }
+
+  // ========== COVER PAGE ==========
+  if (sections.includes('coverPage')) {
+    // Header stripe
+    doc.setFillColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+    doc.rect(0, 0, pageWidth, 70, 'F')
+
+    // Logo
+    if (branding?.operator?.logo) {
+      try {
+        doc.addImage(branding.operator.logo, 'PNG', margin, 15, 50, 25)
+      } catch (e) {
+        logger.warn('Failed to add logo:', e)
+      }
+    }
+
+    // Title
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(24)
+    doc.setFont('helvetica', 'bold')
+    doc.text('PROJECT PROPOSAL', margin, 90)
+
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'normal')
+    const projectTitle = doc.splitTextToSize(project?.name || 'Project Name', contentWidth)
+    doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+    doc.text(projectTitle, margin, 105)
+
+    // Client info
+    doc.setTextColor(100, 100, 100)
+    doc.setFontSize(12)
+    doc.text('Prepared for:', margin, 130)
+    doc.setTextColor(30, 30, 30)
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.text(project?.clientName || 'Client', margin, 140)
+
+    // Meta info
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 100, 100)
+    doc.text(`Reference: ${project?.projectCode || project?.id?.slice(0, 8) || 'PROP-XXXX'}`, margin, 160)
+    doc.text(`Date: ${new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}`, margin, 167)
+
+    // Footer
+    doc.setFontSize(8)
+    doc.text(`Submitted by ${branding?.operator?.name || 'Operator'}`, pageWidth / 2, pageHeight - 20, { align: 'center' })
+
+    doc.addPage()
+    pageNumber++
+    currentY = margin
+  }
+
+  // Helper function to add a section
+  const addSection = (title, content) => {
+    checkPageBreak(30)
+
+    // Section header
+    doc.setFillColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+    doc.rect(margin, currentY, contentWidth, 10, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text(title, margin + 3, currentY + 7)
+    currentY += 15
+
+    // Section content
+    doc.setTextColor(30, 30, 30)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+
+    if (typeof content === 'string') {
+      const lines = doc.splitTextToSize(content, contentWidth)
+      lines.forEach(line => {
+        checkPageBreak(6)
+        doc.text(line, margin, currentY)
+        currentY += 5
+      })
+    } else if (Array.isArray(content)) {
+      content.forEach(item => {
+        checkPageBreak(6)
+        doc.text(`• ${item}`, margin + 3, currentY)
+        currentY += 5
+      })
+    }
+
+    currentY += 10
+  }
+
+  // ========== EXECUTIVE SUMMARY ==========
+  if (sections.includes('executiveSummary')) {
+    const summary = enhanced?.executiveSummary ||
+      `This proposal outlines a comprehensive ${project?.needsAnalysis?.missionProfile || 'drone services'} solution for ${project?.clientName || 'the client'}. Our team of certified professionals will deliver high-quality results while maintaining the highest standards of safety and regulatory compliance.`
+    addSection('Executive Summary', summary)
+  }
+
+  // ========== COMPANY OVERVIEW ==========
+  if (sections.includes('companyOverview')) {
+    const overview = enhanced?.companyValue ||
+      `${branding?.operator?.name || 'Our company'} is a leading provider of professional drone services. With certified pilots and state-of-the-art equipment, we deliver exceptional results across various industries.`
+    addSection('About Us', overview)
+  }
+
+  // ========== SCOPE OF WORK ==========
+  if (sections.includes('scope')) {
+    const scope = enhanced?.scopeSummary || project?.needsAnalysis?.requirements || project?.description || 'Detailed scope to be defined.'
+    addSection('Scope of Work', scope)
+  }
+
+  // ========== METHODOLOGY ==========
+  if (sections.includes('methodology')) {
+    const methodology = enhanced?.methodologyNarrative || `Our proven methodology ensures consistent, high-quality results:
+
+1. Pre-flight planning and site assessment
+2. Risk assessment and safety briefing
+3. Equipment preparation and checks
+4. Flight operations execution
+5. Data processing and quality control
+6. Deliverable preparation and client review`
+    addSection('Methodology', methodology)
+  }
+
+  // ========== SAFETY ==========
+  if (sections.includes('safety')) {
+    const safety = enhanced?.safetyCommitment || `Safety is our top priority. All operations are conducted in full compliance with Transport Canada regulations. Our pilots hold valid RPAS certifications and follow comprehensive safety protocols for every flight.`
+    addSection('Safety & Compliance', safety)
+  }
+
+  // ========== EQUIPMENT ==========
+  if (sections.includes('equipment')) {
+    const aircraft = project?.aircraft || project?.flightPlan?.aircraft || []
+    const equipmentList = aircraft.map(a => `${a.nickname || a.registration || 'Aircraft'}: ${a.make || ''} ${a.model || ''}`.trim())
+    if (equipmentList.length > 0) {
+      addSection('Equipment', equipmentList)
+    }
+  }
+
+  // ========== PERSONNEL ==========
+  if (sections.includes('personnel')) {
+    const crew = project?.crew || []
+    const crewList = crew.map(c => `${c.role || 'Team Member'}: ${c.name || 'TBD'}`)
+    if (crewList.length > 0) {
+      addSection('Project Team', crewList)
+    }
+  }
+
+  // ========== DELIVERABLES ==========
+  if (sections.includes('deliverables')) {
+    const deliverables = project?.needsAnalysis?.deliverables || ['Final processed data/imagery', 'Project documentation', 'Flight logs and reports']
+    addSection('Deliverables', deliverables)
+  }
+
+  // ========== TIMELINE ==========
+  if (sections.includes('timeline')) {
+    const timeline = `Start Date: ${project?.startDate || 'To be confirmed'}
+End Date: ${project?.endDate || 'To be confirmed'}
+
+Project phases:
+• Planning and preparation
+• Site assessment
+• Flight operations
+• Data processing
+• Final delivery`
+    addSection('Timeline', timeline)
+  }
+
+  // ========== PRICING ==========
+  if (sections.includes('pricing')) {
+    checkPageBreak(40)
+
+    doc.setFillColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+    doc.rect(margin, currentY, contentWidth, 10, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Investment', margin + 3, currentY + 7)
+    currentY += 15
+
+    if (enhanced?.pricingIntro) {
+      doc.setTextColor(30, 30, 30)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      const introLines = doc.splitTextToSize(enhanced.pricingIntro, contentWidth)
+      doc.text(introLines, margin, currentY)
+      currentY += introLines.length * 5 + 8
+    }
+
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b)
+    const price = project?.estimatedCost
+      ? `$${project.estimatedCost.toLocaleString('en-CA', { minimumFractionDigits: 2 })}`
+      : 'Price on request'
+    doc.text(price, margin, currentY)
+    currentY += 10
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 100, 100)
+    doc.text('Plus applicable taxes', margin, currentY)
+    currentY += 15
+  }
+
+  // ========== TERMS ==========
+  if (sections.includes('terms')) {
+    const terms = `1. This proposal is valid for 30 days from the date of issue.
+2. 50% deposit required upon acceptance; balance due upon completion.
+3. Operations are subject to suitable weather conditions.
+4. All operations comply with Transport Canada regulations.
+5. Changes to scope may affect pricing and timeline.
+6. Cancellation within 48 hours may incur fees.`
+    addSection('Terms & Conditions', terms)
+  }
+
+  // Final footer
+  addFooter()
+
+  return doc
+}
+
 export default {
   exportToPDF,
   exportToMarkdown,
   exportToHTML,
-  exportToDocx
+  exportToDocx,
+  generateQuotePDF,
+  generateProposalPDF
 }

@@ -44,8 +44,8 @@ export const PHASES = [
     id: 'deliver',
     label: 'Deliver',
     icon: PackageCheck,
-    description: 'Proposal, post-field & export',
-    tabs: ['postField', 'proposal', 'export']
+    description: 'Documents & post-field',
+    tabs: ['postField', 'documents']
   },
   {
     id: 'field',

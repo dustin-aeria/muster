@@ -35,7 +35,6 @@ import {
   FileCheck,
   FileText,
   ClipboardList,
-  Download,
   MoreVertical,
   Trash2,
   Circle,
@@ -48,7 +47,6 @@ import {
   CloudOff,
   Target,
   MessageSquare,
-  FileEdit,
   Layers,
   Bell,
   ClipboardCheck,
@@ -57,7 +55,8 @@ import {
   Calculator,
   Clock,
   Receipt,
-  Timer
+  Timer,
+  Files
 } from 'lucide-react'
 import { getProject, updateProject, deleteProject, migrateProjectToDecoupledStructure, getClients } from '../lib/firestore'
 import ProjectOverview from '../components/projects/ProjectOverview'
@@ -73,10 +72,10 @@ import ProjectSORA from '../components/projects/ProjectSORA'
 import ProjectApprovals from '../components/projects/ProjectApprovals'
 import ProjectTailgate from '../components/projects/ProjectTailgate'
 import ProjectForms from '../components/projects/ProjectForms'
-import ProjectExport from '../components/projects/ProjectExport'
+// ProjectExport replaced by DocumentCenter
 import ProjectNeedsAnalysis from '../components/projects/ProjectNeedsAnalysis'
 import ProjectComments from '../components/projects/ProjectComments'
-import ProjectProposal from '../components/projects/ProjectProposal'
+import DocumentCenter from '../components/documentCenter'
 import ProjectTemplates from '../components/projects/ProjectTemplates'
 import ProjectTeam from '../components/projects/ProjectTeam'
 import ProjectPreField from '../components/projects/ProjectPreField'
@@ -119,8 +118,7 @@ const tabs = [
   { id: 'tailgate', label: 'Tailgate', icon: FileText },
   { id: 'postField', label: 'Post-Field', icon: PackageCheck, toggleable: true, sectionKey: 'postField' },
   { id: 'forms', label: 'Forms', icon: ClipboardList, toggleable: true, sectionKey: 'forms' },
-  { id: 'proposal', label: 'Proposal', icon: FileEdit, toggleable: true, sectionKey: 'proposal' },
-  { id: 'export', label: 'Export', icon: Download },
+  { id: 'documents', label: 'Documents', icon: Files },
   { id: 'templates', label: 'Templates', icon: Layers, toggleable: true, sectionKey: 'templates' },
 ]
 
@@ -753,11 +751,8 @@ export default function ProjectView() {
         {activeTab === 'forms' && (
           <ProjectForms project={project} onUpdate={handleUpdate} />
         )}
-        {activeTab === 'proposal' && (
-          <ProjectProposal project={project} />
-        )}
-        {activeTab === 'export' && (
-          <ProjectExport project={project} />
+        {activeTab === 'documents' && (
+          <DocumentCenter project={project} />
         )}
       </div>
     </div>

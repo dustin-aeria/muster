@@ -636,10 +636,17 @@ export class BrandedPDF {
 
   /**
    * Add an AI-enhanced section with professional prose
+   * Combines enhanced narrative with optional data table
+   * @param {string} title - Section title
+   * @param {string} enhancedText - AI-generated prose content
+   * @param {object} options - Optional configuration
    */
   addEnhancedSection(title, enhancedText, options = {}) {
     if (!enhancedText) return this
+
     const { dataTable, showBadge = true } = options
+
+    // Add the section title if provided
     if (title) {
       if (options.isSubsection) {
         this.addSubsectionTitle(title)
@@ -647,56 +654,83 @@ export class BrandedPDF {
         this.addSectionTitle(title)
       }
     }
+
+    // Add AI-enhanced badge if enabled
     if (showBadge) {
-      this.setFillColor('#f3e8ff')
+      this.setFillColor('#f3e8ff') // Light purple background
       this.doc.roundedRect(this.margin, this.currentY - 2, this.contentWidth, 6, 1, 1, 'F')
-      this.setColor('#7c3aed')
+      this.setColor('#7c3aed') // Purple text
       this.doc.setFontSize(6)
       this.doc.setFont('helvetica', 'italic')
       this.doc.text('AI-Enhanced Content', this.margin + 2, this.currentY + 2)
       this.currentY += 8
     }
+
+    // Add the enhanced prose content
     this.addParagraph(enhancedText, { fontSize: 9 })
+
+    // Add optional data table below the prose
     if (dataTable && dataTable.headers && dataTable.rows?.length > 0) {
       this.addSpacer(5)
       this.addTable(dataTable.headers, dataTable.rows, dataTable.options || {})
     }
+
     return this
   }
 
   /**
    * Add enhanced prose paragraph with visual distinction
+   * @param {string} text - Enhanced text content
+   * @param {object} options - Display options
    */
   addEnhancedParagraph(text, options = {}) {
     if (!text) return this
-    this.setDrawColor('#a78bfa')
+
+    // Subtle left border to indicate enhanced content
+    this.setDrawColor('#a78bfa') // Purple border
     this.doc.setLineWidth(0.8)
     const startY = this.currentY
+
+    // Add the paragraph text
     this.addParagraph(text, { fontSize: 9, ...options })
+
+    // Draw the accent border on the left
     this.doc.line(this.margin - 3, startY, this.margin - 3, this.currentY - 4)
+
     return this
   }
 
   /**
    * Add an enhanced info callout box
+   * @param {string} title - Box title
+   * @param {string} content - AI-enhanced content
    */
   addEnhancedInfoBox(title, content) {
     if (!content) return this
+
     this.checkNewPage(35)
-    this.setFillColor('#faf5ff')
+
+    // Purple-themed info box for enhanced content
+    this.setFillColor('#faf5ff') // Very light purple
     this.doc.roundedRect(this.margin, this.currentY, this.contentWidth, 25, 2, 2, 'F')
-    this.setDrawColor('#a78bfa')
+
+    this.setDrawColor('#a78bfa') // Purple border
     this.doc.setLineWidth(0.5)
     this.doc.line(this.margin, this.currentY, this.margin, this.currentY + 25)
+
+    // Title
     this.setColor('#6d28d9')
     this.doc.setFontSize(9)
     this.doc.setFont('helvetica', 'bold')
     this.doc.text(title, this.margin + 5, this.currentY + 7)
+
+    // Content
     this.setColor('#374151')
     this.doc.setFont('helvetica', 'normal')
     this.doc.setFontSize(8)
     const lines = this.doc.splitTextToSize(content, this.contentWidth - 10)
     this.doc.text(lines.slice(0, 2).join(' '), this.margin + 5, this.currentY + 15)
+
     this.currentY += 32
     return this
   }
@@ -734,6 +768,8 @@ export async function generateOperationsPlanPDF(project, branding = null, client
   pdf.addTableOfContents()
 
   pdf.addNewSection('Executive Summary')
+
+  // Use enhanced executive summary if available, otherwise use default
   if (enhancedContent?.executiveSummary) {
     pdf.addEnhancedParagraph(enhancedContent.executiveSummary)
   } else {
@@ -786,10 +822,13 @@ export async function generateOperationsPlanPDF(project, branding = null, client
   if (project?.hseRiskAssessment || project?.hseRisk) {
     pdf.addNewSection('HSE Risk Assessment')
     const risk = project?.hseRiskAssessment || project?.hseRisk
+
+    // Add enhanced risk narrative if available
     if (enhancedContent?.riskNarrative) {
       pdf.addEnhancedParagraph(enhancedContent.riskNarrative)
       pdf.addSpacer(5)
     }
+
     if (risk?.hazards?.length > 0) {
       pdf.addSubsectionTitle('Identified Hazards')
       const hazardRows = risk.hazards.map(h => [
@@ -805,10 +844,13 @@ export async function generateOperationsPlanPDF(project, branding = null, client
   if (project?.emergencyPlan || project?.emergency) {
     pdf.addNewSection('Emergency Procedures')
     const ep = project?.emergencyPlan || project?.emergency
+
+    // Add enhanced emergency procedures narrative if available
     if (enhancedContent?.emergencyProcedures) {
       pdf.addEnhancedParagraph(enhancedContent.emergencyProcedures)
       pdf.addSpacer(5)
     }
+
     if (ep?.primaryEmergencyContact || ep?.musterPoint) {
       pdf.addLabelValue('Muster Point', ep.musterPoint || ep.rallyPoint)
       pdf.addLabelValue('Emergency Contact', ep.primaryEmergencyContact?.name)
@@ -821,7 +863,7 @@ export async function generateOperationsPlanPDF(project, branding = null, client
       pdf.addTable(['Name', 'Role', 'Phone'], contactRows)
     }
   }
-
+  
   if (project?.crew?.length > 0) {
     pdf.addNewSection('Crew Roster')
     const crewRows = project.crew.map(m => [
@@ -832,6 +874,7 @@ export async function generateOperationsPlanPDF(project, branding = null, client
     pdf.addTable(['Name', 'Role', 'Certifications'], crewRows)
   }
 
+  // Add enhanced recommendations if available
   if (enhancedContent?.recommendations) {
     pdf.addNewSection('Recommendations')
     if (Array.isArray(enhancedContent.recommendations)) {
@@ -844,10 +887,13 @@ export async function generateOperationsPlanPDF(project, branding = null, client
   }
 
   pdf.addNewSection('Approvals')
+
+  // Add enhanced closing statement if available
   if (enhancedContent?.closingStatement) {
     pdf.addEnhancedParagraph(enhancedContent.closingStatement)
     pdf.addSpacer(10)
   }
+
   pdf.addSignatureBlock([
     { role: 'Pilot in Command (PIC)', name: '' },
     { role: 'Operations Manager', name: '' },
@@ -873,10 +919,13 @@ export async function generateSORAPDF(project, calculations, branding = null, en
   pdf.addTableOfContents()
 
   pdf.addNewSection('Assessment Summary')
+
+  // Use enhanced executive summary if available
   if (enhancedContent?.executiveSummary) {
     pdf.addEnhancedParagraph(enhancedContent.executiveSummary)
     pdf.addSpacer(5)
   }
+
   pdf.addInfoBox('SAIL Level Determination', `Based on the assessment, this operation has been assigned SAIL Level ${calculations?.sailLevel || calculations?.sail || 'N/A'}`, 'info')
   pdf.addKPIRow([
     { label: 'Initial GRC', value: calculations?.initialGRC || calculations?.intrinsicGRC || 'N/A' },
@@ -887,6 +936,8 @@ export async function generateSORAPDF(project, calculations, branding = null, en
 
   pdf.addNewSection('Ground Risk Assessment')
   pdf.addSubsectionTitle('Intrinsic Ground Risk Class (iGRC)')
+
+  // Use enhanced risk narrative if available
   if (enhancedContent?.riskNarrative) {
     pdf.addEnhancedParagraph(enhancedContent.riskNarrative)
   } else {
@@ -894,6 +945,8 @@ export async function generateSORAPDF(project, calculations, branding = null, en
   }
 
   pdf.addNewSection('Ground Risk Mitigations')
+
+  // Use enhanced mitigations summary if available
   if (enhancedContent?.mitigationsSummary) {
     pdf.addEnhancedParagraph(enhancedContent.mitigationsSummary)
   } else {
@@ -904,6 +957,7 @@ export async function generateSORAPDF(project, calculations, branding = null, en
   pdf.addSubsectionTitle('Air Risk Class (ARC)')
   pdf.addParagraph('The air risk class is determined by the airspace classification and the type of operation.')
 
+  // Add OSO narrative if available
   if (enhancedContent?.osoNarrative) {
     pdf.addNewSection('Operational Safety Objectives')
     pdf.addEnhancedParagraph(enhancedContent.osoNarrative)
@@ -933,11 +987,15 @@ export async function generateHSERiskPDF(project, branding = null, enhancedConte
   const risk = project?.hseRiskAssessment || project?.hseRisk || {}
 
   pdf.addNewSection('Assessment Summary')
+
+  // Use enhanced executive summary if available
   if (enhancedContent?.executiveSummary) {
     pdf.addEnhancedParagraph(enhancedContent.executiveSummary)
     pdf.addSpacer(5)
   }
+
   const hazards = risk.hazards || []
+  // Risk thresholds: Low (1-4), Medium (5-9), High (10-16), Critical (17-25)
   const criticalRisks = hazards.filter(h => h.riskLevel === 'critical' || (h.likelihood * h.severity >= 17)).length
   const highRisks = hazards.filter(h => h.riskLevel === 'high' || (h.likelihood * h.severity >= 10 && h.likelihood * h.severity <= 16)).length
   const mediumRisks = hazards.filter(h => h.riskLevel === 'medium' || (h.likelihood * h.severity >= 5 && h.likelihood * h.severity <= 9)).length
@@ -955,11 +1013,14 @@ export async function generateHSERiskPDF(project, branding = null, enhancedConte
     hazards.forEach((hazard, index) => {
       pdf.checkNewPage(40)
       pdf.addSubsectionTitle(`${index + 1}. ${hazard.description || 'Hazard'}`)
+
+      // Use enhanced hazard description if available
       const enhancedHazardDesc = enhancedContent?.hazardDescriptions?.[hazard.id || index]
       if (enhancedHazardDesc) {
         pdf.addEnhancedParagraph(enhancedHazardDesc)
         pdf.addSpacer(3)
       }
+
       pdf.addKeyValueGrid([
         { label: 'Category', value: hazard.category },
         { label: 'Initial Risk', value: hazard.riskLevel?.toUpperCase() || `L${hazard.likelihood} x S${hazard.severity}` },
@@ -975,6 +1036,7 @@ export async function generateHSERiskPDF(project, branding = null, enhancedConte
     pdf.addParagraph('No hazards identified.')
   }
 
+  // Add enhanced recommendations if available
   if (enhancedContent?.recommendations) {
     pdf.addNewSection('Recommendations')
     if (Array.isArray(enhancedContent.recommendations)) {
