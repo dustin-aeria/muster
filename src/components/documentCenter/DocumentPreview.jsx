@@ -346,6 +346,104 @@ Backup: ${project.communications.backupChannel || 'TBD'}`
       }
       return 'Standard PPE requirements apply.'
 
+    case 'fieldActivities':
+      // Project Report: detailed field activities performed
+      if (project?.activities?.length > 0) {
+        return project.activities.map((a, i) =>
+          `${i + 1}. ${a.type || 'Activity'}: ${a.description || 'No description'}\n   Duration: ${a.duration || 'N/A'} | Status: ${a.status || 'Completed'}`
+        ).join('\n\n')
+      }
+      if (project?.tailgateBriefing?.completedAt) {
+        return `Field operations commenced ${new Date(project.tailgateBriefing.completedAt).toLocaleDateString()}.\nAll planned activities completed as per operations plan.`
+      }
+      return 'Field activities will be documented during operations.'
+
+    case 'methods':
+      // Project Report: methods and techniques used
+      if (project?.methodology) {
+        return project.methodology
+      }
+      const opType = project?.flightPlan?.operationType || project?.soraAssessment?.operationType || 'VLOS'
+      return `Operation Type: ${opType}
+Data Collection Method: ${project?.flightPlan?.missionType || 'Aerial Survey'}
+Equipment: ${(project?.aircraft || project?.flightPlan?.aircraft || []).map(a => a.nickname || a.model || 'Aircraft').join(', ') || 'As per operations plan'}
+Quality Control: Standard operating procedures applied throughout operations.`
+
+    case 'flightLog':
+      // Project Report: summary of flights conducted
+      if (project?.flightLogs?.length > 0) {
+        const totalFlights = project.flightLogs.length
+        const totalDuration = project.flightLogs.reduce((sum, log) => sum + (log.duration || 0), 0)
+        return `Total Flights: ${totalFlights}
+Total Flight Time: ${Math.round(totalDuration)} minutes
+Aircraft Used: ${[...new Set(project.flightLogs.map(l => l.aircraft || 'N/A'))].join(', ')}
+All flights completed within operational parameters.`
+      }
+      return 'Flight log summary will be populated from recorded flights.'
+
+    case 'dataCollected':
+      // Project Report: data collected during operations
+      if (project?.dataCollection) {
+        return project.dataCollection
+      }
+      if (project?.needsAnalysis?.deliverables?.length > 0) {
+        return `Data collected per project requirements:\n${project.needsAnalysis.deliverables.map((d, i) => `${i + 1}. ${d}`).join('\n')}`
+      }
+      return 'Data collection summary will be documented upon completion.'
+
+    case 'findings':
+      // Project Report: key findings and observations
+      if (project?.findings) {
+        return project.findings
+      }
+      return 'Findings and observations will be documented upon data analysis completion.'
+
+    case 'projectOverview':
+      return `Project: ${project?.name || 'Project Name'}
+Client: ${project?.clientName || 'Client Name'}
+Reference: ${project?.projectCode || 'PRJ-XXXX'}
+${project?.description || 'Project description and objectives.'}`
+
+    case 'team':
+      // Project Report: team members involved
+      if (project?.crew?.length > 0) {
+        return project.crew.map(c =>
+          `${c.name || 'TBD'}\nRole: ${c.role || 'Team Member'}${c.certifications?.length ? `\nCertifications: ${c.certifications.join(', ')}` : ''}`
+        ).join('\n\n')
+      }
+      return 'Project team details pending assignment.'
+
+    case 'equipment':
+      // Project Report: equipment used
+      const allAircraft = project?.aircraft || project?.flightPlan?.aircraft || []
+      const allEquipment = project?.equipment || []
+      let equipmentText = ''
+
+      if (allAircraft.length > 0) {
+        equipmentText += 'Aircraft:\n' + allAircraft.map(a =>
+          `• ${a.nickname || a.registration || 'Aircraft'}: ${a.make || ''} ${a.model || ''}`
+        ).join('\n')
+      }
+
+      if (allEquipment.length > 0) {
+        equipmentText += (equipmentText ? '\n\n' : '') + 'Additional Equipment:\n' + allEquipment.map(e =>
+          `• ${e.name || e.type || 'Equipment'}: ${e.description || ''}`
+        ).join('\n')
+      }
+
+      return equipmentText || 'Equipment list pending.'
+
+    case 'qualityAssurance':
+      // Project Report: QA measures applied
+      return `Quality Assurance Measures:
+• Pre-flight system checks completed for all operations
+• Data validation performed post-collection
+• Deliverables reviewed against project requirements
+• Documentation maintained per standard operating procedures`
+
+    case 'appendices':
+      return 'Appendices include supporting documentation, raw data, and supplementary materials.'
+
     case 'terms':
       return `1. Quote valid for 30 days
 2. 50% deposit required
@@ -389,7 +487,13 @@ function getEnhancedKeyForSection(sectionId) {
     recommendations: 'recommendations',
     emergency: 'emergencyProcedures',
     mission: 'missionDescription',
-    briefingIntro: 'briefingIntro'
+    briefingIntro: 'briefingIntro',
+    // Project Report specific mappings
+    fieldActivities: 'activitiesNarrative',
+    methods: 'methodsNarrative',
+    findings: 'findingsNarrative',
+    dataCollected: 'dataAnalysis',
+    deliverables: 'deliverablesNarrative'
   }
   return mapping[sectionId] || sectionId
 }

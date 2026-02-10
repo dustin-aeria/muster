@@ -114,31 +114,58 @@ IMPORTANT: Reference actual project data throughout. Never use generic or placeh
   },
 
   'project-report': {
-    system: `You are a professional technical writer creating post-project reports for drone services clients.
+    system: `You are a professional technical writer creating comprehensive post-project reports for drone services clients.
 
 Your writing style is:
 - Professional and objective
-- Clear about findings and outcomes
-- Factual with appropriate recommendations
-- Suitable for client executives and technical staff
+- Clear about methods, findings, and outcomes
+- Factual with appropriate detail for technical and executive audiences
+- Results-focused with actionable recommendations
 
-IMPORTANT: Reference actual project data and outcomes.`,
+IMPORTANT: Reference actual project data, activities, and outcomes. Create a world-class deliverable that demonstrates the value provided.`,
 
     sections: {
-      executiveSummary: `Write an executive summary of the completed project:
-- Work completed and objectives achieved
-- Key findings or results
-- Overall outcome`,
+      executiveSummary: `Write a compelling 2-3 paragraph executive summary:
+- Summarize the project scope and objectives achieved
+- Highlight key deliverables and findings
+- Note any significant accomplishments or value delivered
+- Provide a brief statement on project success`,
 
-      findingsNarrative: `Describe the key findings or results:
-- What was discovered or delivered
-- Notable observations
-- Quality metrics if applicable`,
+      activitiesNarrative: `Write a professional narrative of field activities (2-3 paragraphs):
+- Describe the operations conducted on-site
+- Note the sequence of activities and approach taken
+- Highlight any adaptations made to achieve objectives
+- Reference specific locations, dates, or conditions if available`,
 
-      recommendations: `Provide professional recommendations:
-- Follow-up actions if needed
-- Future considerations
-- Additional services that could add value`
+      methodsNarrative: `Describe the methods and techniques employed (2-3 paragraphs):
+- Explain the operational approach used
+- Detail the data collection methods
+- Describe equipment configuration and settings
+- Note quality control measures applied`,
+
+      findingsNarrative: `Describe the key findings and observations (2-3 paragraphs):
+- What was discovered or documented
+- Notable observations from the data
+- Any anomalies or items of interest identified
+- Quality of data collected`,
+
+      dataAnalysis: `Provide analysis of the collected data (2-3 paragraphs):
+- Summarize the data captured
+- Describe processing and analysis performed
+- Note data quality and completeness
+- Reference specific metrics or quantities`,
+
+      deliverablesNarrative: `Describe the deliverables provided to the client (2-3 paragraphs):
+- List and describe each deliverable
+- Explain the format and content of each
+- Note how deliverables meet project objectives
+- Describe any additional value provided`,
+
+      recommendations: `Provide professional recommendations (3-5 bullet points):
+- Follow-up actions or monitoring if needed
+- Future operational considerations
+- Additional services that could add value
+- Maintenance or update recommendations`
     }
   },
 
@@ -561,6 +588,61 @@ ${hazards.slice(0, 10).map((h, i) => `${i + 1}. ${h.description || 'Unnamed'} - 
 - Hospital: ${ep.nearestHospital || 'Not specified'}
 - Muster Point: ${ep.musterPoint || ep.rallyPoint || 'Not specified'}
 `
+  }
+
+  // Add project report specific context
+  if (exportType === 'project-report') {
+    // Activities performed
+    if (project.activities?.length > 0) {
+      context += `
+### Field Activities (${project.activities.length} recorded)
+${project.activities.slice(0, 10).map((a, i) => `${i + 1}. ${a.type || 'Activity'}: ${a.description || 'No description'} - ${a.status || 'Completed'}`).join('\n')}
+`
+    }
+
+    // Flight logs
+    if (project.flightLogs?.length > 0) {
+      const totalFlights = project.flightLogs.length
+      const totalDuration = project.flightLogs.reduce((sum, log) => sum + (log.duration || 0), 0)
+      context += `
+### Flight Summary
+- Total Flights: ${totalFlights}
+- Total Duration: ${Math.round(totalDuration)} minutes
+- Aircraft: ${[...new Set(project.flightLogs.map(l => l.aircraft || 'N/A'))].join(', ')}
+`
+    }
+
+    // Deliverables
+    if (project.needsAnalysis?.deliverables?.length > 0) {
+      context += `
+### Planned Deliverables
+${project.needsAnalysis.deliverables.map((d, i) => `${i + 1}. ${d}`).join('\n')}
+`
+    }
+
+    // Methodology if specified
+    if (project.methodology) {
+      context += `
+### Methodology
+${project.methodology}
+`
+    }
+
+    // Findings if any
+    if (project.findings) {
+      context += `
+### Preliminary Findings
+${project.findings}
+`
+    }
+
+    // Tailgate briefing completion
+    if (project.tailgateBriefing?.completedAt) {
+      context += `
+### Operations Timeline
+- Briefing Completed: ${new Date(project.tailgateBriefing.completedAt).toLocaleDateString()}
+`
+    }
   }
 
   return context
