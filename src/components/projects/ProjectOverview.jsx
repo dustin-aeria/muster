@@ -447,9 +447,32 @@ function ProjectDetails({ project, onUpdate }) {
       <div className="space-y-4">
         {/* Estimated Field Days - Key for cost calculations */}
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <label className="block text-xs font-medium text-blue-800 mb-1">
-            Estimated Field Days
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-medium text-blue-800">
+              Estimated Field Days
+            </label>
+            {/* Show project dates as a guide */}
+            {(project?.startDate || project?.endDate) && (
+              <span className="text-xs text-blue-600 flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {project?.startDate && project?.endDate && project.startDate !== project.endDate ? (
+                  <>
+                    {new Date(project.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {' - '}
+                    {new Date(project.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {(() => {
+                      const start = new Date(project.startDate)
+                      const end = new Date(project.endDate)
+                      const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
+                      return ` (${diffDays} days)`
+                    })()}
+                  </>
+                ) : project?.startDate ? (
+                  new Date(project.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                ) : null}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="number"
