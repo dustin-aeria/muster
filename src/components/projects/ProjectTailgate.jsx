@@ -977,31 +977,76 @@ export default function ProjectTailgate({ project, onUpdate }) {
                       )}
 
                       {section.id === 'emergency' && (
-                        <div className="space-y-2 text-sm">
-                          <div className="grid sm:grid-cols-2 gap-2">
-                            <div className="p-2 bg-red-50 rounded">
-                              <span className="text-red-700 font-medium">Emergency Contact: </span>
-                              <span className="text-red-900">
-                                {project.emergencyPlan?.primaryEmergencyContact?.name || project.emergencyPlan?.contacts?.[0]?.name || 'Not set'}
-                                {(project.emergencyPlan?.primaryEmergencyContact?.phone || project.emergencyPlan?.contacts?.[0]?.phone) &&
-                                  ` - ${project.emergencyPlan?.primaryEmergencyContact?.phone || project.emergencyPlan?.contacts?.[0]?.phone}`}
-                              </span>
-                            </div>
-                            <div className="p-2 bg-red-50 rounded">
-                              <span className="text-red-700 font-medium">Hospital: </span>
-                              <span className="text-red-900">{project.emergencyPlan?.nearestFacilities?.hospital || project.emergencyPlan?.nearestHospital || 'Not set'}</span>
+                        <div className="space-y-3 text-sm">
+                          {/* All Emergency Contacts */}
+                          <div>
+                            <p className="font-medium text-gray-700 mb-2">Emergency Contacts:</p>
+                            <div className="space-y-2">
+                              {(project.emergencyPlan?.contacts?.length > 0) ? (
+                                project.emergencyPlan.contacts.map((contact, i) => (
+                                  <div key={i} className="p-2 bg-red-50 rounded flex items-center justify-between">
+                                    <div>
+                                      <span className="font-medium text-red-900">{contact.name || 'Unknown'}</span>
+                                      {contact.role && <span className="text-red-700 ml-2">({contact.role})</span>}
+                                    </div>
+                                    <span className="text-red-800 font-mono">{contact.phone || 'No phone'}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-gray-500 italic">No emergency contacts configured.</p>
+                              )}
                             </div>
                           </div>
+
+                          {/* Nearest Facilities */}
+                          <div className="grid sm:grid-cols-3 gap-2">
+                            <div className="p-2 bg-blue-50 rounded">
+                              <p className="text-blue-700 text-xs font-medium">Hospital</p>
+                              <p className="text-blue-900 font-medium">{project.emergencyPlan?.nearestFacilities?.hospitalName || project.emergencyPlan?.nearestHospital || 'Not set'}</p>
+                              {project.emergencyPlan?.nearestFacilities?.hospitalPhone && (
+                                <p className="text-blue-800 text-xs">{project.emergencyPlan.nearestFacilities.hospitalPhone}</p>
+                              )}
+                            </div>
+                            <div className="p-2 bg-orange-50 rounded">
+                              <p className="text-orange-700 text-xs font-medium">Fire Station</p>
+                              <p className="text-orange-900 font-medium">{project.emergencyPlan?.nearestFacilities?.fireStationName || 'Not set'}</p>
+                              {project.emergencyPlan?.nearestFacilities?.fireStationPhone && (
+                                <p className="text-orange-800 text-xs">{project.emergencyPlan.nearestFacilities.fireStationPhone}</p>
+                              )}
+                            </div>
+                            <div className="p-2 bg-indigo-50 rounded">
+                              <p className="text-indigo-700 text-xs font-medium">Police</p>
+                              <p className="text-indigo-900 font-medium">{project.emergencyPlan?.nearestFacilities?.policeStationName || 'Not set'}</p>
+                              {project.emergencyPlan?.nearestFacilities?.policeStationPhone && (
+                                <p className="text-indigo-800 text-xs">{project.emergencyPlan.nearestFacilities.policeStationPhone}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Muster Point */}
                           {(project.emergencyPlan?.musterPoints?.length > 0 || project.emergencyPlan?.rallyPoint) && (
                             <div className="p-2 bg-green-50 rounded">
                               <span className="text-green-700 font-medium">Muster Point: </span>
                               <span className="text-green-900">
-                                {project.emergencyPlan?.musterPoints?.[0]?.name || project.emergencyPlan?.rallyPoint || 'Not set'}
+                                {project.emergencyPlan?.musterPoints?.find(mp => mp.isPrimary)?.name ||
+                                 project.emergencyPlan?.musterPoints?.[0]?.name ||
+                                 project.emergencyPlan?.rallyPoint || 'Not set'}
                               </span>
                             </div>
                           )}
+
+                          {/* Emergency Procedures Summary */}
                           {project.emergencyPlan?.procedures?.length > 0 && (
-                            <p className="text-gray-600">{project.emergencyPlan.procedures.length} emergency procedures documented</p>
+                            <div className="p-2 bg-gray-50 rounded">
+                              <p className="font-medium text-gray-700 mb-1">Emergency Procedures:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {project.emergencyPlan.procedures.map((proc, i) => (
+                                  <span key={i} className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs">
+                                    {proc.customName || proc.type || 'Procedure'}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
                           )}
                         </div>
                       )}
