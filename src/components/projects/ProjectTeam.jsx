@@ -58,10 +58,19 @@ export default function ProjectTeam({ project, onUpdate }) {
 
   // Load distribution lists
   useEffect(() => {
-    loadDistributionLists()
-  }, [project.id])
+    if (project?.id && project?.organizationId) {
+      loadDistributionLists()
+    }
+  }, [project?.id, project?.organizationId])
 
   const loadDistributionLists = async () => {
+    // Guard against missing required fields
+    if (!project?.id || !project?.organizationId) {
+      console.warn('ProjectTeam: Missing project.id or project.organizationId')
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       const lists = await getDistributionLists(project.id, project.organizationId)
@@ -74,6 +83,11 @@ export default function ProjectTeam({ project, onUpdate }) {
   }
 
   const loadNotificationHistory = async () => {
+    if (!project?.id) {
+      setHistoryLoading(false)
+      return
+    }
+
     try {
       setHistoryLoading(true)
       const history = await getAggregatedNotificationHistory(project.id, { limit: 20 })
@@ -87,12 +101,12 @@ export default function ProjectTeam({ project, onUpdate }) {
 
   // Initialize notification settings if not present
   useEffect(() => {
-    if (!project.notificationSettings) {
+    if (project?.id && !project.notificationSettings) {
       onUpdate({
         notificationSettings: getDefaultNotificationSettings()
       })
     }
-  }, [project.notificationSettings])
+  }, [project?.id, project?.notificationSettings])
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
@@ -147,6 +161,12 @@ export default function ProjectTeam({ project, onUpdate }) {
   }
 
   const handleCreateDefaultLists = async () => {
+    if (!project?.id || !project?.organizationId) {
+      console.warn('ProjectTeam: Cannot create default lists - missing project.id or project.organizationId')
+      alert('Unable to create default lists. Please try refreshing the page.')
+      return
+    }
+
     try {
       setLoading(true)
       await createDefaultListsForProject(project.id, project.organizationId, project.crew || [])
