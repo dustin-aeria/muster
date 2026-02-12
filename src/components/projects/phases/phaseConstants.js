@@ -251,6 +251,7 @@ export function createTask(overrides = {}) {
     estimatedHours: 0,
     assignedOperators: [],
     estimatedCost: 0,
+    modifiers: [],  // Array of { id, name, multiplier } for price adjustments
     ...overrides
   }
 }

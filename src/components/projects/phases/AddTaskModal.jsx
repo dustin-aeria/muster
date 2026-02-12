@@ -6,11 +6,13 @@
  */
 
 import { useState, useEffect } from 'react'
-import { X, ListTodo, Calendar, Clock, Users, DollarSign, Trash2 } from 'lucide-react'
+import { X, ListTodo, Calendar, Clock, Users, DollarSign, Trash2, Percent } from 'lucide-react'
 import {
   PRE_FIELD_TASK_TYPES,
   POST_FIELD_TASK_TYPES,
-  createTask
+  createTask,
+  generateId,
+  COST_ITEM_MODIFIER_PRESETS
 } from './phaseConstants'
 
 const RATE_TYPE_OPTIONS = {
@@ -34,7 +36,8 @@ export default function AddTaskModal({
     dueDate: '',
     rateType: 'hourly',
     estimatedDuration: '',
-    assignedOperators: []
+    assignedOperators: [],
+    modifiers: []
   })
 
   const taskTypes = isPreField ? PRE_FIELD_TASK_TYPES : POST_FIELD_TASK_TYPES
@@ -50,7 +53,8 @@ export default function AddTaskModal({
         dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
         rateType: task.rateType || 'hourly',
         estimatedDuration: task.estimatedDuration || task.estimatedHours || '',
-        assignedOperators: task.assignedOperators || []
+        assignedOperators: task.assignedOperators || [],
+        modifiers: task.modifiers || []
       })
     } else {
       setFormData({
@@ -60,7 +64,8 @@ export default function AddTaskModal({
         dueDate: '',
         rateType: 'hourly',
         estimatedDuration: '',
-        assignedOperators: []
+        assignedOperators: [],
+        modifiers: []
       })
     }
   }, [task, isOpen])
@@ -71,13 +76,53 @@ export default function AddTaskModal({
     return operator?.[rateField] || 0
   }
 
-  // Calculate estimated cost based on assigned operators, duration, and rate type
-  const estimatedCost = formData.assignedOperators.reduce((total, opId) => {
+  // Calculate base cost based on assigned operators, duration, and rate type
+  const baseCost = formData.assignedOperators.reduce((total, opId) => {
     const operator = operators.find(o => o.id === opId || o.operatorId === opId)
     const duration = parseFloat(formData.estimatedDuration) || 0
     const rate = getOperatorRate(operator)
     return total + (duration * rate)
   }, 0)
+
+  // Apply modifiers to get final estimated cost
+  const estimatedCost = (() => {
+    let cost = baseCost
+    if (formData.modifiers.length > 0) {
+      let multiplier = 1
+      for (const mod of formData.modifiers) {
+        multiplier *= (mod.multiplier || 1)
+      }
+      cost *= multiplier
+    }
+    return cost
+  })()
+
+  // Modifier management functions
+  const addModifier = (preset = null) => {
+    const newModifier = preset
+      ? { id: generateId(), name: preset.name, multiplier: preset.multiplier }
+      : { id: generateId(), name: '', multiplier: 1.0 }
+    setFormData(prev => ({
+      ...prev,
+      modifiers: [...prev.modifiers, newModifier]
+    }))
+  }
+
+  const updateModifier = (id, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      modifiers: prev.modifiers.map(m =>
+        m.id === id ? { ...m, [field]: value } : m
+      )
+    }))
+  }
+
+  const removeModifier = (id) => {
+    setFormData(prev => ({
+      ...prev,
+      modifiers: prev.modifiers.filter(m => m.id !== id)
+    }))
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -98,7 +143,9 @@ export default function AddTaskModal({
             : formData.rateType === 'daily'
               ? (parseFloat(formData.estimatedDuration) || 0) * 8
               : (parseFloat(formData.estimatedDuration) || 0) * 40,
-          estimatedCost
+          estimatedCost,
+          baseCost,
+          modifiers: formData.modifiers
         }
       : createTask({
           ...formData,
@@ -109,7 +156,9 @@ export default function AddTaskModal({
             : formData.rateType === 'daily'
               ? (parseFloat(formData.estimatedDuration) || 0) * 8
               : (parseFloat(formData.estimatedDuration) || 0) * 40,
-          estimatedCost
+          estimatedCost,
+          baseCost,
+          modifiers: formData.modifiers
         })
 
     onSave(taskData)
@@ -347,16 +396,104 @@ export default function AddTaskModal({
               </div>
             )}
 
+            {/* Price Adjustments / Modifiers */}
+            {(baseCost > 0 || formData.modifiers.length > 0) && (
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Percent className="w-4 h-4" />
+                    Price Adjustments
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => addModifier()}
+                    className="text-xs text-aeria-navy hover:underline"
+                  >
+                    + Add Custom
+                  </button>
+                </div>
+
+                {/* Quick add preset modifiers */}
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {COST_ITEM_MODIFIER_PRESETS
+                    .filter(preset => !formData.modifiers.some(m => m.name === preset.name))
+                    .slice(0, 4)
+                    .map(preset => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => addModifier(preset)}
+                        className="px-2 py-0.5 text-xs bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors"
+                      >
+                        + {preset.name} ({preset.multiplier > 1 ? '+' : ''}{((preset.multiplier - 1) * 100).toFixed(0)}%)
+                      </button>
+                    ))}
+                </div>
+
+                {/* Active modifiers */}
+                {formData.modifiers.length > 0 ? (
+                  <div className="space-y-2">
+                    {formData.modifiers.map(m => (
+                      <div key={m.id} className="flex items-center gap-2 bg-white p-2 rounded border border-gray-200">
+                        <input
+                          type="text"
+                          value={m.name}
+                          onChange={(e) => updateModifier(m.id, 'name', e.target.value)}
+                          className="input flex-1 text-sm py-1"
+                          placeholder="Adjustment name"
+                        />
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={m.multiplier || ''}
+                            onChange={(e) => updateModifier(m.id, 'multiplier', parseFloat(e.target.value) || 1)}
+                            className="input w-16 text-sm text-center py-1"
+                            placeholder="1.0"
+                            step="0.05"
+                            min="0.1"
+                            max="3"
+                          />
+                          <span className="text-xs text-gray-500">x</span>
+                        </div>
+                        <span className={`text-xs w-12 text-right ${
+                          m.multiplier > 1 ? 'text-red-600' : m.multiplier < 1 ? 'text-green-600' : 'text-gray-500'
+                        }`}>
+                          {m.multiplier > 1 ? `+${((m.multiplier - 1) * 100).toFixed(0)}%` :
+                           m.multiplier < 1 ? `${((m.multiplier - 1) * 100).toFixed(0)}%` : '—'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeModifier(m.id)}
+                          className="p-1 text-gray-400 hover:text-red-500"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">No adjustments. Add rush fees, discounts, etc.</p>
+                )}
+              </div>
+            )}
+
             {/* Estimated Cost */}
             {estimatedCost > 0 && (
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-green-800">
-                    Estimated Cost: <strong>${estimatedCost.toFixed(2)}</strong>
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-green-600" />
+                    <span className="text-sm text-green-800">
+                      Estimated Cost: <strong>${estimatedCost.toFixed(2)}</strong>
+                    </span>
+                  </div>
                   <span className="text-xs text-green-600">
-                    ({formData.assignedOperators.length} operator{formData.assignedOperators.length !== 1 ? 's' : ''} × {formData.estimatedDuration || 0} {rateConfig.label.toLowerCase()})
+                    {formData.assignedOperators.length} operator{formData.assignedOperators.length !== 1 ? 's' : ''} × {formData.estimatedDuration || 0} {rateConfig.label.toLowerCase()}
+                    {formData.modifiers.length > 0 && (
+                      <span className="ml-1">
+                        (base ${baseCost.toFixed(2)})
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>
