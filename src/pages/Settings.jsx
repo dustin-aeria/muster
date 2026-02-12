@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganization } from '../hooks/useOrganization'
 import { usePermissions } from '../hooks/usePermissions'
-import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2, Phone, Users, Plug, Eye, EyeOff } from 'lucide-react'
+import { User, Building, Shield, Bell, Palette, Check, Loader2, Database, AlertCircle, CheckCircle2, Phone, Users } from 'lucide-react'
 import { updateOperator } from '../lib/firestore'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
@@ -22,7 +22,6 @@ import TeamMembers from './settings/TeamMembers'
 import { RequireAdmin, AccessDeniedMessage } from '../components/PermissionGuard'
 import { logger } from '../lib/logger'
 import { autoElevateToAdmin } from '../lib/adminUtils'
-import { getClaudeApiKey, saveClaudeApiKey } from '../lib/claudeService'
 
 export default function Settings() {
   const { userProfile, user } = useAuth()
@@ -86,13 +85,6 @@ export default function Settings() {
   const [elevating, setElevating] = useState(false)
   const [elevateResult, setElevateResult] = useState(null)
 
-  // Claude API key state
-  const [claudeApiKey, setClaudeApiKey] = useState('')
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [apiKeySaving, setApiKeySaving] = useState(false)
-  const [apiKeySaved, setApiKeySaved] = useState(false)
-  const [apiKeyLoading, setApiKeyLoading] = useState(true)
-
   // Handle elevate to admin
   const handleElevateToAdmin = async () => {
     setElevating(true)
@@ -146,42 +138,6 @@ export default function Settings() {
       loadNotificationPrefs()
     }
   }, [user])
-
-  // Load Claude API key
-  useEffect(() => {
-    if (user) {
-      loadClaudeApiKey()
-    }
-  }, [user])
-
-  const loadClaudeApiKey = async () => {
-    setApiKeyLoading(true)
-    try {
-      const key = await getClaudeApiKey(user.uid)
-      if (key) {
-        setClaudeApiKey(key)
-      }
-    } catch (error) {
-      console.error('Error loading Claude API key:', error)
-    } finally {
-      setApiKeyLoading(false)
-    }
-  }
-
-  const handleSaveClaudeApiKey = async () => {
-    setApiKeySaving(true)
-    setApiKeySaved(false)
-    try {
-      await saveClaudeApiKey(user.uid, claudeApiKey)
-      setApiKeySaved(true)
-      setTimeout(() => setApiKeySaved(false), 3000)
-    } catch (err) {
-      logger.error('Failed to save Claude API key:', err)
-      alert('Failed to save API key. Please try again.')
-    } finally {
-      setApiKeySaving(false)
-    }
-  }
 
   const loadNotificationPrefs = async () => {
     try {
@@ -342,7 +298,6 @@ export default function Settings() {
     { id: 'emergency', label: 'Emergency', icon: Phone, description: 'Emergency contacts', requiresSettings: true },
     { id: 'branding', label: 'Branding', icon: Palette, description: 'PDF export branding', requiresSettings: true },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alert preferences' },
-    { id: 'integrations', label: 'Integrations', icon: Plug, description: 'AI & external services' },
     { id: 'security', label: 'Security', icon: Shield, description: 'Password & authentication' },
     { id: 'data', label: 'Data', icon: Database, description: 'Data management', requiresAdmin: true }
   ]
@@ -643,88 +598,6 @@ export default function Settings() {
                   onClick={handleSaveNotifications}
                   label="Save Preferences"
                 />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Integrations Tab */}
-        {activeTab === 'integrations' && (
-          <div className="card">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-aeria-sky rounded-lg">
-                <Plug className="w-5 h-5 text-aeria-navy" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Integrations</h2>
-                <p className="text-sm text-gray-500">AI assistants and external services</p>
-              </div>
-            </div>
-            <div className="space-y-6">
-              {/* Claude AI Section */}
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <svg className="w-6 h-6 text-purple-700" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-purple-900">Claude AI Assistant</h3>
-                    <p className="text-sm text-purple-700 mt-1">
-                      Connect your Anthropic API key to enable AI-powered study assistance in Q-Cards.
-                      Ask questions, get explanations, and explore examples.
-                    </p>
-                    <a
-                      href="https://console.anthropic.com/settings/keys"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-purple-600 hover:text-purple-800 underline mt-2 inline-block"
-                    >
-                      Get your API key from Anthropic Console
-                    </a>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="label">Claude API Key</label>
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <input
-                        type={showApiKey ? 'text' : 'password'}
-                        className="input pr-10 font-mono text-sm"
-                        value={claudeApiKey}
-                        onChange={(e) => setClaudeApiKey(e.target.value)}
-                        placeholder="sk-ant-api03-..."
-                        disabled={apiKeyLoading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    <SaveButton
-                      saving={apiKeySaving}
-                      saved={apiKeySaved}
-                      onClick={handleSaveClaudeApiKey}
-                      label="Save Key"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Your API key is stored securely and only used for Q-Cards AI assistance.
-                  </p>
-                </div>
-              </div>
-
-              {/* Future Integrations Placeholder */}
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <h3 className="font-medium text-gray-700">More integrations coming soon</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Weather services, flight planning APIs, and more.
-                </p>
               </div>
             </div>
           </div>

@@ -720,3 +720,109 @@ const exportEnhancement = require('./exportEnhancement')
 exports.enhanceExportContent = exportEnhancement.enhanceExportContent
 exports.invalidateExportCache = exportEnhancement.invalidateExportCache
 exports.getExportCacheStatus = exportEnhancement.getExportCacheStatus
+
+// ============================================
+// Q-Cards AI Study Assistant
+// ============================================
+
+const Anthropic = require('@anthropic-ai/sdk')
+
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
+let anthropic = null
+if (ANTHROPIC_API_KEY) {
+  anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY })
+  functions.logger.info('Anthropic SDK initialized for Q-Cards AI')
+}
+
+/**
+ * Q-Cards AI Study Assistant
+ * Answers questions about L1C RPAS flashcards
+ */
+exports.askQCardQuestion = functions.https.onCall(async (data, context) => {
+  // Verify authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'User must be authenticated'
+    )
+  }
+
+  if (!anthropic) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'AI service not configured'
+    )
+  }
+
+  const { question, card } = data
+  const callerUid = context.auth.uid
+
+  // Input validation
+  if (!question || typeof question !== 'string' || question.length > 1000) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Valid question is required (max 1000 characters)'
+    )
+  }
+
+  if (!card || !card.question || !card.answer) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Valid flashcard data is required'
+    )
+  }
+
+  // Rate limiting
+  const withinLimit = await checkRateLimit(callerUid, 'qcard_question')
+  if (!withinLimit) {
+    throw new functions.https.HttpsError(
+      'resource-exhausted',
+      'Too many requests. Please try again later.'
+    )
+  }
+
+  const systemPrompt = `You are a knowledgeable RPAS (Remotely Piloted Aircraft Systems) instructor helping a student study for their Level 1 Complex Operations certification in Canada.
+
+The student is studying the following flashcard:
+
+**Question:** ${escapeHtml(card.question)}
+
+**Correct Answer:** ${escapeHtml(card.answer)}
+
+Your role is to:
+1. Help explain concepts in different ways if the student is confused
+2. Provide real-world examples and scenarios
+3. Connect this topic to related regulations or concepts
+4. Help the student understand WHY this information is important for safe RPAS operations
+5. Answer follow-up questions about this topic
+
+Keep responses concise but helpful (2-3 paragraphs max). Use bullet points for clarity when appropriate. Reference specific regulations (CARs, TP documents) when relevant.`
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [
+        { role: 'user', content: question }
+      ]
+    })
+
+    const responseText = response.content?.[0]?.text || 'No response generated.'
+
+    functions.logger.info('Q-Card question answered', {
+      userId: callerUid,
+      questionLength: question.length,
+      responseLength: responseText.length
+    })
+
+    return { success: true, response: responseText }
+
+  } catch (error) {
+    functions.logger.error('Q-Card AI error:', error)
+    throw new functions.https.HttpsError(
+      'internal',
+      'Failed to get AI response. Please try again.'
+    )
+  }
+})

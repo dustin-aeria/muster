@@ -33,19 +33,15 @@ import {
   Loader2,
   Lightbulb,
   HelpCircle,
-  Sparkles,
-  Settings
+  Sparkles
 } from 'lucide-react'
 
-import { useAuth } from '../../contexts/AuthContext'
 import { L1C_FLASHCARDS, FLASHCARD_CATEGORIES } from '../../data/l1cFlashcards'
-import { getClaudeApiKey, askClaude, generateFlashcardSystemPrompt } from '../../lib/claudeService'
+import { askQCardQuestion } from '../../lib/claudeService'
 
 const STORAGE_KEY = 'muster_qcards_known'
 
 export default function QCards() {
-  const { user } = useAuth()
-
   // State
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isFlipped, setIsFlipped] = useState(false)
@@ -61,26 +57,6 @@ export default function QCards() {
   const [aiResponse, setAiResponse] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
-  const [hasApiKey, setHasApiKey] = useState(false)
-  const [apiKeyChecked, setApiKeyChecked] = useState(false)
-
-  // Check for API key on mount
-  useEffect(() => {
-    if (user) {
-      checkApiKey()
-    }
-  }, [user])
-
-  const checkApiKey = async () => {
-    try {
-      const key = await getClaudeApiKey(user.uid)
-      setHasApiKey(!!key)
-    } catch (error) {
-      console.error('Error checking API key:', error)
-    } finally {
-      setApiKeyChecked(true)
-    }
-  }
 
   // Load known cards from localStorage on mount
   useEffect(() => {
@@ -223,14 +199,7 @@ export default function QCards() {
     setAiResponse('')
 
     try {
-      const apiKey = await getClaudeApiKey(user.uid)
-      if (!apiKey) {
-        setAiError('No API key configured. Please add your Claude API key in Settings > Integrations.')
-        return
-      }
-
-      const systemPrompt = generateFlashcardSystemPrompt(currentCard)
-      const response = await askClaude(apiKey, systemPrompt, questionText)
+      const response = await askQCardQuestion(currentCard, questionText)
       setAiResponse(response)
     } catch (error) {
       setAiError(error.message)
@@ -617,24 +586,7 @@ export default function QCards() {
               </button>
             </div>
 
-            {/* API Key Check */}
-            {apiKeyChecked && !hasApiKey ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-                <Settings className="w-12 h-12 text-gray-300 mb-4" />
-                <h4 className="font-medium text-gray-900 mb-2">API Key Required</h4>
-                <p className="text-sm text-gray-600 mb-4">
-                  Add your Claude API key in Settings to use AI assistance.
-                </p>
-                <a
-                  href="/settings"
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  Go to Settings
-                </a>
-              </div>
-            ) : (
-              <>
-                {/* Quick Prompts */}
+            {/* Quick Prompts */}
                 <div className="flex gap-2 mb-4">
                   {quickPrompts.map((prompt, index) => (
                     <button
@@ -701,8 +653,6 @@ export default function QCards() {
                     <Send className="w-4 h-4" />
                   </button>
                 </div>
-              </>
-            )}
           </div>
         )}
       </div>
