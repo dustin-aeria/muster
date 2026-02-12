@@ -272,9 +272,25 @@ export function createCostItem(overrides = {}) {
     rateType: 'hourly',
     total: 0,
     notes: '',
+    modifiers: [],  // Array of { id, name, multiplier } for price adjustments
     ...overrides
   }
 }
+
+/**
+ * Preset modifiers for cost items
+ * Same pattern as service modifiers
+ */
+export const COST_ITEM_MODIFIER_PRESETS = [
+  { name: 'Rush (24-48hr)', multiplier: 1.25 },
+  { name: 'Same Day', multiplier: 1.50 },
+  { name: 'Preferred Client', multiplier: 0.90 },
+  { name: 'Volume Discount', multiplier: 0.85 },
+  { name: 'Difficulty Premium', multiplier: 1.20 },
+  { name: 'Weekend/Holiday', multiplier: 1.25 },
+  { name: 'Remote Location', multiplier: 1.15 },
+  { name: 'After Hours', multiplier: 1.30 }
+]
 
 /**
  * Create default phase structure
@@ -292,6 +308,7 @@ export default {
   POST_FIELD_TASK_TYPES,
   COST_ITEM_TYPES,
   TASK_STATUS,
+  COST_ITEM_MODIFIER_PRESETS,
   getTaskTypeConfig,
   getCostItemTypeConfig,
   getTaskStatusConfig,

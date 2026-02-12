@@ -7,11 +7,11 @@
  */
 
 import { useState, useEffect } from 'react'
-import { X, Search, Users, Settings, Wrench, Truck, DollarSign, Loader2, FileText } from 'lucide-react'
+import { X, Search, Users, Settings, Wrench, Truck, DollarSign, Loader2, FileText, Percent } from 'lucide-react'
 import { getOperators, getServices, getEquipment } from '../../../lib/firestore'
 import { useOrganization } from '../../../hooks/useOrganization'
 import { formatCurrency, calculateCostItemTotal } from '../../../lib/costEstimator'
-import { COST_ITEM_TYPES, createCostItem } from './phaseConstants'
+import { COST_ITEM_TYPES, createCostItem, COST_ITEM_MODIFIER_PRESETS, generateId } from './phaseConstants'
 
 const TABS = [
   { id: 'service', label: 'Services', icon: Settings },
@@ -46,6 +46,7 @@ export default function AddCostItemModal({
   const [fixedName, setFixedName] = useState('')
   const [fixedAmount, setFixedAmount] = useState('')
   const [notes, setNotes] = useState('')
+  const [modifiers, setModifiers] = useState([])
 
   // Load resources when modal opens
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function AddCostItemModal({
     setDescription('')
     setCustomName('')
     setNotes('')
+    setModifiers([])
     setRateType(activeTab === 'fleet' ? 'daily' : 'hourly')
   }, [activeTab])
 
@@ -150,7 +152,7 @@ export default function AddCostItemModal({
       : selectedResource.hourlyRate
   }
 
-  const getTotal = () => {
+  const getBaseTotal = () => {
     if (activeTab === 'fixed') {
       return parseFloat(fixedAmount) || 0
     }
@@ -159,11 +161,52 @@ export default function AddCostItemModal({
     return calculateCostItemTotal(qty, rate, rateType)
   }
 
+  const getTotal = () => {
+    let total = getBaseTotal()
+    // Apply modifiers (multiplicative)
+    if (modifiers.length > 0) {
+      let multiplier = 1
+      for (const mod of modifiers) {
+        multiplier *= (mod.multiplier || 1)
+      }
+      total *= multiplier
+    }
+    return total
+  }
+
+  // Modifier management functions
+  const addModifier = (preset = null) => {
+    const newModifier = preset
+      ? { id: generateId(), name: preset.name, multiplier: preset.multiplier }
+      : { id: generateId(), name: '', multiplier: 1.0 }
+    setModifiers(prev => [...prev, newModifier])
+  }
+
+  const updateModifier = (id, field, value) => {
+    setModifiers(prev => prev.map(m =>
+      m.id === id ? { ...m, [field]: value } : m
+    ))
+  }
+
+  const removeModifier = (id) => {
+    setModifiers(prev => prev.filter(m => m.id !== id))
+  }
+
   const handleSubmit = () => {
     if (activeTab === 'fixed') {
       if (!fixedName.trim() || !fixedAmount) {
         alert('Please enter a name and amount')
         return
+      }
+
+      // Calculate fixed total with modifiers
+      let fixedTotal = parseFloat(fixedAmount) || 0
+      if (modifiers.length > 0) {
+        let multiplier = 1
+        for (const mod of modifiers) {
+          multiplier *= (mod.multiplier || 1)
+        }
+        fixedTotal *= multiplier
       }
 
       const costItem = createCostItem({
@@ -174,8 +217,9 @@ export default function AddCostItemModal({
         hours: 0,
         rate: parseFloat(fixedAmount) || 0,
         rateType: 'fixed',
-        total: parseFloat(fixedAmount) || 0,
-        notes: notes.trim()
+        total: fixedTotal,
+        notes: notes.trim(),
+        modifiers: modifiers
       })
 
       onSave(costItem)
@@ -200,7 +244,8 @@ export default function AddCostItemModal({
       rate,
       rateType,
       total,
-      notes: notes.trim()
+      notes: notes.trim(),
+      modifiers: modifiers
     })
 
     onSave(costItem)
@@ -493,13 +538,104 @@ export default function AddCostItemModal({
               </>
             )}
 
+            {/* Price Adjustments / Modifiers */}
+            {(selectedResource || (activeTab === 'fixed' && fixedAmount)) && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Percent className="w-4 h-4" />
+                    Price Adjustments
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => addModifier()}
+                    className="text-xs text-aeria-navy hover:underline"
+                  >
+                    + Add Custom
+                  </button>
+                </div>
+
+                {/* Quick add preset modifiers */}
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {COST_ITEM_MODIFIER_PRESETS
+                    .filter(preset => !modifiers.some(m => m.name === preset.name))
+                    .slice(0, 6)
+                    .map(preset => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => addModifier(preset)}
+                        className="px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors"
+                      >
+                        + {preset.name} ({preset.multiplier > 1 ? '+' : ''}{((preset.multiplier - 1) * 100).toFixed(0)}%)
+                      </button>
+                    ))}
+                </div>
+
+                {/* Active modifiers */}
+                {modifiers.length > 0 ? (
+                  <div className="space-y-2">
+                    {modifiers.map(m => (
+                      <div key={m.id} className="flex items-center gap-2 bg-white p-2 rounded border border-gray-200">
+                        <input
+                          type="text"
+                          value={m.name}
+                          onChange={(e) => updateModifier(m.id, 'name', e.target.value)}
+                          className="input flex-1 text-sm"
+                          placeholder="Adjustment name"
+                        />
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={m.multiplier || ''}
+                            onChange={(e) => updateModifier(m.id, 'multiplier', parseFloat(e.target.value) || 1)}
+                            className="input w-20 text-sm text-center"
+                            placeholder="1.0"
+                            step="0.05"
+                            min="0.1"
+                            max="3"
+                          />
+                          <span className="text-xs text-gray-500">x</span>
+                        </div>
+                        <span className={`text-xs w-14 text-right ${
+                          m.multiplier > 1 ? 'text-red-600' : m.multiplier < 1 ? 'text-green-600' : 'text-gray-500'
+                        }`}>
+                          {m.multiplier > 1 ? `+${((m.multiplier - 1) * 100).toFixed(0)}%` :
+                           m.multiplier < 1 ? `${((m.multiplier - 1) * 100).toFixed(0)}%` : '—'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeModifier(m.id)}
+                          className="p-1 text-gray-400 hover:text-red-500"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">No adjustments. Add rush fees, discounts, etc.</p>
+                )}
+              </div>
+            )}
+
             {/* Total Display */}
             {(selectedResource || (activeTab === 'fixed' && fixedAmount)) && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg flex items-center justify-between">
-                <span className="text-gray-600">Calculated Total:</span>
-                <span className="text-xl font-bold text-gray-900">
-                  {formatCurrency(getTotal())}
-                </span>
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-gray-600">Calculated Total:</span>
+                    {modifiers.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Base: {formatCurrency(getBaseTotal())}
+                        {modifiers.map(m => ` × ${m.multiplier}`).join('')}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-xl font-bold text-gray-900">
+                    {formatCurrency(getTotal())}
+                  </span>
+                </div>
               </div>
             )}
           </div>
