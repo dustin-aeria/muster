@@ -665,7 +665,14 @@ export default function ProjectView() {
           <ProjectOverview project={project} onUpdate={handleUpdate} />
         )}
         {activeTab === 'needs' && (
-          <ProjectNeedsAnalysis project={project} onUpdate={handleUpdate} />
+          <ProjectNeedsAnalysis
+            project={project}
+            onUpdate={handleUpdate}
+            onNavigate={(target) => {
+              if (target === 'site-survey') setActiveTab('site')
+              else if (target === 'flight-plan') setActiveTab('flight')
+            }}
+          />
         )}
         {activeTab === 'costs' && (
           <ProjectCosts project={project} />
