@@ -29,7 +29,8 @@ import {
   List,
   Search,
   Eye,
-  Edit
+  Edit,
+  Layers
 } from 'lucide-react'
 
 import {
@@ -45,6 +46,7 @@ import { usePermissions } from '../hooks/usePermissions'
 
 import TrainingCourseModal from '../components/training/TrainingCourseModal'
 import TrainingRecordModal from '../components/training/TrainingRecordModal'
+import QCards from '../components/training/QCards'
 
 export default function Training() {
   const { user } = useAuth()
@@ -177,7 +179,8 @@ export default function Training() {
   const tabs = [
     { id: 'overview', name: 'Overview', icon: GraduationCap },
     { id: 'courses', name: 'Courses', icon: BookOpen, count: courses.length },
-    { id: 'records', name: 'Training Records', icon: Award, count: records.length }
+    { id: 'records', name: 'Training Records', icon: Award, count: records.length },
+    { id: 'qcards', name: 'Q-Cards', icon: Layers }
   ]
 
   if (loading) {
@@ -683,6 +686,11 @@ export default function Training() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Q-Cards Tab */}
+        {activeTab === 'qcards' && (
+          <QCards />
         )}
       </div>
 
