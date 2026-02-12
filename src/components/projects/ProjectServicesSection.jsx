@@ -34,6 +34,7 @@ import {
   TrendingDown
 } from 'lucide-react'
 import { getServices } from '../../lib/firestore'
+import { useOrganization } from '../../hooks/useOrganization'
 import { formatCurrency } from '../../lib/costEstimator'
 import { PRICING_TYPES, UNIT_TYPES } from '../../pages/Services'
 
@@ -145,6 +146,7 @@ function generateId() {
 // ============================================
 
 function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
+  const { organizationId } = useOrganization()
   const [activeTab, setActiveTab] = useState('library')
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(false)
@@ -202,9 +204,10 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
   }, [selectedService])
 
   const loadServices = async () => {
+    if (!organizationId) return
     setLoading(true)
     try {
-      const data = await getServices()
+      const data = await getServices(organizationId)
       setServices(data.filter(s => s.status === 'active'))
     } catch (error) {
       console.error('Failed to load services:', error)
