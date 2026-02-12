@@ -1950,9 +1950,8 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
     }
   }, [analysis])
 
-  // Selected mission profiles details (first one for display)
+  // Selected mission profiles details
   const selectedProfiles = analysis.missionProfiles?.map(id => MISSION_PROFILES[id]).filter(Boolean) || []
-  const primaryProfile = selectedProfiles[0] || null
   
   return (
     <div className="space-y-6">
@@ -2023,40 +2022,44 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
             </div>
           )}
 
-          {primaryProfile && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-3">Primary Profile Details: {primaryProfile.name}</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500">Typical Altitude</p>
-                  <p className="font-medium">{primaryProfile.typicalAltitude}</p>
+          {selectedProfiles.length > 0 && (
+            <div className="mt-4 space-y-4">
+              {selectedProfiles.map(profile => (
+                <div key={profile.id} className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-3">{profile.name}</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-500">Typical Altitude</p>
+                      <p className="font-medium">{profile.typicalAltitude}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Typical Duration</p>
+                      <p className="font-medium">{profile.typicalDuration}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Recommended Op Type</p>
+                      <p className="font-medium">{profile.recommendedOperationType}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Common Payloads</p>
+                      <p className="font-medium">
+                        {profile.typicalPayloads.map(p => PAYLOAD_TYPES[p]?.name || p).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-gray-500 text-sm mb-1">Key Considerations:</p>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      {profile.considerations.map((c, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <ChevronRight className="w-4 h-4 text-aeria-navy flex-shrink-0 mt-0.5" />
+                          {c}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-gray-500">Typical Duration</p>
-                  <p className="font-medium">{primaryProfile.typicalDuration}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Recommended Op Type</p>
-                  <p className="font-medium">{primaryProfile.recommendedOperationType}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Common Payloads</p>
-                  <p className="font-medium">
-                    {primaryProfile.typicalPayloads.map(p => PAYLOAD_TYPES[p]?.name || p).join(', ')}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3">
-                <p className="text-gray-500 text-sm mb-1">Key Considerations:</p>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  {primaryProfile.considerations.map((c, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <ChevronRight className="w-4 h-4 text-aeria-navy flex-shrink-0 mt-0.5" />
-                      {c}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              ))}
             </div>
           )}
         </CollapsibleSection>
@@ -2316,10 +2319,10 @@ export default function ProjectNeedsAnalysis({ project, onUpdate, onNavigate }) 
             Select all payload types required for the mission. Weight classification affects aircraft requirements.
           </p>
           
-          {primaryProfile && (
+          {selectedProfiles.length > 0 && (
             <InfoBanner type="info">
-              <strong>Recommended for {primaryProfile.name}:</strong>{' '}
-              {primaryProfile.typicalPayloads.map(p => PAYLOAD_TYPES[p]?.name || p).join(', ')}
+              <strong>Recommended payloads based on selected profiles:</strong>{' '}
+              {[...new Set(selectedProfiles.flatMap(p => p.typicalPayloads))].map(p => PAYLOAD_TYPES[p]?.name || p).join(', ')}
             </InfoBanner>
           )}
           
