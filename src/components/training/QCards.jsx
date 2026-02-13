@@ -433,20 +433,21 @@ export default function QCards() {
                 className="w-full max-w-2xl cursor-pointer perspective-1000"
               >
                 <div
-                  className={`relative w-full min-h-[320px] transition-transform duration-500 transform-style-3d ${
+                  className={`relative w-full transition-transform duration-500 transform-style-3d ${
                     isFlipped ? 'rotate-y-180' : ''
                   }`}
                   style={{
                     transformStyle: 'preserve-3d',
-                    transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                    transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                    minHeight: '380px'
                   }}
                 >
                   {/* Front (Question) */}
                   <div
-                    className={`absolute inset-0 bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8 flex flex-col backface-hidden ${
+                    className={`absolute inset-0 bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6 md:p-8 flex flex-col backface-hidden ${
                       isFlipped ? 'invisible' : ''
                     }`}
-                    style={{ backfaceVisibility: 'hidden' }}
+                    style={{ backfaceVisibility: 'hidden', minHeight: '380px' }}
                   >
                     {/* Category Badge */}
                     <div className="flex items-center justify-between mb-4">
@@ -462,8 +463,8 @@ export default function QCards() {
                     </div>
 
                     {/* Question */}
-                    <div className="flex-1 flex items-center justify-center">
-                      <h3 className="text-xl md:text-2xl font-semibold text-gray-900 text-center">
+                    <div className="flex-1 flex items-center justify-center py-4">
+                      <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-gray-900 text-center leading-relaxed">
                         {currentCard.question}
                       </h3>
                     </div>
@@ -476,16 +477,17 @@ export default function QCards() {
 
                   {/* Back (Answer) */}
                   <div
-                    className={`absolute inset-0 bg-gradient-to-br from-aeria-blue to-aeria-navy rounded-2xl shadow-lg p-8 flex flex-col text-white backface-hidden ${
+                    className={`absolute inset-0 bg-gradient-to-br from-aeria-blue to-aeria-navy rounded-2xl shadow-lg p-6 md:p-8 flex flex-col text-white backface-hidden ${
                       !isFlipped ? 'invisible' : ''
                     }`}
                     style={{
                       backfaceVisibility: 'hidden',
-                      transform: 'rotateY(180deg)'
+                      transform: 'rotateY(180deg)',
+                      minHeight: '380px'
                     }}
                   >
                     {/* Category Badge */}
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-3 flex-shrink-0">
                       <span className="px-3 py-1 text-sm rounded-full bg-white/20">
                         {getCategoryInfo(currentCard.category).name}
                       </span>
@@ -497,15 +499,19 @@ export default function QCards() {
                       )}
                     </div>
 
-                    {/* Answer */}
-                    <div className="flex-1 flex items-center justify-center overflow-auto">
-                      <p className="text-lg md:text-xl text-white/95 whitespace-pre-line text-center">
-                        {currentCard.answer}
-                      </p>
+                    {/* Answer - scrollable if content is long */}
+                    <div className="flex-1 overflow-y-auto py-2 scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent">
+                      <div className="text-base md:text-lg text-white/95 whitespace-pre-line leading-relaxed">
+                        {currentCard.answer.split('\n').map((line, i) => (
+                          <p key={i} className={`${line.startsWith('•') || line.startsWith('-') || line.match(/^\d+\./) ? 'pl-2' : ''} ${i > 0 ? 'mt-2' : ''}`}>
+                            {line}
+                          </p>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Tap hint */}
-                    <p className="text-center text-white/50 text-sm mt-4">
+                    <p className="text-center text-white/50 text-sm mt-3 flex-shrink-0">
                       Tap to see question
                     </p>
                   </div>
@@ -617,8 +623,47 @@ export default function QCards() {
                       <p>{aiError}</p>
                     </div>
                   ) : aiResponse ? (
-                    <div className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">
-                      {aiResponse}
+                    <div className="text-gray-700 text-sm leading-relaxed prose prose-sm max-w-none">
+                      {aiResponse.split('\n\n').map((paragraph, pIndex) => (
+                        <div key={pIndex} className={pIndex > 0 ? 'mt-4' : ''}>
+                          {paragraph.split('\n').map((line, lIndex) => {
+                            // Handle bullet points
+                            if (line.trim().startsWith('•') || line.trim().startsWith('-') || line.trim().startsWith('*')) {
+                              return (
+                                <div key={lIndex} className="flex items-start gap-2 ml-2 my-1">
+                                  <span className="text-purple-500 mt-0.5">•</span>
+                                  <span>{line.replace(/^[\s•\-\*]+/, '')}</span>
+                                </div>
+                              )
+                            }
+                            // Handle numbered lists
+                            if (line.trim().match(/^\d+[\.\)]/)) {
+                              const [num, ...rest] = line.trim().split(/[\.\)]\s*/)
+                              return (
+                                <div key={lIndex} className="flex items-start gap-2 ml-2 my-1">
+                                  <span className="text-purple-600 font-medium min-w-[1.5rem]">{num}.</span>
+                                  <span>{rest.join('. ')}</span>
+                                </div>
+                              )
+                            }
+                            // Handle bold text **text**
+                            if (line.includes('**')) {
+                              const parts = line.split(/\*\*(.*?)\*\*/)
+                              return (
+                                <p key={lIndex} className={lIndex > 0 ? 'mt-2' : ''}>
+                                  {parts.map((part, i) =>
+                                    i % 2 === 1 ? <strong key={i} className="text-gray-900">{part}</strong> : part
+                                  )}
+                                </p>
+                              )
+                            }
+                            // Regular paragraph
+                            return line.trim() ? (
+                              <p key={lIndex} className={lIndex > 0 ? 'mt-2' : ''}>{line}</p>
+                            ) : null
+                          })}
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
