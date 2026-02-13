@@ -70,6 +70,7 @@ const CapaDetail = lazy(() => import('./pages/CapaDetail'))
 const FormalHazardLibrary = lazy(() => import('./pages/FormalHazardLibrary'))
 const JHSC = lazy(() => import('./pages/JHSC'))
 const Training = lazy(() => import('./pages/Training'))
+const QCards = lazy(() => import('./pages/QCards'))
 const Inspections = lazy(() => import('./pages/Inspections'))
 const Calendar = lazy(() => import('./pages/Calendar'))
 
@@ -297,6 +298,7 @@ function App() {
           <Route path="hazards" element={<Suspense fallback={<PageLoader />}><FormalHazardLibrary /></Suspense>} />
           <Route path="jhsc" element={<Suspense fallback={<PageLoader />}><JHSC /></Suspense>} />
           <Route path="training" element={<Suspense fallback={<PageLoader />}><Training /></Suspense>} />
+          <Route path="training/qcards" element={<Suspense fallback={<PageLoader />}><QCards /></Suspense>} />
           <Route path="inspections" element={<Suspense fallback={<PageLoader />}><Inspections /></Suspense>} />
 
           {/* Maintenance Module Routes - lazy-loaded */}

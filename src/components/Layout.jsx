@@ -33,7 +33,8 @@ import {
   CheckSquare,
   Sparkles,
   DollarSign,
-  Scale
+  Scale,
+  Layers
 } from 'lucide-react'
 import FeedbackModal from './FeedbackModal'
 import NotificationBell from './NotificationBell'
@@ -63,6 +64,7 @@ const safetyNavigation = [
 
 const trainingNavigation = [
   { name: 'Training Records', href: '/training', icon: GraduationCap },
+  { name: 'Q-Cards', href: '/training/qcards', icon: Layers },
 ]
 
 const complianceNavigation = [
