@@ -187,11 +187,16 @@ export default function ProjectEquipment({ project, onUpdate }) {
         ...currentAircraft,
         {
           id: aircraft.id,
+          nickname: aircraft.nickname,
           registration: aircraft.registration || aircraft.serialNumber,
           make: aircraft.make,
           model: aircraft.model,
           serialNumber: aircraft.serialNumber,
-          isPrimary
+          isPrimary,
+          // Include rates for cost calculations
+          hourlyRate: aircraft.hourlyRate || 0,
+          dailyRate: aircraft.dailyRate || 0,
+          weeklyRate: aircraft.weeklyRate || 0
         }
       ]
     }
