@@ -30,7 +30,8 @@ import {
   Briefcase,
   ChevronDown,
   ChevronRight,
-  Archive
+  Archive,
+  DollarSign
 } from 'lucide-react'
 import {
   getAircraft,
@@ -404,6 +405,21 @@ export default function ProjectEquipment({ project, onUpdate }) {
                         )}
                       </div>
 
+                      {/* Rates */}
+                      {(ac.hourlyRate > 0 || ac.dailyRate > 0) && (
+                        <div className="flex items-center gap-3 mb-3 text-sm">
+                          <DollarSign className="w-4 h-4 text-green-600" />
+                          <div className="flex gap-3 text-green-600 font-medium">
+                            {ac.hourlyRate > 0 && (
+                              <span>${ac.hourlyRate}/hr</span>
+                            )}
+                            {ac.dailyRate > 0 && (
+                              <span>${ac.dailyRate}/day</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <div className="flex items-center gap-2">
                           <button
@@ -669,9 +685,16 @@ export default function ProjectEquipment({ project, onUpdate }) {
                             <p className="font-medium text-gray-900">{ac.nickname}</p>
                             <p className="text-sm text-gray-500">{ac.make} {ac.model}</p>
                           </div>
-                          {ac.mtow && (
-                            <span className="text-xs text-gray-400">{ac.mtow} kg</span>
-                          )}
+                          <div className="text-right">
+                            {(ac.hourlyRate > 0 || ac.dailyRate > 0) && (
+                              <span className="text-xs text-green-600 font-medium block">
+                                {ac.dailyRate > 0 ? `$${ac.dailyRate}/day` : `$${ac.hourlyRate}/hr`}
+                              </span>
+                            )}
+                            {ac.mtow && (
+                              <span className="text-xs text-gray-400">{ac.mtow} kg</span>
+                            )}
+                          </div>
                         </div>
                       </button>
                     ))
