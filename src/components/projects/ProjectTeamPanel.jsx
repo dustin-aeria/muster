@@ -90,13 +90,13 @@ function TeamMemberCard({ member, projectRole, onRemove, onRoleChange, isLead })
     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
       {/* Avatar */}
       <div className="w-10 h-10 rounded-full bg-aeria-navy text-white flex items-center justify-center font-medium">
-        {member.name?.[0]?.toUpperCase() || member.email?.[0]?.toUpperCase() || '?'}
+        {member.firstName?.[0]?.toUpperCase() || member.name?.[0]?.toUpperCase() || member.email?.[0]?.toUpperCase() || '?'}
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="font-medium text-gray-900 truncate">{member.name || member.displayName || 'Unknown'}</p>
+          <p className="font-medium text-gray-900 truncate">{member.firstName ? `${member.firstName} ${member.lastName || ''}`.trim() : (member.name || 'Unknown')}</p>
           {isLead && <Crown className="w-4 h-4 text-amber-500" title="Project Lead" />}
         </div>
         <p className="text-sm text-gray-500 truncate">{member.email || 'No email'}</p>
@@ -209,16 +209,19 @@ export default function ProjectTeamPanel({ project, onUpdate }) {
 
   // Filter by search
   const filteredOperators = searchTerm
-    ? availableOperators.filter(op =>
-        (op.name || op.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (op.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    ? availableOperators.filter(op => {
+        const fullName = `${op.firstName || ''} ${op.lastName || ''}`.trim().toLowerCase()
+        return fullName.includes(searchTerm.toLowerCase()) ||
+          (op.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+      })
     : availableOperators
 
   const handleAddMember = (operator) => {
     const newMember = {
       operatorId: operator.id,
-      name: operator.name || operator.displayName,
+      name: `${operator.firstName || ''} ${operator.lastName || ''}`.trim() || operator.name,
+      firstName: operator.firstName,
+      lastName: operator.lastName,
       email: operator.email,
       phone: operator.phone,
       role: 'crew',
@@ -338,26 +341,29 @@ export default function ProjectTeamPanel({ project, onUpdate }) {
                         : 'No matching crew members found'}
                     </p>
                   ) : (
-                    filteredOperators.map(operator => (
-                      <button
-                        key={operator.id}
-                        onClick={() => handleAddMember(operator)}
-                        className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg text-left transition-colors"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-aeria-navy text-white flex items-center justify-center font-medium">
-                          {(operator.name || operator.displayName)?.[0]?.toUpperCase() || '?'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">
-                            {operator.name || operator.displayName || 'Unknown'}
-                          </p>
-                          <p className="text-sm text-gray-500 truncate">
-                            {operator.role || 'Crew Member'}
-                          </p>
-                        </div>
-                        <UserPlus className="w-5 h-5 text-gray-400" />
-                      </button>
-                    ))
+                    filteredOperators.map(operator => {
+                      const fullName = `${operator.firstName || ''} ${operator.lastName || ''}`.trim()
+                      return (
+                        <button
+                          key={operator.id}
+                          onClick={() => handleAddMember(operator)}
+                          className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg text-left transition-colors"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-aeria-navy text-white flex items-center justify-center font-medium">
+                            {operator.firstName?.[0]?.toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">
+                              {fullName || 'Unknown'}
+                            </p>
+                            <p className="text-sm text-gray-500 truncate">
+                              {operator.roles?.join(', ') || 'Crew Member'}
+                            </p>
+                          </div>
+                          <UserPlus className="w-5 h-5 text-gray-400" />
+                        </button>
+                      )
+                    })
                   )}
                 </div>
               </div>
