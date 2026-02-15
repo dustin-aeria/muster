@@ -24,7 +24,7 @@ export const PHASES = [
     label: 'Plan',
     icon: ClipboardList,
     description: 'Project setup & preparation',
-    tabs: ['overview', 'needs', 'costs', 'time', 'expenses', 'sections', 'preField', 'templates', 'crew', 'equipment', 'review', 'team', 'notifications', 'forms']
+    tabs: ['overview', 'needs', 'costs', 'time', 'sections', 'preField', 'templates', 'crew', 'equipment', 'review', 'team', 'notifications', 'forms']
   },
   {
     id: 'sites',
@@ -52,7 +52,7 @@ export const PHASES = [
     label: 'Field',
     icon: Plane,
     description: 'In-field operations',
-    tabs: ['tailgate', 'activities']
+    tabs: ['tailgate', 'activities', 'expenses']
   }
 ]
 
