@@ -774,8 +774,17 @@ exports.sendTeamNotificationEmail = functions.firestore
     const notification = snap.data()
     const notificationId = context.params.notificationId
 
+    // Debug logging
+    functions.logger.info('Email Function triggered:', {
+      notificationId,
+      type: notification.type,
+      hasEmailRecipients: !!notification.emailRecipients,
+      emailRecipientsCount: notification.emailRecipients?.length || 0
+    })
+
     // Only process email_batch type notifications
     if (notification.type !== 'email_batch') {
+      functions.logger.info('Skipping - not email_batch type:', notification.type)
       return null
     }
 
@@ -987,13 +996,23 @@ exports.sendTeamNotificationSMS = functions.firestore
     const notification = snap.data()
     const notificationId = context.params.notificationId
 
+    // Debug logging
+    functions.logger.info('SMS Function triggered:', {
+      notificationId,
+      type: notification.type,
+      hasSmsRecipients: !!notification.smsRecipients,
+      smsRecipientsCount: notification.smsRecipients?.length || 0
+    })
+
     // Only process email_batch type notifications that have SMS recipients
     if (notification.type !== 'email_batch') {
+      functions.logger.info('Skipping - not email_batch type:', notification.type)
       return null
     }
 
     // Skip if no SMS recipients
     if (!notification.smsRecipients || notification.smsRecipients.length === 0) {
+      functions.logger.info('Skipping - no SMS recipients')
       return null
     }
 
