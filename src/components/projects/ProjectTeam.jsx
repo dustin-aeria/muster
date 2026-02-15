@@ -467,17 +467,19 @@ function DistributionListCard({ list, onEdit, onDelete }) {
       {/* Channel Icons */}
       {memberCount > 0 && (
         <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
-          <span className="flex items-center gap-1">
-            <Bell className="w-3 h-3" />
-            In-App
-          </span>
-          {list.members.some(m => m.email) && (
+          {list.members.some(m => m.channels?.includes('inApp')) && (
+            <span className="flex items-center gap-1">
+              <Bell className="w-3 h-3" />
+              In-App
+            </span>
+          )}
+          {list.members.some(m => m.channels?.includes('email')) && (
             <span className="flex items-center gap-1">
               <Mail className="w-3 h-3" />
               Email
             </span>
           )}
-          {list.members.some(m => m.phone) && (
+          {list.members.some(m => m.channels?.includes('sms')) && (
             <span className="flex items-center gap-1">
               <MessageSquare className="w-3 h-3" />
               SMS
