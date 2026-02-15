@@ -325,7 +325,6 @@ export default function SendNotificationModal({ project, distributionLists, onCl
                   >
                     <Mail className="w-4 h-4" />
                     Email
-                    <span className="text-xs opacity-75">(Phase 2)</span>
                   </button>
                   <button
                     onClick={() => handleToggleChannel('sms')}
@@ -337,11 +336,10 @@ export default function SendNotificationModal({ project, distributionLists, onCl
                   >
                     <MessageSquare className="w-4 h-4" />
                     SMS
-                    <span className="text-xs opacity-75">(Phase 2)</span>
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Email and SMS will queue for delivery when Cloud Functions are configured.
+                  Email via Resend, SMS via Twilio.
                 </p>
               </div>
 
@@ -420,10 +418,22 @@ export default function SendNotificationModal({ project, distributionLists, onCl
                     {result.deliveryStats.inApp.sent} in-app
                   </span>
                 )}
+                {result.deliveryStats?.email?.sent > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Mail className="w-4 h-4 text-green-500" />
+                    {result.deliveryStats.email.sent} email sent
+                  </span>
+                )}
                 {result.deliveryStats?.email?.pending > 0 && (
                   <span className="flex items-center gap-1">
                     <Mail className="w-4 h-4 text-amber-500" />
                     {result.deliveryStats.email.pending} email queued
+                  </span>
+                )}
+                {result.deliveryStats?.sms?.sent > 0 && (
+                  <span className="flex items-center gap-1">
+                    <MessageSquare className="w-4 h-4 text-green-500" />
+                    {result.deliveryStats.sms.sent} SMS sent
                   </span>
                 )}
                 {result.deliveryStats?.sms?.pending > 0 && (

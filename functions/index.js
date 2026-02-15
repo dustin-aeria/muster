@@ -722,6 +722,378 @@ exports.invalidateExportCache = exportEnhancement.invalidateExportCache
 exports.getExportCacheStatus = exportEnhancement.getExportCacheStatus
 
 // ============================================
+// Team Notification Emails
+// ============================================
+
+/**
+ * Get notification type display info
+ */
+function getNotificationTypeInfo(type) {
+  const types = {
+    go_no_go: {
+      label: 'GO/NO GO Decision',
+      color: '#10b981',
+      description: 'Flight operations status update'
+    },
+    plan_approved: {
+      label: 'Plan Approved',
+      color: '#3b82f6',
+      description: 'Project plan has been approved'
+    },
+    daily_plan: {
+      label: 'Daily Plan',
+      color: '#8b5cf6',
+      description: 'Daily operations plan'
+    },
+    briefing: {
+      label: 'Briefing',
+      color: '#f59e0b',
+      description: 'Team briefing notification'
+    },
+    safety_alert: {
+      label: 'Safety Alert',
+      color: '#ef4444',
+      description: 'Important safety notification'
+    },
+    custom: {
+      label: 'Team Update',
+      color: '#6b7280',
+      description: 'Team notification'
+    }
+  }
+  return types[type] || types.custom
+}
+
+/**
+ * Send team notification emails to distribution list members
+ * Triggered when a notification is created with email channel
+ */
+exports.sendTeamNotificationEmail = functions.firestore
+  .document('notifications/{notificationId}')
+  .onCreate(async (snap, context) => {
+    const notification = snap.data()
+    const notificationId = context.params.notificationId
+
+    // Only process email_batch type notifications
+    if (notification.type !== 'email_batch') {
+      return null
+    }
+
+    // Skip if no email recipients
+    if (!notification.emailRecipients || notification.emailRecipients.length === 0) {
+      functions.logger.info('No email recipients for notification:', notificationId)
+      return null
+    }
+
+    if (!resend) {
+      functions.logger.error('Resend not configured for team notifications')
+      await snap.ref.update({
+        emailStatus: 'failed',
+        emailError: 'Email service not configured'
+      })
+      return null
+    }
+
+    try {
+      // Get project info if available
+      let projectName = 'Project Update'
+      let orgName = 'Your Organization'
+
+      if (notification.projectId) {
+        const projectDoc = await db.collection('projects').doc(notification.projectId).get()
+        if (projectDoc.exists) {
+          projectName = projectDoc.data().name || projectName
+        }
+      }
+
+      if (notification.organizationId) {
+        const orgDoc = await db.collection('organizations').doc(notification.organizationId).get()
+        if (orgDoc.exists) {
+          orgName = orgDoc.data().name || orgName
+        }
+      }
+
+      // Get sender info
+      let senderName = 'Team Member'
+      if (notification.sentBy) {
+        const senderDoc = await db.collection('operators').doc(notification.sentBy).get()
+        if (senderDoc.exists) {
+          const sender = senderDoc.data()
+          senderName = sender.firstName ? `${sender.firstName} ${sender.lastName || ''}`.trim() : senderName
+        }
+      }
+
+      const typeInfo = getNotificationTypeInfo(notification.type)
+      const sentAt = notification.sentAt?.toDate?.() || new Date()
+      const formattedDate = sentAt.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+
+      // Build recipient list
+      const recipients = notification.emailRecipients.filter(email => email && email.includes('@'))
+
+      if (recipients.length === 0) {
+        functions.logger.info('No valid email addresses:', notificationId)
+        return null
+      }
+
+      // Send emails to all recipients
+      const emailPromises = recipients.map(async (email) => {
+        try {
+          const { data, error } = await resend.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: `[${escapeHtml(projectName)}] ${typeInfo.label}`,
+            html: `
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              </head>
+              <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f3f4f6;">
+                <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: white; margin: 0; font-size: 24px;">Muster</h1>
+                  <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">${escapeHtml(orgName)}</p>
+                </div>
+
+                <div style="background: #ffffff; padding: 24px; border: 1px solid #e5e7eb; border-top: none;">
+                  <!-- Type Badge -->
+                  <div style="margin-bottom: 20px;">
+                    <span style="display: inline-block; background: ${typeInfo.color}20; color: ${typeInfo.color}; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;">
+                      ${escapeHtml(typeInfo.label)}
+                    </span>
+                  </div>
+
+                  <!-- Project Name -->
+                  <h2 style="color: #1e3a5f; margin: 0 0 16px 0; font-size: 20px;">${escapeHtml(projectName)}</h2>
+
+                  <!-- Message Content -->
+                  ${notification.message ? `
+                    <div style="background: #f9fafb; border-left: 4px solid ${typeInfo.color}; padding: 16px; margin-bottom: 20px; border-radius: 0 8px 8px 0;">
+                      <p style="margin: 0; white-space: pre-wrap;">${escapeHtml(notification.message)}</p>
+                    </div>
+                  ` : ''}
+
+                  <!-- Status for GO/NO GO -->
+                  ${notification.type === 'go_no_go' && notification.status ? `
+                    <div style="text-align: center; padding: 20px; background: ${notification.status === 'go' ? '#dcfce7' : '#fee2e2'}; border-radius: 8px; margin-bottom: 20px;">
+                      <span style="font-size: 32px; font-weight: bold; color: ${notification.status === 'go' ? '#16a34a' : '#dc2626'};">
+                        ${notification.status === 'go' ? '✓ GO' : '✗ NO GO'}
+                      </span>
+                    </div>
+                  ` : ''}
+
+                  <!-- Metadata -->
+                  <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 16px;">
+                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">
+                      <strong>Sent by:</strong> ${escapeHtml(senderName)}
+                    </p>
+                    <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                      <strong>Date:</strong> ${escapeHtml(formattedDate)}
+                    </p>
+                  </div>
+                </div>
+
+                <div style="background: #f9fafb; padding: 16px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; text-align: center;">
+                  <a href="${APP_URL}/projects/${notification.projectId}" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+                    View Project
+                  </a>
+                </div>
+
+                <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 20px;">
+                  You received this email because you're on a distribution list for this project.
+                </p>
+              </body>
+              </html>
+            `
+          })
+
+          if (error) {
+            functions.logger.error('Failed to send to:', email, error)
+            return { email, success: false, error: error.message }
+          }
+
+          return { email, success: true, messageId: data?.id }
+        } catch (err) {
+          functions.logger.error('Email send error:', email, err)
+          return { email, success: false, error: err.message }
+        }
+      })
+
+      const results = await Promise.all(emailPromises)
+      const successCount = results.filter(r => r.success).length
+      const failedCount = results.filter(r => !r.success).length
+
+      functions.logger.info('Team notification emails sent:', {
+        notificationId,
+        total: recipients.length,
+        success: successCount,
+        failed: failedCount
+      })
+
+      // Update notification with email status
+      await snap.ref.update({
+        emailStatus: failedCount === 0 ? 'sent' : (successCount > 0 ? 'partial' : 'failed'),
+        emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        emailResults: {
+          total: recipients.length,
+          success: successCount,
+          failed: failedCount
+        }
+      })
+
+      return { success: true, sent: successCount, failed: failedCount }
+
+    } catch (error) {
+      functions.logger.error('Team notification email error:', error)
+      await snap.ref.update({
+        emailStatus: 'failed',
+        emailError: 'An error occurred while sending emails'
+      })
+      return { success: false, error: error.message }
+    }
+  })
+
+// ============================================
+// Team SMS Notifications (Twilio)
+// ============================================
+
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER
+
+let twilioClient = null
+if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+  const twilio = require('twilio')
+  twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+  functions.logger.info('Twilio client initialized successfully')
+} else {
+  functions.logger.warn('Twilio not configured. SMS sending will be disabled.')
+}
+
+/**
+ * Send team notification SMS to distribution list members
+ * Triggered when a notification is created with SMS recipients
+ */
+exports.sendTeamNotificationSMS = functions.firestore
+  .document('notifications/{notificationId}')
+  .onCreate(async (snap, context) => {
+    const notification = snap.data()
+    const notificationId = context.params.notificationId
+
+    // Only process email_batch type notifications that have SMS recipients
+    if (notification.type !== 'email_batch') {
+      return null
+    }
+
+    // Skip if no SMS recipients
+    if (!notification.smsRecipients || notification.smsRecipients.length === 0) {
+      return null
+    }
+
+    if (!twilioClient) {
+      functions.logger.error('Twilio not configured for SMS notifications')
+      await snap.ref.update({
+        smsStatus: 'failed',
+        smsError: 'SMS service not configured'
+      })
+      return null
+    }
+
+    try {
+      // Get project name
+      let projectName = 'Muster Project'
+      if (notification.projectId) {
+        const projectDoc = await db.collection('projects').doc(notification.projectId).get()
+        if (projectDoc.exists) {
+          projectName = projectDoc.data().name || projectName
+        }
+      }
+
+      // Build SMS message (keep it short for SMS)
+      const typeInfo = getNotificationTypeInfo(notification.triggerEvent || 'custom')
+      let smsBody = `[${projectName}] ${typeInfo.label}`
+
+      // Add GO/NO GO status if applicable
+      if (notification.status === 'go') {
+        smsBody += '\n\n✓ STATUS: GO'
+      } else if (notification.status === 'no_go') {
+        smsBody += '\n\n✗ STATUS: NO GO'
+      }
+
+      // Add message preview (truncated for SMS)
+      if (notification.message) {
+        const truncatedMsg = notification.message.substring(0, 100)
+        smsBody += `\n\n${truncatedMsg}${notification.message.length > 100 ? '...' : ''}`
+      }
+
+      smsBody += `\n\nView: ${APP_URL}/projects/${notification.projectId}`
+
+      // Send SMS to all recipients
+      const smsPromises = notification.smsRecipients.map(async (phone) => {
+        // Normalize phone number (ensure it has country code)
+        let formattedPhone = phone.replace(/[^\d+]/g, '')
+        if (!formattedPhone.startsWith('+')) {
+          // Assume North America if no country code
+          formattedPhone = '+1' + formattedPhone.replace(/^1/, '')
+        }
+
+        try {
+          const message = await twilioClient.messages.create({
+            body: smsBody,
+            from: TWILIO_PHONE_NUMBER,
+            to: formattedPhone
+          })
+
+          functions.logger.info('SMS sent:', { to: formattedPhone, sid: message.sid })
+          return { phone: formattedPhone, success: true, sid: message.sid }
+        } catch (err) {
+          functions.logger.error('SMS send error:', { phone: formattedPhone, error: err.message })
+          return { phone: formattedPhone, success: false, error: err.message }
+        }
+      })
+
+      const results = await Promise.all(smsPromises)
+      const successCount = results.filter(r => r.success).length
+      const failedCount = results.filter(r => !r.success).length
+
+      functions.logger.info('Team notification SMS sent:', {
+        notificationId,
+        total: notification.smsRecipients.length,
+        success: successCount,
+        failed: failedCount
+      })
+
+      // Update notification with SMS status
+      await snap.ref.update({
+        smsStatus: failedCount === 0 ? 'sent' : (successCount > 0 ? 'partial' : 'failed'),
+        smsSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        smsResults: {
+          total: notification.smsRecipients.length,
+          success: successCount,
+          failed: failedCount
+        }
+      })
+
+      return { success: true, sent: successCount, failed: failedCount }
+
+    } catch (error) {
+      functions.logger.error('Team notification SMS error:', error)
+      await snap.ref.update({
+        smsStatus: 'failed',
+        smsError: 'An error occurred while sending SMS'
+      })
+      return { success: false, error: error.message }
+    }
+  })
+
+// ============================================
 // Q-Cards AI Study Assistant
 // ============================================
 

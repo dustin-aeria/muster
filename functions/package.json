@@ -19,7 +19,8 @@
     "@google-cloud/vision": "^4.3.2",
     "firebase-admin": "^13.6.0",
     "firebase-functions": "^7.0.5",
-    "resend": "^2.0.0"
+    "resend": "^2.0.0",
+    "twilio": "^5.12.1"
   },
   "devDependencies": {
     "eslint": "^9.39.2",

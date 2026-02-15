@@ -248,6 +248,7 @@ export async function sendTeamNotification(projectId, event, eventData = {}, opt
       title: template.title(templateData),
       body: template.body(templateData),
       projectId,
+      organizationId: project.organizationId || null,
       triggerEvent: event,
       eventData: templateData,
       priority: options.priority || 'normal',
@@ -285,6 +286,11 @@ export async function sendManualNotification(projectId, {
   createdBy = null
 }) {
   try {
+    // Get project to fetch organizationId
+    const projectRef = doc(db, 'projects', projectId)
+    const projectSnap = await getDoc(projectRef)
+    const project = projectSnap.exists() ? projectSnap.data() : {}
+
     // Collect recipients
     let recipients = []
 
@@ -314,6 +320,7 @@ export async function sendManualNotification(projectId, {
       title,
       body,
       projectId,
+      organizationId: project.organizationId || null,
       triggerEvent: null, // Manual send
       eventData: { manual: true },
       priority,
@@ -391,14 +398,28 @@ async function sendToRecipients(notification, recipients, options = {}) {
   const notificationIds = []
   const deliveryStats = {
     inApp: { sent: 0, failed: 0 },
-    email: { pending: 0, failed: 0 },
-    sms: { pending: 0, failed: 0 }
+    email: { pending: 0, sent: 0, failed: 0 },
+    sms: { pending: 0, sent: 0, failed: 0 }
   }
+
+  // Collect email recipients for batch email sending
+  const emailRecipients = []
+  const smsRecipients = []
 
   for (const recipient of recipients) {
     // Skip external contacts for in-app notifications
     if (recipient.type === 'external' && recipient.channels.every(c => c === 'inApp')) {
       continue
+    }
+
+    // Collect email recipients
+    if (recipient.channels.includes('email') && recipient.email) {
+      emailRecipients.push(recipient.email)
+    }
+
+    // Collect SMS recipients
+    if (recipient.channels.includes('sms') && recipient.phone) {
+      smsRecipients.push(recipient.phone)
     }
 
     const notificationDoc = {
@@ -437,6 +458,42 @@ async function sendToRecipients(notification, recipients, options = {}) {
   }
 
   await batch.commit()
+
+  // Create a separate batch notification document if there are email or SMS recipients
+  // This triggers the Cloud Functions to send emails and SMS
+  if (emailRecipients.length > 0 || smsRecipients.length > 0) {
+    try {
+      await addDoc(notificationsRef, {
+        type: 'email_batch',
+        title: notification.title,
+        message: notification.body,
+        projectId: notification.projectId,
+        organizationId: notification.organizationId || null,
+        sentBy: notification.createdBy,
+        sentAt: serverTimestamp(),
+        emailRecipients: emailRecipients,
+        smsRecipients: smsRecipients,
+        triggerEvent: notification.triggerEvent,
+        status: notification.triggerEvent === 'goNoGo'
+          ? (notification.eventData?.decision === 'GO' ? 'go' : 'no_go')
+          : null,
+        createdAt: serverTimestamp()
+      })
+
+      // Update delivery stats - emails and SMS will be sent by Cloud Functions
+      if (emailRecipients.length > 0) {
+        deliveryStats.email.sent = emailRecipients.length
+        deliveryStats.email.pending = 0
+      }
+      if (smsRecipients.length > 0) {
+        deliveryStats.sms.sent = smsRecipients.length
+        deliveryStats.sms.pending = 0
+      }
+    } catch (error) {
+      console.error('Failed to create batch notification:', error)
+      // Keep pending status if batch creation fails
+    }
+  }
 
   return { notificationIds, deliveryStats }
 }
