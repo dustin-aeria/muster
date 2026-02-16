@@ -32,7 +32,6 @@ import {
   ShieldAlert,
   HardHat,
   Radio,
-  FileCheck,
   FileText,
   ClipboardList,
   MoreVertical,
@@ -69,7 +68,6 @@ import ProjectPPE from '../components/projects/ProjectPPE'
 import ProjectComms from '../components/projects/ProjectComms'
 import ProjectHSERisk from '../components/projects/ProjectHSERisk'
 import ProjectSORA from '../components/projects/ProjectSORA'
-import ProjectApprovals from '../components/projects/ProjectApprovals'
 import ProjectTailgate from '../components/projects/ProjectTailgate'
 import ProjectForms from '../components/projects/ProjectForms'
 // ProjectExport replaced by DocumentCenter
@@ -114,7 +112,6 @@ const tabs = [
   { id: 'emergency', label: 'Emergency', icon: ShieldAlert },
   { id: 'ppe', label: 'PPE', icon: HardHat },
   { id: 'comms', label: 'Communications', icon: Radio },
-  { id: 'review', label: 'Review', icon: FileCheck },
   { id: 'tailgate', label: 'Tailgate', icon: FileText },
   { id: 'postField', label: 'Post-Field', icon: PackageCheck, toggleable: true, sectionKey: 'postField' },
   { id: 'forms', label: 'Forms', icon: ClipboardList, toggleable: true, sectionKey: 'forms' },
@@ -745,9 +742,6 @@ export default function ProjectView() {
         )}
         {activeTab === 'comms' && (
           <ProjectComms project={project} onUpdate={handleUpdate} />
-        )}
-        {activeTab === 'review' && (
-          <ProjectApprovals project={project} onUpdate={handleUpdate} />
         )}
         {activeTab === 'tailgate' && (
           <ProjectTailgate project={project} onUpdate={handleUpdate} />
