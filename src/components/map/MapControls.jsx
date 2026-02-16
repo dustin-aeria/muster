@@ -40,10 +40,7 @@ import {
   Copy,
   User,
   MoreVertical,
-  Expand,
-  Route,
-  Waypoints,
-  MoveHorizontal
+  Expand
 } from 'lucide-react'
 import { MAP_LAYERS, MAP_BASEMAPS, SITE_STATUS } from '../../lib/mapDataStructures'
 import { DRAWING_MODES } from '../../hooks/useMapData'
@@ -374,10 +371,7 @@ export function DrawingTools({
       { mode: 'launchPoint', icon: Plane, label: 'Launch' },
       { mode: 'recoveryPoint', icon: Target, label: 'Recovery' },
       { mode: 'pilotPosition', icon: User, label: 'Pilot' },
-      { mode: 'flightGeography', icon: Square, label: 'Flight Area' },
-      { mode: 'flightPath', icon: Route, label: 'Flight Path' },
-      { mode: 'corridor', icon: MoveHorizontal, label: 'Corridor' },
-      { mode: 'waypoint', icon: MapPin, label: 'Waypoint' }
+      { mode: 'flightGeography', icon: Square, label: 'Flight Area' }
     ],
     emergency: [
       { mode: 'musterPoint', icon: Flag, label: 'Muster' },
