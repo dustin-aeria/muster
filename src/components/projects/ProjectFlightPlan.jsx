@@ -1395,7 +1395,7 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
           </h4>
           <ul className="text-sm text-amber-700 space-y-1">
             {validation.issues.map((issue, i) => (
-              <li key={i}>â€¢ {issue}</li>
+              <li key={i}>• {issue}</li>
             ))}
           </ul>
         </div>

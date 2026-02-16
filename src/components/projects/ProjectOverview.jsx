@@ -176,7 +176,7 @@ function SiteStatusCard({ site, index, calculations, onNavigate, onSelect }) {
       {/* Footer Actions */}
       <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
         <span className="text-xs text-gray-500">
-          {site.flightPlan?.operationType || 'VLOS'} â€¢ GRC: {calc.fGRC ?? '?'}
+          {site.flightPlan?.operationType || 'VLOS'} • GRC: {calc.fGRC ?? '?'}
         </span>
         <button
           onClick={() => onSelect?.(site.id)}
