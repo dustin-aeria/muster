@@ -1869,9 +1869,9 @@ export function UnifiedProjectMap({
       )}
 
       {/* Fullscreen button - shown even when controls are hidden */}
-      {/* Positioned bottom-right near map nav controls for visibility */}
-      {!showControls && mapLoaded && (
-        <div className="absolute bottom-20 right-4 z-30">
+      {/* Positioned above the Mapbox zoom controls */}
+      {!showControls && !isFullscreen && mapLoaded && (
+        <div className="absolute bottom-36 right-2 z-30">
           <FullscreenButton
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
