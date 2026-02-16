@@ -1745,13 +1745,26 @@ export function UnifiedProjectMap({
     setIsFullscreen(prev => !prev)
   }, [])
   
-  // Resize map when fullscreen changes
+  // Resize map when fullscreen changes and handle body overflow
   useEffect(() => {
+    if (isFullscreen) {
+      // Hide body scrollbars when fullscreen
+      document.body.style.overflow = 'hidden'
+    } else {
+      // Restore body scroll
+      document.body.style.overflow = ''
+    }
+
     if (mapRef.current) {
       // Small delay to let the DOM update
       setTimeout(() => {
         mapRef.current?.resize()
       }, 50)
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = ''
     }
   }, [isFullscreen])
   
@@ -1788,9 +1801,18 @@ export function UnifiedProjectMap({
   }
   
   return (
-    <div 
+    <div
       className={`relative bg-gray-100 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'rounded-lg'} ${className}`}
-      style={{ height: isFullscreen ? '100vh' : height }}
+      style={isFullscreen ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999
+      } : { height }}
     >
       {/* Map container */}
       <div ref={mapContainerRef} className="absolute inset-0" />
