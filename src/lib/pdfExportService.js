@@ -13,6 +13,7 @@
  */
 
 import { logger } from './logger'
+import { getSiteMapImage, getProjectMapImages } from './staticMapService'
 
 const JSPDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
 const AUTOTABLE_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js'
@@ -605,6 +606,94 @@ export class BrandedPDF {
     return this
   }
 
+  /**
+   * Add a map image to the PDF
+   * @param {string} imageDataUrl - Base64 data URL of the map image
+   * @param {Object} options - Display options
+   */
+  addMapImage(imageDataUrl, options = {}) {
+    if (!imageDataUrl) return this
+
+    const {
+      caption = 'Site Location Map',
+      width = this.contentWidth,
+      height = 80, // Default height in mm
+      centered = true
+    } = options
+
+    this.checkNewPage(height + 20)
+
+    // Calculate x position for centering
+    const imgWidth = Math.min(width, this.contentWidth)
+    const x = centered ? this.margin + (this.contentWidth - imgWidth) / 2 : this.margin
+
+    // Add subtle border/frame
+    this.setDrawColor('#e5e7eb')
+    this.doc.setLineWidth(0.5)
+    this.doc.roundedRect(x - 1, this.currentY - 1, imgWidth + 2, height + 2, 2, 2, 'S')
+
+    try {
+      // Add the image
+      this.doc.addImage(
+        imageDataUrl,
+        'PNG',
+        x,
+        this.currentY,
+        imgWidth,
+        height
+      )
+    } catch (e) {
+      logger.warn('Failed to add map image to PDF:', e)
+      // Add placeholder if image fails
+      this.setFillColor('#f3f4f6')
+      this.doc.roundedRect(x, this.currentY, imgWidth, height, 2, 2, 'F')
+      this.setColor('textLight')
+      this.doc.setFontSize(10)
+      this.doc.text('Map image unavailable', x + imgWidth / 2 - 20, this.currentY + height / 2)
+    }
+
+    this.currentY += height + 5
+
+    // Add caption
+    if (caption) {
+      this.setColor('textLight')
+      this.doc.setFontSize(8)
+      this.doc.setFont('helvetica', 'italic')
+      const captionWidth = this.doc.getTextWidth(caption)
+      const captionX = centered ? this.margin + (this.contentWidth - captionWidth) / 2 : this.margin
+      this.doc.text(caption, captionX, this.currentY)
+      this.currentY += 8
+    }
+
+    return this
+  }
+
+  /**
+   * Add a site map section with map image
+   * @param {Object} site - Site data
+   * @param {string} mapImageDataUrl - Pre-fetched map image data URL
+   * @param {Object} options - Display options
+   */
+  addSiteMapSection(site, mapImageDataUrl, options = {}) {
+    const siteName = site?.name || 'Site'
+
+    this.addSubsectionTitle(`${siteName} - Location Map`)
+
+    if (mapImageDataUrl) {
+      this.addMapImage(mapImageDataUrl, {
+        caption: `${siteName} operational area and key positions`,
+        ...options
+      })
+    } else {
+      this.setColor('textLight')
+      this.doc.setFontSize(9)
+      this.doc.text('Map image not available for this site.', this.margin, this.currentY)
+      this.currentY += 10
+    }
+
+    return this
+  }
+
   addSignatureBlock(signers = []) {
     this.checkNewPage(50)
     this.addSubsectionTitle('Signatures & Approvals')
@@ -752,7 +841,7 @@ export class BrandedPDF {
 }
 
 // FIX #7: Fixed clientName field reference (project?.clientName instead of project?.client)
-export async function generateOperationsPlanPDF(project, branding = null, clientBranding = null, enhancedContent = null) {
+export async function generateOperationsPlanPDF(project, branding = null, clientBranding = null, enhancedContent = null, mapImages = null) {
   const pdf = new BrandedPDF({
     title: 'RPAS Operations Plan',
     subtitle: project?.name || 'Operations Plan',
@@ -804,6 +893,31 @@ export async function generateOperationsPlanPDF(project, branding = null, client
       pdf.addSubsectionTitle('Identified Obstacles')
       const obstacleRows = ss.obstacles.map(o => [o.type || 'Unknown', o.description || '', o.height ? `${o.height}m` : 'N/A', o.distance ? `${o.distance}m` : 'N/A'])
       pdf.addTable(['Type', 'Description', 'Height', 'Distance'], obstacleRows)
+    }
+  }
+
+  // Add site map images
+  const sites = project?.sites || []
+  if (sites.length > 0 && mapImages) {
+    pdf.addNewSection('Site Maps')
+    pdf.addParagraph('The following maps show the operational areas, flight zones, and key positions for each site.')
+    pdf.addSpacer(5)
+
+    for (const site of sites) {
+      const mapImage = mapImages[site.id]
+      if (mapImage) {
+        pdf.addSiteMapSection(site, mapImage)
+        pdf.addSpacer(10)
+      }
+    }
+  } else if (sites.length === 0 && mapImages) {
+    // Single-site project (legacy structure)
+    const singleSiteMap = Object.values(mapImages)[0]
+    if (singleSiteMap) {
+      pdf.addNewSection('Site Map')
+      pdf.addMapImage(singleSiteMap, {
+        caption: 'Operational area showing flight zone and key positions'
+      })
     }
   }
   
@@ -904,7 +1018,7 @@ export async function generateOperationsPlanPDF(project, branding = null, client
 }
 
 // FIX #7: Fixed clientName field reference
-export async function generateSORAPDF(project, calculations, branding = null, enhancedContent = null) {
+export async function generateSORAPDF(project, calculations, branding = null, enhancedContent = null, mapImages = null) {
   const pdf = new BrandedPDF({
     title: 'SORA Risk Assessment',
     subtitle: 'JARUS SORA 2.5 Methodology',
@@ -963,6 +1077,22 @@ export async function generateSORAPDF(project, calculations, branding = null, en
     pdf.addEnhancedParagraph(enhancedContent.osoNarrative)
   }
 
+  // Add site map images for operational area visualization
+  const sites = project?.sites || []
+  if (sites.length > 0 && mapImages) {
+    pdf.addNewSection('Operational Area Maps')
+    pdf.addParagraph('The following maps illustrate the operational areas assessed in this SORA evaluation, including ground risk buffer zones and flight geography.')
+    pdf.addSpacer(5)
+
+    for (const site of sites) {
+      const mapImage = mapImages[site.id]
+      if (mapImage) {
+        pdf.addSiteMapSection(site, mapImage)
+        pdf.addSpacer(10)
+      }
+    }
+  }
+
   pdf.addNewSection('Assessment Approval')
   pdf.addSignatureBlock([{ role: 'Assessor' }, { role: 'Reviewer' }])
 
@@ -970,7 +1100,7 @@ export async function generateSORAPDF(project, calculations, branding = null, en
 }
 
 // FIX #7: Fixed clientName field reference
-export async function generateHSERiskPDF(project, branding = null, enhancedContent = null) {
+export async function generateHSERiskPDF(project, branding = null, enhancedContent = null, mapImages = null) {
   const pdf = new BrandedPDF({
     title: 'HSE Risk Assessment',
     subtitle: 'Workplace Hazard Analysis',
@@ -1048,6 +1178,22 @@ export async function generateHSERiskPDF(project, branding = null, enhancedConte
     }
   }
 
+  // Add site map images showing hazard locations
+  const sites = project?.sites || []
+  if (sites.length > 0 && mapImages) {
+    pdf.addNewSection('Site Overview Maps')
+    pdf.addParagraph('The following maps provide visual context for the operational sites and identified hazard locations.')
+    pdf.addSpacer(5)
+
+    for (const site of sites) {
+      const mapImage = mapImages[site.id]
+      if (mapImage) {
+        pdf.addSiteMapSection(site, mapImage)
+        pdf.addSpacer(10)
+      }
+    }
+  }
+
   pdf.addNewSection('Approvals')
   pdf.addSignatureBlock([{ role: 'Assessor' }, { role: 'Reviewer' }])
 
@@ -1102,18 +1248,32 @@ export async function generateFormPDF(form, formTemplate, project, operators = [
 }
 
 export async function exportToPDF(type, project, options = {}) {
-  const { branding, calculations, clientBranding, enhancedContent } = options
+  const { branding, calculations, clientBranding, enhancedContent, includeMapImages = true } = options
   let pdf
+
+  // Fetch map images for all sites if enabled
+  let mapImages = null
+  if (includeMapImages) {
+    try {
+      mapImages = await getProjectMapImages(project, {
+        width: 800,
+        height: 500,
+        style: 'satelliteStreets'
+      })
+    } catch (e) {
+      logger.warn('Failed to fetch map images for PDF:', e)
+    }
+  }
 
   switch (type) {
     case 'operations-plan':
-      pdf = await generateOperationsPlanPDF(project, branding, clientBranding, enhancedContent)
+      pdf = await generateOperationsPlanPDF(project, branding, clientBranding, enhancedContent, mapImages)
       break
     case 'sora':
-      pdf = await generateSORAPDF(project, calculations, branding, enhancedContent)
+      pdf = await generateSORAPDF(project, calculations, branding, enhancedContent, mapImages)
       break
     case 'hse-risk':
-      pdf = await generateHSERiskPDF(project, branding, enhancedContent)
+      pdf = await generateHSERiskPDF(project, branding, enhancedContent, mapImages)
       break
     default:
       throw new Error(`Unknown export type: ${type}`)

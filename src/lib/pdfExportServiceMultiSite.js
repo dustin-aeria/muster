@@ -16,9 +16,11 @@
  */
 
 import { BrandedPDF } from './pdfExportService'
-import { 
-  populationCategories, 
-  uaCharacteristics, 
+import { getProjectMapImages } from './staticMapService'
+import { logger } from './logger'
+import {
+  populationCategories,
+  uaCharacteristics,
   sailColors,
   sailDescriptions,
   groundMitigations,
@@ -34,7 +36,7 @@ import {
 // MULTI-SITE OPERATIONS PLAN PDF
 // ============================================
 
-export async function generateMultiSiteOperationsPlanPDF(project, branding = null, clientBranding = null, enhancedContent = null) {
+export async function generateMultiSiteOperationsPlanPDF(project, branding = null, clientBranding = null, enhancedContent = null, mapImages = null) {
   const sites = Array.isArray(project?.sites) ? project.sites : []
 
   const pdf = new BrandedPDF({
@@ -168,6 +170,17 @@ export async function generateMultiSiteOperationsPlanPDF(project, branding = nul
       { label: 'Evacuation Routes', value: routes.length > 0 ? `${routes.length} defined` : 'Not defined' }
     ])
     
+    // Site Map
+    const siteMapImage = mapImages?.[site.id]
+    if (siteMapImage) {
+      pdf.checkNewPage(100)
+      pdf.addSubsectionTitle('Site Map')
+      pdf.addMapImage(siteMapImage, {
+        caption: `${site.name || 'Site'} - Operational area and key positions`,
+        height: 70
+      })
+    }
+
     // SORA Summary for this site
     pdf.checkNewPage(40)
     pdf.addSubsectionTitle('SORA Assessment')
@@ -324,7 +337,7 @@ export async function generateMultiSiteOperationsPlanPDF(project, branding = nul
 // MULTI-SITE SORA PDF
 // ============================================
 
-export async function generateMultiSiteSORA_PDF(project, branding = null, enhancedContent = null) {
+export async function generateMultiSiteSORA_PDF(project, branding = null, enhancedContent = null, mapImages = null) {
   const sites = Array.isArray(project?.sites) ? project.sites : []
 
   const pdf = new BrandedPDF({
@@ -409,6 +422,16 @@ export async function generateMultiSiteSORA_PDF(project, branding = null, enhanc
     if (siteRiskNarrative && typeof siteRiskNarrative === 'string') {
       pdf.addEnhancedParagraph(siteRiskNarrative)
       pdf.addSpacer(5)
+    }
+
+    // Site Map for SORA context
+    const siteMapImage = mapImages?.[site.id]
+    if (siteMapImage) {
+      pdf.addSubsectionTitle('Operational Area')
+      pdf.addMapImage(siteMapImage, {
+        caption: `${site.name || 'Site'} - Ground risk assessment area`,
+        height: 60
+      })
     }
 
     // Step 2: iGRC
@@ -515,7 +538,7 @@ export async function generateMultiSiteSORA_PDF(project, branding = null, enhanc
 // SINGLE-SITE EXPORT
 // ============================================
 
-export async function generateSingleSiteExport(project, siteId, exportType, branding = null, enhancedContent = null) {
+export async function generateSingleSiteExport(project, siteId, exportType, branding = null, enhancedContent = null, mapImages = null) {
   const sites = Array.isArray(project?.sites) ? project.sites : []
   const site = sites.find(s => s.id === siteId)
 
@@ -532,9 +555,9 @@ export async function generateSingleSiteExport(project, siteId, exportType, bran
 
   switch (exportType) {
     case 'operations-plan':
-      return generateMultiSiteOperationsPlanPDF(singleSiteProject, branding, null, enhancedContent)
+      return generateMultiSiteOperationsPlanPDF(singleSiteProject, branding, null, enhancedContent, mapImages)
     case 'sora':
-      return generateMultiSiteSORA_PDF(singleSiteProject, branding, enhancedContent)
+      return generateMultiSiteSORA_PDF(singleSiteProject, branding, enhancedContent, mapImages)
     default:
       throw new Error(`Unknown export type: ${exportType}`)
   }
@@ -598,20 +621,34 @@ function formatCoordinates(coords) {
 // ============================================
 
 export async function exportMultiSitePDF(type, project, options = {}) {
-  const { branding, clientBranding, siteId, enhancedContent } = options
+  const { branding, clientBranding, siteId, enhancedContent, includeMapImages = true } = options
   let pdf
+
+  // Fetch map images for all sites if enabled
+  let mapImages = null
+  if (includeMapImages) {
+    try {
+      mapImages = await getProjectMapImages(project, {
+        width: 800,
+        height: 500,
+        style: 'satelliteStreets'
+      })
+    } catch (e) {
+      logger.warn('Failed to fetch map images for multi-site PDF:', e)
+    }
+  }
 
   // If siteId provided, export single site
   if (siteId) {
-    pdf = await generateSingleSiteExport(project, siteId, type, branding, enhancedContent)
+    pdf = await generateSingleSiteExport(project, siteId, type, branding, enhancedContent, mapImages)
   } else {
     // Export all sites
     switch (type) {
       case 'operations-plan':
-        pdf = await generateMultiSiteOperationsPlanPDF(project, branding, clientBranding, enhancedContent)
+        pdf = await generateMultiSiteOperationsPlanPDF(project, branding, clientBranding, enhancedContent, mapImages)
         break
       case 'sora':
-        pdf = await generateMultiSiteSORA_PDF(project, branding, enhancedContent)
+        pdf = await generateMultiSiteSORA_PDF(project, branding, enhancedContent, mapImages)
         break
       default:
         throw new Error(`Unknown export type: ${type}`)
