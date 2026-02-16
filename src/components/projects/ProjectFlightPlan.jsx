@@ -57,8 +57,12 @@ import {
   getSiteStats,
   calculatePolygonArea,
   POPULATION_CATEGORIES,
-  generateSORAVolumes
+  generateSORAVolumes,
+  MISSION_TYPES,
+  createMission,
+  MAX_MISSIONS_PER_SITE
 } from '../../lib/mapDataStructures'
+import { MissionCard } from '../map/MissionCard'
 import NoAircraftAssignedModal from '../NoAircraftAssignedModal'
 import { FlightPathGenerator } from '../map/FlightPathGenerator'
 import { WaypointEditor } from '../map/WaypointEditor'
@@ -1429,6 +1433,110 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
   }, [flightPathData.waypoints, flightPathData.gridSettings, flightPathData.corridorSettings])
 
   // ============================================
+  // MISSION MANAGEMENT
+  // ============================================
+
+  // State for expanded mission card
+  const [expandedMissionId, setExpandedMissionId] = useState(null)
+
+  // Get missions from site flight plan
+  const missions = useMemo(() => {
+    return siteFlightPlan.missions || []
+  }, [siteFlightPlan.missions])
+
+  // Add new mission
+  const handleAddMission = useCallback((type = 'mapping') => {
+    if (missions.length >= MAX_MISSIONS_PER_SITE) {
+      alert(`Maximum ${MAX_MISSIONS_PER_SITE} missions per site`)
+      return
+    }
+
+    const newMission = createMission({
+      type,
+      order: missions.length
+    })
+
+    updateSiteFlightPlan({
+      missions: [...missions, newMission]
+    })
+
+    // Auto-expand the new mission
+    setExpandedMissionId(newMission.id)
+  }, [missions, updateSiteFlightPlan])
+
+  // Update mission
+  const handleUpdateMission = useCallback((updatedMission) => {
+    const updatedMissions = missions.map(m =>
+      m.id === updatedMission.id ? updatedMission : m
+    )
+    updateSiteFlightPlan({ missions: updatedMissions })
+  }, [missions, updateSiteFlightPlan])
+
+  // Delete mission
+  const handleDeleteMission = useCallback((missionId) => {
+    if (!confirm('Delete this mission?')) return
+
+    const updatedMissions = missions
+      .filter(m => m.id !== missionId)
+      .map((m, index) => ({ ...m, order: index }))
+
+    updateSiteFlightPlan({ missions: updatedMissions })
+
+    if (expandedMissionId === missionId) {
+      setExpandedMissionId(null)
+    }
+  }, [missions, updateSiteFlightPlan, expandedMissionId])
+
+  // Duplicate mission
+  const handleDuplicateMission = useCallback((mission) => {
+    if (missions.length >= MAX_MISSIONS_PER_SITE) {
+      alert(`Maximum ${MAX_MISSIONS_PER_SITE} missions per site`)
+      return
+    }
+
+    const newMission = createMission({
+      ...mission,
+      id: undefined, // Will generate new ID
+      name: `${mission.name} (Copy)`,
+      order: missions.length,
+      status: 'draft',
+      flightPath: { waypoints: [], corridorBuffer: null, lastGenerated: null }
+    })
+
+    updateSiteFlightPlan({
+      missions: [...missions, newMission]
+    })
+
+    setExpandedMissionId(newMission.id)
+  }, [missions, updateSiteFlightPlan])
+
+  // Generate path for mission
+  const handleGenerateMissionPath = useCallback((mission) => {
+    // Get the flight geography - either mission-specific or site-level
+    const flightGeography = mission.geography || activeSite?.mapData?.flightPlan?.flightGeography
+
+    if (!flightGeography && mission.type !== 'freeform') {
+      alert('Draw a flight geography first to generate a flight path')
+      return
+    }
+
+    // TODO: Integrate with existing path generation based on mission type
+    // For now, mark the mission as needing path generation
+    const updatedMission = {
+      ...mission,
+      status: 'planned',
+      updatedAt: new Date().toISOString()
+    }
+
+    handleUpdateMission(updatedMission)
+  }, [activeSite, handleUpdateMission])
+
+  // Toggle mission expansion
+  const handleToggleMissionExpand = useCallback((missionId) => {
+    setExpandedMissionId(prev => prev === missionId ? null : missionId)
+  }, [])
+
+  // ============================================
   // VALIDATION
   // ============================================
   
@@ -1576,6 +1684,10 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
         </div>
       )}
       
+      {/* ============================================ */}
+      {/* SECTION 1: MAP & FLIGHT GEOGRAPHY */}
+      {/* ============================================ */}
+
       {/* Flight Parameters Summary */}
       <CollapsibleSection
         title="Flight Positions"
@@ -1952,107 +2064,128 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
         </div>
       </CollapsibleSection>
 
-      {/* Flight Path Generation */}
+      {/* ============================================ */}
+      {/* SECTION 2: MISSIONS */}
+      {/* ============================================ */}
       <CollapsibleSection
-        title="Flight Path"
+        title="Missions"
         icon={Route}
-        badge={flightPathData.waypoints?.length > 0 ? `${flightPathData.waypoints.length} waypoints` : null}
-        status={flightPathData.waypoints?.length > 0 ? 'complete' : 'incomplete'}
-        defaultOpen={false}
+        badge={missions.length > 0 ? `${missions.length} mission${missions.length > 1 ? 's' : ''}` : null}
+        status={missions.length > 0 ? 'complete' : 'incomplete'}
+        defaultOpen={true}
       >
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-800">
               <Info className="w-4 h-4 inline mr-1" />
-              Generate flight patterns based on your operation area type, then fine-tune waypoints manually.
-              {siteFlightPlan.areaType === 'area' && ' For area surveys, use Grid Pattern.'}
-              {siteFlightPlan.areaType === 'corridor' && ' For corridor operations, use Linear Pattern.'}
-              {siteFlightPlan.areaType === 'point' && ' For point operations, add waypoints manually.'}
+              Add missions to define specific flight operations within your flight geography.
+              Each mission can have its own type (mapping, inspection, etc.), altitude, and flight path.
             </p>
           </div>
 
-          {/* Flight Path Generator */}
-          {activeSite?.mapData?.flightPlan?.flightGeography && (
-            <FlightPathGenerator
-              flightGeography={activeSite.mapData.flightPlan.flightGeography}
-              areaType={siteFlightPlan.areaType || 'area'}
-              gridSettings={flightPathData.gridSettings}
-              corridorSettings={flightPathData.corridorSettings}
-              onGenerate={handlePatternGenerate}
-              onSettingsChange={(settings) => {
-                if (settings.spacing !== undefined || settings.angle !== undefined) {
-                  updateFlightPath({ gridSettings: { ...flightPathData.gridSettings, ...settings } })
-                } else {
-                  updateFlightPath({ corridorSettings: { ...flightPathData.corridorSettings, ...settings } })
-                }
-              }}
-              flightStats={flightStats}
-            />
-          )}
-
-          {!activeSite?.mapData?.flightPlan?.flightGeography && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-              <Square className="w-8 h-8 mx-auto text-amber-400 mb-2" />
-              <p className="text-sm text-amber-800">
-                Draw a flight geography on the map first to generate flight patterns.
+          {/* Mission List */}
+          {missions.length === 0 ? (
+            <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+              <Route className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500 mb-4">No missions defined yet</p>
+              <p className="text-sm text-gray-400 mb-4">
+                Add a mission to plan your flight operations
               </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {missions.map((mission, index) => (
+                <MissionCard
+                  key={mission.id}
+                  mission={mission}
+                  index={index}
+                  isExpanded={expandedMissionId === mission.id}
+                  onToggleExpand={handleToggleMissionExpand}
+                  onUpdate={handleUpdateMission}
+                  onDelete={handleDeleteMission}
+                  onDuplicate={handleDuplicateMission}
+                  onGeneratePath={handleGenerateMissionPath}
+                  maxAltitude={siteFlightPlan.maxAltitudeAGL || 400}
+                  hasFlightGeography={!!activeSite?.mapData?.flightPlan?.flightGeography}
+                />
+              ))}
             </div>
           )}
 
-          {/* Waypoint Editor */}
-          {flightPathData.waypoints?.length > 0 && (
-            <WaypointEditor
-              waypoints={flightPathData.waypoints}
-              selectedWaypointId={selectedWaypointId}
-              onSelectWaypoint={setSelectedWaypointId}
-              onUpdateAltitude={handleWaypointAltitudeUpdate}
-              onDeleteWaypoint={handleWaypointDelete}
-              onReorderWaypoints={handleWaypointReorder}
-              maxAltitude={siteFlightPlan.maxAltitudeAGL || 400}
-            />
-          )}
+          {/* Add Mission Buttons */}
+          <div className="pt-4 border-t border-gray-200">
+            <p className="text-sm font-medium text-gray-700 mb-3">Add Mission</p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(MISSION_TYPES).map(([key, type]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleAddMission(key)}
+                  disabled={missions.length >= MAX_MISSIONS_PER_SITE}
+                  className="px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ borderLeftColor: type.color, borderLeftWidth: '3px' }}
+                >
+                  <Plus className="w-4 h-4" />
+                  {type.label}
+                </button>
+              ))}
+            </div>
+            {missions.length >= MAX_MISSIONS_PER_SITE && (
+              <p className="text-xs text-amber-600 mt-2">
+                Maximum {MAX_MISSIONS_PER_SITE} missions per site reached
+              </p>
+            )}
+          </div>
 
-          {/* Altitude Profile */}
-          {altitudeProfile.length > 0 && (
-            <AltitudeProfileView
-              profile={altitudeProfile}
-              selectedWaypointId={selectedWaypointId}
-              onWaypointHover={setSelectedWaypointId}
-              onWaypointClick={setSelectedWaypointId}
-              altitudeRange={flightStats.minAltitude !== undefined ? {
-                min: flightStats.minAltitude,
-                max: flightStats.maxAltitude
-              } : null}
-            />
-          )}
+          {/* Legacy Flight Path Section - for backwards compatibility */}
+          {flightPathData.waypoints?.length > 0 && missions.length === 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <Info className="w-4 h-4 text-blue-500" />
+                Legacy Flight Path (migrate to missions)
+              </p>
 
-          {/* Flight Stats Summary */}
-          {flightPathData.waypoints?.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-500">Total Distance</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {flightStats.distance >= 1000
-                    ? `${(flightStats.distance / 1000).toFixed(2)} km`
-                    : `${Math.round(flightStats.distance)} m`
-                  }
-                </p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-500">Est. Duration</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {Math.floor(flightStats.duration / 60)}:{String(Math.round(flightStats.duration % 60)).padStart(2, '0')}
-                </p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-500">Waypoints</p>
-                <p className="text-lg font-semibold text-gray-900">{flightStats.waypointCount}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-500">Altitude Range</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {flightStats.minAltitude}-{flightStats.maxAltitude}m
-                </p>
+              {/* Altitude Profile */}
+              {altitudeProfile.length > 0 && (
+                <AltitudeProfileView
+                  profile={altitudeProfile}
+                  selectedWaypointId={selectedWaypointId}
+                  onWaypointHover={setSelectedWaypointId}
+                  onWaypointClick={setSelectedWaypointId}
+                  altitudeRange={flightStats.minAltitude !== undefined ? {
+                    min: flightStats.minAltitude,
+                    max: flightStats.maxAltitude
+                  } : null}
+                />
+              )}
+
+              {/* Flight Stats Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Total Distance</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {flightStats.distance >= 1000
+                      ? `${(flightStats.distance / 1000).toFixed(2)} km`
+                      : `${Math.round(flightStats.distance)} m`
+                    }
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Est. Duration</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {Math.floor(flightStats.duration / 60)}:{String(Math.round(flightStats.duration % 60)).padStart(2, '0')}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Waypoints</p>
+                  <p className="text-lg font-semibold text-gray-900">{flightStats.waypointCount}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Altitude Range</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {flightStats.minAltitude}-{flightStats.maxAltitude}m
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -2098,6 +2231,10 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
         </div>
       </CollapsibleSection>
       
+      {/* ============================================ */}
+      {/* SECTION 3: SORA & RISK ASSESSMENT */}
+      {/* ============================================ */}
+
       {/* Airspace - Site Level */}
       <CollapsibleSection
         title="Airspace"
@@ -2308,6 +2445,10 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
           </div>
         </div>
       </CollapsibleSection>
+
+      {/* ============================================ */}
+      {/* SECTION 4: OPERATION DETAILS */}
+      {/* ============================================ */}
 
       {/* Aircraft - Site Level */}
       <CollapsibleSection

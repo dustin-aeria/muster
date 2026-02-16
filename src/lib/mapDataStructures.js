@@ -17,6 +17,76 @@ import { polygon as turfPolygon } from '@turf/helpers'
 // ============================================
 
 export const MAX_SITES_PER_PROJECT = 10
+export const MAX_MISSIONS_PER_SITE = 10
+
+// Mission type definitions
+export const MISSION_TYPES = {
+  mapping: {
+    id: 'mapping',
+    label: 'Mapping / Survey',
+    description: 'Area coverage with parallel flight lines',
+    icon: 'Grid3x3',
+    color: '#3B82F6',
+    defaultSettings: {
+      pattern: 'grid',
+      altitude: 80,
+      overlap: 70,
+      sidelap: 60,
+      speed: 8
+    }
+  },
+  corridor: {
+    id: 'corridor',
+    label: 'Corridor Inspection',
+    description: 'Linear path along pipeline, road, or powerline',
+    icon: 'MoveHorizontal',
+    color: '#22C55E',
+    defaultSettings: {
+      pattern: 'linear',
+      altitude: 60,
+      width: 30,
+      speed: 6
+    }
+  },
+  point: {
+    id: 'point',
+    label: 'Point Survey',
+    description: 'Inspection of a specific structure or location',
+    icon: 'Target',
+    color: '#F97316',
+    defaultSettings: {
+      pattern: 'orbit',
+      altitude: 40,
+      radius: 30,
+      speed: 4
+    }
+  },
+  perimeter: {
+    id: 'perimeter',
+    label: 'Perimeter',
+    description: 'Boundary patrol or fence line inspection',
+    icon: 'Square',
+    color: '#8B5CF6',
+    defaultSettings: {
+      pattern: 'perimeter',
+      altitude: 50,
+      offset: 10,
+      speed: 6
+    }
+  },
+  freeform: {
+    id: 'freeform',
+    label: 'Freeform / Manual',
+    description: 'Custom waypoint-based flight path',
+    icon: 'Route',
+    color: '#64748B',
+    defaultSettings: {
+      pattern: 'waypoint',
+      altitude: 80,
+      speed: 8
+    }
+  }
+}
 
 export const SITE_STATUS = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700' },
@@ -511,9 +581,68 @@ export const getDefaultSiteSurveyData = () => ({
 })
 
 /**
+ * Create a new mission
+ * Missions represent individual flight operations within a site's flight geography
+ */
+export const createMission = (options = {}) => {
+  const missionType = MISSION_TYPES[options.type] || MISSION_TYPES.mapping
+  const now = new Date().toISOString()
+
+  return {
+    id: options.id || `mission_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    name: options.name || `New ${missionType.label}`,
+    type: options.type || 'mapping',
+    description: options.description || '',
+
+    // Mission-specific geography (can be subset of flight geography)
+    // If null, uses site flight geography
+    geography: options.geography || null,
+
+    // Flight parameters
+    altitude: options.altitude || missionType.defaultSettings.altitude,
+    speed: options.speed || missionType.defaultSettings.speed,
+
+    // Pattern-specific settings
+    settings: {
+      ...missionType.defaultSettings,
+      ...options.settings
+    },
+
+    // Generated flight path for this mission
+    flightPath: options.flightPath || {
+      waypoints: [],
+      corridorBuffer: null,
+      lastGenerated: null
+    },
+
+    // 3D visualization
+    show3DOverlay: options.show3DOverlay ?? true,
+
+    // Volume calculation
+    addToVolume: options.addToVolume ?? true,
+
+    // Status
+    status: options.status || 'draft', // draft | planned | complete
+    order: options.order ?? 0,
+
+    // Metadata
+    createdAt: now,
+    updatedAt: now
+  }
+}
+
+/**
+ * Get default missions array for a new site
+ */
+export const getDefaultMissions = () => []
+
+/**
  * Default site-specific flight plan data
  */
 export const getDefaultSiteFlightPlanData = () => ({
+  // Missions - multiple flight operations within the site
+  missions: [],              // Array of mission objects
+
   // Site-specific aircraft assignment
   aircraft: [],              // Array of aircraft IDs assigned to this site
   primaryAircraftId: null,   // ID of primary aircraft for this site (for SORA)
@@ -1082,12 +1211,14 @@ export const generateSORAVolumes = (flightGeography, contingencyBuffer, groundRi
 
 export default {
   MAX_SITES_PER_PROJECT,
+  MAX_MISSIONS_PER_SITE,
   SITE_STATUS,
   MAP_LAYERS,
   MAP_ELEMENT_STYLES,
   MAP_BASEMAPS,
   MAP_OVERLAY_LAYERS,
   POPULATION_CATEGORIES,
+  MISSION_TYPES,
   createGeoPoint,
   createGeoPolygon,
   createGeoLine,
@@ -1097,6 +1228,8 @@ export default {
   createObstacle,
   createMusterPoint,
   createEvacuationRoute,
+  createMission,
+  getDefaultMissions,
   getDefaultSiteMapData,
   getDefaultSiteSurveyData,
   getDefaultSiteFlightPlanData,
