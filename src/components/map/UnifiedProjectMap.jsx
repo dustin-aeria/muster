@@ -32,7 +32,7 @@ import { MapControlsPanel, FullscreenButton, DrawingTools } from './MapControls'
 import { Toggle3DButton, Map3DControlsPanel } from './Map3DControls'
 import { useFlightPath3DLayers } from './FlightPath3DLayer'
 import { MapLegend, SiteColorLegend } from './MapLegend'
-import { MAP_ELEMENT_STYLES, MAP_BASEMAPS, MAP_OVERLAY_LAYERS, getSiteBounds } from '../../lib/mapDataStructures'
+import { MAP_ELEMENT_STYLES, MAP_BASEMAPS, MAP_OVERLAY_LAYERS, getSiteBounds, calculateDistance } from '../../lib/mapDataStructures'
 import {
   Loader2,
   AlertCircle,
@@ -1597,6 +1597,7 @@ export function UnifiedProjectMap({
     try {
       if (map.getLayer(layerId)) map.removeLayer(layerId)
       if (map.getLayer(pointsLayerId)) map.removeLayer(pointsLayerId)
+      if (map.getLayer('drawing-distance-labels')) map.removeLayer('drawing-distance-labels')
       if (map.getSource(sourceId)) map.removeSource(sourceId)
     } catch (e) {
       // Map might be in an invalid state during unmount
@@ -1604,9 +1605,10 @@ export function UnifiedProjectMap({
     }
 
     if (!isDrawing || drawingPoints.length === 0) return
-    
+
+    const isMeasuring = drawingMode.id === 'measureDistance'
     const style = MAP_ELEMENT_STYLES[drawingMode.id] || {}
-    const color = style.color || '#3B82F6'
+    const color = isMeasuring ? '#F59E0B' : (style.color || '#3B82F6') // Amber for measurement
     
     // Create preview geometry
     const features = []
@@ -1639,7 +1641,32 @@ export function UnifiedProjectMap({
         }
       })
     })
-    
+
+    // Add distance labels for measurement mode
+    if (isMeasuring && drawingPoints.length >= 2) {
+      for (let i = 1; i < drawingPoints.length; i++) {
+        const p1 = drawingPoints[i - 1]
+        const p2 = drawingPoints[i]
+        const midpoint = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2]
+        const segmentDistance = calculateDistance(
+          { lng: p1[0], lat: p1[1] },
+          { lng: p2[0], lat: p2[1] }
+        )
+        const label = segmentDistance >= 1000
+          ? `${(segmentDistance / 1000).toFixed(2)} km`
+          : `${Math.round(segmentDistance)} m`
+
+        features.push({
+          type: 'Feature',
+          properties: { type: 'distance-label', label },
+          geometry: {
+            type: 'Point',
+            coordinates: midpoint
+          }
+        })
+      }
+    }
+
     map.addSource(sourceId, {
       type: 'geojson',
       data: {
@@ -1647,8 +1674,8 @@ export function UnifiedProjectMap({
         features
       }
     })
-    
-    // Line layer
+
+    // Line layer - solid line for measurement, dashed for others
     map.addLayer({
       id: layerId,
       type: 'line',
@@ -1656,11 +1683,11 @@ export function UnifiedProjectMap({
       filter: ['==', ['get', 'type'], 'line'],
       paint: {
         'line-color': color,
-        'line-width': 2,
-        'line-dasharray': [2, 2]
+        'line-width': isMeasuring ? 3 : 2,
+        ...(isMeasuring ? {} : { 'line-dasharray': [2, 2] })
       }
     })
-    
+
     // Points layer
     map.addLayer({
       id: pointsLayerId,
@@ -1668,12 +1695,35 @@ export function UnifiedProjectMap({
       source: sourceId,
       filter: ['==', ['get', 'type'], 'point'],
       paint: {
-        'circle-radius': 6,
+        'circle-radius': isMeasuring ? 8 : 6,
         'circle-color': '#FFFFFF',
         'circle-stroke-color': color,
         'circle-stroke-width': 2
       }
     })
+
+    // Distance labels layer (measurement mode only)
+    if (isMeasuring) {
+      map.addLayer({
+        id: 'drawing-distance-labels',
+        type: 'symbol',
+        source: sourceId,
+        filter: ['==', ['get', 'type'], 'distance-label'],
+        layout: {
+          'text-field': ['get', 'label'],
+          'text-size': 14,
+          'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+          'text-offset': [0, -1.2],
+          'text-anchor': 'bottom',
+          'text-allow-overlap': true
+        },
+        paint: {
+          'text-color': '#F59E0B',
+          'text-halo-color': 'rgba(255, 255, 255, 0.95)',
+          'text-halo-width': 2
+        }
+      })
+    }
     
   }, [isDrawing, drawingPoints, drawingMode, mapLoaded, styleVersion])
 
@@ -2243,7 +2293,9 @@ export function UnifiedProjectMap({
 
       {/* Drawing mode indicator */}
       {isDrawing && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 bg-aeria-navy text-white rounded-lg shadow-lg text-sm">
+        <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-lg shadow-lg text-sm ${
+          drawingMode.id === 'measureDistance' ? 'bg-amber-500' : 'bg-aeria-navy'
+        } text-white`}>
           <p className="font-medium">{drawingMode.label}</p>
           {drawingMode.type === 'marker' && (
             <p className="text-white/80 text-xs">Click on map to place</p>
@@ -2253,6 +2305,27 @@ export function UnifiedProjectMap({
           )}
           {drawingMode.type === 'line' && (
             <p className="text-white/80 text-xs">Click to add points, double-click to finish</p>
+          )}
+          {drawingMode.id === 'measureDistance' && (
+            <>
+              <p className="text-white/80 text-xs">Click to add points, double-click to finish</p>
+              {drawingPoints.length >= 2 && (
+                <p className="text-white font-bold text-base mt-1">
+                  {(() => {
+                    let total = 0
+                    for (let i = 1; i < drawingPoints.length; i++) {
+                      total += calculateDistance(
+                        { lng: drawingPoints[i-1][0], lat: drawingPoints[i-1][1] },
+                        { lng: drawingPoints[i][0], lat: drawingPoints[i][1] }
+                      )
+                    }
+                    return total >= 1000
+                      ? `${(total / 1000).toFixed(2)} km`
+                      : `${Math.round(total)} m`
+                  })()}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

@@ -959,6 +959,9 @@ export function useMapData(project, onUpdate, options = {}) {
       if (drawingPoints.length >= 2) {
         addEvacuationRoute(drawingPoints)
       }
+    } else if (shapeType === 'measurement') {
+      // Measurement tool - don't save anything, just clear
+      // The distance was displayed in real-time during drawing
     }
 
     // Reset drawing state

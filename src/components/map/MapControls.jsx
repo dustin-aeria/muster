@@ -40,7 +40,8 @@ import {
   Copy,
   User,
   MoreVertical,
-  Expand
+  Expand,
+  Ruler
 } from 'lucide-react'
 import { MAP_LAYERS, MAP_BASEMAPS, SITE_STATUS } from '../../lib/mapDataStructures'
 import { DRAWING_MODES } from '../../hooks/useMapData'
@@ -493,6 +494,29 @@ export function DrawingTools({
                 </button>
               )
             })}
+          </div>
+
+          {/* Utility tools - available on all layers */}
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <p className="text-xs text-gray-400 mb-1 px-1">Utilities</p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                drawingMode.id === 'measureDistance' ? onCancelDrawing() : onStartDrawing('measureDistance')
+              }}
+              disabled={isDrawing && drawingMode.id !== 'measureDistance'}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${
+                drawingMode.id === 'measureDistance'
+                  ? 'bg-amber-500 text-white'
+                  : isDrawing
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Ruler className="w-4 h-4" />
+              <span>Measure Distance</span>
+            </button>
           </div>
         </div>
       )}
