@@ -117,32 +117,38 @@ export const DRAWING_MODES = {
     layer: 'flightPlan',
     single: true
   },
-  flightPath: {
-    id: 'flightPath',
+
+  // Mission-based flight path drawing modes
+  // These modes create missions via onMissionCreate callback
+  missionFlightPath: {
+    id: 'missionFlightPath',
     label: 'Draw Flight Path',
     cursor: 'crosshair',
     type: 'line',
     layer: 'flightPlan',
-    single: true,
-    isFlightPath: true // Special handling for waypoint generation
+    single: false,
+    createsMission: true,  // Indicates this mode creates a mission
+    missionType: 'freeform'
   },
-  corridor: {
-    id: 'corridor',
-    label: 'Draw Corridor Centerline',
+  missionCorridor: {
+    id: 'missionCorridor',
+    label: 'Draw Corridor',
     cursor: 'crosshair',
     type: 'line',
     layer: 'flightPlan',
-    single: true,
-    isCorridor: true // Special handling for corridor buffer
+    single: false,
+    createsMission: true,
+    missionType: 'corridor'
   },
-  waypoint: {
-    id: 'waypoint',
-    label: 'Add Waypoint',
+  missionArea: {
+    id: 'missionArea',
+    label: 'Draw Survey Area',
     cursor: 'crosshair',
-    type: 'marker',
+    type: 'polygon',
     layer: 'flightPlan',
     single: false,
-    isWaypoint: true // Adds to flight path waypoints
+    createsMission: true,
+    missionType: 'mapping'
   },
 
   // Emergency drawing modes
@@ -193,7 +199,7 @@ export function useMapData(project, onUpdate, options = {}) {
     editMode = false,
     allowedLayers = ['siteSurvey', 'flightPlan', 'emergency'],
     initialBasemap = 'streets',
-    onMissionCreate = null  // Callback when drawing creates a new mission
+    onMissionCreate = null  // Callback for mission-based drawing modes
   } = options
 
   // ============================================
@@ -950,8 +956,41 @@ export function useMapData(project, onUpdate, options = {}) {
   const completeDrawing = useCallback((lngLat = null) => {
     if (!isDrawing || !drawingMode || drawingMode.id === 'none') return
 
-    const { id: elementType, type: shapeType } = drawingMode
+    const { id: elementType, type: shapeType, createsMission, missionType } = drawingMode
 
+    // Handle mission-based drawing modes
+    if (createsMission) {
+      if (!onMissionCreate) {
+        logger.warn('[useMapData] Mission drawing mode requires onMissionCreate callback')
+        cancelDrawing()
+        return
+      }
+
+      // For mission area (polygon)
+      if (shapeType === 'polygon' && drawingPoints.length >= 3) {
+        onMissionCreate({
+          type: missionType,
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[...drawingPoints, drawingPoints[0]]] // Close the polygon
+          },
+          waypoints: [] // Will be generated based on mission type
+        })
+      }
+      // For mission flight path/corridor (line)
+      else if (shapeType === 'line' && drawingPoints.length >= 2) {
+        onMissionCreate({
+          type: missionType,
+          geometry: null, // Lines don't have area geometry
+          waypoints: drawingPoints // These become the waypoints
+        })
+      }
+
+      cancelDrawing()
+      return
+    }
+
+    // Handle standard (non-mission) drawing modes
     if (shapeType === 'marker') {
       // For markers, use the provided lngLat or last point
       const point = lngLat || (drawingPoints.length > 0 ? {
@@ -967,38 +1006,6 @@ export function useMapData(project, onUpdate, options = {}) {
           return
         }
 
-        // Special handling for waypoints - add to flight path
-        if (drawingMode.isWaypoint) {
-          const altitude = 120 // Default altitude
-          updateSiteMapData(mapData => {
-            const existingWaypoints = mapData?.flightPlan?.flightPath?.waypoints || []
-            const newOrder = existingWaypoints.length
-            const newWaypoint = {
-              id: `wp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              coordinates: [point.lng, point.lat, altitude],
-              order: newOrder,
-              label: `WP${newOrder + 1}`,
-              type: 'waypoint',
-              createdAt: new Date().toISOString()
-            }
-
-            return {
-              ...mapData,
-              flightPlan: {
-                ...mapData?.flightPlan,
-                flightPath: {
-                  ...mapData?.flightPlan?.flightPath,
-                  type: mapData?.flightPlan?.flightPath?.type || 'waypoint',
-                  waypoints: [...existingWaypoints, newWaypoint],
-                  lastGenerated: new Date().toISOString()
-                }
-              }
-            }
-          })
-          // Don't cancel drawing - allow adding more waypoints
-          return
-        }
-
         // For site location, also auto-populate address
         if (elementType === 'siteLocation') {
           setMarker(elementType, point)
@@ -1011,92 +1018,18 @@ export function useMapData(project, onUpdate, options = {}) {
     } else if (shapeType === 'polygon') {
       // Need at least 3 points for a polygon
       if (drawingPoints.length >= 3) {
-        // Check if this is a flight geography - could create a mapping mission
-        if (elementType === 'flightGeography' && onMissionCreate) {
-          // Create a mapping mission from the drawn area
-          const missionData = {
-            type: 'mapping',
-            name: 'New Mapping Mission',
-            geometry: {
-              type: 'Polygon',
-              coordinates: [[...drawingPoints, drawingPoints[0]]] // Close the polygon
-            },
-            altitude: 80,
-            settings: {
-              pattern: 'grid',
-              overlap: 70,
-              sidelap: 60
-            }
-          }
-          onMissionCreate(missionData)
-          // Also save the flight geography for SORA calculations
-          setPolygon(elementType, drawingPoints)
-        } else {
-          setPolygon(elementType, drawingPoints)
-        }
+        setPolygon(elementType, drawingPoints)
       }
     } else if (shapeType === 'line') {
       // Need at least 2 points for a line
       if (drawingPoints.length >= 2) {
-        // Check for flight path specific line types
-        if (drawingMode.isFlightPath || drawingMode.isCorridor) {
-          // Convert line to waypoints
-          const altitude = drawingMode.isCorridor ? 60 : 80 // Default altitude
-          const waypoints = drawingPoints.map((coord, index) => ({
-            id: `wp_${Date.now()}_${index}`,
-            coordinates: [coord[0], coord[1], altitude],
-            order: index,
-            label: index === 0 ? 'Start' : index === drawingPoints.length - 1 ? 'End' : `WP${index + 1}`,
-            type: index === 0 ? 'start' : index === drawingPoints.length - 1 ? 'end' : 'waypoint',
-            createdAt: new Date().toISOString()
-          }))
-
-          // If mission callback provided, create a mission instead
-          if (onMissionCreate) {
-            const missionType = drawingMode.isCorridor ? 'corridor' : 'freeform'
-            const missionData = {
-              type: missionType,
-              name: drawingMode.isCorridor ? 'New Corridor Mission' : 'New Flight Path',
-              geometry: {
-                type: 'LineString',
-                coordinates: drawingPoints
-              },
-              altitude,
-              flightPath: {
-                waypoints,
-                corridorBuffer: null,
-                lastGenerated: new Date().toISOString()
-              },
-              settings: drawingMode.isCorridor
-                ? { pattern: 'linear', width: 30 }
-                : { pattern: 'waypoint' }
-            }
-            onMissionCreate(missionData)
-          } else {
-            // Fallback: save directly to mapData (legacy behavior)
-            updateSiteMapData(mapData => ({
-              ...mapData,
-              flightPlan: {
-                ...mapData?.flightPlan,
-                flightPath: {
-                  ...mapData?.flightPlan?.flightPath,
-                  type: drawingMode.isCorridor ? 'corridor' : 'waypoint',
-                  waypoints,
-                  lastGenerated: new Date().toISOString()
-                }
-              }
-            }))
-          }
-        } else {
-          // Regular line (evacuation route)
-          addEvacuationRoute(drawingPoints)
-        }
+        addEvacuationRoute(drawingPoints)
       }
     }
 
     // Reset drawing state
     cancelDrawing()
-  }, [isDrawing, drawingMode, drawingPoints, setMarker, setPolygon, addEvacuationRoute, cancelDrawing, autoPopulateAddress, updateSiteMapData])
+  }, [isDrawing, drawingMode, drawingPoints, setMarker, setPolygon, addEvacuationRoute, cancelDrawing, autoPopulateAddress, onMissionCreate])
 
   // ============================================
   // UTILITY FUNCTIONS
