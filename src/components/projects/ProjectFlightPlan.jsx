@@ -81,25 +81,8 @@ const OPERATION_TYPES = [
   }
 ]
 
-const FLIGHT_GEOGRAPHY_METHODS = [
-  { value: 'inside-out', label: 'Inside-Out', description: 'Start with flight path, add buffers outward' },
-  { value: 'reverse', label: 'Reverse', description: 'Start with available ground, determine max flight area' },
-  { value: 'manual', label: 'Manual', description: 'Draw flight geography directly on map' },
-  { value: 'sameAsBoundary', label: 'Same as Boundary', description: 'Use the operations boundary as flight geography' }
-]
-
-const AREA_TYPES = [
-  { value: 'point', label: 'Point Operation', description: 'Stationary or near-stationary flight around a single point' },
-  { value: 'corridor', label: 'Corridor / Linear', description: 'Flight along a linear path (pipeline, road, powerline)' },
-  { value: 'area', label: 'Area Survey', description: 'Flight covering a defined area with multiple passes' }
-]
-
-const GROUND_RISK_BUFFER_METHODS = [
-  { value: 'altitude', label: 'Altitude-Based', description: '1:1 ratio - buffer equals flight altitude' },
-  { value: 'ballistic', label: 'Ballistic Calculation', description: 'Based on max speed, altitude, and glide ratio' },
-  { value: 'fixed', label: 'Fixed Distance', description: 'Manual fixed-distance buffer' },
-  { value: 'containment', label: 'With Containment', description: 'Reduced buffer with demonstrated containment' }
-]
+// Buffer calculation constants
+const CONTINGENCY_TIME_SECONDS = 15 // Time buffer for contingency volume
 
 const DEFAULT_CONTINGENCIES = [
   { trigger: 'Loss of C2 Link', action: 'Return to Home (RTH) automatically engages. If no RTH within 30 seconds, land in place.', priority: 'high' },
@@ -1117,6 +1100,8 @@ function FlightParametersSummary({ site, projectFlightPlan }) {
 export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSection }) {
   const [showMap, setShowMap] = useState(true)
   const [showAircraftModal, setShowAircraftModal] = useState(false)
+  const [terrainElevation, setTerrainElevation] = useState(null) // { min, max, launchElevation }
+  const [isCalculatingElevation, setIsCalculatingElevation] = useState(false)
 
   // Get sites array
   const sites = useMemo(() => {
@@ -1141,6 +1126,27 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
 
   // Project-level flight plan data
   const projectFlightPlan = project?.flightPlan || {}
+
+  // Auto-calculated buffer values
+  const calculatedBuffers = useMemo(() => {
+    const speed = siteFlightPlan.speed || 10 // m/s
+    const altitude = siteFlightPlan.maxAltitudeAGL || 120 // m
+
+    // Contingency buffer = speed × 15 seconds
+    const contingencyBuffer = Math.round(speed * CONTINGENCY_TIME_SECONDS)
+
+    // Ground risk buffer = altitude (1:1 ratio)
+    const groundRiskBuffer = altitude
+
+    // Total horizontal buffer from flight area edge
+    const totalBuffer = contingencyBuffer + groundRiskBuffer
+
+    return {
+      contingencyBuffer,
+      groundRiskBuffer,
+      totalBuffer
+    }
+  }, [siteFlightPlan.speed, siteFlightPlan.maxAltitudeAGL])
 
   // ============================================
   // HANDLERS
@@ -1239,9 +1245,8 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
       return
     }
 
-    // Get buffer distances from site flight plan, or use defaults
-    const contingencyBuffer = siteFlightPlan.contingencyBuffer || 50 // Default 50m
-    const groundRiskBuffer = siteFlightPlan.groundRiskBuffer || siteFlightPlan.maxAltitudeAGL || 120 // Default to altitude or 120m
+    // Use auto-calculated buffer values
+    const { contingencyBuffer, groundRiskBuffer } = calculatedBuffers
 
     // Generate the volumes
     const volumes = generateSORAVolumes(flightGeography, contingencyBuffer, groundRiskBuffer)
@@ -1270,7 +1275,83 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
     })
 
     onUpdate({ sites: updatedSites })
-  }, [activeSite, activeSiteId, siteFlightPlan, sites, onUpdate])
+  }, [activeSite, activeSiteId, calculatedBuffers, sites, onUpdate])
+
+  // Calculate terrain elevation across flight area
+  const handleCalculateTerrainElevation = useCallback(async () => {
+    if (!activeSite?.mapData?.flightPlan?.flightGeography?.geometry?.coordinates?.[0]) {
+      alert('Please draw a flight area first.')
+      return
+    }
+
+    setIsCalculatingElevation(true)
+
+    try {
+      const coords = activeSite.mapData.flightPlan.flightGeography.geometry.coordinates[0]
+      const launchPoint = activeSite.mapData?.flightPlan?.launchPoint?.geometry?.coordinates
+
+      // Use Open-Elevation API or similar to get elevation data
+      // Sample points within the polygon
+      const samplePoints = []
+
+      // Get bounding box
+      const lngs = coords.map(c => c[0])
+      const lats = coords.map(c => c[1])
+      const minLng = Math.min(...lngs)
+      const maxLng = Math.max(...lngs)
+      const minLat = Math.min(...lats)
+      const maxLat = Math.max(...lats)
+
+      // Create a grid of sample points (5x5 = 25 points)
+      const gridSize = 5
+      for (let i = 0; i <= gridSize; i++) {
+        for (let j = 0; j <= gridSize; j++) {
+          const lng = minLng + (maxLng - minLng) * (i / gridSize)
+          const lat = minLat + (maxLat - minLat) * (j / gridSize)
+          samplePoints.push({ latitude: lat, longitude: lng })
+        }
+      }
+
+      // Add launch point if available
+      if (launchPoint) {
+        samplePoints.push({ latitude: launchPoint[1], longitude: launchPoint[0] })
+      }
+
+      // Call Open-Elevation API
+      const response = await fetch('https://api.open-elevation.com/api/v1/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locations: samplePoints })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch elevation data')
+      }
+
+      const data = await response.json()
+      const elevations = data.results.map(r => r.elevation)
+
+      // Get launch point elevation (last point if we added it)
+      let launchElevation = null
+      if (launchPoint) {
+        launchElevation = elevations.pop() // Remove and get the launch point elevation
+      }
+
+      const minElevation = Math.min(...elevations)
+      const maxElevation = Math.max(...elevations)
+
+      setTerrainElevation({
+        min: Math.round(minElevation),
+        max: Math.round(maxElevation),
+        launchElevation: launchElevation ? Math.round(launchElevation) : null
+      })
+    } catch (error) {
+      console.error('Error calculating terrain elevation:', error)
+      alert('Failed to calculate terrain elevation. Please try again.')
+    } finally {
+      setIsCalculatingElevation(false)
+    }
+  }, [activeSite])
 
   // Handle aircraft selected from modal (new or existing)
   const handleAircraftFromModal = useCallback((aircraft) => {
@@ -1556,231 +1637,61 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
         </div>
       </CollapsibleSection>
       
-      {/* Flight Geography */}
+      {/* Flight Area & Volumes */}
       <CollapsibleSection
-        title="Flight Geography"
+        title="Flight Area & Volumes"
         icon={Square}
-        badge={siteFlightPlan.areaType ? AREA_TYPES.find(t => t.value === siteFlightPlan.areaType)?.label : null}
-        status={siteFlightPlan.areaType ? 'complete' : 'incomplete'}
+        badge={activeSite?.mapData?.flightPlan?.flightGeography ? 'Drawn' : null}
+        status={activeSite?.mapData?.flightPlan?.flightGeography ? 'complete' : 'missing'}
       >
         <div className="space-y-4">
-          {/* Area Type Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Operation Area Type
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {AREA_TYPES.map(type => (
-                <label
-                  key={type.value}
-                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    siteFlightPlan.areaType === type.value
-                      ? 'bg-aeria-navy/5 border-aeria-navy'
-                      : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="areaType"
-                    value={type.value}
-                    checked={siteFlightPlan.areaType === type.value}
-                    onChange={(e) => updateSiteFlightPlan({ areaType: e.target.value })}
-                    className="mt-1"
-                  />
-                  <div>
-                    <span className="font-medium text-gray-900">{type.label}</span>
-                    <p className="text-xs text-gray-500 mt-0.5">{type.description}</p>
+          {/* Draw instruction */}
+          {!activeSite?.mapData?.flightPlan?.flightGeography ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                <Info className="w-4 h-4 inline mr-1" />
+                Use the <strong>Draw Flight Area</strong> tool on the map above to define your flight geography.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Volume Calculator - Auto-calculated */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <Target className="w-4 h-4" />
+                  Volume Calculator
+                  <span className="text-xs text-gray-500 font-normal">(auto-calculated from speed & altitude)</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-xs text-green-600 font-medium mb-1">Flight Geography</p>
+                    <p className="text-green-900 font-semibold">
+                      {(calculatePolygonArea(activeSite.mapData.flightPlan.flightGeography) / 10000).toFixed(2)} ha
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">+ {siteFlightPlan.maxAltitudeAGL || 120}m AGL ceiling</p>
                   </div>
-                </label>
-              ))}
-            </div>
-          </div>
-          
-          {/* Geography Method & Buffers */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Flight Geography Method
-              </label>
-              <select
-                value={siteFlightPlan.flightGeographyMethod || 'manual'}
-                onChange={(e) => {
-                  const method = e.target.value
-                  updateSiteFlightPlan({ flightGeographyMethod: method })
-
-                  // If "Same as Boundary" selected, copy the operations boundary to flight geography
-                  if (method === 'sameAsBoundary' && activeSite?.mapData?.siteSurvey?.operationsBoundary) {
-                    const boundary = activeSite.mapData.siteSurvey.operationsBoundary
-                    // Copy boundary to flight geography
-                    const updatedSites = sites.map(site => {
-                      if (site.id !== activeSiteId) return site
-                      return {
-                        ...site,
-                        mapData: {
-                          ...site.mapData,
-                          flightPlan: {
-                            ...(site.mapData?.flightPlan || {}),
-                            flightGeography: JSON.parse(JSON.stringify(boundary)) // Deep copy
-                          }
-                        },
-                        updatedAt: new Date().toISOString()
-                      }
-                    })
-                    onUpdate({ sites: updatedSites })
-                  }
-                }}
-                className="input"
-              >
-                {FLIGHT_GEOGRAPHY_METHODS.map(method => (
-                  <option key={method.value} value={method.value}>
-                    {method.label} - {method.description}
-                  </option>
-                ))}
-              </select>
-              {siteFlightPlan.flightGeographyMethod === 'sameAsBoundary' && !activeSite?.mapData?.siteSurvey?.operationsBoundary && (
-                <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
-                  <AlertTriangle className="w-4 h-4" />
-                  Draw an operations boundary in Site Survey first
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-xs text-amber-600 font-medium mb-1">Contingency Volume</p>
+                    <p className="text-amber-900 font-semibold">
+                      +{calculatedBuffers.contingencyBuffer}m buffer
+                    </p>
+                    <p className="text-xs text-amber-600 mt-1">
+                      {siteFlightPlan.speed || 10}m/s × {CONTINGENCY_TIME_SECONDS}s
+                    </p>
+                  </div>
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-xs text-red-600 font-medium mb-1">Ground Risk Buffer</p>
+                    <p className="text-red-900 font-semibold">
+                      +{calculatedBuffers.groundRiskBuffer}m
+                    </p>
+                    <p className="text-xs text-red-600 mt-1">1:1 altitude ratio</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  Total horizontal extent from flight area: <strong>{calculatedBuffers.totalBuffer}m</strong> per side
                 </p>
-              )}
-              {siteFlightPlan.flightGeographyMethod === 'sameAsBoundary' && activeSite?.mapData?.siteSurvey?.operationsBoundary && (
-                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Flight geography copied from operations boundary
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ground Risk Buffer Method
-              </label>
-              <select
-                value={siteFlightPlan.groundRiskBufferMethod || 'altitude'}
-                onChange={(e) => updateSiteFlightPlan({ groundRiskBufferMethod: e.target.value })}
-                className="input"
-              >
-                {GROUND_RISK_BUFFER_METHODS.map(method => (
-                  <option key={method.value} value={method.value}>
-                    {method.label}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                {GROUND_RISK_BUFFER_METHODS.find(m => m.value === (siteFlightPlan.groundRiskBufferMethod || 'altitude'))?.description}
-              </p>
-            </div>
-          </div>
-          
-          {/* Buffer Values */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contingency Buffer
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  step="10"
-                  min="0"
-                  value={siteFlightPlan.contingencyBuffer || ''}
-                  onChange={(e) => updateSiteFlightPlan({ 
-                    contingencyBuffer: e.target.value ? Number(e.target.value) : null 
-                  })}
-                  placeholder="50"
-                  className="input w-24"
-                />
-                <span className="text-sm text-gray-500">m</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Max speed × 15 sec typical</p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ground Risk Buffer
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  step="10"
-                  min="0"
-                  value={siteFlightPlan.groundRiskBuffer || ''}
-                  onChange={(e) => updateSiteFlightPlan({ 
-                    groundRiskBuffer: e.target.value ? Number(e.target.value) : null 
-                  })}
-                  placeholder="120"
-                  className="input w-24"
-                />
-                <span className="text-sm text-gray-500">m</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {siteFlightPlan.groundRiskBufferMethod === 'altitude' 
-                  ? `Auto: ${siteFlightPlan.maxAltitudeAGL || 120}m (1:1)`
-                  : 'Manual entry'
-                }
-              </p>
-            </div>
-            
-            <div className="flex items-center">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={siteFlightPlan.adjacentAreaConsidered || false}
-                  onChange={(e) => updateSiteFlightPlan({ adjacentAreaConsidered: e.target.checked })}
-                  className="w-4 h-4 text-aeria-navy rounded"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-700">Adjacent Area Assessed</span>
-                  <p className="text-xs text-gray-500">Per SORA Step 8</p>
-                </div>
-              </label>
-            </div>
-          </div>
-          
-          {/* Flight Geography Calculator */}
-          {(siteFlightPlan.maxAltitudeAGL || siteFlightPlan.contingencyBuffer || siteFlightPlan.groundRiskBuffer) && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
-                <Target className="w-4 h-4" />
-                Volume Calculator
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-xs text-green-600 font-medium mb-1">Operational Volume</p>
-                  <p className="text-green-900">
-                    Flight Geography + {siteFlightPlan.maxAltitudeAGL || 120}m AGL
-                  </p>
-                  <p className="text-xs text-green-600 mt-1">Where normal flight occurs</p>
-                </div>
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-xs text-amber-600 font-medium mb-1">Contingency Volume</p>
-                  <p className="text-amber-900">
-                    OV + {siteFlightPlan.contingencyBuffer || 50}m buffer
-                  </p>
-                  <p className="text-xs text-amber-600 mt-1">
-                    ~{Math.round((siteFlightPlan.contingencyBuffer || 50) / ((siteFlightPlan.maxSpeed || 15) / 3.6))}s at max speed
-                  </p>
-                </div>
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-xs text-red-600 font-medium mb-1">Ground Risk Buffer</p>
-                  <p className="text-red-900">
-                    CV + {siteFlightPlan.groundRiskBuffer || siteFlightPlan.maxAltitudeAGL || 120}m
-                  </p>
-                  <p className="text-xs text-red-600 mt-1">
-                    {siteFlightPlan.groundRiskBufferMethod === 'altitude' ? '1:1 altitude ratio' :
-                     siteFlightPlan.groundRiskBufferMethod === 'ballistic' ? 'Ballistic calculation' :
-                     siteFlightPlan.groundRiskBufferMethod === 'containment' ? 'With containment' : 'Fixed distance'}
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-3">
-                Total horizontal extent from flight path: {
-                  (siteFlightPlan.contingencyBuffer || 50) + (siteFlightPlan.groundRiskBuffer || siteFlightPlan.maxAltitudeAGL || 120)
-                }m per side
-              </p>
 
-              {/* Generate Volumes Button */}
-              {activeSite?.mapData?.flightPlan?.flightGeography && (
+                {/* Generate Volumes Button */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <button
                     type="button"
@@ -1797,61 +1708,96 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
                     </p>
                   )}
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Elevation Profile Summary */}
-          {activeSite?.mapData?.flightPlan?.flightGeography && (
-            <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
-                <Mountain className="w-4 h-4 text-blue-600" />
-                Elevation Profile
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
-                  <p className="text-xs text-gray-500 mb-1">Min Altitude</p>
-                  <p className="text-lg font-semibold text-green-600">0m AGL</p>
-                  <p className="text-xs text-gray-400">Ground Level</p>
-                </div>
-                <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
-                  <p className="text-xs text-gray-500 mb-1">Max Altitude</p>
-                  <p className="text-lg font-semibold text-blue-600">
-                    {siteFlightPlan.maxAltitudeAGL || 120}m AGL
-                  </p>
-                  <p className="text-xs text-gray-400">Planned Ceiling</p>
-                </div>
-                <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
-                  <p className="text-xs text-gray-500 mb-1">Flight Area</p>
-                  <p className="text-lg font-semibold text-gray-700">
-                    {activeSite?.mapData?.flightPlan?.flightGeography
-                      ? `${(calculatePolygonArea(activeSite.mapData.flightPlan.flightGeography) / 10000).toFixed(2)} ha`
-                      : 'Not set'}
-                  </p>
-                  <p className="text-xs text-gray-400">Geography Size</p>
-                </div>
-                <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
-                  <p className="text-xs text-gray-500 mb-1">Speed</p>
-                  <p className="text-lg font-semibold text-amber-600">
-                    {siteFlightPlan.speed || 10}m/s
-                  </p>
-                  <p className="text-xs text-gray-400">{((siteFlightPlan.speed || 10) * 3.6).toFixed(0)} km/h</p>
-                </div>
               </div>
-              <p className="text-xs text-gray-500 mt-3 text-center">
-                Altitude range: Ground to {siteFlightPlan.maxAltitudeAGL || 120}m AGL ({Math.round((siteFlightPlan.maxAltitudeAGL || 120) * 3.281)}ft)
-              </p>
-            </div>
-          )}
 
-          {/* Map reference note */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-800">
-              <Info className="w-4 h-4 inline mr-1" />
-              Draw your flight geography on the map using the <strong>Drawing Tools</strong>.
-              The flight volume, contingency volume, and ground risk buffer will be visualized.
-            </p>
-          </div>
+              {/* Terrain Elevation Profile */}
+              <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                    <Mountain className="w-4 h-4 text-blue-600" />
+                    Terrain Elevation
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleCalculateTerrainElevation}
+                    disabled={isCalculatingElevation}
+                    className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  >
+                    {isCalculatingElevation ? (
+                      <>
+                        <span className="animate-spin">⟳</span>
+                        Calculating...
+                      </>
+                    ) : (
+                      <>
+                        <Activity className="w-3 h-3" />
+                        Calculate Elevation
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {terrainElevation ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
+                        <p className="text-xs text-gray-500 mb-1">Min Terrain</p>
+                        <p className="text-lg font-semibold text-green-600">{terrainElevation.min}m</p>
+                        <p className="text-xs text-gray-400">ASL</p>
+                      </div>
+                      <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
+                        <p className="text-xs text-gray-500 mb-1">Max Terrain</p>
+                        <p className="text-lg font-semibold text-red-600">{terrainElevation.max}m</p>
+                        <p className="text-xs text-gray-400">ASL</p>
+                      </div>
+                      <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
+                        <p className="text-xs text-gray-500 mb-1">Elevation Range</p>
+                        <p className="text-lg font-semibold text-amber-600">{terrainElevation.max - terrainElevation.min}m</p>
+                        <p className="text-xs text-gray-400">Difference</p>
+                      </div>
+                      {terrainElevation.launchElevation !== null && (
+                        <div className="text-center p-3 bg-white rounded-lg border border-blue-200">
+                          <p className="text-xs text-gray-500 mb-1">Launch Point</p>
+                          <p className="text-lg font-semibold text-blue-600">{terrainElevation.launchElevation}m</p>
+                          <p className="text-xs text-gray-400">ASL</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* AGL from launch point */}
+                    {terrainElevation.launchElevation !== null && (
+                      <div className="bg-white rounded-lg border border-gray-200 p-3">
+                        <p className="text-xs text-gray-500 mb-2 font-medium">Relative to Launch Point (AGL)</p>
+                        <div className="grid grid-cols-2 gap-3 text-center">
+                          <div>
+                            <p className="text-sm text-gray-700">Lowest point:</p>
+                            <p className="text-lg font-semibold text-green-600">
+                              {terrainElevation.min - terrainElevation.launchElevation}m
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-700">Highest point:</p>
+                            <p className="text-lg font-semibold text-red-600">
+                              {terrainElevation.max - terrainElevation.launchElevation > 0 ? '+' : ''}{terrainElevation.max - terrainElevation.launchElevation}m
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                          Flight ceiling of {siteFlightPlan.maxAltitudeAGL || 120}m AGL from launch = {(siteFlightPlan.maxAltitudeAGL || 120) + terrainElevation.launchElevation}m ASL
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <Mountain className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">Click "Calculate Elevation" to analyze terrain across your flight area</p>
+                    <p className="text-xs text-gray-400 mt-1">Requires flight area and optional launch point</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </CollapsibleSection>
       
