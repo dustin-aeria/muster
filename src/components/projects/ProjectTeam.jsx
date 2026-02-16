@@ -36,6 +36,7 @@ import {
   getAggregatedNotificationHistory,
   getDefaultNotificationSettings
 } from '../../lib/teamNotificationService'
+import { getOperators } from '../../lib/firestore'
 
 export default function ProjectTeam({ project, onUpdate }) {
   const [expandedSections, setExpandedSections] = useState({
@@ -47,6 +48,7 @@ export default function ProjectTeam({ project, onUpdate }) {
 
   // Data state
   const [distributionLists, setDistributionLists] = useState([])
+  const [operators, setOperators] = useState([])
   const [notificationHistory, setNotificationHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -56,12 +58,23 @@ export default function ProjectTeam({ project, onUpdate }) {
   const [editingList, setEditingList] = useState(null)
   const [showSendModal, setShowSendModal] = useState(false)
 
-  // Load distribution lists
+  // Load distribution lists and operators
   useEffect(() => {
     if (project?.id && project?.organizationId) {
       loadDistributionLists()
+      loadOperators()
     }
   }, [project?.id, project?.organizationId])
+
+  const loadOperators = async () => {
+    if (!project?.organizationId) return
+    try {
+      const data = await getOperators(project.organizationId)
+      setOperators(data)
+    } catch (error) {
+      console.error('Failed to load operators:', error)
+    }
+  }
 
   const loadDistributionLists = async () => {
     // Guard against missing required fields
@@ -169,7 +182,7 @@ export default function ProjectTeam({ project, onUpdate }) {
 
     try {
       setLoading(true)
-      await createDefaultListsForProject(project.id, project.organizationId, project.crew || [])
+      await createDefaultListsForProject(project.id, project.organizationId, crewWithFullData)
       await loadDistributionLists()
     } catch (error) {
       console.error('Failed to create default lists:', error)
@@ -194,6 +207,21 @@ export default function ProjectTeam({ project, onUpdate }) {
 
   const notificationSettings = project.notificationSettings || getDefaultNotificationSettings()
   const crew = project.crew || []
+
+  // Merge crew with full operator data (to get phone numbers, emails, etc.)
+  const crewWithFullData = crew.map(crewMember => {
+    const operator = operators.find(op => op.id === crewMember.operatorId || op.id === crewMember.organizationId)
+    if (operator) {
+      return {
+        ...crewMember,
+        email: operator.email || crewMember.email || '',
+        phone: operator.phone || crewMember.phone || '',
+        name: crewMember.operatorName || crewMember.name || `${operator.firstName || ''} ${operator.lastName || ''}`.trim(),
+        operatorName: crewMember.operatorName || `${operator.firstName || ''} ${operator.lastName || ''}`.trim()
+      }
+    }
+    return crewMember
+  })
 
   return (
     <div className="space-y-6">
@@ -367,7 +395,7 @@ export default function ProjectTeam({ project, onUpdate }) {
       {showListEditor && (
         <DistributionListEditor
           list={editingList}
-          projectCrew={crew}
+          projectCrew={crewWithFullData}
           onSave={handleSaveList}
           onClose={() => {
             setShowListEditor(false)

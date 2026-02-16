@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPAS Level 1 Complex Operations - Flash Cards (AUDITED)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #1a365d;
+            border-bottom: 3px solid #2c5282;
+            padding-bottom: 15px;
+        }
+        h2 {
+            color: #2c5282;
+            background: #e2e8f0;
+            padding: 10px 15px;
+            border-left: 5px solid #2c5282;
+            margin-top: 40px;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .question {
+            background: #2c5282;
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .question span.num {
+            background: #1a365d;
+            padding: 3px 10px;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .answer {
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .answer ul, .answer ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+        .answer li {
+            margin: 5px 0;
+        }
+        .highlight {
+            background: #fef3c7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .number {
+            color: #c53030;
+            font-weight: bold;
+        }
+        .important {
+            background: #fed7d7;
+            padding: 10px 15px;
+            border-left: 4px solid #c53030;
+            margin: 10px 0;
+        }
+        .key-point {
+            background: #c6f6d5;
+            padding: 10px 15px;
+            border-left: 4px solid #276749;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .warning {
+            background: #feebc8;
+            padding: 10px 15px;
+            border-left: 4px solid #c05621;
+            margin: 10px 0;
+        }
+        @media print {
+            body { background: white; }
+            .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+            h2 { break-before: page; }
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #edf2f7;
+        }
+        .category-a {
+            background: #bee3f8;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .category-b {
+            background: #c6f6d5;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>RPAS Level 1 Complex Operations<br>Comprehensive Study Flash Cards</h1>
+<p style="text-align:center;color:#666;">Canadian Aviation Regulations (SOR/96-433) - Sections 901.62, 901.87, 901.194, 901.213</p>
+<p style="text-align:center;color:#276749;font-weight:bold;">AUDITED & CORRECTED VERSION</p>
+
+<h2>SECTION 1: DEFINITIONS</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q1</span> What is BVLOS?</div>
+    <div class="answer"><span class="highlight">Beyond Visual Line-of-Sight</span> - operating a remotely piloted aircraft outside the pilot's unaided visual range.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q2</span> What is VLOS?</div>
+    <div class="answer"><span class="highlight">Visual Line-of-Sight</span> - unaided visual contact maintained with a remotely piloted aircraft sufficient to:
+        <ul>
+            <li>Maintain control</li>
+            <li>Know location</li>
+            <li>Detect conflicting traffic and hazards</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q3</span> What is Extended VLOS?</div>
+    <div class="answer">An operation where the aircraft is <strong>NOT</strong> in visual line-of-sight, but unaided visual contact <strong>IS</strong> maintained with the <span class="highlight">airspace</span> to detect conflicts and take avoidance action.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q4</span> What is a Sheltered Operation?</div>
+    <div class="answer">An operation where the aircraft:
+        <ul>
+            <li>Remains <span class="number">less than 200 feet (61 m) horizontally</span> from a building/structure</li>
+            <li>At an altitude <span class="number">no greater than 100 feet (30 m)</span></li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q5</span> What is Flight Geography?</div>
+    <div class="answer">The area within which a remotely piloted aircraft is <span class="highlight">intended to fly</span> for a specific operation.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q6</span> What is Contingency Volume?</div>
+    <div class="answer">The area <strong>immediately surrounding the flight geography</strong> within which contingency procedures are intended to be used to:
+        <ul>
+            <li>Return the aircraft to flight geography, OR</li>
+            <li>Safely terminate the flight</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q7</span> What is Ground Risk Buffer?</div>
+    <div class="answer">The area immediately surrounding the contingency volume that, when measured horizontally from the perimeter of the contingency volume, is <span class="highlight">at least equal to the planned maximum altitude</span>.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q8</span> What is Operational Volume?</div>
+    <div class="answer">The combined area composed of:
+        <ol>
+            <li>Flight Geography</li>
+            <li>Contingency Volume</li>
+            <li>Ground Risk Buffer</li>
+        </ol>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q9</span> What is a Small Remotely Piloted Aircraft?</div>
+    <div class="answer">Operating weight of <span class="number">at least 250g but not more than 25 kg (55 lbs)</span>.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q10</span> What is a Medium Remotely Piloted Aircraft?</div>
+    <div class="answer">Operating weight of <span class="number">more than 25 kg (55 lbs) but not more than 150 kg (331 lbs)</span>.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q11</span> What is Operating Weight?</div>
+    <div class="answer">The weight of the aircraft at any point during flight, including:
+        <ul>
+            <li>Any payload</li>
+            <li>Any safety equipment aboard or connected</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q12</span> What is a Populated Area?</div>
+    <div class="answer">An area with <span class="number">more than 5 people per square kilometre</span>.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q13</span> What is a Sparsely Populated Area?</div>
+    <div class="answer">An area with <span class="number">more than 5 but not more than 25 people per square kilometre</span>.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q14</span> What is a Payload?</div>
+    <div class="answer">A system, object, or collection of objects (including slung loads) that is on board or connected to the aircraft but is <span class="highlight">NOT required for flight</span>.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q15</span> What is a Visual Observer?</div>
+    <div class="answer">A crew member who is <span class="highlight">trained to assist the pilot</span> in ensuring the safe conduct of a flight.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q16</span> What is a Fly-away?</div>
+    <div class="answer">When there is an <span class="highlight">interruption or loss of the command and control link</span> such that the pilot is <strong>no longer able to control</strong> the aircraft.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q17</span> What are Contingency Procedures?</div>
+    <div class="answer">Procedures to be followed to address conditions that <span class="highlight">could lead to an unsafe situation</span>.</div>
+</div>
+
+<h2>SECTION 2: LEVEL 1 COMPLEX OPERATIONS - SCOPE (901.87)</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q18</span> What two categories of BVLOS operations does Level 1 Complex (Division VI) cover?</div>
+    <div class="answer">
+        <div class="category-a">
+            <strong>Category (a) - Small OR Medium RPAS:</strong>
+            <ul>
+                <li>BVLOS in uncontrolled airspace</li>
+                <li><span class="number">At least 1 km from a populated area</span> (MANDATORY)</li>
+            </ul>
+        </div>
+        <div class="category-b">
+            <strong>Category (b) - Small RPAS ONLY:</strong>
+            <ul>
+                <li>BVLOS in uncontrolled airspace</li>
+                <li>Over a <span class="highlight">sparsely populated area</span>, OR</li>
+                <li><span class="number">Less than 1 km</span> from a populated area</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q19</span> Can MEDIUM RPAS conduct BVLOS operations closer than 1 km from a populated area?</div>
+    <div class="answer">
+        <div class="important">
+            <strong style="color:red;">NO</strong> - Medium RPAS can ONLY conduct BVLOS under Category (a), which requires a minimum distance of <span class="number">1 km from populated areas</span>. Category (b) allowing closer operations is restricted to <strong>small RPAS only</strong>.
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q20</span> Can SMALL RPAS conduct BVLOS operations closer than 1 km from a populated area?</div>
+    <div class="answer">
+        <div class="key-point">
+            <strong style="color:green;">YES</strong> - Small RPAS can operate under Category (b), which permits BVLOS:
+            <ul>
+                <li>Over sparsely populated areas, OR</li>
+                <li>At distances <span class="number">less than 1 km</span> from populated areas</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q21</span> What is the KEY difference between small and medium RPAS for L1C BVLOS operations?</div>
+    <div class="answer">
+        <table>
+            <tr><th>Aircraft Type</th><th>Populated Area Rule</th></tr>
+            <tr>
+                <td><strong>Medium RPAS</strong></td>
+                <td>Must <span class="number">ALWAYS maintain at least 1 km</span> from populated areas (Category a ONLY)</td>
+            </tr>
+            <tr>
+                <td><strong>Small RPAS</strong></td>
+                <td>Can operate at <span class="number">1+ km</span> (Category a) <strong>OR</strong> <span class="number">closer than 1 km/over sparsely populated areas</span> (Category b)</td>
+            </tr>
+        </table>
+        <div class="key-point">KEY POINT: Medium RPAS have NO flexibility - they must always maintain 1 km. Small RPAS can operate closer.</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q22</span> What airspace type is Level 1 Complex Operations restricted to?</div>
+    <div class="answer"><span class="highlight">Uncontrolled airspace ONLY</span> - controlled airspace operations require additional certifications and ATC coordination.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q23</span> Can you conduct Level 1 Complex Operations in controlled airspace?</div>
+    <div class="answer"><strong style="color:red;">NO</strong> - Level 1 Complex is restricted to uncontrolled airspace. Controlled airspace requires additional authorization.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q24</span> Where can small RPAS conduct BVLOS under Category (b)?</div>
+    <div class="answer">In uncontrolled airspace:
+        <ul>
+            <li>Over <span class="highlight">sparsely populated areas</span> (5-25 people/km²), OR</li>
+            <li>At a distance of <span class="number">less than 1 km</span> from a populated area</li>
+        </ul>
+    </div>
+</div>
+
+<h2>SECTION 3: PILOT CERTIFICATE REQUIREMENTS</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q25</span> What is the minimum age for a Level 1 Complex Operations pilot certificate?</div>
+    <div class="answer"><span class="number" style="font-size:1.5em;">18 years old</span></div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q26</span> What are the requirements for a Level 1 Complex pilot certificate?</div>
+    <div class="answer">
+        <ol>
+            <li>Be at least <span class="number">18 years old</span></li>
+            <li>Successfully complete the <span class="highlight">Advanced Operations examination</span> (TP 15263)</li>
+            <li>Complete <span class="number">20 hours</span> of RPAS ground school instruction from a training provider covering L1C operations (TP 15530)</li>
+            <li>Pass the <span class="highlight">Level 1 Complex Operations examination</span> (TP 15530)</li>
+            <li>Complete <span class="highlight">flight review within 12 months</span> prior to application (Standard 921)</li>
+        </ol>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q27</span> What is the minimum age for a Basic Operations certificate?</div>
+    <div class="answer"><span class="number" style="font-size:1.5em;">14 years old</span></div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q28</span> What is the minimum age for an Advanced Operations certificate?</div>
+    <div class="answer"><span class="number" style="font-size:1.5em;">16 years old</span></div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q29</span> What ground school hours are required for Level 1 Complex?</div>
+    <div class="answer"><span class="number" style="font-size:1.5em;">20 hours</span> of RPAS ground school instruction delivered by an approved training provider, covering subjects in TP 15530.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q30</span> What examination must be passed BEFORE the L1C exam?</div>
+    <div class="answer">The <span class="highlight">Remotely Piloted Aircraft Systems - Advanced Operations</span> examination (TP 15263).</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q31</span> What Transport Canada documents define L1C knowledge requirements?</div>
+    <div class="answer">
+        <ul>
+            <li><strong>TP 15263</strong>: Basic and Advanced Operations knowledge requirements</li>
+            <li><strong>TP 15530</strong>: Level 1 Complex Operations knowledge requirements</li>
+        </ul>
+    </div>
+</div>
+
+<h2>SECTION 4: RECENCY REQUIREMENTS</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q32</span> What is the recency period for Level 1 Complex Operations?</div>
+    <div class="answer"><span class="number" style="font-size:1.5em;">24 months</span> - must have completed qualifying requirements within 24 months before operating.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q33</span> What qualifies for recency under Level 1 Complex Operations?</div>
+    <div class="answer">Within 24 months, must have completed <strong>ONE</strong> of:
+        <ul>
+            <li>Issuance of the certificate, OR</li>
+            <li>Basic, Advanced, or L1C examinations, OR</li>
+            <li>Flight reviews per Standard 921, OR</li>
+            <li>Recurrent training activities per section 921.04 of Standard 921</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q34</span> How long must pilots retain recency activity records?</div>
+    <div class="answer"><span class="number">At least 24 months</span> after the day on which they were completed.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q35</span> What must be easily accessible during flight operations?</div>
+    <div class="answer">
+        <ul>
+            <li>Pilot certificate</li>
+            <li>Proof of recency compliance</li>
+            <li>Authorization documents (if applicable)</li>
+            <li>Flight review completion records</li>
+        </ul>
+    </div>
+</div>
+
+<h2>SECTION 5: FLIGHT REVIEW & EXAMINATION RULES</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q36</span> How long before application must the flight review be completed?</div>
+    <div class="answer"><span class="number">Within 12 months</span> prior to certificate application.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q37</span> What is the waiting period to retake a failed examination?</div>
+    <div class="answer"><span class="number" style="font-size:1.5em;">24 hours</span> before retaking failed examinations or flight reviews.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q38</span> What is prohibited during examinations?</div>
+    <div class="answer">
+        <ul>
+            <li>Cheating</li>
+            <li>Unauthorized assistance</li>
+            <li>Possession of unauthorized materials</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q39</span> What standard governs flight reviews for RPAS pilots?</div>
+    <div class="answer"><span class="highlight">Standard 921 - Remotely Piloted Aircraft</span>, specifically section 921.02.</div>
+</div>
+
+<h2>SECTION 6: RPAS OPERATOR CERTIFICATE</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q40</span> Is an RPAS Operator Certificate required for Level 1 Complex Operations?</div>
+    <div class="answer"><span class="highlight" style="font-size:1.3em;">YES</span> - mandatory for conducting Level 1 Complex Operations.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q41</span> Who can conduct Level 1 Complex Operations?</div>
+    <div class="answer">A person who:
+        <ul>
+            <li>IS an RPAS operator, OR</li>
+            <li>Is an employee, agent, mandatary, or representative of an RPAS operator</li>
+        </ul>
+        <strong>AND</strong> complies with the conditions in the RPAS operator certificate.
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q42</span> Who is eligible for an RPAS Operator Certificate (commercial)?</div>
+    <div class="answer">Must be <span class="highlight">Canadian</span> (Canadian citizen, permanent resident, or Canadian-incorporated entity).</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q43</span> Who is eligible for an RPAS Operator Certificate (non-commercial)?</div>
+    <div class="answer">
+        <ul>
+            <li>Canadian citizens or permanent residents</li>
+            <li>Government entities in Canada (or their agents/representatives)</li>
+            <li>Corporations incorporated under Canadian federal or provincial law</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q44</span> What information is required for Operator Certificate application?</div>
+    <div class="answer">
+        <ul>
+            <li>Legal name and contact information</li>
+            <li>Accountable executive identification</li>
+            <li>Declaration of operations manual compliance</li>
+            <li>Training program compliance</li>
+            <li>Operational intent statement</li>
+        </ul>
+    </div>
+</div>
+
+<h2>SECTION 7: RPAS DECLARATION REQUIREMENTS (901.194)</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q45</span> What must be submitted in an RPAS Declaration?</div>
+    <div class="answer">
+        <ol>
+            <li>Legal name, trade name, address, contact details</li>
+            <li><span class="highlight">Model name</span> of the RPAS</li>
+            <li><span class="highlight">Configurable elements</span> of the system</li>
+            <li><span class="highlight">Intended operations</span> to be conducted</li>
+            <li>Technical requirements from <span class="highlight">Standard 922</span> subject to declaration</li>
+        </ol>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q46</span> What makes an RPAS Declaration invalid?</div>
+    <div class="answer">Three conditions:
+        <ol>
+            <li>The model <strong>fails to meet</strong> specified technical requirements</li>
+            <li>The declarant <strong>notifies the Minister</strong> of invalidity</li>
+            <li><strong>Annual reporting requirements</strong> are not met</li>
+        </ol>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q47</span> What document is required before making a declaration for certain advanced BVLOS operations?</div>
+    <div class="answer">An <span class="highlight">acceptance letter</span> must have been issued <span class="number">within 2 years prior</span> to making the declaration.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q48</span> Within what timeframe must declarants notify the Minister of contact changes?</div>
+    <div class="answer"><span class="number">Within 30 days</span> of any changes to names, addresses, or contact information.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q49</span> What must be included in annual reports?</div>
+    <div class="answer">
+        <ul>
+            <li>Operator name</li>
+            <li>Aircraft model name</li>
+            <li>Operational hours in Canada</li>
+            <li>Count of service difficulty reports with summaries of mandatory actions</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q50</span> Is a declaration required before conducting L1C operations?</div>
+    <div class="answer"><strong>YES</strong> - Per section 901.95, no pilot shall operate under Division VI (L1C) unless a declaration has been made in accordance with section 901.194.</div>
+</div>
+
+<h2>SECTION 8-11: OPERATIONS MANUAL, SAFETY, TRAINING & RECORDS</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q51</span> What must the Operations Manual describe?</div>
+    <div class="answer">
+        <ul>
+            <li>Crew roles and responsibilities</li>
+            <li>Personnel hierarchy</li>
+            <li>Established processes and procedures</li>
+            <li>Detailed training syllabus components</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q52</span> What documentation must operators provide to users?</div>
+    <div class="answer">
+        <ul>
+            <li>Maintenance programs with servicing instructions and inspection procedures</li>
+            <li>Mandatory actions</li>
+            <li>Operating manuals covering: system descriptions, weight/CG limits, flight envelope, environmental effects, safety features, warning systems, emergency procedures, integration instructions</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q53</span> What safety processes must RPAS operators establish?</div>
+    <div class="answer">
+        <ul>
+            <li>Setting aviation safety goals</li>
+            <li>Identifying hazards</li>
+            <li>Evaluating mitigation effectiveness</li>
+            <li>Reporting incidents</li>
+            <li>Ensuring maintenance compliance</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q54</span> What must RPAS operator training programs include?</div>
+    <div class="answer">
+        <ul>
+            <li>Indoctrination training</li>
+            <li>Initial training (aircraft models, servicing/ground handling, operational procedures)</li>
+            <li>Annual recurrent training</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q55</span> How long must operator records be maintained?</div>
+    <div class="answer"><span class="number">12-24 months</span> depending on record type.</div>
+</div>
+
+<h2>SECTION 12: GENERAL OPERATING RULES</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q56</span> What is the standard maximum altitude for RPAS operations?</div>
+    <div class="answer"><span class="number" style="font-size:1.5em;">400 feet (122 m) AGL</span></div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q57</span> What altitude restriction applies when within 200 feet horizontally of a structure?</div>
+    <div class="answer">Must maintain altitude <span class="number">no greater than 100 feet (30 m) above</span> any building or structure.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q58</span> What is the minimum horizontal distance from uninvolved persons for SMALL RPAS (VLOS)?</div>
+    <div class="answer"><span class="number" style="font-size:1.5em;">100 feet (30 m)</span></div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q59</span> What is the minimum horizontal distance from uninvolved persons for MEDIUM RPAS (VLOS)?</div>
+    <div class="answer"><span class="number" style="font-size:1.5em;">500 feet (152.4 m)</span></div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q60</span> What must pilots yield to?</div>
+    <div class="answer">Must give way to:
+        <ul>
+            <li>Power-driven heavier-than-air aircraft</li>
+            <li>Airships</li>
+            <li>Gliders</li>
+            <li>Balloons</li>
+        </ul>
+        <span class="highlight">AT ALL TIMES</span>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q61</span> What is the alcohol restriction for RPAS crew members?</div>
+    <div class="answer">Cannot serve:
+        <ul>
+            <li>Within <span class="number">12 hours</span> after consuming alcohol</li>
+            <li>While under alcohol's influence</li>
+            <li>While using impairing drugs</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q62</span> When must operations immediately cease?</div>
+    <div class="answer">If aviation safety or the safety of any person is <span class="highlight">endangered or likely to be endangered</span>.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q63</span> What must happen if an aircraft loses pilot control and enters/threatens controlled airspace?</div>
+    <div class="answer"><span class="highlight">Immediately notify</span> the appropriate ATS unit or agency.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q64</span> Can RPAS carry passengers?</div>
+    <div class="answer"><strong style="color:red;">NO</strong> - except with a special flight operations certificate.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q65</span> Can RPAS leave Canadian Domestic Airspace?</div>
+    <div class="answer"><strong style="color:red;">NO</strong> - except with a special flight operations certificate.</div>
+</div>
+
+<h2>SECTION 13: VISUAL OBSERVER REQUIREMENTS</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q66</span> What communication must be maintained between pilot and visual observer?</div>
+    <div class="answer"><span class="highlight">Reliable and timely communication</span> during the operation.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q67</span> Can a visual observer monitor multiple aircraft?</div>
+    <div class="answer"><strong style="color:red;">NO</strong> - cannot monitor multiple aircraft simultaneously (except under Division V or special certificates).</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q68</span> Can visual observers perform duties while operating vehicles?</div>
+    <div class="answer"><strong style="color:red;">NO</strong> - cannot perform duties while operating vehicles, vessels, or aircraft.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q69</span> What certificates must visual observers hold?</div>
+    <div class="answer">Must hold one of:
+        <ul>
+            <li>Small RPAS basic certificate</li>
+            <li>Remotely piloted aircraft advanced certificate</li>
+            <li>Level 1 Complex Operations certificate</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q70</span> What is the maximum distance a visual observer can be from the aircraft?</div>
+    <div class="answer"><span class="number">Within 2 nautical miles</span> of the aircraft.</div>
+</div>
+
+<h2>SECTION 14: PRE-FLIGHT REQUIREMENTS</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q71</span> What must be determined in a site survey?</div>
+    <div class="answer">
+        <ul>
+            <li>Airspace type and requirements</li>
+            <li>Altitudes and routes for approach/launch/recovery</li>
+            <li>Proximity of other aircraft operations</li>
+            <li>Distance from airports and aerodromes</li>
+            <li>Obstacles (wires, towers, buildings, turbines)</li>
+            <li>Weather and environmental conditions</li>
+            <li>Horizontal distance from uninvolved persons</li>
+            <li>Distance from populated areas (BVLOS)</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q72</span> What emergency procedures must be established?</div>
+    <div class="answer">
+        <ul>
+            <li>Control station failure</li>
+            <li>Equipment failure</li>
+            <li>Aircraft failure</li>
+            <li>Loss of command and control link</li>
+            <li>Fly-away scenarios</li>
+            <li>Flight termination</li>
+            <li>Detection and avoidance of conflicting traffic</li>
+        </ul>
+    </div>
+</div>
+
+<h2>SECTION 15: CONTROLLED AIRSPACE & AIRPORT PROXIMITY</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q73</span> What is required for controlled airspace operations?</div>
+    <div class="answer"><span class="highlight">Authorization from air traffic services provider.</span></div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q74</span> What distance restriction applies near airports?</div>
+    <div class="answer">Cannot operate within <span class="number">3 nautical miles</span> of airport centers without established safe-use procedures.</div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q75</span> What distance restriction applies near heliports?</div>
+    <div class="answer">Cannot operate within <span class="number">1 nautical mile</span> of heliport centers without established safe-use procedures.</div>
+</div>
+
+<h2>SECTION 16: REGISTRATION & NOTIFICATION</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q76</span> Within what timeframe must owners notify the Minister of aircraft changes?</div>
+    <div class="answer"><span class="number">Within 7 days</span> of:
+        <ul>
+            <li>Aircraft destruction</li>
+            <li>Permanent withdrawal from use</li>
+            <li>Aircraft missing with terminated search</li>
+            <li>Aircraft missing 60+ days</li>
+            <li>Transfer of custody and control</li>
+        </ul>
+    </div>
+</div>
+
+<h2>SECTION 17: QUICK REFERENCE - KEY NUMBERS</h2>
+
+<div class="card">
+    <div class="question"><span class="num">Q77</span> Key VLOS distances from uninvolved persons?</div>
+    <div class="answer">
+        <table>
+            <tr><th>Aircraft Type</th><th>Minimum Distance</th></tr>
+            <tr><td>Small RPAS</td><td><span class="number">100 feet (30 m)</span></td></tr>
+            <tr><td>Medium RPAS</td><td><span class="number">500 feet (152.4 m)</span></td></tr>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q78</span> Key BVLOS (L1C) distances from populated areas?</div>
+    <div class="answer">
+        <table>
+            <tr><th>Aircraft Type</th><th>Distance Requirement</th></tr>
+            <tr><td><strong>Medium RPAS</strong></td><td><span class="number">At least 1 km</span> (MANDATORY - no exceptions under L1C)</td></tr>
+            <tr><td><strong>Small RPAS</strong></td><td><span class="number">1+ km</span> (Cat. a) OR <span class="number">&lt;1 km/sparsely populated</span> (Cat. b)</td></tr>
+        </table>
+        <div class="key-point">Medium = NO flexibility (always 1 km). Small = CAN operate closer.</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q79</span> Key proximity restrictions?</div>
+    <div class="answer">
+        <table>
+            <tr><th>Location</th><th>Restriction</th></tr>
+            <tr><td>Airports</td><td><span class="number">3 nautical miles</span> from center</td></tr>
+            <tr><td>Heliports</td><td><span class="number">1 nautical mile</span> from center</td></tr>
+            <tr><td>Extended VLOS range</td><td><span class="number">2 nautical miles</span> from pilot/observer</td></tr>
+            <tr><td>Sheltered ops - building</td><td><span class="number">Less than 200 feet (61 m)</span> horizontal</td></tr>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q80</span> Key altitudes?</div>
+    <div class="answer">
+        <table>
+            <tr><th>Scenario</th><th>Altitude Limit</th></tr>
+            <tr><td>Standard maximum</td><td><span class="number">400 feet (122 m) AGL</span></td></tr>
+            <tr><td>Sheltered operations</td><td><span class="number">100 feet (30 m)</span> max</td></tr>
+            <tr><td>Near structures (within 200 ft horizontal)</td><td><span class="number">100 feet above</span> structure</td></tr>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q81</span> Key time periods?</div>
+    <div class="answer">
+        <table>
+            <tr><th>Period</th><th>Application</th></tr>
+            <tr><td><span class="number">12 hours</span></td><td>Alcohol restriction before duty</td></tr>
+            <tr><td><span class="number">12 months</span></td><td>Flight review validity for certificate application</td></tr>
+            <tr><td><span class="number">24 hours</span></td><td>Wait period for exam retake</td></tr>
+            <tr><td><span class="number">24 months</span></td><td>Recency period</td></tr>
+            <tr><td><span class="number">2 years</span></td><td>Acceptance letter validity for declarations</td></tr>
+            <tr><td><span class="number">30 days</span></td><td>Contact change notification to Minister</td></tr>
+            <tr><td><span class="number">7 days</span></td><td>Aircraft status change notification</td></tr>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q82</span> Key weight thresholds?</div>
+    <div class="answer">
+        <table>
+            <tr><th>Weight</th><th>Significance</th></tr>
+            <tr><td><span class="number">250g</span></td><td>Minimum for regulated RPAS</td></tr>
+            <tr><td><span class="number">25 kg (55 lbs)</span></td><td>Small/Medium boundary</td></tr>
+            <tr><td><span class="number">150 kg (331 lbs)</span></td><td>Maximum for Medium RPAS</td></tr>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q83</span> Key age requirements?</div>
+    <div class="answer">
+        <table>
+            <tr><th>Age</th><th>Certificate Level</th></tr>
+            <tr><td><span class="number">14</span></td><td>Basic Operations</td></tr>
+            <tr><td><span class="number">16</span></td><td>Advanced Operations</td></tr>
+            <tr><td><span class="number">18</span></td><td>Level 1 Complex Operations</td></tr>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q84</span> Key training requirements comparison?</div>
+    <div class="answer">
+        <table>
+            <tr><th>Certificate</th><th>Ground School</th><th>Exam</th><th>Flight Review</th></tr>
+            <tr><td>Basic</td><td>None required</td><td>Basic (TP 15263)</td><td>None</td></tr>
+            <tr><td>Advanced</td><td>None specified</td><td>Advanced (TP 15263)</td><td>Yes (12 months)</td></tr>
+            <tr><td>L1C</td><td><span class="number">20 hours</span> (TP 15530)</td><td>Advanced + L1C</td><td>Yes (12 months)</td></tr>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="question"><span class="num">Q85</span> Population density definitions?</div>
+    <div class="answer">
+        <table>
+            <tr><th>Area Type</th><th>Density</th></tr>
+            <tr><td>Populated area</td><td><span class="number">&gt;5 people/km²</span></td></tr>
+            <tr><td>Sparsely populated</td><td><span class="number">&gt;5 to 25 people/km²</span></td></tr>
+        </table>
+    </div>
+</div>
+
+<hr style="margin-top:50px;">
+<p style="text-align:center;color:#666;font-size:0.9em;">
+    <strong>Source:</strong> Canadian Aviation Regulations (SOR/96-433)<br>
+    Sections: 901.62, 901.87, 901.194, 901.213 and related provisions<br>
+    Current as of 2026 (amended by SOR/2025-70)<br>
+    <strong style="color:#276749;">AUDITED VERSION - Small vs Medium distinctions corrected</strong>
+</p>
+
+</body>
+</html>

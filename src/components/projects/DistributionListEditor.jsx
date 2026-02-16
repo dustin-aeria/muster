@@ -404,7 +404,6 @@ export default function DistributionListEditor({ list, projectCrew, onSave, onCl
                     >
                       <Mail className="w-4 h-4" />
                       Email
-                      <span className="text-xs opacity-75">(Phase 2)</span>
                     </button>
                     <button
                       type="button"
@@ -417,7 +416,6 @@ export default function DistributionListEditor({ list, projectCrew, onSave, onCl
                     >
                       <MessageSquare className="w-4 h-4" />
                       SMS
-                      <span className="text-xs opacity-75">(Phase 2)</span>
                     </button>
                   </div>
                   {newMemberType === 'external' && (

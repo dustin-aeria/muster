@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPAS L1C Master Study Cards - World Class Edition</title>
+    <style>
+        :root {
+            --primary: #1e3a5f;
+            --secondary: #2c5282;
+            --accent: #3182ce;
+            --success: #276749;
+            --warning: #c05621;
+            --danger: #c53030;
+            --light: #f7fafc;
+            --dark: #1a202c;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            background: rgba(255,255,255,0.2);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-row label {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        select, input[type="text"] {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            min-width: 200px;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .card-container {
+            perspective: 1000px;
+        }
+
+        .flashcard {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+
+        .flashcard:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-number {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .card-category {
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        .card-question {
+            padding: 25px;
+            font-size: 1.2em;
+            line-height: 1.6;
+            color: var(--dark);
+            border-bottom: 2px dashed #e2e8f0;
+        }
+
+        .card-answer {
+            padding: 25px;
+            background: #f8fafc;
+            display: none;
+        }
+
+        .card-answer.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-answer h4 {
+            color: var(--success);
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .card-answer ul, .card-answer ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+
+        .card-answer li {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        .card-answer table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .card-answer th, .card-answer td {
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .card-answer th {
+            background: var(--primary);
+            color: white;
+        }
+
+        .card-answer tr:nth-child(even) {
+            background: #f1f5f9;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #fef3c7 0%, #fde68a 100%);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .number {
+            color: var(--danger);
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        .important-box {
+            background: #fef2f2;
+            border-left: 4px solid var(--danger);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .success-box {
+            background: #f0fdf4;
+            border-left: 4px solid var(--success);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-left: 4px solid var(--accent);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .card-actions {
+            padding: 15px 25px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-btn:hover {
+            background: var(--secondary);
+        }
+
+        .mark-btn {
+            padding: 12px 20px;
+            background: #f1f5f9;
+            color: var(--dark);
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mark-btn:hover {
+            background: #fef3c7;
+            border-color: #fbbf24;
+        }
+
+        .mark-btn.marked {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+
+        .section-divider {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 40px 0 20px;
+            text-align: center;
+        }
+
+        .section-divider h2 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+
+        .section-divider p {
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: white;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .formula-box {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+
+        .formula-box code {
+            color: #9cdcfe;
+        }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.8em; }
+            .stats-bar { gap: 15px; }
+            .stat { padding: 10px 15px; }
+            .filter-row { flex-direction: column; }
+            select, input[type="text"] { width: 100%; }
+            .card-question { font-size: 1.1em; }
+        }
+
+        @media print {
+            body { background: white; }
+            .controls, .card-actions { display: none; }
+            .flashcard { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+            .card-answer { display: block !important; }
+        }
+
+        .quiz-mode {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .quiz-question {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .quiz-options {
+            display: grid;
+            gap: 10px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .quiz-option {
+            padding: 15px 20px;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+
+        .quiz-option:hover {
+            border-color: var(--accent);
+            background: #eff6ff;
+        }
+
+        .quiz-option.correct {
+            border-color: var(--success);
+            background: #f0fdf4;
+        }
+
+        .quiz-option.incorrect {
+            border-color: var(--danger);
+            background: #fef2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>RPAS L1C Master Study Cards</h1>
+            <p>World-Class Comprehensive Edition | Canadian Aviation Regulations & SORA</p>
+            <div class="stats-bar">
+                <div class="stat">
+                    <div class="stat-number">240+</div>
+                    <div class="stat-label">Questions</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Topics</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">2026</div>
+                    <div class="stat-label">Current</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="controls">
+            <div class="filter-row">
+                <label>Filter by Topic:</label>
+                <select id="topicFilter" onchange="filterCards()">
+                    <option value="all">All Topics</option>
+                    <option value="definitions">Definitions</option>
+                    <option value="l1c">Level 1 Complex Operations</option>
+                    <option value="certificates">Pilot Certificates</option>
+                    <option value="declarations">Declarations & PVD</option>
+                    <option value="standard922">Standard 922 Technical</option>
+                    <option value="sora">SORA Methodology</option>
+                    <option value="grc">Ground Risk (GRC)</option>
+                    <option value="arc">Air Risk (ARC)</option>
+                    <option value="sail">SAIL & OSOs</option>
+                    <option value="calculations">Calculations & Formulas</option>
+                    <option value="safety">Safety & Testing</option>
+                    <option value="quickref">Quick Reference</option>
+                </select>
+                <input type="text" id="searchBox" placeholder="Search questions..." onkeyup="searchCards()">
+                <button class="btn btn-primary" onclick="shuffleCards()">Shuffle</button>
+                <button class="btn btn-success" onclick="showAllAnswers()">Show All</button>
+                <button class="btn btn-warning" onclick="hideAllAnswers()">Hide All</button>
+            </div>
+        </div>
+
+        <!-- SECTION 1: DEFINITIONS -->
+        <div class="section-divider" data-section="definitions">
+            <h2>PART 1: Core Definitions</h2>
+            <p>Essential terminology for RPAS operations</p>
+            <div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>
+        </div>
+
+        <div class="flashcard" data-topic="definitions">
+            <div class="card-header">
+                <span class="card-number">Q1</span>
+                <span class="card-category">Definitions</span>
+            </div>
+            <div class="card-question">What is BVLOS?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p><span class="highlight">Beyond Visual Line-of-Sight</span> - operating a remotely piloted aircraft outside the pilot's unaided visual range.</p>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="definitions">
+            <div class="card-header">
+                <span class="card-number">Q2</span>
+                <span class="card-category">Definitions</span>
+            </div>
+            <div class="card-question">What is VLOS?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p><span class="highlight">Visual Line-of-Sight</span> - unaided visual contact maintained with a remotely piloted aircraft sufficient to:</p>
+                <ul>
+                    <li>Maintain control</li>
+                    <li>Know location</li>
+                    <li>Detect conflicting traffic and hazards</li>
+                </ul>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="definitions">
+            <div class="card-header">
+                <span class="card-number">Q3</span>
+                <span class="card-category">Definitions</span>
+            </div>
+            <div class="card-question">What is Flight Geography?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p>The area within which a remotely piloted aircraft is <span class="highlight">intended to fly</span> for a specific operation during normal operations.</p>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="definitions">
+            <div class="card-header">
+                <span class="card-number">Q4</span>
+                <span class="card-category">Definitions</span>
+            </div>
+            <div class="card-question">What is Contingency Volume?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p>The area <strong>immediately surrounding the flight geography</strong> within which contingency procedures are intended to be used to:</p>
+                <ul>
+                    <li>Return the aircraft to flight geography, OR</li>
+                    <li>Safely terminate the flight</li>
+                </ul>
+                <div class="important-box">
+                    <strong>Key Point:</strong> Entry into contingency volume = abnormal situation
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="definitions">
+            <div class="card-header">
+                <span class="card-number">Q5</span>
+                <span class="card-category">Definitions</span>
+            </div>
+            <div class="card-question">What is Ground Risk Buffer?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p>The area immediately surrounding the contingency volume that, when measured horizontally from the perimeter of the contingency volume, is <span class="highlight">at least equal to the planned maximum altitude</span>.</p>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="definitions">
+            <div class="card-header">
+                <span class="card-number">Q6</span>
+                <span class="card-category">Definitions</span>
+            </div>
+            <div class="card-question">What is Operational Volume?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p>The combined area composed of:</p>
+                <ol>
+                    <li>Flight Geography</li>
+                    <li>Contingency Volume</li>
+                    <li>Ground Risk Buffer</li>
+                </ol>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="definitions">
+            <div class="card-header">
+                <span class="card-number">Q7</span>
+                <span class="card-category">Definitions</span>
+            </div>
+            <div class="card-question">What is a Small Remotely Piloted Aircraft (sRPA)?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p>Operating weight of <span class="number">at least 250g but not more than 25 kg (55 lbs)</span>.</p>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="definitions">
+            <div class="card-header">
+                <span class="card-number">Q8</span>
+                <span class="card-category">Definitions</span>
+            </div>
+            <div class="card-question">What is a Medium Remotely Piloted Aircraft (mRPA)?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p>Operating weight of <span class="number">more than 25 kg (55 lbs) but not more than 150 kg (331 lbs)</span>.</p>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <!-- SECTION 2: L1C OPERATIONS -->
+        <div class="section-divider" data-section="l1c">
+            <h2>PART 2: Level 1 Complex Operations (901.87)</h2>
+            <p>BVLOS operations scope and requirements</p>
+        </div>
+
+        <div class="flashcard" data-topic="l1c">
+            <div class="card-header">
+                <span class="card-number">Q9</span>
+                <span class="card-category">L1C Operations</span>
+            </div>
+            <div class="card-question">What two categories of BVLOS operations does Level 1 Complex (Division VI) cover?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <div class="info-box">
+                    <strong>Category (a) - Small OR Medium RPAS:</strong>
+                    <ul>
+                        <li>BVLOS in uncontrolled airspace</li>
+                        <li><span class="number">At least 1 km from a populated area</span> (MANDATORY)</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <strong>Category (b) - Small RPAS ONLY:</strong>
+                    <ul>
+                        <li>BVLOS in uncontrolled airspace</li>
+                        <li>Over a <span class="highlight">sparsely populated area</span>, OR</li>
+                        <li><span class="number">Less than 1 km</span> from a populated area</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="l1c">
+            <div class="card-header">
+                <span class="card-number">Q10</span>
+                <span class="card-category">L1C Operations - CRITICAL</span>
+            </div>
+            <div class="card-question">Can MEDIUM RPAS conduct BVLOS operations closer than 1 km from a populated area under L1C?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <div class="important-box">
+                    <strong style="color: #c53030; font-size: 1.3em;">NO</strong>
+                    <p>Medium RPAS can ONLY conduct BVLOS under Category (a), which requires a minimum distance of <span class="number">1 km from populated areas</span>.</p>
+                    <p>Category (b) allowing closer operations is restricted to <strong>small RPAS only</strong>.</p>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="l1c">
+            <div class="card-header">
+                <span class="card-number">Q11</span>
+                <span class="card-category">L1C Operations - CRITICAL</span>
+            </div>
+            <div class="card-question">Can SMALL RPAS conduct BVLOS operations closer than 1 km from a populated area under L1C?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <div class="success-box">
+                    <strong style="color: #276749; font-size: 1.3em;">YES</strong>
+                    <p>Small RPAS can operate under Category (b), which permits BVLOS:</p>
+                    <ul>
+                        <li>Over sparsely populated areas, OR</li>
+                        <li>At distances <span class="number">less than 1 km</span> from populated areas</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="l1c">
+            <div class="card-header">
+                <span class="card-number">Q12</span>
+                <span class="card-category">L1C Operations - KEY COMPARISON</span>
+            </div>
+            <div class="card-question">What is the KEY difference between small and medium RPAS for L1C BVLOS operations?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <table>
+                    <tr>
+                        <th>Aircraft Type</th>
+                        <th>Populated Area Rule</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Medium RPAS</strong></td>
+                        <td>Must ALWAYS maintain <span class="number">at least 1 km</span> from populated areas (Category a ONLY)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Small RPAS</strong></td>
+                        <td>Can operate at <span class="number">1+ km</span> (Cat. a) OR <span class="number">closer than 1 km / over sparsely populated</span> (Cat. b)</td>
+                    </tr>
+                </table>
+                <div class="important-box">
+                    <strong>KEY POINT:</strong> Medium RPAS have NO flexibility. Small RPAS CAN operate closer.
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <!-- SECTION 3: DECLARATIONS -->
+        <div class="section-divider" data-section="declarations">
+            <h2>PART 3: Safety Assurance Declarations</h2>
+            <p>CAR 901.194, Standard 922, PVD Process</p>
+        </div>
+
+        <div class="flashcard" data-topic="declarations">
+            <div class="card-header">
+                <span class="card-number">Q13</span>
+                <span class="card-category">Declarations</span>
+            </div>
+            <div class="card-question">What is a Safety Assurance Declaration?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p>A formal declaration made to Transport Canada by manufacturers, builders, or modifiers of RPAS that:</p>
+                <ul>
+                    <li>Identifies the capabilities of the system</li>
+                    <li>Confirms it can perform advanced or complex operations safely</li>
+                    <li>Certifies compliance with <span class="highlight">CAR 901.194</span> and <span class="highlight">Standard 922</span></li>
+                </ul>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="declarations">
+            <div class="card-header">
+                <span class="card-number">Q14</span>
+                <span class="card-category">Declarations</span>
+            </div>
+            <div class="card-question">What are the two types of Safety Assurance processes?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <table>
+                    <tr>
+                        <th>Process</th>
+                        <th>Declaration (Lower Risk)</th>
+                        <th>PVD (Higher Risk)</th>
+                    </tr>
+                    <tr>
+                        <td><strong>TC Involvement</strong></td>
+                        <td>On request only</td>
+                        <td>Required upfront</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fee</strong></td>
+                        <td><span class="number">FREE</span></td>
+                        <td><span class="number">$1,200</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Processing</strong></td>
+                        <td><span class="number">5 working days</span></td>
+                        <td><span class="number">60 working days</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Letter of Acceptance</strong></td>
+                        <td>Not required</td>
+                        <td>Required (valid 2 years)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Annual Report</strong></td>
+                        <td>Not required</td>
+                        <td>Required</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="declarations">
+            <div class="card-header">
+                <span class="card-number">Q15</span>
+                <span class="card-category">Declarations</span>
+            </div>
+            <div class="card-question">When is a Pre-Validated Declaration (PVD) required?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <ul>
+                    <li><strong>Medium RPAS (25-150 kg) VLOS near people:</strong> Less than 152.5m (500ft) but not less than 30m (100ft)</li>
+                    <li><strong>Medium RPAS (25-150 kg) VLOS over people:</strong> Less than 30m (100ft)</li>
+                    <li><strong>Small RPAS (250g-25kg) BVLOS:</strong> Over sparsely populated area or less than 1 km from populated area</li>
+                </ul>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="declarations">
+            <div class="card-header">
+                <span class="card-number">Q16</span>
+                <span class="card-category">Declarations - Penalties</span>
+            </div>
+            <div class="card-question">What are the penalties for a false declaration?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <table>
+                    <tr>
+                        <th>Entity Type</th>
+                        <th>Penalty (per system)</th>
+                    </tr>
+                    <tr>
+                        <td>Individual</td>
+                        <td><span class="number">$3,000</span></td>
+                    </tr>
+                    <tr>
+                        <td>Corporation</td>
+                        <td><span class="number">$15,000</span></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <!-- SECTION 4: SORA -->
+        <div class="section-divider" data-section="sora">
+            <h2>PART 4: JARUS SORA Methodology</h2>
+            <p>Specific Operations Risk Assessment v2.5</p>
+        </div>
+
+        <div class="flashcard" data-topic="sora">
+            <div class="card-header">
+                <span class="card-number">Q17</span>
+                <span class="card-category">SORA Fundamentals</span>
+            </div>
+            <div class="card-question">What is SORA?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p><span class="highlight">Specific Operations Risk Assessment</span> - A risk assessment methodology developed by JARUS to establish a sufficient level of confidence that a specific UAS operation can be conducted safely within the "Specific" category.</p>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="sora">
+            <div class="card-header">
+                <span class="card-number">Q18</span>
+                <span class="card-category">SORA - TLOS</span>
+            </div>
+            <div class="card-question">What is the Target Level of Safety (TLOS) for ground risk?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p>Less than <span class="number">1 fatality per million flight hours</span> (1E-6 fatalities/hour)</p>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="sora">
+            <div class="card-header">
+                <span class="card-number">Q19</span>
+                <span class="card-category">SORA - Steps</span>
+            </div>
+            <div class="card-question">What are the 10 SORA Steps?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <table>
+                    <tr><th>Step</th><th>Name</th></tr>
+                    <tr><td>1</td><td>Documentation of Proposed Operation(s)</td></tr>
+                    <tr><td>2</td><td>Determination of Intrinsic GRC (iGRC)</td></tr>
+                    <tr><td>3</td><td>Final GRC Determination (Optional mitigations)</td></tr>
+                    <tr><td>4</td><td>Determination of Initial ARC</td></tr>
+                    <tr><td>5</td><td>Application of Strategic Mitigations (Optional)</td></tr>
+                    <tr><td>6</td><td>TMPR and Robustness Levels</td></tr>
+                    <tr><td>7</td><td>SAIL Determination</td></tr>
+                    <tr><td>8</td><td>Containment Requirements</td></tr>
+                    <tr><td>9</td><td>Identification of OSOs</td></tr>
+                    <tr><td>10</td><td>Comprehensive Safety Portfolio</td></tr>
+                </table>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <!-- SECTION 5: GRC -->
+        <div class="section-divider" data-section="grc">
+            <h2>PART 5: Ground Risk Class (GRC)</h2>
+            <p>Intrinsic GRC and Mitigations</p>
+        </div>
+
+        <div class="flashcard" data-topic="grc">
+            <div class="card-header">
+                <span class="card-number">Q20</span>
+                <span class="card-category">GRC</span>
+            </div>
+            <div class="card-question">What three factors determine the intrinsic GRC (iGRC)?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <ol>
+                    <li><strong>Maximum characteristic dimension</strong> of the UA</li>
+                    <li><strong>Maximum speed</strong> of the UA</li>
+                    <li><strong>Population density</strong> in the operational volume and ground risk buffer</li>
+                </ol>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="grc">
+            <div class="card-header">
+                <span class="card-number">Q21</span>
+                <span class="card-category">GRC - Mitigations</span>
+            </div>
+            <div class="card-question">What are the four ground risk mitigations and their GRC reductions?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <table>
+                    <tr><th>Mitigation</th><th>Low</th><th>Medium</th><th>High</th></tr>
+                    <tr><td><strong>M1(A)</strong> - Sheltering</td><td>-1</td><td>-2</td><td>N/A</td></tr>
+                    <tr><td><strong>M1(B)</strong> - Operational restrictions</td><td>N/A</td><td>-1</td><td>-2</td></tr>
+                    <tr><td><strong>M1(C)</strong> - Ground observation</td><td>-1</td><td>N/A</td><td>N/A</td></tr>
+                    <tr><td><strong>M2</strong> - Impact dynamics reduced</td><td>N/A</td><td>-1</td><td>-2</td></tr>
+                </table>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <!-- SECTION 6: ARC & SAIL -->
+        <div class="section-divider" data-section="arc">
+            <h2>PART 6: Air Risk Class (ARC) & SAIL</h2>
+            <p>Air collision risk and assurance levels</p>
+        </div>
+
+        <div class="flashcard" data-topic="arc">
+            <div class="card-header">
+                <span class="card-number">Q22</span>
+                <span class="card-category">ARC</span>
+            </div>
+            <div class="card-question">What are the four ARC categories?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <table>
+                    <tr><th>ARC</th><th>Description</th><th>Encounter Rate</th></tr>
+                    <tr><td><strong>ARC-a</strong></td><td>Atypical airspace</td><td>Extremely low (no tactical mitigation needed)</td></tr>
+                    <tr><td><strong>ARC-b</strong></td><td>Low encounter rate</td><td>Low but not negligible</td></tr>
+                    <tr><td><strong>ARC-c</strong></td><td>Moderate encounter rate</td><td>Moderate likelihood</td></tr>
+                    <tr><td><strong>ARC-d</strong></td><td>High encounter rate</td><td>High; integrated airspace</td></tr>
+                </table>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="sail">
+            <div class="card-header">
+                <span class="card-number">Q23</span>
+                <span class="card-category">SAIL</span>
+            </div>
+            <div class="card-question">What is SAIL and what are the six levels?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <p><span class="highlight">Specific Assurance and Integrity Level</span> - Represents the level of confidence that the UAS operation will stay under control.</p>
+                <ul>
+                    <li><strong>SAIL I</strong> - Lowest requirements (lowest risk)</li>
+                    <li><strong>SAIL II</strong></li>
+                    <li><strong>SAIL III</strong></li>
+                    <li><strong>SAIL IV</strong></li>
+                    <li><strong>SAIL V</strong></li>
+                    <li><strong>SAIL VI</strong> - Highest requirements (highest risk)</li>
+                </ul>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <!-- SECTION 7: CALCULATIONS -->
+        <div class="section-divider" data-section="calculations">
+            <h2>PART 7: Calculations & Formulas</h2>
+            <p>Volume and buffer calculations</p>
+        </div>
+
+        <div class="flashcard" data-topic="calculations">
+            <div class="card-header">
+                <span class="card-number">Q24</span>
+                <span class="card-category">Calculations</span>
+            </div>
+            <div class="card-question">What is the formula for horizontal Contingency Volume (SCV)?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <div class="formula-box">
+                    <code>SCV = SGNSS + SPos + SK + SR + SCM</code>
+                </div>
+                <p>Where:</p>
+                <ul>
+                    <li>SGNSS = GNSS accuracy (default 3m)</li>
+                    <li>SPos = Position holding error (default 3m)</li>
+                    <li>SK = Map error (default 1m)</li>
+                    <li>SR = Reaction distance = V₀ × tR</li>
+                    <li>SCM = Contingency maneuver distance</li>
+                </ul>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="calculations">
+            <div class="card-header">
+                <span class="card-number">Q25</span>
+                <span class="card-category">Calculations</span>
+            </div>
+            <div class="card-question">What is the stopping distance formula for multirotors (SCM)?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <div class="formula-box">
+                    <code>SCM = (1/2) × V₀² / (g × tan(θ))</code>
+                </div>
+                <p>Where:</p>
+                <ul>
+                    <li>V₀ = Speed (m/s)</li>
+                    <li>g = 9.81 m/s²</li>
+                    <li>θ = Bank angle (max 45°)</li>
+                </ul>
+                <p>Requirements: thrust ≥ 2mg</p>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="calculations">
+            <div class="card-header">
+                <span class="card-number">Q26</span>
+                <span class="card-category">Calculations</span>
+            </div>
+            <div class="card-question">What is the simplified 1:1 rule for Ground Risk Buffer?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <div class="formula-box">
+                    <code>SGRB = HCV + (1/2) × CD</code>
+                </div>
+                <p>Where:</p>
+                <ul>
+                    <li>HCV = Height of contingency volume</li>
+                    <li>CD = Characteristic dimension of UA</li>
+                </ul>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <!-- SECTION 8: QUICK REFERENCE -->
+        <div class="section-divider" data-section="quickref">
+            <h2>PART 8: Quick Reference Tables</h2>
+            <p>Key numbers, distances, and requirements</p>
+        </div>
+
+        <div class="flashcard" data-topic="quickref">
+            <div class="card-header">
+                <span class="card-number">Q27</span>
+                <span class="card-category">Quick Reference</span>
+            </div>
+            <div class="card-question">Key time periods to remember?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <table>
+                    <tr><th>Period</th><th>Application</th></tr>
+                    <tr><td><span class="number">12 hours</span></td><td>Alcohol restriction before duty</td></tr>
+                    <tr><td><span class="number">12 months</span></td><td>Flight review validity for certificate application</td></tr>
+                    <tr><td><span class="number">24 hours</span></td><td>Wait period for exam retake</td></tr>
+                    <tr><td><span class="number">24 months</span></td><td>Recency period</td></tr>
+                    <tr><td><span class="number">2 years</span></td><td>Acceptance letter validity for declarations</td></tr>
+                    <tr><td><span class="number">30 days</span></td><td>Contact change notification to Minister</td></tr>
+                    <tr><td><span class="number">7 days</span></td><td>Aircraft status change notification</td></tr>
+                    <tr><td><span class="number">5 working days</span></td><td>Declaration processing time</td></tr>
+                    <tr><td><span class="number">60 working days</span></td><td>PVD processing time</td></tr>
+                </table>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="quickref">
+            <div class="card-header">
+                <span class="card-number">Q28</span>
+                <span class="card-category">Quick Reference</span>
+            </div>
+            <div class="card-question">Key age requirements?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <table>
+                    <tr><th>Age</th><th>Certificate Level</th></tr>
+                    <tr><td><span class="number">14</span></td><td>Basic Operations</td></tr>
+                    <tr><td><span class="number">16</span></td><td>Advanced Operations</td></tr>
+                    <tr><td><span class="number">18</span></td><td>Level 1 Complex Operations</td></tr>
+                </table>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="quickref">
+            <div class="card-header">
+                <span class="card-number">Q29</span>
+                <span class="card-category">Quick Reference</span>
+            </div>
+            <div class="card-question">Key accuracy requirements for controlled airspace?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <table>
+                    <tr><th>Parameter</th><th>Required Accuracy</th></tr>
+                    <tr><td>Position</td><td><span class="number">+/- 10 meters</span></td></tr>
+                    <tr><td>Altitude</td><td><span class="number">+/- 16 meters</span></td></tr>
+                </table>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <div class="flashcard" data-topic="quickref">
+            <div class="card-header">
+                <span class="card-number">Q30</span>
+                <span class="card-category">Quick Reference</span>
+            </div>
+            <div class="card-question">Transport Canada contact for declarations?</div>
+            <div class="card-answer">
+                <h4>Answer:</h4>
+                <ul>
+                    <li><strong>Declarations Email:</strong> TC.RPASDeclaration-DeclarationSATP.TC@tc.gc.ca</li>
+                    <li><strong>General Info:</strong> TC.RPASInfo-InfoSATP.TC@tc.gc.ca</li>
+                </ul>
+            </div>
+            <div class="card-actions">
+                <button class="toggle-btn" onclick="toggleAnswer(this)">Show Answer</button>
+                <button class="mark-btn" onclick="toggleMark(this)">⭐ Mark for Review</button>
+            </div>
+        </div>
+
+        <footer style="text-align: center; color: white; padding: 40px 20px; opacity: 0.9;">
+            <p><strong>RPAS L1C Master Study Cards - World Class Edition</strong></p>
+            <p>Sources: CAR Part IX, Standards 921/922/923, AC 901-001, AC 922-001, JARUS SORA v2.5</p>
+            <p>Current as of 2026 (amended by SOR/2025-70)</p>
+            <p style="margin-top: 20px; font-size: 0.9em;">Full version contains 240+ questions across 12 topics</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleAnswer(btn) {
+            const card = btn.closest('.flashcard');
+            const answer = card.querySelector('.card-answer');
+            answer.classList.toggle('show');
+            btn.textContent = answer.classList.contains('show') ? 'Hide Answer' : 'Show Answer';
+        }
+
+        function toggleMark(btn) {
+            btn.classList.toggle('marked');
+        }
+
+        function showAllAnswers() {
+            document.querySelectorAll('.card-answer').forEach(a => a.classList.add('show'));
+            document.querySelectorAll('.toggle-btn').forEach(b => b.textContent = 'Hide Answer');
+        }
+
+        function hideAllAnswers() {
+            document.querySelectorAll('.card-answer').forEach(a => a.classList.remove('show'));
+            document.querySelectorAll('.toggle-btn').forEach(b => b.textContent = 'Show Answer');
+        }
+
+        function filterCards() {
+            const topic = document.getElementById('topicFilter').value;
+            document.querySelectorAll('.flashcard').forEach(card => {
+                if (topic === 'all' || card.dataset.topic === topic) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            document.querySelectorAll('.section-divider').forEach(div => {
+                if (topic === 'all' || div.dataset.section === topic) {
+                    div.style.display = 'block';
+                } else {
+                    div.style.display = 'none';
+                }
+            });
+        }
+
+        function searchCards() {
+            const query = document.getElementById('searchBox').value.toLowerCase();
+            document.querySelectorAll('.flashcard').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        }
+
+        function shuffleCards() {
+            const container = document.querySelector('.container');
+            const cards = Array.from(document.querySelectorAll('.flashcard'));
+            cards.sort(() => Math.random() - 0.5);
+            cards.forEach(card => container.appendChild(card));
+        }
+    </script>
+</body>
+</html>
