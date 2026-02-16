@@ -15,7 +15,7 @@
  * @action NEW
  */
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import {
   Plane,
@@ -33,19 +33,15 @@ import {
   Eye,
   Cloud,
   Wind,
-  Thermometer,
   Gauge,
-  Clock,
   ArrowRight,
   CheckCircle2,
-  XCircle,
   Settings,
   Copy,
-  ExternalLink,
+  Activity,
+  ShieldAlert,
   Radio,
-  Navigation2,
-  Users,
-  ShieldAlert
+  Mountain
 } from 'lucide-react'
 import UnifiedProjectMap from '../map/UnifiedProjectMap'
 import { LayerToggles, DrawingTools } from '../map/MapControls'
@@ -55,13 +51,9 @@ import {
   getSiteStats,
   calculatePolygonArea,
   POPULATION_CATEGORIES,
-  generateSORAVolumes,
-  createMission,
-  createWaypoint,
-  MISSION_TYPES
+  generateSORAVolumes
 } from '../../lib/mapDataStructures'
 import NoAircraftAssignedModal from '../NoAircraftAssignedModal'
-import MissionCard from '../map/MissionCard'
 
 // ============================================
 // CONSTANTS
@@ -1054,99 +1046,6 @@ function EmergencyResponseProcedures({ procedures = [], onChange, onNavigateToEm
 }
 
 // ============================================
-// MISSIONS PANEL
-// ============================================
-
-function MissionsPanel({
-  missions = [],
-  selectedMissionId,
-  onSelectMission,
-  onEditMission,
-  onDeleteMission,
-  onStartDrawing,
-  drawingMode
-}) {
-  const hasMissions = missions.length > 0
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          {hasMissions
-            ? `${missions.length} mission${missions.length > 1 ? 's' : ''} defined`
-            : 'No missions defined yet'}
-        </p>
-      </div>
-
-      {/* Mission cards */}
-      {hasMissions && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {missions.map(mission => (
-            <MissionCard
-              key={mission.id}
-              mission={mission}
-              isSelected={mission.id === selectedMissionId}
-              onSelect={onSelectMission}
-              onEdit={onEditMission}
-              onDelete={onDeleteMission}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Add mission buttons */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <p className="text-sm font-medium text-gray-700 mb-3">Add New Mission</p>
-        <p className="text-xs text-gray-500 mb-3">
-          Use the drawing tools to create a new mission. The drawn shape will define the flight path.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => onStartDrawing('missionFlightPath')}
-            disabled={drawingMode?.id !== 'none'}
-            className={`px-3 py-2 text-sm rounded-lg flex items-center gap-2 transition-colors ${
-              drawingMode?.id === 'missionFlightPath'
-                ? 'bg-aeria-navy text-white'
-                : 'bg-white border border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            <Navigation2 className="w-4 h-4" />
-            Flight Path
-          </button>
-          <button
-            type="button"
-            onClick={() => onStartDrawing('missionCorridor')}
-            disabled={drawingMode?.id !== 'none'}
-            className={`px-3 py-2 text-sm rounded-lg flex items-center gap-2 transition-colors ${
-              drawingMode?.id === 'missionCorridor'
-                ? 'bg-aeria-navy text-white'
-                : 'bg-white border border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            <Radio className="w-4 h-4" />
-            Corridor
-          </button>
-          <button
-            type="button"
-            onClick={() => onStartDrawing('missionArea')}
-            disabled={drawingMode?.id !== 'none'}
-            className={`px-3 py-2 text-sm rounded-lg flex items-center gap-2 transition-colors ${
-              drawingMode?.id === 'missionArea'
-                ? 'bg-aeria-navy text-white'
-                : 'bg-white border border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            <Square className="w-4 h-4" />
-            Survey Area
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ============================================
 // FLIGHT PARAMETERS SUMMARY
 // ============================================
 
@@ -1217,75 +1116,26 @@ function FlightParametersSummary({ site, projectFlightPlan }) {
 export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSection }) {
   const [showMap, setShowMap] = useState(true)
   const [showAircraftModal, setShowAircraftModal] = useState(false)
-  const [selectedMissionId, setSelectedMissionId] = useState(null)
 
-  // Get sites array with defensive check (need this early for mission handlers)
+  // Get sites array
   const sites = useMemo(() => {
     return Array.isArray(project?.sites) ? project.sites : []
   }, [project?.sites])
 
-  // Active site (need this early for mission handlers)
+  // Active site
   const activeSiteId = project?.activeSiteId || sites[0]?.id || null
   const activeSite = useMemo(() => {
     return sites.find(s => s.id === activeSiteId) || sites[0] || null
   }, [sites, activeSiteId])
 
-  // Site-level flight plan data (need this early for mission handlers)
+  // Site-level flight plan data
   const siteFlightPlan = activeSite?.flightPlan || {}
-
-  // Missions array for the active site
-  const missions = useMemo(() => {
-    return siteFlightPlan.missions || []
-  }, [siteFlightPlan.missions])
-
-  // Selected mission
-  const selectedMission = useMemo(() => {
-    return missions.find(m => m.id === selectedMissionId) || missions[0] || null
-  }, [missions, selectedMissionId])
-
-  // Mission create handler - passed to useMapData
-  const handleMissionCreate = useCallback((missionData) => {
-    if (!activeSiteId) return
-
-    const defaultAltitude = siteFlightPlan.maxAltitudeAGL || 80
-
-    // Convert waypoints if provided (for line-based missions)
-    const waypoints = missionData.waypoints
-      ? missionData.waypoints.map((coord, index) =>
-          createWaypoint(coord[0], coord[1], defaultAltitude, { order: index })
-        )
-      : []
-
-    const newMission = createMission({
-      name: `${MISSION_TYPES[missionData.type]?.label || 'Mission'} ${missions.length + 1}`,
-      type: missionData.type,
-      altitude: defaultAltitude,
-      geography: missionData.geometry,
-      waypoints
-    })
-
-    const updatedSites = sites.map(site => {
-      if (site.id !== activeSiteId) return site
-      return {
-        ...site,
-        flightPlan: {
-          ...site.flightPlan,
-          missions: [...(site.flightPlan?.missions || []), newMission]
-        },
-        updatedAt: new Date().toISOString()
-      }
-    })
-
-    onUpdate({ sites: updatedSites })
-    setSelectedMissionId(newMission.id)
-  }, [activeSiteId, sites, missions.length, siteFlightPlan.maxAltitudeAGL, onUpdate])
 
   // Map controls - lifted to page level so we can render controls outside the map
   const mapControls = useMapData(project, onUpdate, {
     editMode: true,
     allowedLayers: ['siteSurvey', 'flightPlan'],
-    initialBasemap: 'streets',
-    onMissionCreate: handleMissionCreate
+    initialBasemap: 'streets'
   })
 
   // Project-level flight plan data
@@ -1328,64 +1178,6 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
 
     onUpdate({ sites: updatedSites })
   }, [sites, activeSiteId, onUpdate])
-
-  // ============================================
-  // MISSION HANDLERS
-  // ============================================
-
-  // Update an existing mission
-  const handleUpdateMission = useCallback((missionId, updates) => {
-    if (!activeSiteId) return
-
-    const updatedMissions = missions.map(mission =>
-      mission.id === missionId
-        ? { ...mission, ...updates, updatedAt: new Date().toISOString() }
-        : mission
-    )
-
-    updateSiteFlightPlan({ missions: updatedMissions })
-  }, [activeSiteId, missions, updateSiteFlightPlan])
-
-  // Delete a mission
-  const handleDeleteMission = useCallback((missionId) => {
-    if (!activeSiteId) return
-
-    const updatedMissions = missions.filter(m => m.id !== missionId)
-    updateSiteFlightPlan({ missions: updatedMissions })
-
-    // If we deleted the selected mission, select another one
-    if (selectedMissionId === missionId) {
-      setSelectedMissionId(updatedMissions[0]?.id || null)
-    }
-  }, [activeSiteId, missions, selectedMissionId, updateSiteFlightPlan])
-
-  // Move a waypoint within the selected mission
-  const handleWaypointMove = useCallback((waypointId, newLngLat) => {
-    if (!selectedMission) return
-
-    const updatedWaypoints = selectedMission.flightPath.waypoints.map(wp =>
-      wp.id === waypointId
-        ? { ...wp, coordinates: [newLngLat.lng, newLngLat.lat, wp.coordinates[2]] }
-        : wp
-    )
-
-    handleUpdateMission(selectedMission.id, {
-      flightPath: { ...selectedMission.flightPath, waypoints: updatedWaypoints }
-    })
-  }, [selectedMission, handleUpdateMission])
-
-  // Delete a waypoint from the selected mission
-  const handleWaypointDelete = useCallback((waypointId) => {
-    if (!selectedMission) return
-
-    const updatedWaypoints = selectedMission.flightPath.waypoints
-      .filter(wp => wp.id !== waypointId)
-      .map((wp, i) => ({ ...wp, order: i }))
-
-    handleUpdateMission(selectedMission.id, {
-      flightPath: { ...selectedMission.flightPath, waypoints: updatedWaypoints }
-    })
-  }, [selectedMission, handleUpdateMission])
 
   // Toggle aircraft selection
   const handleToggleAircraft = useCallback((aircraftId) => {
@@ -1511,63 +1303,6 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
       })
     }
   }, [project?.aircraft, siteFlightPlan.aircraft, onUpdate, updateSiteFlightPlan])
-
-  // ============================================
-  // LEGACY DATA MIGRATION
-  // ============================================
-
-  // Migrate legacy flightPath data to missions (one-time migration)
-  const migrationRunRef = useRef(false)
-  useEffect(() => {
-    // Only run once per session
-    if (migrationRunRef.current) return
-    if (!activeSite || !activeSiteId) return
-
-    // Check if there's legacy flightPath data and no missions
-    const legacyFlightPath = activeSite?.mapData?.flightPlan?.flightPath
-    const hasMissions = missions.length > 0
-    const hasLegacyWaypoints = legacyFlightPath?.waypoints?.length > 0
-
-    if (hasLegacyWaypoints && !hasMissions) {
-      migrationRunRef.current = true
-
-      // Convert legacy waypoints to mission format
-      const legacyWaypoints = legacyFlightPath.waypoints.map((wp, index) =>
-        createWaypoint(
-          wp.coordinates?.[0] || wp.lng,
-          wp.coordinates?.[1] || wp.lat,
-          wp.coordinates?.[2] || wp.altitude || siteFlightPlan.maxAltitudeAGL || 80,
-          { order: index }
-        )
-      )
-
-      // Create a migrated mission
-      const migratedMission = createMission({
-        name: 'Migrated Flight Path',
-        type: 'freeform',
-        altitude: siteFlightPlan.maxAltitudeAGL || 80,
-        waypoints: legacyWaypoints
-      })
-
-      // Update the site with the new mission
-      const updatedSites = sites.map(site => {
-        if (site.id !== activeSiteId) return site
-        return {
-          ...site,
-          flightPlan: {
-            ...site.flightPlan,
-            missions: [migratedMission]
-          },
-          updatedAt: new Date().toISOString()
-        }
-      })
-
-      onUpdate({ sites: updatedSites })
-      setSelectedMissionId(migratedMission.id)
-
-      console.log('[ProjectFlightPlan] Migrated legacy flight path to mission:', migratedMission.id)
-    }
-  }, [activeSite, activeSiteId, missions.length, sites, siteFlightPlan.maxAltitudeAGL, onUpdate])
 
   // ============================================
   // VALIDATION
@@ -1717,24 +1452,6 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
         </div>
       )}
       
-      {/* Missions Section */}
-      <CollapsibleSection
-        title="Flight Missions"
-        icon={Navigation2}
-        badge={missions.length > 0 ? `${missions.length}` : null}
-        status={missions.length > 0 ? 'complete' : 'missing'}
-      >
-        <MissionsPanel
-          missions={missions}
-          selectedMissionId={selectedMission?.id}
-          onSelectMission={setSelectedMissionId}
-          onEditMission={(id) => {/* TODO: Open mission editor */}}
-          onDeleteMission={handleDeleteMission}
-          onStartDrawing={mapControls.startDrawing}
-          drawingMode={mapControls.drawingMode}
-        />
-      </CollapsibleSection>
-
       {/* Flight Parameters Summary */}
       <CollapsibleSection
         title="Flight Positions"
@@ -1770,7 +1487,7 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
           onChange={(value) => updateSiteFlightPlan({ operationType: value })}
         />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Max Altitude (AGL)
@@ -1782,8 +1499,8 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
                 min="0"
                 max="400"
                 value={siteFlightPlan.maxAltitudeAGL || ''}
-                onChange={(e) => updateSiteFlightPlan({ 
-                  maxAltitudeAGL: e.target.value ? Number(e.target.value) : null 
+                onChange={(e) => updateSiteFlightPlan({
+                  maxAltitudeAGL: e.target.value ? Number(e.target.value) : null
                 })}
                 placeholder="120"
                 className="input w-24"
@@ -1792,7 +1509,29 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
             </div>
             <p className="text-xs text-gray-500 mt-1">Limit: 122m (400ft)</p>
           </div>
-          
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Aircraft Speed
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                step="1"
+                min="0"
+                max="50"
+                value={siteFlightPlan.speed || ''}
+                onChange={(e) => updateSiteFlightPlan({
+                  speed: e.target.value ? Number(e.target.value) : null
+                })}
+                placeholder="10"
+                className="input w-24"
+              />
+              <span className="text-sm text-gray-500">m/s</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Used for buffer calculations</p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Max Distance from Pilot
@@ -1803,8 +1542,8 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
                 step="100"
                 min="0"
                 value={siteFlightPlan.maxDistanceFromPilot || ''}
-                onChange={(e) => updateSiteFlightPlan({ 
-                  maxDistanceFromPilot: e.target.value ? Number(e.target.value) : null 
+                onChange={(e) => updateSiteFlightPlan({
+                  maxDistanceFromPilot: e.target.value ? Number(e.target.value) : null
                 })}
                 placeholder="500"
                 className="input w-24"
@@ -1812,45 +1551,6 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
               <span className="text-sm text-gray-500">m</span>
             </div>
             <p className="text-xs text-gray-500 mt-1">VLOS typically ≤500m</p>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Total Flight Time
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                step="5"
-                min="0"
-                value={siteFlightPlan.flightDuration || ''}
-                onChange={(e) => updateSiteFlightPlan({
-                  flightDuration: e.target.value ? Number(e.target.value) : null
-                })}
-                placeholder="60"
-                className="input w-24"
-              />
-              <span className="text-sm text-gray-500">min</span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Total planned flight time at this site</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estimated Battery Changes
-            </label>
-            <input
-              type="number"
-              step="1"
-              min="0"
-              value={siteFlightPlan.batteryChanges || ''}
-              onChange={(e) => updateSiteFlightPlan({
-                batteryChanges: e.target.value ? Number(e.target.value) : null
-              })}
-              placeholder="2"
-              className="input w-24"
-            />
-            <p className="text-xs text-gray-500 mt-1">Number of battery swaps expected</p>
           </div>
         </div>
       </CollapsibleSection>
@@ -2097,6 +1797,49 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Elevation Profile Summary */}
+          {activeSite?.mapData?.flightPlan?.flightGeography && (
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <Mountain className="w-4 h-4 text-blue-600" />
+                Elevation Profile
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">Min Altitude</p>
+                  <p className="text-lg font-semibold text-green-600">0m AGL</p>
+                  <p className="text-xs text-gray-400">Ground Level</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">Max Altitude</p>
+                  <p className="text-lg font-semibold text-blue-600">
+                    {siteFlightPlan.maxAltitudeAGL || 120}m AGL
+                  </p>
+                  <p className="text-xs text-gray-400">Planned Ceiling</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">Flight Area</p>
+                  <p className="text-lg font-semibold text-gray-700">
+                    {activeSite?.mapData?.flightPlan?.flightGeography
+                      ? `${(calculatePolygonArea(activeSite.mapData.flightPlan.flightGeography) / 10000).toFixed(2)} ha`
+                      : 'Not set'}
+                  </p>
+                  <p className="text-xs text-gray-400">Geography Size</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">Speed</p>
+                  <p className="text-lg font-semibold text-amber-600">
+                    {siteFlightPlan.speed || 10}m/s
+                  </p>
+                  <p className="text-xs text-gray-400">{((siteFlightPlan.speed || 10) * 3.6).toFixed(0)} km/h</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                Altitude range: Ground to {siteFlightPlan.maxAltitudeAGL || 120}m AGL ({Math.round((siteFlightPlan.maxAltitudeAGL || 120) * 3.281)}ft)
+              </p>
             </div>
           )}
 

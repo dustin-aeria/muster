@@ -430,107 +430,6 @@ export const createEvacuationRoute = (coordinates, options = {}) => ({
   notes: options.notes || ''
 })
 
-// ============================================
-// MISSION TYPES
-// ============================================
-
-export const MISSION_TYPES = {
-  mapping: { id: 'mapping', label: 'Area Mapping', description: 'Survey a defined area with grid pattern' },
-  corridor: { id: 'corridor', label: 'Corridor/Linear', description: 'Follow a linear path (pipeline, road, etc.)' },
-  point: { id: 'point', label: 'Point Inspection', description: 'Inspect a specific point or structure' },
-  perimeter: { id: 'perimeter', label: 'Perimeter', description: 'Fly around the boundary of an area' },
-  freeform: { id: 'freeform', label: 'Freeform', description: 'Custom flight path' }
-}
-
-/**
- * Create a waypoint for flight path
- * @param {number} lng - Longitude
- * @param {number} lat - Latitude
- * @param {number} altitude - Altitude in meters AGL
- * @param {Object} options - Additional waypoint options
- */
-export const createWaypoint = (lng, lat, altitude, options = {}) => ({
-  id: options.id || `wp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-  coordinates: [lng, lat, altitude],
-  order: options.order ?? 0,
-  speed: options.speed || null,        // m/s, null = use mission default
-  heading: options.heading || null,    // degrees, null = auto
-  action: options.action || null,      // hover | photo | video | etc.
-  actionDuration: options.actionDuration || null, // seconds
-  notes: options.notes || ''
-})
-
-/**
- * Mission structure - THE single source of truth for flight paths
- * Each mission contains its own flight path with waypoints
- *
- * @param {Object} options - Mission configuration
- */
-export const createMission = (options = {}) => {
-  const now = new Date().toISOString()
-  return {
-    id: options.id || `mission_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    name: options.name || 'New Mission',
-    type: options.type || 'freeform',         // mapping | corridor | point | perimeter | freeform
-
-    // Mission-specific geography (optional - for area-based missions)
-    geography: options.geography || null,      // GeoJSON polygon for area missions
-
-    // Default altitude for this mission
-    altitude: options.altitude || 80,          // meters AGL
-
-    // Flight path - THE waypoints for this mission
-    flightPath: {
-      waypoints: options.waypoints || [],      // Array of waypoint objects
-      corridorBuffer: options.corridorBuffer || null,  // meters (for corridor missions)
-      lastGenerated: options.lastGenerated || null     // timestamp of auto-generation
-    },
-
-    // Mission settings
-    settings: {
-      speed: options.speed || 10,              // m/s default speed
-      overlapForward: options.overlapForward || 80,    // % for mapping missions
-      overlapSide: options.overlapSide || 70,          // % for mapping missions
-      gimbalPitch: options.gimbalPitch || -90,         // degrees
-      photoInterval: options.photoInterval || null,    // seconds or distance
-      ...options.settings
-    },
-
-    // Status
-    status: options.status || 'draft',         // draft | ready | completed
-
-    // Metadata
-    createdAt: now,
-    updatedAt: now,
-    createdBy: options.createdBy || null
-  }
-}
-
-/**
- * Generate waypoints from a polygon for area mapping
- * (Placeholder - actual implementation would calculate grid pattern)
- */
-export const generateMappingWaypoints = (polygon, altitude, settings = {}) => {
-  // This would be implemented to generate a lawnmower pattern
-  // For now, returns the polygon corners as waypoints
-  if (!polygon?.geometry?.coordinates?.[0]) return []
-
-  const coords = polygon.geometry.coordinates[0]
-  return coords.slice(0, -1).map((coord, index) =>
-    createWaypoint(coord[0], coord[1], altitude, { order: index })
-  )
-}
-
-/**
- * Generate waypoints from a line for corridor missions
- */
-export const generateCorridorWaypoints = (lineCoords, altitude, settings = {}) => {
-  if (!Array.isArray(lineCoords) || lineCoords.length < 2) return []
-
-  return lineCoords.map((coord, index) =>
-    createWaypoint(coord[0], coord[1], altitude, { order: index })
-  )
-}
 
 // ============================================
 // SITE STRUCTURE
@@ -620,16 +519,11 @@ export const getDefaultSiteFlightPlanData = () => ({
   aircraft: [],              // Array of aircraft IDs assigned to this site
   primaryAircraftId: null,   // ID of primary aircraft for this site (for SORA)
 
-  // Missions - THE source of truth for all flight paths
-  // Each mission contains its own flight path with waypoints
-  missions: [],              // Array of mission objects (see createMission helper)
-  
   // Operation parameters (SORA-relevant)
   operationType: 'VLOS',       // VLOS | EVLOS | BVLOS
-  maxAltitudeAGL: 120,         // meters
+  maxAltitudeAGL: 120,         // meters AGL
+  speed: 10,                   // m/s - aircraft speed for buffer calculations
   maxDistanceFromPilot: null,  // meters
-  flightDuration: null,        // minutes per flight
-  totalFlights: 1,             // number of flights planned
   
   // Airspace (moved from siteSurvey - flight-relevant)
   airspace: {
@@ -1163,7 +1057,6 @@ export default {
   MAP_BASEMAPS,
   MAP_OVERLAY_LAYERS,
   POPULATION_CATEGORIES,
-  MISSION_TYPES,
   createGeoPoint,
   createGeoPolygon,
   createGeoLine,
@@ -1173,10 +1066,6 @@ export default {
   createObstacle,
   createMusterPoint,
   createEvacuationRoute,
-  createWaypoint,
-  createMission,
-  generateMappingWaypoints,
-  generateCorridorWaypoints,
   getDefaultSiteMapData,
   getDefaultSiteSurveyData,
   getDefaultSiteFlightPlanData,

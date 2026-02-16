@@ -111,44 +111,11 @@ export const DRAWING_MODES = {
   },
   flightGeography: {
     id: 'flightGeography',
-    label: 'Draw Flight Geography',
+    label: 'Draw Flight Area',
     cursor: 'crosshair',
     type: 'polygon',
     layer: 'flightPlan',
     single: true
-  },
-
-  // Mission-based flight path drawing modes
-  // These modes create missions via onMissionCreate callback
-  missionFlightPath: {
-    id: 'missionFlightPath',
-    label: 'Draw Flight Path',
-    cursor: 'crosshair',
-    type: 'line',
-    layer: 'flightPlan',
-    single: false,
-    createsMission: true,  // Indicates this mode creates a mission
-    missionType: 'freeform'
-  },
-  missionCorridor: {
-    id: 'missionCorridor',
-    label: 'Draw Corridor',
-    cursor: 'crosshair',
-    type: 'line',
-    layer: 'flightPlan',
-    single: false,
-    createsMission: true,
-    missionType: 'corridor'
-  },
-  missionArea: {
-    id: 'missionArea',
-    label: 'Draw Survey Area',
-    cursor: 'crosshair',
-    type: 'polygon',
-    layer: 'flightPlan',
-    single: false,
-    createsMission: true,
-    missionType: 'mapping'
   },
 
   // Emergency drawing modes
@@ -198,8 +165,7 @@ export function useMapData(project, onUpdate, options = {}) {
     initialSiteId = null,
     editMode = false,
     allowedLayers = ['siteSurvey', 'flightPlan', 'emergency'],
-    initialBasemap = 'streets',
-    onMissionCreate = null  // Callback for mission-based drawing modes
+    initialBasemap = 'streets'
   } = options
 
   // ============================================
@@ -956,41 +922,9 @@ export function useMapData(project, onUpdate, options = {}) {
   const completeDrawing = useCallback((lngLat = null) => {
     if (!isDrawing || !drawingMode || drawingMode.id === 'none') return
 
-    const { id: elementType, type: shapeType, createsMission, missionType } = drawingMode
+    const { id: elementType, type: shapeType } = drawingMode
 
-    // Handle mission-based drawing modes
-    if (createsMission) {
-      if (!onMissionCreate) {
-        logger.warn('[useMapData] Mission drawing mode requires onMissionCreate callback')
-        cancelDrawing()
-        return
-      }
-
-      // For mission area (polygon)
-      if (shapeType === 'polygon' && drawingPoints.length >= 3) {
-        onMissionCreate({
-          type: missionType,
-          geometry: {
-            type: 'Polygon',
-            coordinates: [[...drawingPoints, drawingPoints[0]]] // Close the polygon
-          },
-          waypoints: [] // Will be generated based on mission type
-        })
-      }
-      // For mission flight path/corridor (line)
-      else if (shapeType === 'line' && drawingPoints.length >= 2) {
-        onMissionCreate({
-          type: missionType,
-          geometry: null, // Lines don't have area geometry
-          waypoints: drawingPoints // These become the waypoints
-        })
-      }
-
-      cancelDrawing()
-      return
-    }
-
-    // Handle standard (non-mission) drawing modes
+    // Handle drawing modes
     if (shapeType === 'marker') {
       // For markers, use the provided lngLat or last point
       const point = lngLat || (drawingPoints.length > 0 ? {
@@ -1029,7 +963,7 @@ export function useMapData(project, onUpdate, options = {}) {
 
     // Reset drawing state
     cancelDrawing()
-  }, [isDrawing, drawingMode, drawingPoints, setMarker, setPolygon, addEvacuationRoute, cancelDrawing, autoPopulateAddress, onMissionCreate])
+  }, [isDrawing, drawingMode, drawingPoints, setMarker, setPolygon, addEvacuationRoute, cancelDrawing, autoPopulateAddress])
 
   // ============================================
   // UTILITY FUNCTIONS
