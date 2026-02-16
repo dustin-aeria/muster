@@ -109,15 +109,42 @@ export const DRAWING_MODES = {
     layer: 'flightPlan',
     single: true
   },
-  flightGeography: { 
-    id: 'flightGeography', 
-    label: 'Draw Flight Geography', 
+  flightGeography: {
+    id: 'flightGeography',
+    label: 'Draw Flight Geography',
     cursor: 'crosshair',
     type: 'polygon',
     layer: 'flightPlan',
     single: true
   },
-  
+  flightPath: {
+    id: 'flightPath',
+    label: 'Draw Flight Path',
+    cursor: 'crosshair',
+    type: 'line',
+    layer: 'flightPlan',
+    single: true,
+    isFlightPath: true // Special handling for waypoint generation
+  },
+  corridor: {
+    id: 'corridor',
+    label: 'Draw Corridor Centerline',
+    cursor: 'crosshair',
+    type: 'line',
+    layer: 'flightPlan',
+    single: true,
+    isCorridor: true // Special handling for corridor buffer
+  },
+  waypoint: {
+    id: 'waypoint',
+    label: 'Add Waypoint',
+    cursor: 'crosshair',
+    type: 'marker',
+    layer: 'flightPlan',
+    single: false,
+    isWaypoint: true // Adds to flight path waypoints
+  },
+
   // Emergency drawing modes
   musterPoint: {
     id: 'musterPoint',
@@ -939,6 +966,38 @@ export function useMapData(project, onUpdate, options = {}) {
           return
         }
 
+        // Special handling for waypoints - add to flight path
+        if (drawingMode.isWaypoint) {
+          const altitude = 120 // Default altitude
+          updateSiteMapData(mapData => {
+            const existingWaypoints = mapData?.flightPlan?.flightPath?.waypoints || []
+            const newOrder = existingWaypoints.length
+            const newWaypoint = {
+              id: `wp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              coordinates: [point.lng, point.lat, altitude],
+              order: newOrder,
+              label: `WP${newOrder + 1}`,
+              type: 'waypoint',
+              createdAt: new Date().toISOString()
+            }
+
+            return {
+              ...mapData,
+              flightPlan: {
+                ...mapData?.flightPlan,
+                flightPath: {
+                  ...mapData?.flightPlan?.flightPath,
+                  type: mapData?.flightPlan?.flightPath?.type || 'waypoint',
+                  waypoints: [...existingWaypoints, newWaypoint],
+                  lastGenerated: new Date().toISOString()
+                }
+              }
+            }
+          })
+          // Don't cancel drawing - allow adding more waypoints
+          return
+        }
+
         // For site location, also auto-populate address
         if (elementType === 'siteLocation') {
           setMarker(elementType, point)
@@ -956,13 +1015,42 @@ export function useMapData(project, onUpdate, options = {}) {
     } else if (shapeType === 'line') {
       // Need at least 2 points for a line
       if (drawingPoints.length >= 2) {
-        addEvacuationRoute(drawingPoints)
+        // Check for flight path specific line types
+        if (drawingMode.isFlightPath || drawingMode.isCorridor) {
+          // Convert line to waypoints and save to flightPath
+          const altitude = 120 // Default altitude, can be adjusted later
+          const waypoints = drawingPoints.map((coord, index) => ({
+            id: `wp_${Date.now()}_${index}`,
+            coordinates: [coord[0], coord[1], altitude],
+            order: index,
+            label: index === 0 ? 'Start' : index === drawingPoints.length - 1 ? 'End' : `WP${index + 1}`,
+            type: index === 0 ? 'start' : index === drawingPoints.length - 1 ? 'end' : 'waypoint',
+            createdAt: new Date().toISOString()
+          }))
+
+          // Save to flightPath in mapData
+          updateSiteMapData(mapData => ({
+            ...mapData,
+            flightPlan: {
+              ...mapData?.flightPlan,
+              flightPath: {
+                ...mapData?.flightPlan?.flightPath,
+                type: drawingMode.isCorridor ? 'corridor' : 'waypoint',
+                waypoints,
+                lastGenerated: new Date().toISOString()
+              }
+            }
+          }))
+        } else {
+          // Regular line (evacuation route)
+          addEvacuationRoute(drawingPoints)
+        }
       }
     }
 
     // Reset drawing state
     cancelDrawing()
-  }, [isDrawing, drawingMode, drawingPoints, setMarker, setPolygon, addEvacuationRoute, cancelDrawing, autoPopulateAddress])
+  }, [isDrawing, drawingMode, drawingPoints, setMarker, setPolygon, addEvacuationRoute, cancelDrawing, autoPopulateAddress, updateSiteMapData])
 
   // ============================================
   // UTILITY FUNCTIONS
