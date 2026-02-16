@@ -28,7 +28,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 
 import { useMapData, DRAWING_MODES } from '../../hooks/useMapData'
 import { use3DMapFeatures } from '../../hooks/use3DMapFeatures'
-import { MapControlsPanel, FullscreenButton } from './MapControls'
+import { MapControlsPanel, FullscreenButton, DrawingTools } from './MapControls'
 import { Toggle3DButton, Map3DControlsPanel } from './Map3DControls'
 import { useFlightPath3DLayers } from './FlightPath3DLayer'
 import { MapLegend, SiteColorLegend } from './MapLegend'
@@ -1877,6 +1877,43 @@ export function UnifiedProjectMap({
             onToggleFullscreen={handleToggleFullscreen}
           />
         </div>
+      )}
+
+      {/* Drawing tools and exit button in fullscreen mode when showControls is false */}
+      {!showControls && isFullscreen && mapLoaded && (
+        <>
+          {/* Exit fullscreen button - top right corner */}
+          <button
+            onClick={handleToggleFullscreen}
+            className="absolute top-4 right-4 z-40 bg-white hover:bg-gray-100 text-gray-700 px-3 py-2 rounded-lg shadow-lg border border-gray-200 flex items-center gap-2 transition-colors"
+            title="Exit fullscreen (Esc)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="4 14 10 14 10 20"/>
+              <polyline points="20 10 14 10 14 4"/>
+              <line x1="14" y1="10" x2="21" y2="3"/>
+              <line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+            <span className="text-sm font-medium">Exit</span>
+          </button>
+
+          {/* Drawing tools - below exit button */}
+          {editMode && (
+            <div className="absolute top-16 right-4 z-30">
+              <DrawingTools
+                drawingMode={drawingMode}
+                isDrawing={isDrawing}
+                drawingPoints={drawingPoints}
+                onStartDrawing={startDrawing}
+                onCancelDrawing={cancelDrawing}
+                onCompleteDrawing={completeDrawing}
+                onRemoveLastPoint={removeLastDrawingPoint}
+                activeLayer={activeLayer}
+                editMode={editMode}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* 3D Toggle and Overlay Layers Buttons */}
