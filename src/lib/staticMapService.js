@@ -39,7 +39,12 @@ export function generateStaticMapUrl(site, options = {}) {
   }
 
   const mapData = site?.mapData
-  if (!mapData) return null
+  if (!mapData) {
+    console.warn('No mapData found for site:', site?.name || site?.id)
+    return null
+  }
+
+  console.log('Generating static map for site:', site?.name, 'mapData keys:', Object.keys(mapData))
 
   // Collect all coordinates to calculate bounds
   const coordinates = []

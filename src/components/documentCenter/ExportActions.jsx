@@ -29,6 +29,7 @@ import {
   generateMultiSiteSORA_PDF
 } from '../../lib/pdfExportServiceMultiSite'
 import { generateQuotePDF, generateProposalPDF } from '../../lib/documentExportService'
+import { getProjectMapImages } from '../../lib/staticMapService'
 import { getDocumentColorClasses } from '../../lib/documentTypes'
 import { logger } from '../../lib/logger'
 
@@ -119,6 +120,22 @@ export default function ExportActions({
         ? { ...project, sites: sites.filter(s => s.id === selectedSite) }
         : project
 
+      // Fetch map images for sites
+      setExportProgress('Fetching map images...')
+      let mapImages = null
+      try {
+        mapImages = await getProjectMapImages(projectForExport, {
+          width: 800,
+          height: 500,
+          style: 'satelliteStreets'
+        })
+        logger.info('Fetched map images for', Object.keys(mapImages || {}).length, 'sites')
+      } catch (mapErr) {
+        logger.warn('Failed to fetch map images:', mapErr)
+      }
+
+      setExportProgress('Building document...')
+
       // Route to appropriate PDF generator
       switch (documentType.id) {
         case 'quote':
@@ -145,14 +162,16 @@ export default function ExportActions({
               projectForExport,
               exportBranding,
               clientBranding,
-              enhancedContent
+              enhancedContent,
+              mapImages
             )
           } else {
             pdf = await generateOperationsPlanPDF(
               projectForExport,
               exportBranding,
               clientBranding,
-              enhancedContent
+              enhancedContent,
+              mapImages
             )
           }
           break
@@ -168,20 +187,22 @@ export default function ExportActions({
             pdf = await generateMultiSiteSORA_PDF(
               projectForExport,
               exportBranding,
-              enhancedContent
+              enhancedContent,
+              mapImages
             )
           } else {
             pdf = await generateSORAPDF(
               projectForExport,
               soraCalcs,
               exportBranding,
-              enhancedContent
+              enhancedContent,
+              mapImages
             )
           }
           break
 
         case 'hseRisk':
-          pdf = await generateHSERiskPDF(projectForExport, exportBranding, enhancedContent)
+          pdf = await generateHSERiskPDF(projectForExport, exportBranding, enhancedContent, mapImages)
           break
 
         default:

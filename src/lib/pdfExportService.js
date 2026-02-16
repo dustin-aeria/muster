@@ -842,6 +842,15 @@ export class BrandedPDF {
 
 // FIX #7: Fixed clientName field reference (project?.clientName instead of project?.client)
 export async function generateOperationsPlanPDF(project, branding = null, clientBranding = null, enhancedContent = null, mapImages = null) {
+  // Normalize data access - handle both single-site (project.siteSurvey) and multi-site (project.sites[0].siteSurvey) structures
+  const sites = project?.sites || []
+  const primarySite = sites[0] || {}
+  const siteSurvey = project?.siteSurvey || primarySite?.siteSurvey || {}
+  const flightPlan = project?.flightPlan || primarySite?.flightPlan || {}
+  const hseRisk = project?.hseRiskAssessment || project?.hseRisk || primarySite?.hseRiskAssessment || {}
+  const emergency = project?.emergencyPlan || project?.emergency || primarySite?.emergency || {}
+  const mapData = primarySite?.mapData || {}
+
   const pdf = new BrandedPDF({
     title: 'RPAS Operations Plan',
     subtitle: project?.name || 'Operations Plan',
@@ -870,28 +879,52 @@ export async function generateOperationsPlanPDF(project, branding = null, client
     pdf.addParagraph(project?.overview?.description || project?.description)
   }
   
+  // Get location from various possible places
+  const locationDesc = project?.overview?.location ||
+    siteSurvey?.location?.description ||
+    siteSurvey?.location?.name ||
+    mapData?.siteSurvey?.siteLocation?.properties?.address ||
+    primarySite?.name ||
+    'Not specified'
+
   pdf.addKeyValueGrid([
     { label: 'Project Code', value: project?.projectCode },
     { label: 'Client', value: project?.clientName }, // FIX #7
-    { label: 'Location', value: project?.overview?.location || project?.siteSurvey?.location?.description || project?.siteSurvey?.location?.name },
+    { label: 'Location', value: locationDesc },
     { label: 'Status', value: project?.status }
   ])
-  
-  if (project?.siteSurvey) {
+
+  // Site Survey Section
+  const hasSiteSurveyData = siteSurvey?.location || mapData?.siteSurvey?.siteLocation || mapData?.siteSurvey?.obstacles?.length > 0
+  if (hasSiteSurveyData) {
     pdf.addNewSection('Site Survey')
-    const ss = project.siteSurvey
-    if (ss.location) {
-      pdf.addSubsectionTitle('Location Details')
-      pdf.addKeyValueGrid([
-        { label: 'Coordinates', value: ss.location.lat && ss.location.lng ? `${ss.location.lat}, ${ss.location.lng}` : (ss.location.coordinates ? `${ss.location.coordinates.lat}, ${ss.location.coordinates.lng}` : 'Not set') },
-        { label: 'Address', value: ss.location.description || ss.location.address },
-        { label: 'Site Name', value: ss.location.name },
-        { label: 'Access Type', value: ss.access?.type || ss.access?.vehicleAccess ? 'Vehicle' : 'Foot' }
-      ])
-    }
-    if (ss.obstacles?.length > 0) {
+
+    // Location details - check multiple sources
+    const siteLocationCoords = mapData?.siteSurvey?.siteLocation?.geometry?.coordinates
+    const locationCoords = siteSurvey?.location?.lat && siteSurvey?.location?.lng
+      ? `${siteSurvey.location.lat.toFixed(5)}, ${siteSurvey.location.lng.toFixed(5)}`
+      : siteLocationCoords
+        ? `${siteLocationCoords[1]?.toFixed(5)}, ${siteLocationCoords[0]?.toFixed(5)}`
+        : 'Not set'
+
+    pdf.addSubsectionTitle('Location Details')
+    pdf.addKeyValueGrid([
+      { label: 'Coordinates', value: locationCoords },
+      { label: 'Address', value: siteSurvey?.location?.description || siteSurvey?.location?.address || mapData?.siteSurvey?.siteLocation?.properties?.address || 'Not specified' },
+      { label: 'Site Name', value: primarySite?.name || siteSurvey?.location?.name || 'Site 1' },
+      { label: 'Access Type', value: siteSurvey?.access?.type || (siteSurvey?.access?.vehicleAccess ? 'Vehicle' : 'Foot access') }
+    ])
+
+    // Obstacles from mapData
+    const obstacles = mapData?.siteSurvey?.obstacles || siteSurvey?.obstacles || []
+    if (obstacles.length > 0) {
       pdf.addSubsectionTitle('Identified Obstacles')
-      const obstacleRows = ss.obstacles.map(o => [o.type || 'Unknown', o.description || '', o.height ? `${o.height}m` : 'N/A', o.distance ? `${o.distance}m` : 'N/A'])
+      const obstacleRows = obstacles.map(o => [
+        o.properties?.obstacleType || o.type || 'Unknown',
+        o.properties?.label || o.description || '',
+        o.properties?.height ? `${o.properties.height}m` : (o.height ? `${o.height}m` : 'N/A'),
+        o.properties?.distance ? `${o.properties.distance}m` : (o.distance ? `${o.distance}m` : 'N/A')
+      ])
       pdf.addTable(['Type', 'Description', 'Height', 'Distance'], obstacleRows)
     }
   }
@@ -921,21 +954,56 @@ export async function generateOperationsPlanPDF(project, branding = null, client
     }
   }
   
-  if (project?.flightPlan) {
+  // Flight Plan Section
+  const hasFlightPlanData = flightPlan?.operationType || flightPlan?.maxAltitudeAGL || mapData?.flightPlan?.launchPoint
+  if (hasFlightPlanData) {
     pdf.addNewSection('Flight Plan')
-    const fp = project.flightPlan
+
     pdf.addSubsectionTitle('Flight Parameters')
     pdf.addKeyValueGrid([
-      { label: 'Aircraft', value: fp.aircraft?.[0]?.nickname || fp.aircraft?.name || fp.aircraftId },
-      { label: 'Operation Type', value: fp.operationType },
-      { label: 'Max Altitude', value: fp.maxAltitudeAGL ? `${fp.maxAltitudeAGL}m AGL` : (fp.maxAltitude ? `${fp.maxAltitude}m AGL` : 'N/A') },
-      { label: 'Flight Area', value: fp.flightAreaType || fp.flightArea || 'N/A' }
+      { label: 'Aircraft', value: flightPlan.aircraft?.[0]?.nickname || flightPlan.aircraft?.name || project?.aircraft?.[0]?.nickname || 'Not specified' },
+      { label: 'Operation Type', value: flightPlan.operationType || 'VLOS' },
+      { label: 'Max Altitude', value: flightPlan.maxAltitudeAGL ? `${flightPlan.maxAltitudeAGL}m AGL` : 'Not specified' },
+      { label: 'Speed', value: flightPlan.speed ? `${flightPlan.speed} m/s` : 'Not specified' }
     ])
+
+    // Flight positions from mapData
+    const fpMapData = mapData?.flightPlan || {}
+    const hasPositions = fpMapData.launchPoint || fpMapData.recoveryPoint || fpMapData.pilotPosition
+
+    if (hasPositions) {
+      pdf.addSubsectionTitle('Flight Positions')
+      const positions = []
+
+      if (fpMapData.launchPoint?.geometry?.coordinates) {
+        const [lng, lat] = fpMapData.launchPoint.geometry.coordinates
+        positions.push(['Launch Point', `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`])
+      }
+      if (fpMapData.recoveryPoint?.geometry?.coordinates) {
+        const [lng, lat] = fpMapData.recoveryPoint.geometry.coordinates
+        positions.push(['Recovery Point', `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`])
+      }
+      if (fpMapData.pilotPosition?.geometry?.coordinates) {
+        const [lng, lat] = fpMapData.pilotPosition.geometry.coordinates
+        positions.push(['Pilot Position', `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`])
+      }
+
+      if (positions.length > 0) {
+        pdf.addTable(['Position', 'Coordinates'], positions)
+      }
+    }
+
+    // Flight geography info
+    if (fpMapData.flightGeography?.geometry) {
+      pdf.addSpacer(5)
+      const coords = fpMapData.flightGeography.geometry.coordinates?.[0] || []
+      pdf.addParagraph(`Flight Geography: ${coords.length - 1} vertex polygon defined`, { bold: true })
+    }
   }
   
-  if (project?.hseRiskAssessment || project?.hseRisk) {
+  // HSE Risk Assessment Section
+  if (hseRisk?.hazards?.length > 0) {
     pdf.addNewSection('HSE Risk Assessment')
-    const risk = project?.hseRiskAssessment || project?.hseRisk
 
     // Add enhanced risk narrative if available
     if (enhancedContent?.riskNarrative) {
@@ -943,21 +1011,24 @@ export async function generateOperationsPlanPDF(project, branding = null, client
       pdf.addSpacer(5)
     }
 
-    if (risk?.hazards?.length > 0) {
-      pdf.addSubsectionTitle('Identified Hazards')
-      const hazardRows = risk.hazards.map(h => [
-        h.category || 'General',
-        h.description || '',
-        h.riskLevel?.toUpperCase() || `${h.likelihood || '?'}x${h.severity || '?'}`,
-        h.residualRisk?.toUpperCase() || `${h.residualLikelihood || '?'}x${h.residualSeverity || '?'}`
-      ])
-      pdf.addTable(['Category', 'Hazard', 'Initial Risk', 'Residual Risk'], hazardRows)
-    }
+    pdf.addSubsectionTitle('Identified Hazards')
+    const hazardRows = hseRisk.hazards.map(h => [
+      h.category || 'General',
+      h.description || '',
+      h.riskLevel?.toUpperCase() || `${h.likelihood || '?'}x${h.severity || '?'}`,
+      h.residualRisk?.toUpperCase() || `${h.residualLikelihood || '?'}x${h.residualSeverity || '?'}`
+    ])
+    pdf.addTable(['Category', 'Hazard', 'Initial Risk', 'Residual Risk'], hazardRows)
   }
 
-  if (project?.emergencyPlan || project?.emergency) {
+  // Emergency Procedures Section
+  const emergencyMapData = mapData?.emergency || {}
+  const hasEmergencyData = emergency?.contacts?.length > 0 ||
+    emergency?.primaryEmergencyContact ||
+    emergencyMapData?.musterPoints?.length > 0
+
+  if (hasEmergencyData) {
     pdf.addNewSection('Emergency Procedures')
-    const ep = project?.emergencyPlan || project?.emergency
 
     // Add enhanced emergency procedures narrative if available
     if (enhancedContent?.emergencyProcedures) {
@@ -965,16 +1036,41 @@ export async function generateOperationsPlanPDF(project, branding = null, client
       pdf.addSpacer(5)
     }
 
-    if (ep?.primaryEmergencyContact || ep?.musterPoint) {
-      pdf.addLabelValue('Muster Point', ep.musterPoint || ep.rallyPoint)
-      pdf.addLabelValue('Emergency Contact', ep.primaryEmergencyContact?.name)
-      pdf.addLabelValue('Contact Phone', ep.primaryEmergencyContact?.phone)
-      pdf.addLabelValue('Nearest Hospital', ep.nearestHospital)
+    // Muster points from map data
+    const musterPoints = emergencyMapData?.musterPoints || []
+    if (musterPoints.length > 0) {
+      pdf.addSubsectionTitle('Muster Points')
+      const musterRows = musterPoints.map(mp => {
+        const coords = mp.geometry?.coordinates || []
+        return [
+          mp.properties?.label || 'Muster Point',
+          mp.properties?.isPrimary ? 'Primary' : 'Secondary',
+          coords.length >= 2 ? `${coords[1]?.toFixed(5)}°, ${coords[0]?.toFixed(5)}°` : 'N/A'
+        ]
+      })
+      pdf.addTable(['Name', 'Type', 'Coordinates'], musterRows)
     }
-    if (ep?.contacts?.length > 0) {
+
+    // Emergency contacts
+    if (emergency?.primaryEmergencyContact || emergency?.musterPoint) {
+      pdf.addSubsectionTitle('Emergency Information')
+      pdf.addLabelValue('Primary Muster Point', emergency.musterPoint || emergency.rallyPoint)
+      pdf.addLabelValue('Emergency Contact', emergency.primaryEmergencyContact?.name)
+      pdf.addLabelValue('Contact Phone', emergency.primaryEmergencyContact?.phone)
+      pdf.addLabelValue('Nearest Hospital', emergency.nearestHospital)
+    }
+
+    if (emergency?.contacts?.length > 0) {
       pdf.addSubsectionTitle('Emergency Contacts')
-      const contactRows = ep.contacts.map(c => [c.name || '', c.role || '', c.phone || ''])
+      const contactRows = emergency.contacts.map(c => [c.name || '', c.role || '', c.phone || ''])
       pdf.addTable(['Name', 'Role', 'Phone'], contactRows)
+    }
+
+    // Evacuation routes from map data
+    const evacRoutes = emergencyMapData?.evacuationRoutes || []
+    if (evacRoutes.length > 0) {
+      pdf.addSubsectionTitle('Evacuation Routes')
+      pdf.addParagraph(`${evacRoutes.length} evacuation route(s) defined on site map.`)
     }
   }
   
