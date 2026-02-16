@@ -1568,7 +1568,7 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
         title="Air Risk - Initial ARC"
         stepNumber={4}
         badge={siteSORA.initialARC || 'ARC-b'}
-        status={siteSORA.initialARC ? 'complete' : 'missing'}
+        status="complete"
       >
         <p className="text-sm text-gray-600 mb-4">
           Select the initial Air Risk Class based on airspace and expected traffic density.
