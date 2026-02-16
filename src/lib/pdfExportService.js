@@ -930,7 +930,6 @@ export async function generateOperationsPlanPDF(project, branding = null, client
   }
 
   // Add site map images
-  const sites = project?.sites || []
   if (sites.length > 0 && mapImages) {
     pdf.addNewSection('Site Maps')
     pdf.addParagraph('The following maps show the operational areas, flight zones, and key positions for each site.')
