@@ -340,7 +340,7 @@ function CollapsibleSection({ title, icon: Icon, children, defaultOpen = true, b
           )}
           {status && (
             <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[status]}`}>
-              {status === 'complete' ? 'âœ“ Complete' : status === 'partial' ? 'Partial' : 'Missing'}
+              {status === 'complete' ? '✓ Complete' : status === 'partial' ? 'Partial' : 'Missing'}
             </span>
           )}
         </div>
