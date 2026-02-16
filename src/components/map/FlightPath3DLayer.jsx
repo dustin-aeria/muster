@@ -70,17 +70,34 @@ export function useFlightPath3DLayers({
   const cleanupLayers = (mapInstance) => {
     if (!mapInstance || !mapInstance.getStyle) return
 
+    // Check if style is loaded before accessing layers
+    try {
+      const style = mapInstance.getStyle()
+      if (!style) return
+    } catch (e) {
+      // Style not ready yet
+      return
+    }
+
     // Remove layers
     Object.values(LAYER_IDS).forEach(layerId => {
-      if (mapInstance.getLayer(layerId)) {
-        mapInstance.removeLayer(layerId)
+      try {
+        if (mapInstance.getLayer(layerId)) {
+          mapInstance.removeLayer(layerId)
+        }
+      } catch (e) {
+        // Layer doesn't exist or style not ready
       }
     })
 
     // Remove sources
     Object.values(SOURCE_IDS).forEach(sourceId => {
-      if (mapInstance.getSource(sourceId)) {
-        mapInstance.removeSource(sourceId)
+      try {
+        if (mapInstance.getSource(sourceId)) {
+          mapInstance.removeSource(sourceId)
+        }
+      } catch (e) {
+        // Source doesn't exist or style not ready
       }
     })
 
@@ -93,84 +110,95 @@ export function useFlightPath3DLayers({
   useEffect(() => {
     if (!map || !mapLoaded) return
 
+    // Check if style is loaded before accessing layers
+    try {
+      const style = map.getStyle()
+      if (!style) return
+    } catch (e) {
+      // Style not ready yet
+      return
+    }
+
     // Clean up existing layers first
     cleanupLayers(map)
 
-    // Add flight geography extrusion (3D volume)
-    if (flightGeography?.coordinates?.[0]?.length >= 4 && is3DEnabled) {
-      map.addSource(SOURCE_IDS.flightVolume, {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: { altitude: maxAltitude },
-          geometry: flightGeography
-        }
-      })
+    // Wrap all layer operations in try-catch to handle style not ready
+    try {
+      // Add flight geography extrusion (3D volume)
+      if (flightGeography?.coordinates?.[0]?.length >= 4 && is3DEnabled) {
+        map.addSource(SOURCE_IDS.flightVolume, {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: { altitude: maxAltitude },
+            geometry: flightGeography
+          }
+        })
 
-      map.addLayer({
-        id: LAYER_IDS.flightVolumeExtrusion,
-        type: 'fill-extrusion',
-        source: SOURCE_IDS.flightVolume,
-        paint: {
-          'fill-extrusion-color': '#22C55E',
-          'fill-extrusion-height': maxAltitude,
-          'fill-extrusion-base': 0,
-          'fill-extrusion-opacity': 0.15
-        }
-      })
-    }
+        map.addLayer({
+          id: LAYER_IDS.flightVolumeExtrusion,
+          type: 'fill-extrusion',
+          source: SOURCE_IDS.flightVolume,
+          paint: {
+            'fill-extrusion-color': '#22C55E',
+            'fill-extrusion-height': maxAltitude,
+            'fill-extrusion-base': 0,
+            'fill-extrusion-opacity': 0.15
+          }
+        })
+      }
 
-    // Add corridor buffer if available
-    if (corridorBuffer?.coordinates?.[0]?.length >= 4) {
-      map.addSource(SOURCE_IDS.corridorBuffer, {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: corridorBuffer
-        }
-      })
+      // Add corridor buffer if available
+      if (corridorBuffer?.coordinates?.[0]?.length >= 4) {
+        map.addSource(SOURCE_IDS.corridorBuffer, {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: corridorBuffer
+          }
+        })
 
-      map.addLayer({
-        id: LAYER_IDS.corridorBuffer,
-        type: 'fill',
-        source: SOURCE_IDS.corridorBuffer,
-        paint: {
-          'fill-color': '#3B82F6',
-          'fill-opacity': 0.1
-        }
-      })
+        map.addLayer({
+          id: LAYER_IDS.corridorBuffer,
+          type: 'fill',
+          source: SOURCE_IDS.corridorBuffer,
+          paint: {
+            'fill-color': '#3B82F6',
+            'fill-opacity': 0.1
+          }
+        })
 
-      map.addLayer({
-        id: LAYER_IDS.corridorBufferOutline,
-        type: 'line',
-        source: SOURCE_IDS.corridorBuffer,
-        paint: {
-          'line-color': '#3B82F6',
-          'line-width': 2,
-          'line-dasharray': [3, 2]
-        }
-      })
-    }
+        map.addLayer({
+          id: LAYER_IDS.corridorBufferOutline,
+          type: 'line',
+          source: SOURCE_IDS.corridorBuffer,
+          paint: {
+            'line-color': '#3B82F6',
+            'line-width': 2,
+            'line-dasharray': [3, 2]
+          }
+        })
+      }
 
-    // Add flight path layers
-    if (flightPath3DGeoJSON?.features?.length > 0) {
-      map.addSource(SOURCE_IDS.flightPath, {
-        type: 'geojson',
-        data: flightPath3DGeoJSON
-      })
+      // Add flight path layers
+      if (flightPath3DGeoJSON?.features?.length > 0) {
+        map.addSource(SOURCE_IDS.flightPath, {
+          type: 'geojson',
+          data: flightPath3DGeoJSON
+        })
 
-      // Ground shadow (dashed line at ground level)
-      map.addLayer({
-        id: LAYER_IDS.groundShadow,
-        type: 'line',
-        source: SOURCE_IDS.flightPath,
-        filter: ['==', ['get', 'type'], 'groundShadow'],
-        paint: {
-          'line-color': '#6B7280',
-          'line-width': 1.5,
-          'line-dasharray': [4, 4],
-          'line-opacity': 0.5
+        // Ground shadow (dashed line at ground level)
+        map.addLayer({
+          id: LAYER_IDS.groundShadow,
+          type: 'line',
+          source: SOURCE_IDS.flightPath,
+          filter: ['==', ['get', 'type'], 'groundShadow'],
+          paint: {
+            'line-color': '#6B7280',
+            'line-width': 1.5,
+            'line-dasharray': [4, 4],
+            'line-opacity': 0.5
         }
       })
 
@@ -284,6 +312,10 @@ export function useFlightPath3DLayers({
 
         markersRef.current.push(marker)
       })
+    }
+    } catch (e) {
+      // Style not ready or other map error - ignore
+      console.warn('FlightPath3DLayer: Could not add layers', e.message)
     }
 
     // Cleanup on unmount
