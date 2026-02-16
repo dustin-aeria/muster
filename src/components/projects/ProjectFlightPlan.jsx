@@ -1564,9 +1564,9 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
               type="number"
               step="1"
               min="0"
-              value={siteFlightPlan.batteryChanges || ''}
+              value={siteFlightPlan.batteryChanges ?? ''}
               onChange={(e) => updateSiteFlightPlan({
-                batteryChanges: e.target.value ? Number(e.target.value) : null
+                batteryChanges: e.target.value !== '' ? Number(e.target.value) : null
               })}
               placeholder="2"
               className="input w-24"
