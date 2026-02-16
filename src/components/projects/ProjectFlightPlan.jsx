@@ -45,7 +45,9 @@ import {
   Radio,
   Navigation2,
   Users,
-  ShieldAlert
+  ShieldAlert,
+  Route,
+  Box
 } from 'lucide-react'
 import UnifiedProjectMap from '../map/UnifiedProjectMap'
 import { LayerToggles, DrawingTools } from '../map/MapControls'
@@ -58,6 +60,16 @@ import {
   generateSORAVolumes
 } from '../../lib/mapDataStructures'
 import NoAircraftAssignedModal from '../NoAircraftAssignedModal'
+import { FlightPathGenerator } from '../map/FlightPathGenerator'
+import { WaypointEditor } from '../map/WaypointEditor'
+import { AltitudeProfileView } from '../map/AltitudeProfileView'
+import { use3DMapFeatures } from '../../hooks/use3DMapFeatures'
+import {
+  waypointsTo3DGeoJSON,
+  generateAltitudeProfile,
+  calculatePathDistance,
+  calculateFlightDuration
+} from '../../lib/flightPathUtils'
 
 // ============================================
 // CONSTANTS
@@ -1120,6 +1132,7 @@ function FlightParametersSummary({ site, projectFlightPlan }) {
 export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSection }) {
   const [showMap, setShowMap] = useState(true)
   const [showAircraftModal, setShowAircraftModal] = useState(false)
+  const [selectedWaypointId, setSelectedWaypointId] = useState(null)
 
   // Map controls - lifted to page level so we can render controls outside the map
   const mapControls = useMapData(project, onUpdate, {
@@ -1307,7 +1320,114 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
       })
     }
   }, [project?.aircraft, siteFlightPlan.aircraft, onUpdate, updateSiteFlightPlan])
-  
+
+  // ============================================
+  // FLIGHT PATH HANDLERS
+  // ============================================
+
+  // Get flight path data from site mapData
+  const flightPathData = activeSite?.mapData?.flightPlan?.flightPath || {
+    type: null,
+    waypoints: [],
+    gridSettings: { spacing: 30, angle: 0, overlap: 70, altitude: 120, speed: 10 },
+    corridorSettings: { width: 50, altitude: 80, waypointSpacing: 100 }
+  }
+
+  // Update flight path in site mapData
+  const updateFlightPath = useCallback((updates) => {
+    if (!activeSiteId) return
+
+    const updatedSites = sites.map(site => {
+      if (site.id !== activeSiteId) return site
+
+      return {
+        ...site,
+        mapData: {
+          ...site.mapData,
+          flightPlan: {
+            ...site.mapData?.flightPlan,
+            flightPath: {
+              ...site.mapData?.flightPlan?.flightPath,
+              ...updates
+            }
+          }
+        },
+        updatedAt: new Date().toISOString()
+      }
+    })
+
+    onUpdate({ sites: updatedSites })
+  }, [sites, activeSiteId, onUpdate])
+
+  // Handle waypoint updates
+  const handleWaypointAltitudeUpdate = useCallback((waypointId, altitude) => {
+    const waypoints = flightPathData.waypoints || []
+    const updatedWaypoints = waypoints.map(wp => {
+      if (wp.id === waypointId) {
+        return {
+          ...wp,
+          coordinates: [wp.coordinates[0], wp.coordinates[1], altitude]
+        }
+      }
+      return wp
+    })
+    updateFlightPath({ waypoints: updatedWaypoints })
+  }, [flightPathData.waypoints, updateFlightPath])
+
+  const handleWaypointDelete = useCallback((waypointId) => {
+    const waypoints = flightPathData.waypoints || []
+    const updatedWaypoints = waypoints
+      .filter(wp => wp.id !== waypointId)
+      .map((wp, index) => ({ ...wp, order: index }))
+    updateFlightPath({ waypoints: updatedWaypoints })
+    if (selectedWaypointId === waypointId) {
+      setSelectedWaypointId(null)
+    }
+  }, [flightPathData.waypoints, updateFlightPath, selectedWaypointId])
+
+  const handleWaypointReorder = useCallback((fromIndex, toIndex) => {
+    const waypoints = [...(flightPathData.waypoints || [])]
+    const [moved] = waypoints.splice(fromIndex, 1)
+    waypoints.splice(toIndex, 0, moved)
+    const reordered = waypoints.map((wp, index) => ({ ...wp, order: index }))
+    updateFlightPath({ waypoints: reordered })
+  }, [flightPathData.waypoints, updateFlightPath])
+
+  const handlePatternGenerate = useCallback((waypoints, settings) => {
+    updateFlightPath({
+      waypoints,
+      ...(settings.type === 'grid' ? { gridSettings: settings } : {}),
+      ...(settings.type === 'corridor' ? { corridorSettings: settings } : {}),
+      type: settings.type,
+      lastGenerated: new Date().toISOString()
+    })
+  }, [updateFlightPath])
+
+  // Compute derived data for flight path visualization
+  const flightPath3DGeoJSON = useMemo(() => {
+    if (!flightPathData.waypoints || flightPathData.waypoints.length === 0) return null
+    return waypointsTo3DGeoJSON(flightPathData.waypoints)
+  }, [flightPathData.waypoints])
+
+  const altitudeProfile = useMemo(() => {
+    if (!flightPathData.waypoints || flightPathData.waypoints.length === 0) return []
+    return generateAltitudeProfile(flightPathData.waypoints)
+  }, [flightPathData.waypoints])
+
+  const flightStats = useMemo(() => {
+    if (!flightPathData.waypoints || flightPathData.waypoints.length === 0) {
+      return { distance: 0, duration: 0, waypointCount: 0 }
+    }
+    const speed = flightPathData.gridSettings?.speed || flightPathData.corridorSettings?.speed || 10
+    return {
+      distance: calculatePathDistance(flightPathData.waypoints),
+      duration: calculateFlightDuration(flightPathData.waypoints, speed),
+      waypointCount: flightPathData.waypoints.length,
+      minAltitude: Math.min(...flightPathData.waypoints.map(wp => wp.coordinates[2] || 0)),
+      maxAltitude: Math.max(...flightPathData.waypoints.map(wp => wp.coordinates[2] || 0))
+    }
+  }, [flightPathData.waypoints, flightPathData.gridSettings, flightPathData.corridorSettings])
+
   // ============================================
   // VALIDATION
   // ============================================
@@ -1831,7 +1951,114 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
           </div>
         </div>
       </CollapsibleSection>
-      
+
+      {/* Flight Path Generation */}
+      <CollapsibleSection
+        title="Flight Path"
+        icon={Route}
+        badge={flightPathData.waypoints?.length > 0 ? `${flightPathData.waypoints.length} waypoints` : null}
+        status={flightPathData.waypoints?.length > 0 ? 'complete' : 'incomplete'}
+        defaultOpen={false}
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              <Info className="w-4 h-4 inline mr-1" />
+              Generate flight patterns based on your operation area type, then fine-tune waypoints manually.
+              {siteFlightPlan.areaType === 'area' && ' For area surveys, use Grid Pattern.'}
+              {siteFlightPlan.areaType === 'corridor' && ' For corridor operations, use Linear Pattern.'}
+              {siteFlightPlan.areaType === 'point' && ' For point operations, add waypoints manually.'}
+            </p>
+          </div>
+
+          {/* Flight Path Generator */}
+          {activeSite?.mapData?.flightPlan?.flightGeography && (
+            <FlightPathGenerator
+              flightGeography={activeSite.mapData.flightPlan.flightGeography}
+              areaType={siteFlightPlan.areaType || 'area'}
+              gridSettings={flightPathData.gridSettings}
+              corridorSettings={flightPathData.corridorSettings}
+              onGenerate={handlePatternGenerate}
+              onSettingsChange={(settings) => {
+                if (settings.spacing !== undefined || settings.angle !== undefined) {
+                  updateFlightPath({ gridSettings: { ...flightPathData.gridSettings, ...settings } })
+                } else {
+                  updateFlightPath({ corridorSettings: { ...flightPathData.corridorSettings, ...settings } })
+                }
+              }}
+              flightStats={flightStats}
+            />
+          )}
+
+          {!activeSite?.mapData?.flightPlan?.flightGeography && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+              <Square className="w-8 h-8 mx-auto text-amber-400 mb-2" />
+              <p className="text-sm text-amber-800">
+                Draw a flight geography on the map first to generate flight patterns.
+              </p>
+            </div>
+          )}
+
+          {/* Waypoint Editor */}
+          {flightPathData.waypoints?.length > 0 && (
+            <WaypointEditor
+              waypoints={flightPathData.waypoints}
+              selectedWaypointId={selectedWaypointId}
+              onSelectWaypoint={setSelectedWaypointId}
+              onUpdateAltitude={handleWaypointAltitudeUpdate}
+              onDeleteWaypoint={handleWaypointDelete}
+              onReorderWaypoints={handleWaypointReorder}
+              maxAltitude={siteFlightPlan.maxAltitudeAGL || 400}
+            />
+          )}
+
+          {/* Altitude Profile */}
+          {altitudeProfile.length > 0 && (
+            <AltitudeProfileView
+              profile={altitudeProfile}
+              selectedWaypointId={selectedWaypointId}
+              onWaypointHover={setSelectedWaypointId}
+              onWaypointClick={setSelectedWaypointId}
+              altitudeRange={flightStats.minAltitude !== undefined ? {
+                min: flightStats.minAltitude,
+                max: flightStats.maxAltitude
+              } : null}
+            />
+          )}
+
+          {/* Flight Stats Summary */}
+          {flightPathData.waypoints?.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <p className="text-xs text-gray-500">Total Distance</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {flightStats.distance >= 1000
+                    ? `${(flightStats.distance / 1000).toFixed(2)} km`
+                    : `${Math.round(flightStats.distance)} m`
+                  }
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <p className="text-xs text-gray-500">Est. Duration</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {Math.floor(flightStats.duration / 60)}:{String(Math.round(flightStats.duration % 60)).padStart(2, '0')}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <p className="text-xs text-gray-500">Waypoints</p>
+                <p className="text-lg font-semibold text-gray-900">{flightStats.waypointCount}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <p className="text-xs text-gray-500">Altitude Range</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {flightStats.minAltitude}-{flightStats.maxAltitude}m
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
+
       {/* Flight Plan Notes */}
       <CollapsibleSection
         title="Flight Plan Notes"

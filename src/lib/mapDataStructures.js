@@ -552,7 +552,38 @@ export const getDefaultSiteFlightPlanData = () => ({
   
   // Site-specific contingencies
   siteContingencies: [],
-  
+
+  // 3D View settings
+  view3D: {
+    enabled: false,
+    terrainEnabled: true,
+    terrainExaggeration: 1.5,
+    pitch: 60,
+    bearing: 0,
+    skyEnabled: true
+  },
+
+  // Flight path data (for 3D visualization)
+  flightPath: {
+    type: null,                   // 'grid' | 'waypoint' | 'corridor' | 'perimeter'
+    waypoints: [],                // Array of waypoint objects
+    gridSettings: {
+      spacing: 30,                // meters between flight lines
+      angle: 0,                   // grid rotation in degrees
+      overlap: 70,                // percentage overlap
+      altitude: 120,              // meters AGL
+      speed: 10                   // m/s
+    },
+    corridorSettings: {
+      width: 50,                  // buffer width on each side (meters)
+      altitude: 80,               // meters AGL
+      waypointSpacing: 100        // meters between waypoints
+    },
+    corridorBuffer: null,         // GeoJSON polygon for corridor buffer
+    isEditing: false,
+    lastGenerated: null           // ISO timestamp
+  },
+
   notes: ''
 })
 

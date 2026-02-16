@@ -27,14 +27,18 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 
 import { useMapData, DRAWING_MODES } from '../../hooks/useMapData'
+import { use3DMapFeatures } from '../../hooks/use3DMapFeatures'
 import { MapControlsPanel, FullscreenButton } from './MapControls'
+import { Toggle3DButton, Map3DControlsPanel } from './Map3DControls'
+import { useFlightPath3DLayers } from './FlightPath3DLayer'
 import { MapLegend, SiteColorLegend } from './MapLegend'
 import { MAP_ELEMENT_STYLES, MAP_BASEMAPS, MAP_OVERLAY_LAYERS, getSiteBounds } from '../../lib/mapDataStructures'
 import {
   Loader2,
   AlertCircle,
   WifiOff,
-  Layers
+  Layers,
+  Box
 } from 'lucide-react'
 import { logger } from '../../lib/logger'
 
@@ -185,7 +189,26 @@ export function UnifiedProjectMap({
   const [showOverlayPanel, setShowOverlayPanel] = useState(false) // Show overlay layer picker
   const [airspaceClasses, setAirspaceClasses] = useState({ 0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true }) // Which airspace classes are visible (numeric icaoClass)
   const [showAirspacePanel, setShowAirspacePanel] = useState(false) // Show airspace class picker
-  
+  const [show3DPanel, setShow3DPanel] = useState(false) // Show 3D controls panel
+
+  // 3D Map Features hook
+  const mapFeatures3D = use3DMapFeatures({
+    flightGeography: null, // Will be set when flight geography is drawn
+    maxAltitude: 400
+  })
+
+  const {
+    view3D,
+    is3DEnabled,
+    toggle3DMode,
+    toggleTerrain,
+    setTerrainExaggeration,
+    setPitch,
+    setBearing,
+    toggleSky,
+    resetView: reset3DView
+  } = mapFeatures3D
+
   // Map data hook - use external if provided, otherwise create internal
   const internalMapData = useMapData(project, onUpdate, {
     editMode,
@@ -617,6 +640,174 @@ export function UnifiedProjectMap({
       map.off('style.load', handleStyleLoad)
     }
   }, [basemap, mapLoaded])
+
+  // ============================================
+  // 3D TERRAIN AND SKY LAYERS
+  // Add/remove terrain and atmospheric effects based on 3D mode
+  // ============================================
+
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return
+
+    const map = mapRef.current
+
+    if (is3DEnabled) {
+      // Add terrain source if not exists
+      if (!map.getSource('mapbox-dem')) {
+        map.addSource('mapbox-dem', {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14
+        })
+      }
+
+      // Enable terrain
+      if (view3D.terrainEnabled) {
+        map.setTerrain({
+          source: 'mapbox-dem',
+          exaggeration: view3D.terrainExaggeration
+        })
+      } else {
+        map.setTerrain(null)
+      }
+
+      // Add sky layer for atmospheric effect
+      if (view3D.skyEnabled && !map.getLayer('sky')) {
+        map.addLayer({
+          id: 'sky',
+          type: 'sky',
+          paint: {
+            'sky-type': 'atmosphere',
+            'sky-atmosphere-sun': [0.0, 90.0],
+            'sky-atmosphere-sun-intensity': 15
+          }
+        })
+      } else if (!view3D.skyEnabled && map.getLayer('sky')) {
+        map.removeLayer('sky')
+      }
+
+      // Set camera pitch and bearing
+      map.easeTo({
+        pitch: view3D.pitch,
+        bearing: view3D.bearing,
+        duration: 500
+      })
+
+    } else {
+      // Disable 3D mode
+      map.setTerrain(null)
+
+      if (map.getLayer('sky')) {
+        map.removeLayer('sky')
+      }
+
+      // Reset camera to top-down
+      map.easeTo({
+        pitch: 0,
+        bearing: 0,
+        duration: 500
+      })
+    }
+  }, [is3DEnabled, view3D.terrainEnabled, view3D.terrainExaggeration, view3D.skyEnabled, view3D.pitch, view3D.bearing, mapLoaded, styleVersion])
+
+  // ============================================
+  // 3D FLIGHT PATH LAYERS
+  // Render flight path with 3D visualization
+  // ============================================
+
+  // Get flight path data from active site
+  const flightPathData = useMemo(() => {
+    return activeSite?.mapData?.flightPlan?.flightPath || null
+  }, [activeSite?.mapData?.flightPlan?.flightPath])
+
+  // Convert waypoints to 3D GeoJSON for rendering
+  const flightPath3DGeoJSON = useMemo(() => {
+    if (!flightPathData?.waypoints || flightPathData.waypoints.length === 0) return null
+
+    // Import the conversion function dynamically to avoid circular dependencies
+    const features = []
+    const waypoints = flightPathData.waypoints
+
+    // Create the main flight path line
+    if (waypoints.length >= 2) {
+      features.push({
+        type: 'Feature',
+        properties: { type: 'flightPath' },
+        geometry: {
+          type: 'LineString',
+          coordinates: waypoints.map(wp => wp.coordinates)
+        }
+      })
+
+      // Create ground shadow (2D projection)
+      features.push({
+        type: 'Feature',
+        properties: { type: 'groundShadow' },
+        geometry: {
+          type: 'LineString',
+          coordinates: waypoints.map(wp => [wp.coordinates[0], wp.coordinates[1], 0])
+        }
+      })
+
+      // Create altitude poles for each waypoint
+      waypoints.forEach(wp => {
+        features.push({
+          type: 'Feature',
+          properties: {
+            type: 'altitudePole',
+            waypointId: wp.id,
+            altitude: wp.coordinates[2] || 0
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [wp.coordinates[0], wp.coordinates[1], 0],
+              wp.coordinates
+            ]
+          }
+        })
+      })
+    }
+
+    // Create waypoint markers
+    waypoints.forEach(wp => {
+      features.push({
+        type: 'Feature',
+        properties: {
+          type: 'waypointMarker',
+          waypointId: wp.id,
+          order: wp.order,
+          label: wp.label || `WP${wp.order + 1}`,
+          waypointType: wp.type || 'waypoint',
+          altitude: wp.coordinates[2] || 0
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: wp.coordinates
+        }
+      })
+    })
+
+    return {
+      type: 'FeatureCollection',
+      features
+    }
+  }, [flightPathData])
+
+  // Use the flight path 3D layers hook
+  useFlightPath3DLayers({
+    map: mapRef.current,
+    mapLoaded,
+    flightPath3DGeoJSON,
+    flightGeography: activeSite?.mapData?.flightPlan?.flightGeography?.geometry || null,
+    corridorBuffer: flightPathData?.corridorBuffer || null,
+    maxAltitude: activeSite?.flightPlan?.maxAltitudeAGL || 120,
+    is3DEnabled,
+    selectedWaypointId: null, // Could be passed from props if needed
+    onWaypointClick: null, // Could be passed from props if needed
+    styleVersion
+  })
 
   // ============================================
   // OVERLAY LAYERS MANAGEMENT
@@ -1657,9 +1848,42 @@ export function UnifiedProjectMap({
         </div>
       )}
 
-      {/* Overlay Layers Toggle Button */}
+      {/* 3D Toggle and Overlay Layers Buttons */}
       {mapLoaded && (
-        <div className="absolute top-4 left-4 z-20">
+        <div className="absolute top-4 left-4 z-20 flex gap-2">
+          {/* 3D Toggle Button */}
+          <div className="relative">
+            <button
+              onClick={() => setShow3DPanel(!show3DPanel)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg shadow-md transition-colors ${
+                is3DEnabled
+                  ? 'bg-aeria-navy text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+              title={is3DEnabled ? 'Disable 3D view' : 'Enable 3D view'}
+            >
+              <Box className="w-4 h-4" />
+              <span className="text-sm font-medium">{is3DEnabled ? '3D' : '2D'}</span>
+            </button>
+
+            {/* 3D Controls Panel */}
+            {show3DPanel && (
+              <div className="absolute top-full left-0 mt-2 w-64 z-50">
+                <Map3DControlsPanel
+                  view3D={view3D}
+                  onToggle3D={toggle3DMode}
+                  onToggleTerrain={toggleTerrain}
+                  onSetExaggeration={setTerrainExaggeration}
+                  onSetPitch={setPitch}
+                  onSetBearing={setBearing}
+                  onToggleSky={toggleSky}
+                  onReset={reset3DView}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Overlay Layers Button */}
           <div className="relative">
             <button
               onClick={() => setShowOverlayPanel(!showOverlayPanel)}
