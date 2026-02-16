@@ -42,27 +42,60 @@ function AltitudeChart({
   const [hoveredIndex, setHoveredIndex] = useState(null)
 
   // Calculate scales
-  const { xScale, yScale, pathD, areaD } = useMemo(() => {
+  const { xScale, yScale, pathD, areaD, maxDistance, maxAltitude } = useMemo(() => {
     if (!profile || profile.length === 0) {
-      return { xScale: () => 0, yScale: () => 0, pathD: '', areaD: '' }
+      return {
+        xScale: () => CHART_PADDING.left,
+        yScale: () => CHART_PADDING.top,
+        pathD: '',
+        areaD: '',
+        maxDistance: 0,
+        maxAltitude: 100
+      }
     }
 
     const innerWidth = width - CHART_PADDING.left - CHART_PADDING.right
     const innerHeight = CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom
 
-    const maxDistance = Math.max(...profile.map(p => p.distance))
-    const maxAltitude = Math.max(...profile.map(p => p.altitude), 50) * 1.1 // 10% padding
+    // Calculate max values with safety checks
+    const distances = profile.map(p => p.distance || 0)
+    const altitudes = profile.map(p => p.altitude || 0)
+
+    let maxDistance = Math.max(...distances, 0)
+    let maxAltitude = Math.max(...altitudes, 50) * 1.1 // 10% padding
     const minAltitude = 0
 
-    const xScale = (d) => CHART_PADDING.left + (d / maxDistance) * innerWidth
-    const yScale = (a) => CHART_PADDING.top + innerHeight - ((a - minAltitude) / (maxAltitude - minAltitude)) * innerHeight
+    // Prevent division by zero
+    if (maxDistance <= 0) maxDistance = 100 // Default to 100m if no distance
+    if (maxAltitude <= minAltitude) maxAltitude = minAltitude + 100 // Ensure range
 
-    // Flight path line
-    const pathPoints = profile.map(p => `${xScale(p.distance)},${yScale(p.altitude)}`)
-    const pathD = `M ${pathPoints.join(' L ')}`
+    const xScale = (d) => {
+      const val = CHART_PADDING.left + ((d || 0) / maxDistance) * innerWidth
+      return isNaN(val) ? CHART_PADDING.left : val
+    }
+
+    const yScale = (a) => {
+      const range = maxAltitude - minAltitude
+      const val = CHART_PADDING.top + innerHeight - (((a || 0) - minAltitude) / range) * innerHeight
+      return isNaN(val) ? CHART_PADDING.top + innerHeight : val
+    }
+
+    // Flight path line - filter out any NaN values
+    const pathPoints = profile
+      .map(p => {
+        const x = xScale(p.distance)
+        const y = yScale(p.altitude)
+        if (isNaN(x) || isNaN(y)) return null
+        return `${x},${y}`
+      })
+      .filter(Boolean)
+
+    const pathD = pathPoints.length > 0 ? `M ${pathPoints.join(' L ')}` : ''
 
     // Area under the line
-    const areaD = `${pathD} L ${xScale(maxDistance)},${yScale(0)} L ${xScale(0)},${yScale(0)} Z`
+    const areaD = pathPoints.length > 0
+      ? `${pathD} L ${xScale(maxDistance)},${yScale(0)} L ${xScale(0)},${yScale(0)} Z`
+      : ''
 
     return { xScale, yScale, pathD, areaD, maxDistance, maxAltitude }
   }, [profile, width])
@@ -111,8 +144,7 @@ function AltitudeChart({
     )
   }
 
-  const maxDistance = Math.max(...profile.map(p => p.distance))
-  const maxAltitude = Math.max(...profile.map(p => p.altitude), 50)
+  // Use computed values from useMemo (maxDistance and maxAltitude already calculated)
 
   return (
     <svg
@@ -136,6 +168,8 @@ function AltitudeChart({
       {/* Grid lines */}
       {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
         const y = yScale(maxAltitude * ratio)
+        // Skip rendering if y is NaN
+        if (isNaN(y)) return null
         return (
           <g key={ratio}>
             <line
@@ -185,32 +219,39 @@ function AltitudeChart({
       />
 
       {/* Ground line */}
-      <line
-        x1={CHART_PADDING.left}
-        y1={yScale(0)}
-        x2={width - CHART_PADDING.right}
-        y2={yScale(0)}
-        stroke="#10B981"
-        strokeWidth={2}
-      />
+      {!isNaN(yScale(0)) && (
+        <line
+          x1={CHART_PADDING.left}
+          y1={yScale(0)}
+          x2={width - CHART_PADDING.right}
+          y2={yScale(0)}
+          stroke="#10B981"
+          strokeWidth={2}
+        />
+      )}
 
       {/* Waypoint markers */}
       {profile.map((point, index) => {
         const x = xScale(point.distance)
         const y = yScale(point.altitude)
+        const groundY = yScale(0)
+
+        // Skip if coordinates are NaN
+        if (isNaN(x) || isNaN(y) || isNaN(groundY)) return null
+
         const isSelected = point.waypointId === selectedWaypointId
         const isHovered = index === hoveredIndex
 
         return (
           <g
-            key={point.waypointId}
+            key={point.waypointId || index}
             onClick={() => onWaypointClick?.(point.waypointId)}
             className="cursor-pointer"
           >
             {/* Vertical line from ground to altitude */}
             <line
               x1={x}
-              y1={yScale(0)}
+              y1={groundY}
               x2={x}
               y2={y}
               stroke="#9CA3AF"
@@ -247,7 +288,7 @@ function AltitudeChart({
                   textAnchor="middle"
                   className="fill-gray-700 text-xs font-medium"
                 >
-                  {point.altitude}m
+                  {Math.round(point.altitude || 0)}m
                 </text>
               </g>
             )}
@@ -269,7 +310,7 @@ function AltitudeChart({
         textAnchor="end"
         className="fill-gray-400 text-xs"
       >
-        {maxDistance >= 1000 ? `${(maxDistance / 1000).toFixed(1)}km` : `${maxDistance}m`}
+        {maxDistance >= 1000 ? `${(maxDistance / 1000).toFixed(1)}km` : `${Math.round(maxDistance)}m`}
       </text>
 
       {/* Axis labels */}
