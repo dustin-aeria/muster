@@ -147,7 +147,13 @@ export function UnifiedProjectMap({
   onElementSelect,
   className = '',
   // Optional external map data - if provided, use it instead of internal useMapData
-  externalMapData = null
+  externalMapData = null,
+  // Waypoint editing callbacks
+  onWaypointMove = null,
+  onWaypointDelete = null,
+  onWaypointClick = null,
+  selectedWaypointId = null,
+  waypointEditable = false
 }) {
   // Refs
   const mapContainerRef = useRef(null)
@@ -804,8 +810,11 @@ export function UnifiedProjectMap({
     corridorBuffer: flightPathData?.corridorBuffer || null,
     maxAltitude: activeSite?.flightPlan?.maxAltitudeAGL || 120,
     is3DEnabled,
-    selectedWaypointId: null, // Could be passed from props if needed
-    onWaypointClick: null, // Could be passed from props if needed
+    selectedWaypointId,
+    onWaypointClick,
+    onWaypointMove,
+    onWaypointDelete,
+    editable: waypointEditable,
     styleVersion
   })
 

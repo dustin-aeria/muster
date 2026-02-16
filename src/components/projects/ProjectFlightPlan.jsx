@@ -1137,21 +1137,63 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
   const [showMap, setShowMap] = useState(true)
   const [showAircraftModal, setShowAircraftModal] = useState(false)
   const [selectedWaypointId, setSelectedWaypointId] = useState(null)
+  const [expandedMissionId, setExpandedMissionId] = useState(null)
+
+  // Get sites for early access (needed by callback)
+  const sitesArray = useMemo(() => {
+    return Array.isArray(project?.sites) ? project.sites : []
+  }, [project?.sites])
+
+  const currentActiveSiteId = project?.activeSiteId || sitesArray[0]?.id || null
+
+  // Handler for when drawing creates a mission - defined before useMapData
+  const handleMissionFromDrawing = useCallback((missionData) => {
+    if (!currentActiveSiteId) return
+
+    // Create a new mission from the drawn geometry
+    const newMission = createMission({
+      type: missionData.type,
+      name: missionData.name,
+      geography: missionData.geometry,
+      altitude: missionData.altitude || 80,
+      settings: missionData.settings || {},
+      flightPath: missionData.flightPath || { waypoints: [], corridorBuffer: null, lastGenerated: null }
+    })
+
+    // Add mission to site's flight plan
+    const updatedSites = sitesArray.map(site => {
+      if (site.id !== currentActiveSiteId) return site
+
+      const existingMissions = site.flightPlan?.missions || []
+      return {
+        ...site,
+        flightPlan: {
+          ...site.flightPlan,
+          missions: [...existingMissions, newMission]
+        },
+        updatedAt: new Date().toISOString()
+      }
+    })
+
+    onUpdate({ sites: updatedSites })
+
+    // Auto-expand the new mission
+    setExpandedMissionId(newMission.id)
+  }, [sitesArray, currentActiveSiteId, onUpdate])
 
   // Map controls - lifted to page level so we can render controls outside the map
   const mapControls = useMapData(project, onUpdate, {
     editMode: true,
     allowedLayers: ['siteSurvey', 'flightPlan'],
-    initialBasemap: 'streets'
+    initialBasemap: 'streets',
+    onMissionCreate: handleMissionFromDrawing
   })
 
-  // Get sites array with defensive check
-  const sites = useMemo(() => {
-    return Array.isArray(project?.sites) ? project.sites : []
-  }, [project?.sites])
-  
-  // Active site
-  const activeSiteId = project?.activeSiteId || sites[0]?.id || null
+  // Use the sites array defined earlier
+  const sites = sitesArray
+
+  // Active site (use the value defined earlier for consistency)
+  const activeSiteId = currentActiveSiteId
   const activeSite = useMemo(() => {
     return sites.find(s => s.id === activeSiteId) || sites[0] || null
   }, [sites, activeSiteId])
@@ -1389,6 +1431,26 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
     }
   }, [flightPathData.waypoints, updateFlightPath, selectedWaypointId])
 
+  // Handler for waypoint drag on map
+  const handleWaypointMove = useCallback((waypointId, newLngLat) => {
+    const waypoints = flightPathData.waypoints || []
+    const updatedWaypoints = waypoints.map(wp => {
+      if (wp.id === waypointId) {
+        return {
+          ...wp,
+          coordinates: [newLngLat.lng, newLngLat.lat, wp.coordinates[2] || 80]
+        }
+      }
+      return wp
+    })
+    updateFlightPath({ waypoints: updatedWaypoints })
+  }, [flightPathData.waypoints, updateFlightPath])
+
+  // Handler for waypoint click on map
+  const handleWaypointMapClick = useCallback((waypointId, feature) => {
+    setSelectedWaypointId(waypointId)
+  }, [])
+
   const handleWaypointReorder = useCallback((fromIndex, toIndex) => {
     const waypoints = [...(flightPathData.waypoints || [])]
     const [moved] = waypoints.splice(fromIndex, 1)
@@ -1435,9 +1497,6 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
   // ============================================
   // MISSION MANAGEMENT
   // ============================================
-
-  // State for expanded mission card
-  const [expandedMissionId, setExpandedMissionId] = useState(null)
 
   // Get missions from site flight plan
   const missions = useMemo(() => {
@@ -1679,6 +1738,12 @@ export default function ProjectFlightPlan({ project, onUpdate, onNavigateToSecti
               showControls={false}
               externalMapData={mapControls}
               onSiteChange={handleSelectSite}
+              // Waypoint editing
+              selectedWaypointId={selectedWaypointId}
+              onWaypointClick={handleWaypointMapClick}
+              onWaypointMove={handleWaypointMove}
+              onWaypointDelete={handleWaypointDelete}
+              waypointEditable={true}
             />
           </div>
         </div>

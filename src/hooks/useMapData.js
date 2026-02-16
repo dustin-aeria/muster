@@ -192,7 +192,8 @@ export function useMapData(project, onUpdate, options = {}) {
     initialSiteId = null,
     editMode = false,
     allowedLayers = ['siteSurvey', 'flightPlan', 'emergency'],
-    initialBasemap = 'streets'
+    initialBasemap = 'streets',
+    onMissionCreate = null  // Callback when drawing creates a new mission
   } = options
 
   // ============================================
@@ -1010,15 +1011,37 @@ export function useMapData(project, onUpdate, options = {}) {
     } else if (shapeType === 'polygon') {
       // Need at least 3 points for a polygon
       if (drawingPoints.length >= 3) {
-        setPolygon(elementType, drawingPoints)
+        // Check if this is a flight geography - could create a mapping mission
+        if (elementType === 'flightGeography' && onMissionCreate) {
+          // Create a mapping mission from the drawn area
+          const missionData = {
+            type: 'mapping',
+            name: 'New Mapping Mission',
+            geometry: {
+              type: 'Polygon',
+              coordinates: [[...drawingPoints, drawingPoints[0]]] // Close the polygon
+            },
+            altitude: 80,
+            settings: {
+              pattern: 'grid',
+              overlap: 70,
+              sidelap: 60
+            }
+          }
+          onMissionCreate(missionData)
+          // Also save the flight geography for SORA calculations
+          setPolygon(elementType, drawingPoints)
+        } else {
+          setPolygon(elementType, drawingPoints)
+        }
       }
     } else if (shapeType === 'line') {
       // Need at least 2 points for a line
       if (drawingPoints.length >= 2) {
         // Check for flight path specific line types
         if (drawingMode.isFlightPath || drawingMode.isCorridor) {
-          // Convert line to waypoints and save to flightPath
-          const altitude = 120 // Default altitude, can be adjusted later
+          // Convert line to waypoints
+          const altitude = drawingMode.isCorridor ? 60 : 80 // Default altitude
           const waypoints = drawingPoints.map((coord, index) => ({
             id: `wp_${Date.now()}_${index}`,
             coordinates: [coord[0], coord[1], altitude],
@@ -1028,19 +1051,42 @@ export function useMapData(project, onUpdate, options = {}) {
             createdAt: new Date().toISOString()
           }))
 
-          // Save to flightPath in mapData
-          updateSiteMapData(mapData => ({
-            ...mapData,
-            flightPlan: {
-              ...mapData?.flightPlan,
+          // If mission callback provided, create a mission instead
+          if (onMissionCreate) {
+            const missionType = drawingMode.isCorridor ? 'corridor' : 'freeform'
+            const missionData = {
+              type: missionType,
+              name: drawingMode.isCorridor ? 'New Corridor Mission' : 'New Flight Path',
+              geometry: {
+                type: 'LineString',
+                coordinates: drawingPoints
+              },
+              altitude,
               flightPath: {
-                ...mapData?.flightPlan?.flightPath,
-                type: drawingMode.isCorridor ? 'corridor' : 'waypoint',
                 waypoints,
+                corridorBuffer: null,
                 lastGenerated: new Date().toISOString()
-              }
+              },
+              settings: drawingMode.isCorridor
+                ? { pattern: 'linear', width: 30 }
+                : { pattern: 'waypoint' }
             }
-          }))
+            onMissionCreate(missionData)
+          } else {
+            // Fallback: save directly to mapData (legacy behavior)
+            updateSiteMapData(mapData => ({
+              ...mapData,
+              flightPlan: {
+                ...mapData?.flightPlan,
+                flightPath: {
+                  ...mapData?.flightPlan?.flightPath,
+                  type: drawingMode.isCorridor ? 'corridor' : 'waypoint',
+                  waypoints,
+                  lastGenerated: new Date().toISOString()
+                }
+              }
+            }))
+          }
         } else {
           // Regular line (evacuation route)
           addEvacuationRoute(drawingPoints)

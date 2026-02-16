@@ -62,6 +62,9 @@ export function useFlightPath3DLayers({
   is3DEnabled = false,
   selectedWaypointId = null,
   onWaypointClick = null,
+  onWaypointMove = null,      // Callback when waypoint is dragged: (waypointId, newLngLat) => void
+  onWaypointDelete = null,    // Callback when waypoint is deleted: (waypointId) => void
+  editable = false,           // Enable drag/delete functionality
   styleVersion = 0
 }) {
   const markersRef = useRef([])
@@ -247,6 +250,7 @@ export function useFlightPath3DLayers({
         // Create marker element
         const el = document.createElement('div')
         el.className = 'flight-waypoint-marker'
+        el.dataset.waypointId = waypointId
         el.style.cssText = `
           width: 28px;
           height: 28px;
@@ -260,7 +264,7 @@ export function useFlightPath3DLayers({
           color: white;
           font-size: 11px;
           font-weight: 700;
-          cursor: pointer;
+          cursor: ${editable ? 'grab' : 'pointer'};
           transition: transform 0.15s, box-shadow 0.15s;
         `
         el.innerHTML = `${order + 1}`
@@ -289,7 +293,18 @@ export function useFlightPath3DLayers({
           onWaypointClick?.(waypointId, feature)
         })
 
-        // Create popup
+        // Right-click handler for delete (only if editable)
+        if (editable && onWaypointDelete) {
+          el.addEventListener('contextmenu', (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (confirm(`Delete waypoint ${label}?`)) {
+              onWaypointDelete(waypointId)
+            }
+          })
+        }
+
+        // Create popup with edit hint if editable
         const popup = new mapboxgl.Popup({
           offset: 20,
           closeButton: false
@@ -298,17 +313,27 @@ export function useFlightPath3DLayers({
             <p style="font-weight: 600; margin-bottom: 4px;">${label}</p>
             <p style="color: #666;">Altitude: ${altitude}m AGL</p>
             <p style="color: #666;">Type: ${waypointType}</p>
+            ${editable ? '<p style="color: #3B82F6; font-size: 10px; margin-top: 4px;">Drag to move • Right-click to delete</p>' : ''}
           </div>
         `)
 
         // Create marker at 2D position (Mapbox handles 3D projection)
         const marker = new mapboxgl.Marker({
           element: el,
-          anchor: 'center'
+          anchor: 'center',
+          draggable: editable
         })
           .setLngLat([coordinates[0], coordinates[1]])
           .setPopup(popup)
           .addTo(map)
+
+        // Drag handler (only if editable)
+        if (editable && onWaypointMove) {
+          marker.on('dragend', () => {
+            const newLngLat = marker.getLngLat()
+            onWaypointMove(waypointId, { lng: newLngLat.lng, lat: newLngLat.lat })
+          })
+        }
 
         markersRef.current.push(marker)
       })
@@ -322,7 +347,7 @@ export function useFlightPath3DLayers({
     return () => {
       cleanupLayers(map)
     }
-  }, [map, mapLoaded, flightPath3DGeoJSON, flightGeography, corridorBuffer, maxAltitude, is3DEnabled, selectedWaypointId, styleVersion])
+  }, [map, mapLoaded, flightPath3DGeoJSON, flightGeography, corridorBuffer, maxAltitude, is3DEnabled, selectedWaypointId, onWaypointClick, onWaypointMove, onWaypointDelete, editable, styleVersion])
 
   // Update selection state
   useEffect(() => {
@@ -363,6 +388,9 @@ export function FlightPath3DLayer({
   is3DEnabled,
   selectedWaypointId,
   onWaypointClick,
+  onWaypointMove,
+  onWaypointDelete,
+  editable,
   styleVersion
 }) {
   useFlightPath3DLayers({
@@ -375,6 +403,9 @@ export function FlightPath3DLayer({
     is3DEnabled,
     selectedWaypointId,
     onWaypointClick,
+    onWaypointMove,
+    onWaypointDelete,
+    editable,
     styleVersion
   })
 
