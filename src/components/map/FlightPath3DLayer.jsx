@@ -269,11 +269,8 @@ export function useFlightPath3DLayers({
         `
         el.innerHTML = `${order + 1}`
 
-        // Selection state
-        if (selectedWaypointId === waypointId) {
-          el.style.transform = 'scale(1.2)'
-          el.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.5), 0 2px 8px rgba(0,0,0,0.3)'
-        }
+        // NOTE: Selection state is handled by the separate useEffect below,
+        // not here during marker creation. This prevents stale closure issues.
 
         // Hover effects
         el.addEventListener('mouseenter', () => {
@@ -347,7 +344,10 @@ export function useFlightPath3DLayers({
     return () => {
       cleanupLayers(map)
     }
-  }, [map, mapLoaded, flightPath3DGeoJSON, flightGeography, corridorBuffer, maxAltitude, is3DEnabled, selectedWaypointId, onWaypointClick, onWaypointMove, onWaypointDelete, editable, styleVersion])
+  // NOTE: selectedWaypointId is NOT in this dependency array - selection state is handled
+  // by the separate useEffect below. Including it here would cause all markers to be
+  // recreated on every click, potentially causing position glitches.
+  }, [map, mapLoaded, flightPath3DGeoJSON, flightGeography, corridorBuffer, maxAltitude, is3DEnabled, onWaypointClick, onWaypointMove, onWaypointDelete, editable, styleVersion])
 
   // Update selection state
   useEffect(() => {
