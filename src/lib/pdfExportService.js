@@ -1388,6 +1388,91 @@ export async function exportFormToPDF(form, formTemplate, project, operators = [
   return filename
 }
 
+/**
+ * Generate a compact Flight Plan Brief PDF for notification attachment
+ * Single page with map, parameters, and GO/NO-GO status
+ */
+export async function generateFlightPlanBriefPDF(site, options = {}) {
+  const {
+    projectName = '',
+    projectCode = '',
+    clientName = '',
+    operatorName = '',
+    operatorContact = '',
+    status = 'GO',           // 'GO' or 'NO-GO'
+    statusNotes = '',
+    startTime = '',
+    endTime = '',
+    date = new Date().toISOString().split('T')[0],
+    mapImage = null,         // Base64 data URL
+    branding = null
+  } = options
+
+  const flightPlan = site?.flightPlan || {}
+  const siteSurvey = site?.siteSurvey || site?.mapData?.siteSurvey || {}
+
+  const pdf = new BrandedPDF({
+    title: 'FLIGHT PLAN BRIEF',
+    subtitle: status === 'GO' ? 'FLIGHT AUTHORIZED' : 'FLIGHT NOT AUTHORIZED',
+    projectName,
+    projectCode,
+    clientName,
+    branding
+  })
+
+  await pdf.init()
+
+  // Compact header (no cover page for single-page brief)
+  pdf.addNewPage()
+
+  // Status banner at top
+  pdf.addInfoBox(
+    status === 'GO' ? 'GO - FLIGHT AUTHORIZED' : 'NO-GO - FLIGHT NOT AUTHORIZED',
+    status === 'GO'
+      ? 'All parameters within operational limits'
+      : statusNotes || 'Operations suspended',
+    status === 'GO' ? 'success' : 'danger'
+  )
+  pdf.addSpacer(5)
+
+  // Key parameters grid
+  pdf.addKeyValueGrid([
+    { label: 'Site', value: site?.name || 'Unnamed Site' },
+    { label: 'Date', value: date },
+    { label: 'Time Window', value: startTime && endTime ? `${startTime} - ${endTime}` : 'TBD' },
+    { label: 'Max Altitude', value: flightPlan.maxAltitudeAGL ? `${flightPlan.maxAltitudeAGL}m AGL` : 'See plan' },
+    { label: 'Operation Type', value: flightPlan.operationType || 'VLOS' },
+    { label: 'Aircraft', value: flightPlan.aircraft?.[0]?.nickname || 'See plan' }
+  ], 2)
+
+  // Map section
+  if (mapImage) {
+    pdf.addSpacer(5)
+    pdf.addSubsectionTitle('Operational Area')
+    pdf.addMapImage(mapImage, {
+      caption: `${site?.name || 'Site'} - Flight area, launch/recovery points`,
+      height: 70
+    })
+  }
+
+  // Operator contact
+  pdf.addSpacer(5)
+  pdf.addSubsectionTitle('Operator Contact')
+  pdf.addParagraph(`${operatorName || 'Operator'} | ${operatorContact || 'Contact on file'}`)
+
+  // Footer note
+  pdf.addSpacer(10)
+  pdf.setColor('textLight')
+  pdf.doc.setFontSize(8)
+  pdf.doc.text(
+    `Generated: ${new Date().toLocaleString()} | For flight coordination only`,
+    pdf.margin,
+    pdf.currentY
+  )
+
+  return pdf
+}
+
 export default {
   BrandedPDF,
   generateOperationsPlanPDF,
@@ -1395,5 +1480,6 @@ export default {
   generateHSERiskPDF,
   generateFormPDF,
   exportToPDF,
-  exportFormToPDF
+  exportFormToPDF,
+  generateFlightPlanBriefPDF
 }

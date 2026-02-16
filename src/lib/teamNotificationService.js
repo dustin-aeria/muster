@@ -55,6 +55,11 @@ export const NOTIFICATION_EVENTS = {
     label: 'Daily Plan',
     description: 'Manual daily briefing distribution',
     icon: 'Calendar'
+  },
+  flightPlan: {
+    label: 'Flight Plan',
+    description: 'Flight plan PDF sent with GO/NO GO decision',
+    icon: 'MapPin'
   }
 }
 
@@ -135,6 +140,24 @@ export const MESSAGE_TEMPLATES = {
 
       return lines.join('\n')
     }
+  },
+  flightPlan: {
+    title: (data) => `${data.projectName} - Flight Plan ${data.status}`,
+    body: (data) => {
+      const lines = [
+        `Status: ${data.status}`,
+        `Site: ${data.siteName}`,
+        `Date: ${formatDate(data.date)}`,
+        `Time Window: ${data.startTime} - ${data.endTime}`,
+        `Max Altitude: ${data.altitude}m AGL`,
+        '',
+        'See attached PDF for map and full details.'
+      ]
+      if (data.status === 'NO-GO' && data.notes) {
+        lines.push('', `Reason: ${data.notes}`)
+      }
+      return lines.join('\n')
+    }
   }
 }
 
@@ -192,6 +215,10 @@ export const getDefaultNotificationSettings = () => ({
   },
   dailyPlan: {
     enabled: true,
+    listIds: []
+  },
+  flightPlan: {
+    enabled: false,
     listIds: []
   }
 })
@@ -477,6 +504,7 @@ async function sendToRecipients(notification, recipients, options = {}) {
         status: notification.triggerEvent === 'goNoGo'
           ? (notification.eventData?.decision === 'GO' ? 'go' : 'no_go')
           : null,
+        attachments: options.attachments || [],
         createdAt: serverTimestamp()
       })
 

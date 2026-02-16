@@ -9,7 +9,8 @@ import {
   ChevronDown,
   Check,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  MapPin
 } from 'lucide-react'
 import { NOTIFICATION_EVENTS } from '../../lib/teamNotificationService'
 
@@ -40,6 +41,15 @@ const EVENT_CONFIG = {
     icon: Calendar,
     color: 'text-purple-600',
     bgColor: 'bg-purple-50'
+  },
+  flightPlan: {
+    key: 'flightPlan',
+    event: 'flightPlan',
+    label: 'Flight Plan',
+    description: 'Send flight plan PDF to air operators, heli crews, etc.',
+    icon: MapPin,
+    color: 'text-sky-600',
+    bgColor: 'bg-sky-50'
   }
 }
 
@@ -246,6 +256,10 @@ NotificationSettingsPanel.propTypes = {
       listIds: PropTypes.array
     }),
     dailyPlan: PropTypes.shape({
+      enabled: PropTypes.bool,
+      listIds: PropTypes.array
+    }),
+    flightPlan: PropTypes.shape({
       enabled: PropTypes.bool,
       listIds: PropTypes.array
     })

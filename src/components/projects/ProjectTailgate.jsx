@@ -36,9 +36,10 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
-import { BrandedPDF } from '../../lib/pdfExportService'
+import { BrandedPDF, generateFlightPlanBriefPDF } from '../../lib/pdfExportService'
 import { logger } from '../../lib/logger'
 import { sendTeamNotification } from '../../lib/teamNotificationService'
+import { getSiteMapImage } from '../../lib/staticMapService'
 import WeatherWidget from '../weather/WeatherWidget'
 
 // Helper component to get coordinates and show weather
@@ -173,7 +174,11 @@ const createDefaultTailgateDay = (date) => ({
   goNoGoNotes: '',
   distributedAt: null, // When GO was distributed
   flightLogs: [],
-  includedSections: { ...DEFAULT_INCLUDED_SECTIONS }
+  includedSections: { ...DEFAULT_INCLUDED_SECTIONS },
+  // Flight window for flight plan notifications
+  operationStartTime: '',   // HH:MM format
+  operationEndTime: '',     // HH:MM format
+  editFlightPlanEnabled: false
 })
 
 export default function ProjectTailgate({ project, onUpdate }) {
@@ -306,6 +311,7 @@ export default function ProjectTailgate({ project, onUpdate }) {
   // Handle GO/NO GO decision with notification and distribution
   const handleGoNoGoDecision = async (decision) => {
     const previousDecision = currentDay.goNoGoDecision
+    const statusText = decision === true ? 'GO' : 'NO-GO'
 
     // Update the decision and mark distribution time if GO
     updateCurrentDay({
@@ -313,14 +319,15 @@ export default function ProjectTailgate({ project, onUpdate }) {
       distributedAt: decision === true ? new Date().toISOString() : null
     })
 
-    // Send notification if this is a new GO decision
-    if (decision === true && previousDecision !== true && project.id) {
+    // Only send notifications if this is a change and project exists
+    if (project.id && ((decision === true && previousDecision !== true) || (decision === false && previousDecision !== false))) {
+      // Send existing goNoGo notification
       try {
         await sendTeamNotification(project.id, 'goNoGo', {
-          decision: 'GO',
+          decision: statusText,
           date: currentDay.date || new Date().toISOString(),
           pic: pic?.operatorName || pic?.name || 'Not assigned',
-          notes: '',
+          notes: decision === false ? currentDay.goNoGoNotes : '',
           // Include briefing summary for distribution
           briefingSummary: {
             project: project.name,
@@ -334,17 +341,61 @@ export default function ProjectTailgate({ project, onUpdate }) {
       } catch (error) {
         logger.error('Failed to distribute tailgate briefing:', error)
       }
-    } else if (decision === false && previousDecision !== false && project.id) {
-      // Send NO-GO notification
+
+      // Send flight plan notification with PDF attachment
       try {
-        await sendTeamNotification(project.id, 'goNoGo', {
-          decision: 'NO-GO',
-          date: currentDay.date || new Date().toISOString(),
-          pic: pic?.operatorName || pic?.name || 'Not assigned',
-          notes: currentDay.goNoGoNotes || ''
+        // Generate map image for the PDF
+        let mapImage = null
+        if (activeSite) {
+          try {
+            mapImage = await getSiteMapImage(activeSite, {
+              width: 800,
+              height: 500,
+              style: 'satelliteStreets'
+            })
+          } catch (mapErr) {
+            logger.warn('Failed to generate map image for flight plan:', mapErr)
+          }
+        }
+
+        // Generate flight plan PDF
+        const flightPlanPdf = await generateFlightPlanBriefPDF(activeSite, {
+          projectName: project.name,
+          projectCode: project.projectCode,
+          clientName: project.clientName,
+          operatorName: project.branding?.operator?.name || '',
+          operatorContact: project.branding?.operator?.phone || project.branding?.operator?.email || '',
+          status: statusText,
+          statusNotes: currentDay.goNoGoNotes,
+          startTime: currentDay.operationStartTime,
+          endTime: currentDay.operationEndTime,
+          date: currentDay.date,
+          mapImage,
+          branding: project.branding || null
         })
-      } catch (error) {
-        logger.error('Failed to send NO-GO notification:', error)
+
+        // Get PDF as base64
+        const pdfDataUrl = flightPlanPdf.getDataUrl()
+        const pdfBase64 = pdfDataUrl.split(',')[1] // Remove data:application/pdf;base64, prefix
+
+        // Send flight plan notification
+        await sendTeamNotification(project.id, 'flightPlan', {
+          status: statusText,
+          siteName: activeSite?.name || 'Site',
+          date: currentDay.date,
+          startTime: currentDay.operationStartTime || 'TBD',
+          endTime: currentDay.operationEndTime || 'TBD',
+          altitude: activeSite?.flightPlan?.maxAltitudeAGL || project.flightPlan?.maxAltitudeAGL || 'See plan',
+          notes: currentDay.goNoGoNotes
+        }, {
+          attachments: [{
+            filename: `FlightPlan_${project.projectCode || 'FP'}_${currentDay.date || 'nodate'}.pdf`,
+            content: pdfBase64
+          }]
+        })
+        logger.info('Flight plan notification sent successfully')
+      } catch (err) {
+        logger.error('Failed to send flight plan notification:', err)
       }
     }
   }
@@ -703,6 +754,55 @@ export default function ProjectTailgate({ project, onUpdate }) {
           )}
         </div>
       )}
+
+      {/* Flight Window Section */}
+      <div className="card mb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Clock className="w-5 h-5 text-aeria-blue" />
+          <h3 className="font-medium text-gray-900">Flight Window</h3>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Start Time
+            </label>
+            <input
+              type="time"
+              value={currentDay.operationStartTime || ''}
+              onChange={(e) => updateCurrentDay({ operationStartTime: e.target.value })}
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              End Time
+            </label>
+            <input
+              type="time"
+              value={currentDay.operationEndTime || ''}
+              onChange={(e) => updateCurrentDay({ operationEndTime: e.target.value })}
+              className="input"
+            />
+          </div>
+        </div>
+
+        {/* Edit Flight Plan Toggle */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={currentDay.editFlightPlanEnabled || false}
+              onChange={(e) => updateCurrentDay({ editFlightPlanEnabled: e.target.checked })}
+              className="w-4 h-4 text-aeria-blue rounded"
+            />
+            <div>
+              <span className="font-medium text-gray-900">Edit Flight Plan</span>
+              <p className="text-sm text-gray-500">Make adjustments before today's operations</p>
+            </div>
+          </label>
+        </div>
+      </div>
 
       {/* Multi-Day Header */}
       {isMultiDay && (

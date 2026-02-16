@@ -755,6 +755,11 @@ function getNotificationTypeInfo(type) {
       color: '#ef4444',
       description: 'Important safety notification'
     },
+    flightPlan: {
+      label: 'Flight Plan',
+      color: '#0ea5e9',
+      description: 'Flight plan with GO/NO GO status'
+    },
     custom: {
       label: 'Team Update',
       color: '#6b7280',
@@ -851,6 +856,12 @@ exports.sendTeamNotificationEmail = functions.firestore
         return null
       }
 
+      // Prepare attachments if present
+      const emailAttachments = (notification.attachments || []).map(att => ({
+        filename: att.filename,
+        content: att.content  // Base64 string
+      }))
+
       // Send emails to all recipients
       const emailPromises = recipients.map(async (email) => {
         try {
@@ -858,6 +869,7 @@ exports.sendTeamNotificationEmail = functions.firestore
             from: FROM_EMAIL,
             to: email,
             subject: `[${escapeHtml(projectName)}] ${typeInfo.label}`,
+            attachments: emailAttachments.length > 0 ? emailAttachments : undefined,
             html: `
               <!DOCTYPE html>
               <html>
