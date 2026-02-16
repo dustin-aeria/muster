@@ -1,8 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import {
   FileCheck,
-  UserCheck,
   Clock,
   CheckCircle2,
   XCircle,
@@ -14,12 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
-  Calendar,
-  MessageSquare,
-  Lock,
-  FileText,
-  Square,
-  CheckSquare
+  Lock
 } from 'lucide-react'
 import { sendTeamNotification } from '../../lib/teamNotificationService'
 
@@ -42,52 +36,10 @@ const reviewerRoles = [
 
 export default function ProjectApprovals({ project, onUpdate }) {
   const [expandedSections, setExpandedSections] = useState({
-    documents: true,
     submission: true,
     approval: true,
     acknowledgments: true
   })
-
-  // Document checklist items with requirements based on SAIL level
-  const sites = useMemo(() => Array.isArray(project?.sites) ? project.sites : [], [project?.sites])
-
-  const maxSAIL = useMemo(() => {
-    const sailOrder = ['I', 'II', 'III', 'IV', 'V', 'VI']
-    let maxIndex = -1
-    sites.forEach(site => {
-      const sail = site.soraAssessment?.sail
-      const idx = sailOrder.indexOf(sail)
-      if (idx > maxIndex) maxIndex = idx
-    })
-    return maxIndex >= 0 ? sailOrder[maxIndex] : null
-  }, [sites])
-
-  const documentItems = useMemo(() => [
-    { id: 'ops_manual', name: 'Operations Manual', sailRequired: 'I', description: 'Company operations manual or SOP' },
-    { id: 'emergency_plan', name: 'Emergency Response Plan', sailRequired: 'I', description: 'Emergency procedures and contacts' },
-    { id: 'risk_assessment', name: 'Risk Assessment', sailRequired: 'I', description: 'SORA or equivalent risk assessment' },
-    { id: 'pilot_certs', name: 'Pilot Certifications', sailRequired: 'I', description: 'Valid pilot certificates and ratings' },
-    { id: 'insurance', name: 'Insurance Certificate', sailRequired: 'I', description: 'Liability insurance documentation' },
-    { id: 'maintenance_log', name: 'Maintenance Records', sailRequired: 'III', description: 'Aircraft maintenance logs' },
-    { id: 'training_records', name: 'Training Records', sailRequired: 'II', description: 'Crew training documentation' },
-    { id: 'flight_auth', name: 'Flight Authorization (SFOC)', sailRequired: 'IV', description: 'Special flight operations certificate' }
-  ], [])
-
-  const isDocumentRequired = (sailRequired) => {
-    if (!maxSAIL) return sailRequired === 'I'
-    const sailOrder = ['I', 'II', 'III', 'IV', 'V', 'VI']
-    return sailOrder.indexOf(maxSAIL) >= sailOrder.indexOf(sailRequired)
-  }
-
-  const toggleDocument = (docId) => {
-    const currentChecklist = project.documentChecklist || {}
-    onUpdate({
-      documentChecklist: {
-        ...currentChecklist,
-        [docId]: !currentChecklist[docId]
-      }
-    })
-  }
 
   // Initialize approvals if not present
   useEffect(() => {
@@ -329,81 +281,6 @@ export default function ProjectApprovals({ project, onUpdate }) {
           <div className="flex items-center gap-2 text-sm">
             <Lock className="w-4 h-4" />
             Plan Locked
-          </div>
-        )}
-      </div>
-
-      {/* Documents Checklist */}
-      <div className="card">
-        <button
-          onClick={() => toggleSection('documents')}
-          className="flex items-center justify-between w-full text-left"
-        >
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-aeria-blue" />
-            Documents Checklist
-            <span className={`px-2 py-0.5 text-xs rounded-full ${
-              documentItems.filter(d => isDocumentRequired(d.sailRequired)).every(d => project.documentChecklist?.[d.id])
-                ? 'bg-green-100 text-green-700'
-                : 'bg-gray-100 text-gray-600'
-            }`}>
-              {documentItems.filter(d => isDocumentRequired(d.sailRequired) && project.documentChecklist?.[d.id]).length}/
-              {documentItems.filter(d => isDocumentRequired(d.sailRequired)).length}
-            </span>
-          </h2>
-          {expandedSections.documents ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-        </button>
-
-        {expandedSections.documents && (
-          <div className="mt-4 space-y-2">
-            <p className="text-sm text-gray-600 mb-3">
-              Check off each document as you gather and verify them. Requirements based on SAIL {maxSAIL || 'I'} operations.
-            </p>
-
-            {documentItems.map(doc => {
-              const required = isDocumentRequired(doc.sailRequired)
-              const checked = project.documentChecklist?.[doc.id] || false
-
-              return (
-                <div
-                  key={doc.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
-                    !required ? 'opacity-50 bg-gray-50 border-gray-200' :
-                    checked ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200 hover:bg-gray-50'
-                  }`}
-                  onClick={() => required && !isLocked && toggleDocument(doc.id)}
-                >
-                  <div className="pt-0.5">
-                    {checked ? (
-                      <CheckSquare className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <Square className={`w-5 h-5 ${required ? 'text-gray-400' : 'text-gray-300'}`} />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-medium ${checked ? 'text-green-800' : 'text-gray-900'}`}>
-                        {doc.name}
-                      </span>
-                      {required && !checked && (
-                        <span className="px-1.5 py-0.5 text-[10px] bg-red-100 text-red-700 rounded">Required</span>
-                      )}
-                      {!required && (
-                        <span className="px-1.5 py-0.5 text-[10px] bg-gray-100 text-gray-500 rounded">SAIL {doc.sailRequired}+</span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-500 mt-0.5">{doc.description}</p>
-                  </div>
-                </div>
-              )
-            })}
-
-            {isLocked && (
-              <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                <Lock className="w-3 h-3" />
-                Checklist locked after approval
-              </p>
-            )}
           </div>
         )}
       </div>
