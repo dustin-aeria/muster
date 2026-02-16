@@ -1532,8 +1532,8 @@ export default function ProjectSORA({ project, onUpdate, onNavigateToSection }) 
       <CollapsibleSection
         title="Ground Risk Mitigations"
         stepNumber={3}
-        badge={activeCalc.fGRC ? `fGRC ${activeCalc.fGRC}` : null}
-        status={activeCalc.fGRC ? 'complete' : 'missing'}
+        badge={activeCalc.fGRC != null ? `fGRC ${activeCalc.fGRC}` : null}
+        status={activeCalc.iGRC != null ? 'complete' : 'missing'}
       >
         <p className="text-sm text-gray-600 mb-4">
           Apply mitigations to reduce ground risk class. Each mitigation can reduce the GRC.
