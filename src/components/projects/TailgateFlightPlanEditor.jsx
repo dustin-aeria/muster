@@ -128,6 +128,11 @@ export default function TailgateFlightPlanEditor({
         .custom-div-icon { background: transparent !important; border: none !important; }
         .tailgate-map-container .leaflet-container { cursor: crosshair; }
         .tailgate-map-container .leaflet-dragging .leaflet-container { cursor: move; }
+        .tailgate-map-container .leaflet-marker-icon { cursor: grab !important; }
+        .tailgate-map-container .leaflet-marker-icon:hover { transform: scale(1.15); filter: brightness(1.1); }
+        .tailgate-map-container .leaflet-marker-dragging .leaflet-marker-icon { cursor: grabbing !important; }
+        .boundary-vertex { cursor: grab !important; transition: all 0.15s ease; }
+        .boundary-vertex:hover { transform: scale(1.3); }
       `
       document.head.appendChild(style)
     }
@@ -290,7 +295,7 @@ export default function TailgateFlightPlanEditor({
     boundaryVerticesRef.current.forEach(v => map.removeLayer(v))
     boundaryVerticesRef.current = []
 
-    // Draw new
+    // Draw polygon fill
     if (flightBoundary.length >= 3) {
       const polygon = L.polygon(flightBoundary.map(p => [p.lat, p.lng]), {
         color: '#9333ea',
@@ -301,15 +306,45 @@ export default function TailgateFlightPlanEditor({
       boundaryLayerRef.current = polygon
     }
 
-    // Add vertices
-    flightBoundary.forEach((point) => {
-      const vertex = L.circleMarker([point.lat, point.lng], {
-        radius: 6,
-        color: '#9333ea',
-        fillColor: 'white',
-        fillOpacity: 1,
-        weight: 2
+    // Add draggable vertices
+    flightBoundary.forEach((point, index) => {
+      // Create a custom draggable icon for vertices
+      const vertexIcon = L.divIcon({
+        className: 'boundary-vertex',
+        html: `<div style="
+          width: 14px;
+          height: 14px;
+          background: white;
+          border: 3px solid #9333ea;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        "></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+      })
+
+      const vertex = L.marker([point.lat, point.lng], {
+        icon: vertexIcon,
+        draggable: true
       }).addTo(map)
+
+      // Handle drag to update boundary
+      vertex.on('drag', (e) => {
+        const pos = e.target.getLatLng()
+        setFlightBoundary(prev => {
+          const newBoundary = [...prev]
+          newBoundary[index] = {
+            lat: parseFloat(pos.lat.toFixed(6)),
+            lng: parseFloat(pos.lng.toFixed(6))
+          }
+          return newBoundary
+        })
+      })
+
+      vertex.on('dragend', () => {
+        setHasChanges(true)
+      })
+
       boundaryVerticesRef.current.push(vertex)
     })
   }, [flightBoundary, isLoading])

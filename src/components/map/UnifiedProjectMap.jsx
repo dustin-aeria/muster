@@ -53,7 +53,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || ''
 // INJECT KEYFRAME ANIMATION FOR SELECTION
 // ============================================
 
-// Inject pulse animation CSS once
+// Inject map CSS (animations, hover effects, cursors)
 if (typeof document !== 'undefined') {
   const styleId = 'aeria-map-animations'
   if (!document.getElementById(styleId)) {
@@ -64,6 +64,14 @@ if (typeof document !== 'undefined') {
         0%, 100% { opacity: 1; transform: scale(1); }
         50% { opacity: 0.6; transform: scale(1.1); }
       }
+      /* Marker hover effects */
+      .map-marker { cursor: grab !important; }
+      .map-marker:hover { transform: scale(1.15); filter: brightness(1.1); }
+      .map-marker:active { cursor: grabbing !important; }
+      /* MapboxDraw vertex styling */
+      .mapbox-gl-draw_polygon, .mapbox-gl-draw_line { cursor: pointer; }
+      .mapboxgl-canvas { cursor: crosshair; }
+      .mapboxgl-canvas-container.mapboxgl-interactive:active { cursor: grabbing; }
     `
     document.head.appendChild(style)
   }
