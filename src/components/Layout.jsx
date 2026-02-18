@@ -48,7 +48,6 @@ const navigation = [
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
   { name: 'Expenses', href: '/expenses', icon: DollarSign },
   { name: 'Time Tracking', href: '/time-tracking', icon: Clock },
-  { name: 'Time Approval', href: '/time-approval', icon: ClipboardCheck },
   { name: 'Calendar', href: '/calendar', icon: CalendarDays },
   { name: 'Forms', href: '/forms', icon: ClipboardList },
 ]
