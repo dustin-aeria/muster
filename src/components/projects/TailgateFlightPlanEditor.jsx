@@ -60,6 +60,9 @@ export default function TailgateFlightPlanEditor({
   // Track if changes were made
   const [hasChanges, setHasChanges] = useState(false)
 
+  // Track saved state for visual feedback
+  const [justSaved, setJustSaved] = useState(false)
+
   // Track if previous edits are available but not applied
   const [hasPreviousEdits] = useState(!!previousEdits?.editedAt)
 
@@ -468,6 +471,13 @@ export default function TailgateFlightPlanEditor({
     }
 
     onSave(tailgateMapData)
+
+    // Reset change tracking and show saved confirmation
+    setHasChanges(false)
+    setJustSaved(true)
+
+    // Clear "just saved" after 3 seconds
+    setTimeout(() => setJustSaved(false), 3000)
   }
 
   return (
@@ -617,13 +627,18 @@ export default function TailgateFlightPlanEditor({
       {/* Actions */}
       <div className="p-3 border-t border-gray-200 flex justify-between items-center">
         <div className="text-sm text-gray-500">
-          {hasChanges ? (
+          {justSaved ? (
+            <span className="text-green-600 flex items-center gap-1">
+              <Check className="w-3 h-3" />
+              Saved successfully
+            </span>
+          ) : hasChanges ? (
             <span className="text-amber-600 flex items-center gap-1">
               <Info className="w-3 h-3" />
               Unsaved changes
             </span>
           ) : (
-            'No changes'
+            'Ready to edit'
           )}
         </div>
         <div className="flex gap-2">
@@ -631,7 +646,7 @@ export default function TailgateFlightPlanEditor({
             onClick={onCancel}
             className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
           >
-            Cancel
+            Close
           </button>
           <button
             onClick={handleSave}

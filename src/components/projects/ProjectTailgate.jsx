@@ -934,9 +934,9 @@ export default function ProjectTailgate({ project, onUpdate }) {
               site={activeSite}
               previousEdits={currentDay?.tailgateMapData}
               onSave={(mapData) => {
+                // Save but keep map open for viewing
                 updateCurrentDay({
-                  tailgateMapData: mapData,
-                  editFlightPlanEnabled: false
+                  tailgateMapData: mapData
                 })
                 logger.info('Tailgate flight plan adjustments saved')
               }}
