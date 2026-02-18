@@ -43,6 +43,28 @@ import { getSiteMapImage } from '../../lib/staticMapService'
 import WeatherWidget from '../weather/WeatherWidget'
 import TailgateFlightPlanEditor from './TailgateFlightPlanEditor'
 
+/**
+ * Get site coordinates from various possible data paths
+ * Handles legacy and current data structures
+ * @param {Object} site - Site object
+ * @returns {[number, number] | null} - [lng, lat] or null
+ */
+function getSiteCoordinates(site) {
+  if (!site?.mapData) return null
+
+  // Current structure: mapData.siteSurvey.siteLocation
+  const current = site.mapData.siteSurvey?.siteLocation?.geometry?.coordinates
+
+  // Legacy structure: mapData.siteLocation (direct)
+  const legacy = site.mapData.siteLocation?.geometry?.coordinates
+
+  const coords = current || legacy
+  if (coords && Array.isArray(coords) && coords.length >= 2) {
+    return coords
+  }
+  return null
+}
+
 // Helper component to get coordinates and show weather
 function SiteWeatherWidget({ activeSite }) {
   if (!activeSite) {
@@ -53,14 +75,7 @@ function SiteWeatherWidget({ activeSite }) {
     )
   }
 
-  // Get coordinates - check multiple possible paths
-  // Path 1: Direct on mapData (older structure)
-  let coords = activeSite.mapData?.siteLocation?.geometry?.coordinates
-
-  // Path 2: Under siteSurvey (current structure used by Site Survey tab)
-  if (!coords) {
-    coords = activeSite.mapData?.siteSurvey?.siteLocation?.geometry?.coordinates
-  }
+  const coords = getSiteCoordinates(activeSite)
 
   // Coordinates are stored as [lng, lat] in GeoJSON format
   if (coords && coords.length >= 2) {
@@ -237,8 +252,18 @@ export default function ProjectTailgate({ project, onUpdate }) {
 
   const tailgate = project.tailgate || { days: [] }
   const days = tailgate.days || []
-  const currentDay = days[selectedDayIndex] || createDefaultTailgateDay()
+
+  // Ensure selectedDayIndex is within bounds
+  const safeSelectedIndex = days.length > 0 ? Math.min(selectedDayIndex, days.length - 1) : 0
+  const currentDay = days[safeSelectedIndex] || createDefaultTailgateDay()
   const isMultiDay = tailgate.isMultiDay || days.length > 1
+
+  // Auto-correct selectedDayIndex if out of bounds
+  useEffect(() => {
+    if (days.length > 0 && selectedDayIndex >= days.length) {
+      setSelectedDayIndex(days.length - 1)
+    }
+  }, [days.length, selectedDayIndex])
 
   // Update functions
   const updateTailgate = (updates) => {
@@ -247,7 +272,14 @@ export default function ProjectTailgate({ project, onUpdate }) {
 
   const updateCurrentDay = (updates) => {
     const newDays = [...days]
-    newDays[selectedDayIndex] = { ...currentDay, ...updates }
+    // Use safe index to prevent sparse arrays
+    const idx = days.length > 0 ? Math.min(selectedDayIndex, days.length - 1) : 0
+    if (newDays[idx]) {
+      newDays[idx] = { ...newDays[idx], ...updates }
+    } else {
+      // Create default day if somehow missing
+      newDays[idx] = { ...createDefaultTailgateDay(), ...updates }
+    }
     updateTailgate({ days: newDays })
   }
 

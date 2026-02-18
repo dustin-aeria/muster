@@ -21,7 +21,7 @@ const AUTOTABLE_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.
 let jspdfLoaded = false
 let loadingPromise = null
 
-function loadScript(src) {
+function loadScript(src, timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
     if (document.querySelector(`script[src="${src}"]`)) {
       resolve()
@@ -30,8 +30,22 @@ function loadScript(src) {
     const script = document.createElement('script')
     script.src = src
     script.async = true
-    script.onload = resolve
-    script.onerror = () => reject(new Error(`Failed to load ${src}`))
+
+    // Timeout handler
+    const timeoutId = setTimeout(() => {
+      script.onload = null
+      script.onerror = null
+      reject(new Error(`Timeout loading ${src}`))
+    }, timeoutMs)
+
+    script.onload = () => {
+      clearTimeout(timeoutId)
+      resolve()
+    }
+    script.onerror = () => {
+      clearTimeout(timeoutId)
+      reject(new Error(`Failed to load ${src}`))
+    }
     document.head.appendChild(script)
   })
 }

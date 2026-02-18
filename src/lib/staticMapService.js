@@ -6,6 +6,8 @@
  * @location src/lib/staticMapService.js
  */
 
+import { logger } from './logger'
+
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || ''
 
 // Map styles available
@@ -34,17 +36,17 @@ export function generateStaticMapUrl(site, options = {}) {
   } = options
 
   if (!MAPBOX_TOKEN) {
-    console.warn('Mapbox token not available for static map generation')
+    logger.warn('Mapbox token not available for static map generation')
     return null
   }
 
   const mapData = site?.mapData
   if (!mapData) {
-    console.warn('No mapData found for site:', site?.name || site?.id)
+    logger.debug('No mapData found for site:', site?.name || site?.id)
     return null
   }
 
-  console.log('Generating static map for site:', site?.name, 'mapData keys:', Object.keys(mapData))
+  logger.debug('Generating static map for site:', site?.name)
 
   // Collect all coordinates to calculate bounds
   const coordinates = []
@@ -185,7 +187,7 @@ export async function fetchMapAsDataUrl(url) {
   try {
     const response = await fetch(url)
     if (!response.ok) {
-      console.warn('Failed to fetch static map:', response.status)
+      logger.warn('Failed to fetch static map:', response.status, response.statusText)
       return null
     }
 
@@ -197,7 +199,7 @@ export async function fetchMapAsDataUrl(url) {
       reader.readAsDataURL(blob)
     })
   } catch (error) {
-    console.warn('Error fetching static map:', error)
+    logger.warn('Error fetching static map:', error.message)
     return null
   }
 }
@@ -223,15 +225,28 @@ export async function getSiteMapImage(site, options = {}) {
 export async function getProjectMapImages(project, options = {}) {
   const sites = project?.sites || []
   const mapImages = {}
+  const failures = []
 
   await Promise.all(
     sites.map(async (site) => {
-      const dataUrl = await getSiteMapImage(site, options)
-      if (dataUrl) {
-        mapImages[site.id] = dataUrl
+      try {
+        const dataUrl = await getSiteMapImage(site, options)
+        if (dataUrl) {
+          mapImages[site.id] = dataUrl
+        } else {
+          failures.push({ siteId: site.id, siteName: site.name, reason: 'No map data or token' })
+        }
+      } catch (err) {
+        failures.push({ siteId: site.id, siteName: site.name, reason: err.message })
+        logger.warn(`Failed to generate map for site ${site.name || site.id}:`, err)
       }
     })
   )
+
+  // Log summary if any failures
+  if (failures.length > 0) {
+    logger.warn(`Map generation: ${Object.keys(mapImages).length}/${sites.length} succeeded, ${failures.length} failed`, failures)
+  }
 
   return mapImages
 }

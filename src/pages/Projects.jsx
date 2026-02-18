@@ -26,6 +26,14 @@ import {
 } from 'lucide-react'
 import { getProjects, deleteProject, duplicateProject, getClients } from '../lib/firestore'
 import { useOrganizationContext } from '../contexts/OrganizationContext'
+
+// Timeout wrapper for async operations
+const withTimeout = (promise, ms = 30000, errorMessage = 'Operation timed out') => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(errorMessage)), ms))
+  ])
+}
 import { usePermissions } from '../hooks/usePermissions'
 import { CanEdit, CanDelete } from '../components/PermissionGuard'
 import NewProjectModal from '../components/NewProjectModal'
@@ -67,21 +75,36 @@ export default function Projects() {
     }
   }, [organizationId])
 
+  // Close menu on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && menuOpen) {
+        setMenuOpen(null)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [menuOpen])
+
   const loadData = async () => {
     if (!organizationId) return
     setLoading(true)
     setLoadError(null)
     try {
-      // Load projects and clients in parallel
-      const [projectsData, clientsData] = await Promise.all([
-        getProjects(organizationId),
-        getClients(organizationId)
-      ])
+      // Load projects and clients in parallel with 30s timeout
+      const [projectsData, clientsData] = await withTimeout(
+        Promise.all([
+          getProjects(organizationId),
+          getClients(organizationId)
+        ]),
+        30000,
+        'Loading projects timed out. Please check your connection.'
+      )
       setProjects(projectsData)
       setClients(clientsData)
     } catch (err) {
       logger.error('Failed to load projects:', err)
-      setLoadError('Failed to load projects. Please try again.')
+      setLoadError(err.message || 'Failed to load projects. Please try again.')
     } finally {
       setLoading(false)
     }

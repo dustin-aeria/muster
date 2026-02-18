@@ -47,6 +47,7 @@ export default function TailgateFlightPlanEditor({
   const boundaryVerticesRef = useRef([])
 
   const [isLoading, setIsLoading] = useState(true)
+  const [mapLoadError, setMapLoadError] = useState(null)
   const [activeTool, setActiveTool] = useState(null)
   const [isDrawingBoundary, setIsDrawingBoundary] = useState(false)
 
@@ -138,14 +139,32 @@ export default function TailgateFlightPlanEditor({
     }
 
     const initMap = async () => {
-      // Load Leaflet
+      // Load Leaflet with error handling and timeout
       if (!window.L) {
-        await new Promise((resolve) => {
-          const script = document.createElement('script')
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-          script.onload = resolve
-          document.body.appendChild(script)
-        })
+        try {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script')
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+            script.onload = resolve
+            script.onerror = () => reject(new Error('Failed to load Leaflet library'))
+            document.body.appendChild(script)
+
+            // Timeout after 15 seconds
+            setTimeout(() => reject(new Error('Leaflet load timeout')), 15000)
+          })
+        } catch (err) {
+          logger.error('Failed to load map library:', err)
+          setMapLoadError('Failed to load map. Please check your internet connection.')
+          setIsLoading(false)
+          return
+        }
+      }
+
+      if (!window.L) {
+        logger.error('Leaflet not available after load')
+        setMapLoadError('Map library not available.')
+        setIsLoading(false)
+        return
       }
 
       const L = window.L
@@ -551,9 +570,23 @@ export default function TailgateFlightPlanEditor({
 
       {/* Map */}
       <div className="relative" style={{ height: 350 }}>
-        {isLoading && (
+        {isLoading && !mapLoadError && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
             <Loader2 className="w-6 h-6 animate-spin text-aeria-blue" />
+          </div>
+        )}
+        {mapLoadError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-red-50 z-10">
+            <div className="text-center p-4">
+              <X className="w-8 h-8 text-red-500 mx-auto mb-2" />
+              <p className="text-red-700 font-medium">{mapLoadError}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-2 px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+              >
+                Reload Page
+              </button>
+            </div>
           </div>
         )}
         <div ref={mapContainerRef} className="w-full h-full" />

@@ -303,12 +303,15 @@ export default function ProjectView() {
   const handleUpdate = useCallback((updates) => {
     setProject(prev => {
       if (!prev) return prev
-      
+
       const newProject = { ...prev, ...updates }
-      
+
+      // Sync ref immediately to prevent stale data on unmount
+      projectRef.current = newProject
+
       // Schedule debounced save
       scheduleSave(newProject)
-      
+
       return newProject
     })
   }, [scheduleSave])
@@ -346,11 +349,13 @@ export default function ProjectView() {
     }
   }
 
-  // Filter visible tabs based on enabled sections
-  const visibleTabs = tabs.filter(tab => {
-    if (!tab.toggleable) return true
-    return project?.sections?.[tab.sectionKey]
-  })
+  // Filter visible tabs based on enabled sections (memoized)
+  const visibleTabs = useMemo(() => {
+    return tabs.filter(tab => {
+      if (!tab.toggleable) return true
+      return project?.sections?.[tab.sectionKey]
+    })
+  }, [project?.sections])
 
   // Get tabs for the current phase
   const phaseTabs = getTabsForPhase(activePhase)
