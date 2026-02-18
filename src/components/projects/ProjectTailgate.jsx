@@ -900,7 +900,7 @@ export default function ProjectTailgate({ project, onUpdate }) {
           <div className="mt-4">
             <TailgateFlightPlanEditor
               site={activeSite}
-              initialMapData={currentDay?.tailgateMapData}
+              previousEdits={currentDay?.tailgateMapData}
               onSave={(mapData) => {
                 updateCurrentDay({
                   tailgateMapData: mapData,

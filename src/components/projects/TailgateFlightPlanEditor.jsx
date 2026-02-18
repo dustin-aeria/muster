@@ -36,7 +36,7 @@ const TOOLS = [
 
 export default function TailgateFlightPlanEditor({
   site,
-  initialMapData,
+  previousEdits,  // Previously saved field adjustments (optional)
   onSave,
   onCancel
 }) {
@@ -59,6 +59,9 @@ export default function TailgateFlightPlanEditor({
   // Track if changes were made
   const [hasChanges, setHasChanges] = useState(false)
 
+  // Track if previous edits are available but not applied
+  const [hasPreviousEdits] = useState(!!previousEdits?.editedAt)
+
   // Refs for click handler
   const activeToolRef = useRef(null)
   const isDrawingBoundaryRef = useRef(false)
@@ -67,31 +70,43 @@ export default function TailgateFlightPlanEditor({
   useEffect(() => { activeToolRef.current = activeTool }, [activeTool])
   useEffect(() => { isDrawingBoundaryRef.current = isDrawingBoundary }, [isDrawingBoundary])
 
-  // Initialize from site data or provided initialMapData
-  useEffect(() => {
-    const sourceData = initialMapData || site?.mapData?.flightPlan || {}
-    const siteSurvey = site?.mapData?.siteSurvey || {}
+  // Helper to extract coordinates from GeoJSON
+  const extractCoords = (feature) => {
+    if (!feature?.geometry?.coordinates) return null
+    const [lng, lat] = feature.geometry.coordinates
+    return { lat, lng }
+  }
 
-    // Extract coordinates from GeoJSON format
-    const extractCoords = (feature) => {
-      if (!feature?.geometry?.coordinates) return null
-      const [lng, lat] = feature.geometry.coordinates
-      return { lat, lng }
-    }
-
+  // Load data from a source (site or previous edits)
+  const loadFromSource = (sourceData, siteSurvey) => {
     setLaunchPoint(extractCoords(sourceData.launchPoint))
     setRecoveryPoint(extractCoords(sourceData.recoveryPoint))
     setPilotPosition(extractCoords(sourceData.pilotPosition))
 
     // Extract boundary from flight geography or operations boundary
-    const boundaryFeature = sourceData.flightGeography || siteSurvey.operationsBoundary
+    const boundaryFeature = sourceData.flightGeography || siteSurvey?.operationsBoundary
     if (boundaryFeature?.geometry?.coordinates?.[0]) {
       const coords = boundaryFeature.geometry.coordinates[0]
       setFlightBoundary(coords.map(([lng, lat]) => ({ lat, lng })))
     } else {
       setFlightBoundary([])
     }
-  }, [site, initialMapData])
+  }
+
+  // Always initialize from LATEST site data (not previous edits)
+  useEffect(() => {
+    const sourceData = site?.mapData?.flightPlan || {}
+    const siteSurvey = site?.mapData?.siteSurvey || {}
+    loadFromSource(sourceData, siteSurvey)
+  }, [site])
+
+  // Function to restore previous field adjustments
+  const restorePreviousEdits = () => {
+    if (previousEdits) {
+      loadFromSource(previousEdits, site?.mapData?.siteSurvey || {})
+      setHasChanges(true)
+    }
+  }
 
   // Initialize map
   useEffect(() => {
@@ -228,8 +243,8 @@ export default function TailgateFlightPlanEditor({
         }
       }
 
-      // Add existing markers
-      const sourceData = initialMapData || site?.mapData?.flightPlan || {}
+      // Add existing markers from latest site data
+      const sourceData = site?.mapData?.flightPlan || {}
 
       if (sourceData.launchPoint?.geometry?.coordinates) {
         const [lng, lat] = sourceData.launchPoint.geometry.coordinates
@@ -400,6 +415,21 @@ export default function TailgateFlightPlanEditor({
     <div className="tailgate-map-container border border-gray-200 rounded-lg overflow-hidden bg-white">
       {/* Toolbar */}
       <div className="p-3 bg-gray-50 border-b border-gray-200">
+        {/* Previous edits notice */}
+        {hasPreviousEdits && !hasChanges && (
+          <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+            <span className="text-sm text-amber-800">
+              You have previous field adjustments from {new Date(previousEdits.editedAt).toLocaleString()}
+            </span>
+            <button
+              onClick={restorePreviousEdits}
+              className="px-3 py-1 text-sm bg-amber-100 text-amber-800 rounded hover:bg-amber-200"
+            >
+              Restore Previous
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-2">
           <h4 className="font-medium text-gray-900 flex items-center gap-2">
             <Plane className="w-4 h-4 text-aeria-blue" />
@@ -411,7 +441,7 @@ export default function TailgateFlightPlanEditor({
               className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded flex items-center gap-1"
             >
               <RotateCcw className="w-3 h-3" />
-              Reset
+              Reset to Site Plan
             </button>
           </div>
         </div>
@@ -546,7 +576,7 @@ export default function TailgateFlightPlanEditor({
 
 TailgateFlightPlanEditor.propTypes = {
   site: PropTypes.object,
-  initialMapData: PropTypes.object,
+  previousEdits: PropTypes.object,
   onSave: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired
 }
