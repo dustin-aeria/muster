@@ -41,6 +41,7 @@ import { logger } from '../../lib/logger'
 import { sendTeamNotification } from '../../lib/teamNotificationService'
 import { getSiteMapImage } from '../../lib/staticMapService'
 import WeatherWidget from '../weather/WeatherWidget'
+import TailgateFlightPlanEditor from './TailgateFlightPlanEditor'
 
 // Helper component to get coordinates and show weather
 function SiteWeatherWidget({ activeSite }) {
@@ -178,7 +179,8 @@ const createDefaultTailgateDay = (date) => ({
   // Flight window for flight plan notifications
   operationStartTime: '',   // HH:MM format
   operationEndTime: '',     // HH:MM format
-  editFlightPlanEnabled: false
+  editFlightPlanEnabled: false,
+  tailgateMapData: null  // Field-adjusted flight plan data (GeoJSON)
 })
 
 export default function ProjectTailgate({ project, onUpdate }) {
@@ -345,10 +347,24 @@ export default function ProjectTailgate({ project, onUpdate }) {
       // Send flight plan notification with PDF attachment
       try {
         // Generate map image for the PDF
+        // Use tailgate-specific map data if field adjustments were made
         let mapImage = null
+        const useFieldAdjustments = currentDay.tailgateMapData && currentDay.tailgateMapData.editedAt
+
         if (activeSite) {
           try {
-            mapImage = await getSiteMapImage(activeSite, {
+            // If we have field adjustments, create a modified site object for map generation
+            const siteForMap = useFieldAdjustments
+              ? {
+                  ...activeSite,
+                  mapData: {
+                    ...activeSite.mapData,
+                    flightPlan: currentDay.tailgateMapData
+                  }
+                }
+              : activeSite
+
+            mapImage = await getSiteMapImage(siteForMap, {
               width: 800,
               height: 500,
               style: 'satelliteStreets'
@@ -358,8 +374,22 @@ export default function ProjectTailgate({ project, onUpdate }) {
           }
         }
 
-        // Generate flight plan PDF
-        const flightPlanPdf = await generateFlightPlanBriefPDF(activeSite, {
+        // Generate flight plan PDF using field adjustments if available
+        const siteForPdf = useFieldAdjustments
+          ? {
+              ...activeSite,
+              flightPlan: {
+                ...(activeSite?.flightPlan || {}),
+                ...currentDay.tailgateMapData
+              },
+              mapData: {
+                ...(activeSite?.mapData || {}),
+                flightPlan: currentDay.tailgateMapData
+              }
+            }
+          : activeSite
+
+        const flightPlanPdf = await generateFlightPlanBriefPDF(siteForPdf, {
           projectName: project.name,
           projectCode: project.projectCode,
           clientName: project.clientName,
@@ -764,24 +794,32 @@ export default function ProjectTailgate({ project, onUpdate }) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="operation-start-time" className="block text-sm font-medium text-gray-700 mb-1">
               Start Time
             </label>
             <input
+              id="operation-start-time"
               type="time"
-              value={currentDay.operationStartTime || ''}
-              onChange={(e) => updateCurrentDay({ operationStartTime: e.target.value })}
+              value={currentDay?.operationStartTime || ''}
+              onChange={(e) => {
+                console.log('Start time change:', e.target.value)
+                updateCurrentDay({ operationStartTime: e.target.value })
+              }}
               className="input"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="operation-end-time" className="block text-sm font-medium text-gray-700 mb-1">
               End Time
             </label>
             <input
+              id="operation-end-time"
               type="time"
-              value={currentDay.operationEndTime || ''}
-              onChange={(e) => updateCurrentDay({ operationEndTime: e.target.value })}
+              value={currentDay?.operationEndTime || ''}
+              onChange={(e) => {
+                console.log('End time change:', e.target.value)
+                updateCurrentDay({ operationEndTime: e.target.value })
+              }}
               className="input"
             />
           </div>
@@ -789,11 +827,15 @@ export default function ProjectTailgate({ project, onUpdate }) {
 
         {/* Edit Flight Plan Toggle */}
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <label className="flex items-center gap-3 cursor-pointer">
+          <label htmlFor="edit-flight-plan-toggle" className="flex items-center gap-3 cursor-pointer">
             <input
+              id="edit-flight-plan-toggle"
               type="checkbox"
-              checked={currentDay.editFlightPlanEnabled || false}
-              onChange={(e) => updateCurrentDay({ editFlightPlanEnabled: e.target.checked })}
+              checked={currentDay?.editFlightPlanEnabled || false}
+              onChange={(e) => {
+                console.log('Edit flight plan toggle:', e.target.checked)
+                updateCurrentDay({ editFlightPlanEnabled: e.target.checked })
+              }}
               className="w-4 h-4 text-aeria-blue rounded"
             />
             <div>
@@ -801,7 +843,38 @@ export default function ProjectTailgate({ project, onUpdate }) {
               <p className="text-sm text-gray-500">Make adjustments before today's operations</p>
             </div>
           </label>
+
+          {/* Show saved indicator if field adjustments exist */}
+          {currentDay?.tailgateMapData && (
+            <div className="mt-2 ml-7 flex items-center gap-2 text-sm text-green-600">
+              <Check className="w-4 h-4" />
+              Field adjustments saved
+              <span className="text-gray-400">
+                ({new Date(currentDay.tailgateMapData.editedAt).toLocaleTimeString()})
+              </span>
+            </div>
+          )}
         </div>
+
+        {/* Inline Flight Plan Editor */}
+        {currentDay?.editFlightPlanEnabled && (
+          <div className="mt-4">
+            <TailgateFlightPlanEditor
+              site={activeSite}
+              initialMapData={currentDay?.tailgateMapData}
+              onSave={(mapData) => {
+                updateCurrentDay({
+                  tailgateMapData: mapData,
+                  editFlightPlanEnabled: false
+                })
+                logger.info('Tailgate flight plan adjustments saved')
+              }}
+              onCancel={() => {
+                updateCurrentDay({ editFlightPlanEnabled: false })
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Multi-Day Header */}
