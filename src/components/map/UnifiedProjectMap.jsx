@@ -64,14 +64,16 @@ if (typeof document !== 'undefined') {
         0%, 100% { opacity: 1; transform: scale(1); }
         50% { opacity: 0.6; transform: scale(1.1); }
       }
-      /* Marker hover effects */
-      .map-marker { cursor: grab !important; }
-      .map-marker:hover { transform: scale(1.15); filter: brightness(1.1); }
-      .map-marker:active { cursor: grabbing !important; }
-      /* MapboxDraw vertex styling */
-      .mapbox-gl-draw_polygon, .mapbox-gl-draw_line { cursor: pointer; }
-      .mapboxgl-canvas { cursor: crosshair; }
+      /* Default cursor on map canvas */
+      .mapboxgl-canvas { cursor: default; }
       .mapboxgl-canvas-container.mapboxgl-interactive:active { cursor: grabbing; }
+      /* Marker hover effects */
+      .map-marker { cursor: pointer !important; }
+      .map-marker:hover { transform: scale(1.15); filter: brightness(1.1); cursor: grab !important; }
+      .map-marker:active { cursor: grabbing !important; }
+      /* MapboxDraw vertex/polygon styling */
+      .mapbox-gl-draw_polygon, .mapbox-gl-draw_line { cursor: pointer; }
+      .mapboxgl-canvas-container.mapboxgl-interactive .mapboxgl-canvas.mode-direct_select { cursor: default; }
     `
     document.head.appendChild(style)
   }

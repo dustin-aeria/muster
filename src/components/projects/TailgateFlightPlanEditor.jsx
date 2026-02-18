@@ -126,13 +126,13 @@ export default function TailgateFlightPlanEditor({
       style.id = 'tailgate-map-styles'
       style.textContent = `
         .custom-div-icon { background: transparent !important; border: none !important; }
-        .tailgate-map-container .leaflet-container { cursor: crosshair; }
-        .tailgate-map-container .leaflet-dragging .leaflet-container { cursor: move; }
-        .tailgate-map-container .leaflet-marker-icon { cursor: grab !important; }
-        .tailgate-map-container .leaflet-marker-icon:hover { transform: scale(1.15); filter: brightness(1.1); }
+        .tailgate-map-container .leaflet-container { cursor: default; }
+        .tailgate-map-container .leaflet-dragging .leaflet-container { cursor: grabbing; }
+        .tailgate-map-container .leaflet-marker-icon { cursor: pointer !important; }
+        .tailgate-map-container .leaflet-marker-icon:hover { transform: scale(1.15); filter: brightness(1.1); cursor: grab !important; }
         .tailgate-map-container .leaflet-marker-dragging .leaflet-marker-icon { cursor: grabbing !important; }
-        .boundary-vertex { cursor: grab !important; transition: all 0.15s ease; }
-        .boundary-vertex:hover { transform: scale(1.3); }
+        .boundary-vertex { cursor: pointer !important; transition: all 0.15s ease; }
+        .boundary-vertex:hover { transform: scale(1.3); cursor: grab !important; }
       `
       document.head.appendChild(style)
     }
