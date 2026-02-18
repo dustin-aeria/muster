@@ -328,20 +328,25 @@ export default function TailgateFlightPlanEditor({
         draggable: true
       }).addTo(map)
 
-      // Handle drag to update boundary
-      vertex.on('drag', (e) => {
-        const pos = e.target.getLatLng()
-        setFlightBoundary(prev => {
-          const newBoundary = [...prev]
-          newBoundary[index] = {
+      // During drag, update polygon visually (without state update)
+      vertex.on('drag', () => {
+        if (boundaryLayerRef.current) {
+          // Get current positions of all vertices
+          const newLatLngs = boundaryVerticesRef.current.map(v => v.getLatLng())
+          boundaryLayerRef.current.setLatLngs(newLatLngs)
+        }
+      })
+
+      // On drag end, update state with final positions
+      vertex.on('dragend', () => {
+        const newBoundary = boundaryVerticesRef.current.map(v => {
+          const pos = v.getLatLng()
+          return {
             lat: parseFloat(pos.lat.toFixed(6)),
             lng: parseFloat(pos.lng.toFixed(6))
           }
-          return newBoundary
         })
-      })
-
-      vertex.on('dragend', () => {
+        setFlightBoundary(newBoundary)
         setHasChanges(true)
       })
 
