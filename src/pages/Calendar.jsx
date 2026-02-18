@@ -37,7 +37,7 @@ import { getInsurancePolicies } from '../lib/firestoreInsurance'
 import { getInspections } from '../lib/firestoreInspections'
 import { getUpcomingMaintenance, getAllMaintainableItems } from '../lib/firestoreMaintenance'
 import { getPermitExpiryEvents } from '../lib/firestorePermits'
-import { getTasksWithDueDates } from '../lib/firestoreTasks'
+import { getTasksWithDueDates, TASK_CATEGORY } from '../lib/firestoreTasks'
 import { getSFOCApplications } from '../lib/firestoreSFOC'
 import { logger } from '../lib/logger'
 
@@ -106,6 +106,7 @@ export default function Calendar() {
       const tasks = await getTasksWithDueDates(organizationId).catch(() => [])
       tasks.forEach(task => {
         if (task.dueDate && task.status !== 'complete') {
+          const category = TASK_CATEGORY[task.category] || TASK_CATEGORY.general
           allEvents.push({
             id: `task-${task.id}`,
             title: task.title,
@@ -114,9 +115,12 @@ export default function Calendar() {
             source: 'task',
             sourceId: task.id,
             status: task.status,
+            category: task.category || 'general',
+            categoryColor: category.color,
             details: {
               priority: task.priority,
-              description: task.description
+              description: task.description,
+              category: category.label
             }
           })
         }
@@ -538,10 +542,12 @@ export default function Calendar() {
                   <div className="space-y-1">
                     {dayEvents.slice(0, 3).map(event => {
                       const eventType = EVENT_TYPES[event.type]
+                      // Use category color for tasks, otherwise use event type color
+                      const bgColor = event.categoryColor || eventType.color
                       return (
                         <div
                           key={event.id}
-                          className={`text-xs px-1.5 py-0.5 rounded truncate ${eventType.color} text-white`}
+                          className={`text-xs px-1.5 py-0.5 rounded truncate ${bgColor} text-white`}
                           title={event.title}
                         >
                           {event.title}
@@ -583,19 +589,29 @@ export default function Calendar() {
               {getEventsForDay(selectedDate).map(event => {
                 const eventType = EVENT_TYPES[event.type]
                 const EventIcon = eventType.icon
+                // Use category color for tasks
+                const borderColor = event.categoryColor
+                  ? event.categoryColor.replace('bg-', 'border-')
+                  : eventType.color.replace('bg-', 'border-')
+                const category = event.category ? TASK_CATEGORY[event.category] : null
 
                 return (
                   <div
                     key={event.id}
-                    className={`flex items-start gap-3 p-3 rounded-lg border-l-4 ${eventType.color.replace('bg-', 'border-')} bg-gray-50`}
+                    className={`flex items-start gap-3 p-3 rounded-lg border-l-4 ${borderColor} bg-gray-50`}
                   >
-                    <div className={`p-2 rounded-lg ${eventType.bgLight}`}>
+                    <div className={`p-2 rounded-lg ${category?.lightColor || eventType.bgLight}`}>
                       <EventIcon className="w-4 h-4" />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{event.title}</h4>
                       {event.subtitle && (
                         <p className="text-sm text-gray-600">{event.subtitle}</p>
+                      )}
+                      {event.details?.category && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Category: {event.details.category}
+                        </p>
                       )}
                       {event.details?.location && (
                         <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
@@ -607,8 +623,8 @@ export default function Calendar() {
                         <p className="text-sm text-gray-600 mt-1">{event.description}</p>
                       )}
                     </div>
-                    <span className={`px-2 py-0.5 text-xs rounded-full ${eventType.bgLight}`}>
-                      {eventType.label}
+                    <span className={`px-2 py-0.5 text-xs rounded-full ${category?.lightColor || eventType.bgLight}`}>
+                      {category?.label || eventType.label}
                     </span>
                   </div>
                 )

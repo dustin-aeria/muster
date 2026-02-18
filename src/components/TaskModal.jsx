@@ -11,7 +11,8 @@ import {
   deleteTask,
   TASK_STATUS,
   TASK_PRIORITY,
-  TASK_VISIBILITY
+  TASK_VISIBILITY,
+  TASK_CATEGORY
 } from '../lib/firestoreTasks'
 
 export default function TaskModal({
@@ -29,6 +30,7 @@ export default function TaskModal({
     description: '',
     status: 'todo',
     priority: 'medium',
+    category: 'general',
     dueDate: '',
     projectId: '',
     assignedTo: userId || '',
@@ -46,6 +48,7 @@ export default function TaskModal({
         description: task.description || '',
         status: task.status || 'todo',
         priority: task.priority || 'medium',
+        category: task.category || 'general',
         dueDate: task.dueDate
           ? (task.dueDate instanceof Date
               ? task.dueDate.toISOString().split('T')[0]
@@ -62,6 +65,7 @@ export default function TaskModal({
         description: '',
         status: 'todo',
         priority: 'medium',
+        category: 'general',
         dueDate: '',
         projectId: '',
         assignedTo: userId || '',
@@ -185,6 +189,29 @@ export default function TaskModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Add more details (optional)"
             />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Category
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {Object.entries(TASK_CATEGORY).map(([key, cat]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, category: key }))}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    formData.category === key
+                      ? `${cat.color} text-white ring-2 ring-offset-2 ring-${cat.color.replace('bg-', '')}`
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Due Date & Priority */}

@@ -35,6 +35,18 @@ export const TASK_VISIBILITY = {
   team: { value: 'team', label: 'Team' }
 }
 
+// Task Category Constants with colors for calendar
+export const TASK_CATEGORY = {
+  general: { value: 'general', label: 'General', color: 'bg-gray-500', lightColor: 'bg-gray-100 text-gray-800' },
+  flight: { value: 'flight', label: 'Flight Ops', color: 'bg-sky-500', lightColor: 'bg-sky-100 text-sky-800' },
+  maintenance: { value: 'maintenance', label: 'Maintenance', color: 'bg-orange-500', lightColor: 'bg-orange-100 text-orange-800' },
+  safety: { value: 'safety', label: 'Safety', color: 'bg-red-500', lightColor: 'bg-red-100 text-red-800' },
+  training: { value: 'training', label: 'Training', color: 'bg-purple-500', lightColor: 'bg-purple-100 text-purple-800' },
+  admin: { value: 'admin', label: 'Admin', color: 'bg-slate-500', lightColor: 'bg-slate-100 text-slate-800' },
+  client: { value: 'client', label: 'Client', color: 'bg-emerald-500', lightColor: 'bg-emerald-100 text-emerald-800' },
+  planning: { value: 'planning', label: 'Planning', color: 'bg-indigo-500', lightColor: 'bg-indigo-100 text-indigo-800' }
+}
+
 /**
  * Create a new task
  * @param {Object} data - Task data
@@ -49,6 +61,7 @@ export async function createTask(data, organizationId, userId) {
     description: data.description || '',
     status: data.status || 'todo',
     priority: data.priority || 'medium',
+    category: data.category || 'general',
     dueDate: data.dueDate || null,
     projectId: data.projectId || null,
     assignedTo: data.assignedTo || userId,

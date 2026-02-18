@@ -44,3 +44,4 @@ BUSINESS_CASE.md
 *.pdf
 *.docx
 *.doc
+.vercel
