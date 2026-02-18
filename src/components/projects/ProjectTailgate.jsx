@@ -787,9 +787,26 @@ export default function ProjectTailgate({ project, onUpdate }) {
 
       {/* Flight Window Section */}
       <div className="card mb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Clock className="w-5 h-5 text-aeria-blue" />
-          <h3 className="font-medium text-gray-900">Flight Window</h3>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-aeria-blue" />
+            <h3 className="font-medium text-gray-900">Flight Window</h3>
+          </div>
+          <button
+            onClick={() => {
+              const now = new Date()
+              const today = now.toISOString().split('T')[0]
+              const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
+              updateCurrentDay({
+                date: today,
+                operationStartTime: currentTime
+              })
+            }}
+            className="px-3 py-1.5 text-sm bg-aeria-blue text-white rounded-lg hover:bg-aeria-blue/90 flex items-center gap-1.5"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            Start Now
+          </button>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -797,31 +814,53 @@ export default function ProjectTailgate({ project, onUpdate }) {
             <label htmlFor="operation-start-time" className="block text-sm font-medium text-gray-700 mb-1">
               Start Time
             </label>
-            <input
-              id="operation-start-time"
-              type="time"
-              value={currentDay?.operationStartTime || ''}
-              onChange={(e) => {
-                console.log('Start time change:', e.target.value)
-                updateCurrentDay({ operationStartTime: e.target.value })
-              }}
-              className="input"
-            />
+            <div className="flex gap-2">
+              <input
+                id="operation-start-time"
+                type="time"
+                value={currentDay?.operationStartTime || ''}
+                onChange={(e) => {
+                  updateCurrentDay({ operationStartTime: e.target.value })
+                }}
+                className="input flex-1"
+              />
+              <button
+                onClick={() => {
+                  const currentTime = new Date().toTimeString().slice(0, 5)
+                  updateCurrentDay({ operationStartTime: currentTime })
+                }}
+                className="px-2 py-1 text-xs text-gray-600 hover:text-aeria-blue border border-gray-200 rounded hover:border-aeria-blue"
+                title="Set to current time"
+              >
+                Now
+              </button>
+            </div>
           </div>
           <div>
             <label htmlFor="operation-end-time" className="block text-sm font-medium text-gray-700 mb-1">
               End Time
             </label>
-            <input
-              id="operation-end-time"
-              type="time"
-              value={currentDay?.operationEndTime || ''}
-              onChange={(e) => {
-                console.log('End time change:', e.target.value)
-                updateCurrentDay({ operationEndTime: e.target.value })
-              }}
-              className="input"
-            />
+            <div className="flex gap-2">
+              <input
+                id="operation-end-time"
+                type="time"
+                value={currentDay?.operationEndTime || ''}
+                onChange={(e) => {
+                  updateCurrentDay({ operationEndTime: e.target.value })
+                }}
+                className="input flex-1"
+              />
+              <button
+                onClick={() => {
+                  const currentTime = new Date().toTimeString().slice(0, 5)
+                  updateCurrentDay({ operationEndTime: currentTime })
+                }}
+                className="px-2 py-1 text-xs text-gray-600 hover:text-aeria-blue border border-gray-200 rounded hover:border-aeria-blue"
+                title="Set to current time"
+              >
+                Now
+              </button>
+            </div>
           </div>
         </div>
 
