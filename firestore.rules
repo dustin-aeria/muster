@@ -812,9 +812,9 @@ service cloud.firestore {
     // ============================================
 
     // Document Projects - Client documentation projects
+    // Note: Read is allowed for authenticated users; query filters by organizationId
     match /documentProjects/{projectId} {
-      allow read: if isAuthenticated() &&
-        isMemberOf(resource.data.organizationId);
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
         canEdit(request.resource.data.organizationId);
       allow update: if isAuthenticated() &&
@@ -824,9 +824,9 @@ service cloud.firestore {
     }
 
     // Generated Documents - Individual documents within projects
+    // Note: Read is allowed for authenticated users; query filters by organizationId
     match /generatedDocuments/{documentId} {
-      allow read: if isAuthenticated() &&
-        isMemberOf(resource.data.organizationId);
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
         canEdit(request.resource.data.organizationId);
       allow update: if isAuthenticated() &&

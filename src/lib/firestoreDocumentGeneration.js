@@ -694,7 +694,7 @@ export async function sendDocumentMessage(documentId, message, userId) {
 /**
  * Generate content for a specific section
  */
-export async function generateSectionContent(documentId, sectionId, prompt, userId) {
+export async function generateSectionContent(documentId, sectionId, prompt, userId, options = {}) {
   const functions = getFunctions()
   const generateSection = httpsCallable(functions, 'generateSectionContent')
 
@@ -703,12 +703,52 @@ export async function generateSectionContent(documentId, sectionId, prompt, user
       documentId,
       sectionId,
       prompt,
-      userId
+      userId,
+      enableResearch: options.enableResearch !== false // Default true
     })
 
     return result.data
   } catch (error) {
     console.error('Error generating section content:', error)
+    throw error
+  }
+}
+
+/**
+ * Search the knowledge base for relevant policies and procedures
+ * @param {string} query - Search query
+ * @param {string} type - 'all', 'policies', or 'procedures'
+ * @param {number} limit - Max results
+ * @returns {Promise<Object>} Search results
+ */
+export async function searchKnowledgeBase(query, type = 'all', limit = 10) {
+  const functions = getFunctions()
+  const search = httpsCallable(functions, 'searchKnowledgeBase')
+
+  try {
+    const result = await search({ query, type, limit })
+    return result.data
+  } catch (error) {
+    console.error('Error searching knowledge base:', error)
+    throw error
+  }
+}
+
+/**
+ * Get relevant knowledge base content for a specific document type
+ * @param {string} documentType - Document type (sms, ops_manual, etc.)
+ * @param {Object} projectContext - Project shared context for scope detection
+ * @returns {Promise<Object>} Relevant policies, procedures, and gaps
+ */
+export async function getKnowledgeForDocumentType(documentType, projectContext = {}) {
+  const functions = getFunctions()
+  const getKnowledge = httpsCallable(functions, 'getKnowledgeForDocumentType')
+
+  try {
+    const result = await getKnowledge({ documentType, projectContext })
+    return result.data
+  } catch (error) {
+    console.error('Error getting knowledge for document type:', error)
     throw error
   }
 }
@@ -790,6 +830,8 @@ export default {
   recordDocumentExport,
   sendDocumentMessage,
   generateSectionContent,
+  searchKnowledgeBase,
+  getKnowledgeForDocumentType,
   getDocumentTypeInfo,
   getAllDocumentTypes,
   getDocumentTokenUsage

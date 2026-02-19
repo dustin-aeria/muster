@@ -680,6 +680,8 @@ const documentGeneration = require('./documentGeneration')
 exports.sendDocumentMessage = documentGeneration.sendDocumentMessage
 exports.generateSectionContent = documentGeneration.generateSectionContent
 exports.getOrganizationTokenUsage = documentGeneration.getOrganizationTokenUsage
+exports.searchKnowledgeBase = documentGeneration.searchKnowledgeBase
+exports.getKnowledgeForDocumentType = documentGeneration.getKnowledgeForDocumentType
 
 // ============================================
 // Safety Declaration AI Functions

@@ -2,7 +2,12 @@
  * Document Generation Cloud Functions
  * Handles Claude API integration for AI-driven document generation
  *
- * @version 1.0.0
+ * Enhanced with:
+ * - Internal knowledge base (policies & procedures)
+ * - Smart content matching based on document type & client scope
+ * - Web research for gap-filling
+ *
+ * @version 2.0.0
  */
 
 const functions = require('firebase-functions/v1')
@@ -10,6 +15,9 @@ const admin = require('firebase-admin')
 
 // Initialize Anthropic SDK
 const Anthropic = require('@anthropic-ai/sdk')
+
+// Knowledge base service
+const knowledgeBase = require('./knowledgeBase/index.cjs')
 
 const db = admin.firestore()
 
@@ -20,7 +28,7 @@ const db = admin.firestore()
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 const MODEL = 'claude-sonnet-4-20250514'
 const MAX_CONTEXT_MESSAGES = 20
-const MAX_TOKENS = 4096
+const MAX_TOKENS = 8192  // Increased for comprehensive generation
 
 // Rate limiting
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
@@ -138,46 +146,52 @@ async function verifyDocumentAccess(documentId, userId) {
 // ============================================
 
 const DOCUMENT_TYPE_PROMPTS = {
-  sms: `You are an expert aviation safety consultant specializing in Safety Management Systems (SMS).
-You help create comprehensive SMS documentation that complies with ICAO standards and regulatory requirements.
+  sms: `You are an expert safety consultant specializing in Safety Management Systems (SMS).
+You help create comprehensive SMS documentation that complies with ICAO standards, Transport Canada regulations, and industry best practices.
 Focus on: Safety Policy, Safety Risk Management, Safety Assurance, and Safety Promotion.
-Use clear, professional language appropriate for regulatory documentation.`,
+Adapt content to the client's specific operations - whether drone/RPAS, industrial, or general business.`,
 
-  training_manual: `You are an expert aviation training specialist.
-You help create comprehensive training manuals covering ground training, flight training, proficiency standards, and recurrent training requirements.
-Ensure all content aligns with regulatory training requirements and industry best practices.`,
+  training_manual: `You are an expert training specialist.
+You help create comprehensive training manuals covering ground training, practical training, proficiency standards, and recurrent training requirements.
+Ensure all content aligns with regulatory training requirements and industry best practices.
+Adapt to the client's industry - aviation, construction, industrial, or other sectors.`,
 
-  maintenance_plan: `You are an expert aviation maintenance specialist.
+  maintenance_plan: `You are an expert maintenance specialist.
 You help create maintenance program documentation including policies, schedules, procedures, and record-keeping requirements.
-Ensure compliance with manufacturer recommendations and regulatory requirements.`,
+Ensure compliance with manufacturer recommendations and regulatory requirements.
+Adapt to equipment type - whether aircraft, drones, industrial equipment, or vehicles.`,
 
-  ops_manual: `You are an expert aviation operations consultant.
-You help create operations manuals covering organizational structure, flight operations, emergency procedures, and SOPs.
-Focus on practical, actionable procedures that ensure safe and efficient operations.`,
+  ops_manual: `You are an expert operations consultant.
+You help create operations manuals covering organizational structure, operations procedures, emergency procedures, and SOPs.
+Focus on practical, actionable procedures that ensure safe and efficient operations.
+Adapt to the client's industry and operational scope.`,
 
-  safety_declaration: `You are an expert in aviation safety declarations and risk assessment.
+  safety_declaration: `You are an expert in safety declarations and risk assessment.
 You help create safety declarations that clearly articulate the scope of operations, risk assessments, and commitment to safety.
-Ensure clarity and completeness for regulatory review.`,
+Ensure clarity and completeness for regulatory review.
+Adapt format based on applicable regulations.`,
 
   hse_manual: `You are an expert in Health, Safety, and Environment (HSE) management.
 You help create comprehensive HSE manuals covering policies, hazard management, incident procedures, and PPE requirements.
-Focus on practical workplace safety measures.`,
+Focus on practical workplace safety measures applicable to any industry.`,
 
-  risk_assessment: `You are an expert in aviation risk assessment and hazard management.
+  risk_assessment: `You are an expert in risk assessment and hazard management.
 You help create thorough risk assessments with hazard identification, risk analysis, and mitigation measures.
-Use structured risk matrices and clear evaluation criteria.`,
+Use structured risk matrices and clear evaluation criteria.
+Adapt methodology to the client's industry and operations.`,
 
   sop: `You are an expert in creating Standard Operating Procedures (SOPs).
 You help create clear, step-by-step procedures that ensure consistent, safe operations.
-Focus on clarity, completeness, and practical applicability.`,
+Focus on clarity, completeness, and practical applicability.
+Adapt to any industry or operational context.`,
 
   erp: `You are an expert in emergency response planning.
 You help create comprehensive emergency response plans including procedures, contacts, and communication protocols.
-Ensure plans are actionable and cover all relevant scenarios.`,
+Ensure plans are actionable and cover all relevant scenarios for the client's operations.`,
 
   compliance_matrix: `You are an expert in regulatory compliance management.
 You help create compliance matrices that track regulatory requirements, compliance status, and evidence documentation.
-Ensure thorough coverage of all applicable regulations.`
+Ensure thorough coverage of all applicable regulations for the client's industry.`
 }
 
 // ============================================
@@ -185,103 +199,87 @@ Ensure thorough coverage of all applicable regulations.`
 // ============================================
 
 /**
- * Build system prompt with document and project context
+ * Build comprehensive system prompt with knowledge base content
  */
-async function buildSystemPrompt(document, project, knowledgeBaseDocs = []) {
+async function buildEnhancedSystemPrompt(document, project) {
   const typePrompt = DOCUMENT_TYPE_PROMPTS[document.type] || DOCUMENT_TYPE_PROMPTS.sop
+
+  // Get relevant knowledge base content
+  const kbContext = knowledgeBase.buildKnowledgeContext(
+    document.type,
+    project.sharedContext,
+    12000 // Max tokens for knowledge base context
+  )
 
   let systemPrompt = `${typePrompt}
 
-## Current Document Context
-Document Type: ${document.type}
-Document Title: ${document.title}
-Version: ${document.version}
-Status: ${document.status}
+## Your Role
+You are helping ${project.clientName || 'this client'} create professional documentation.
+You have access to a comprehensive internal knowledge base with proven, compliant policies and procedures.
+Use this knowledge base as your PRIMARY source, adapting content to the client's specific needs.
+When the knowledge base doesn't cover something, use your expertise and research to fill gaps.
 
-## Document Sections
-${document.sections.map((s, i) => `${i + 1}. ${s.title}${s.content ? ' (has content)' : ' (empty)'}`).join('\n')}
-
-## Project Context
+## Client Context
 Client: ${project.clientName}
 Project: ${project.name}
 ${project.description ? `Description: ${project.description}` : ''}
 
-## Shared Context
-${project.sharedContext.companyProfile ? `Company Profile: ${project.sharedContext.companyProfile}` : ''}
-${project.sharedContext.operationsScope ? `Operations Scope: ${project.sharedContext.operationsScope}` : ''}
-${project.sharedContext.aircraftTypes?.length ? `Aircraft Types: ${project.sharedContext.aircraftTypes.join(', ')}` : ''}
-${project.sharedContext.regulations?.length ? `Applicable Regulations: ${project.sharedContext.regulations.join(', ')}` : ''}
-${project.sharedContext.customContext ? `Additional Context: ${project.sharedContext.customContext}` : ''}
+### Operations Profile
+${project.sharedContext?.companyProfile ? `Company Profile: ${project.sharedContext.companyProfile}` : ''}
+${project.sharedContext?.operationsScope ? `Operations Scope: ${project.sharedContext.operationsScope}` : ''}
+${project.sharedContext?.aircraftTypes?.length ? `Equipment/Aircraft: ${project.sharedContext.aircraftTypes.join(', ')}` : ''}
+${project.sharedContext?.regulations?.length ? `Applicable Regulations: ${project.sharedContext.regulations.join(', ')}` : ''}
+${project.sharedContext?.customContext ? `Additional Context: ${project.sharedContext.customContext}` : ''}
 
-${document.localContext?.specificRequirements ? `## Document-Specific Requirements\n${document.localContext.specificRequirements}` : ''}
-${document.localContext?.regulatoryReferences?.length ? `## Regulatory References\n${document.localContext.regulatoryReferences.join('\n')}` : ''}`
+### Client Industry Detection
+${kbContext.includesDroneOps ? '✓ Client operations include drone/RPAS work - include aviation-specific content' : '✗ Client does NOT appear to do drone/RPAS work - focus on general industry content'}
 
-  // Add knowledge base context if available
-  if (knowledgeBaseDocs.length > 0) {
-    systemPrompt += `\n\n## Reference Documents from Knowledge Base
-${knowledgeBaseDocs.map(doc => `### ${doc.title}\n${doc.content?.substring(0, 1000) || 'No content'}...`).join('\n\n')}`
-  }
+## Current Document
+Type: ${document.type}
+Title: ${document.title}
+Version: ${document.version}
+Status: ${document.status}
 
-  // Add cross-reference context
-  if (document.crossReferences?.length > 0) {
-    systemPrompt += `\n\n## Cross-References to Other Documents
-${document.crossReferences.map(ref => `- ${ref.referenceText}`).join('\n')}`
-  }
+### Document Sections
+${document.sections.map((s, i) => `${i + 1}. ${s.title}${s.content ? ' (has content)' : ' (empty)'}`).join('\n')}
 
-  systemPrompt += `
+${document.localContext?.specificRequirements ? `### Document-Specific Requirements\n${document.localContext.specificRequirements}` : ''}
+${document.localContext?.regulatoryReferences?.length ? `### Regulatory References\n${document.localContext.regulatoryReferences.join('\n')}` : ''}
+
+---
+
+## INTERNAL KNOWLEDGE BASE
+
+The following is your primary reference material. Adapt this content to the client's needs:
+
+### Policies Included (${kbContext.includedPolicies.length})
+${kbContext.includedPolicies.map(p => `- ${p.number}: ${p.title}`).join('\n')}
+
+### Procedures Included (${kbContext.includedProcedures.length})
+${kbContext.includedProcedures.map(p => `- ${p.number}: ${p.title}`).join('\n')}
+
+${kbContext.gaps.length > 0 ? `### Potential Gaps (may need research)
+Topics the client may need that aren't fully covered: ${kbContext.gaps.join(', ')}` : ''}
+
+---
+
+${kbContext.content}
+
+---
 
 ## Instructions
-- Generate professional, compliance-ready documentation
-- Use clear, precise language appropriate for regulatory review
-- Maintain consistency with existing document content
-- Reference applicable regulations and standards where appropriate
-- Format content in markdown for easy editing
-- When generating section content, provide complete, well-structured text
-- Ask clarifying questions if requirements are unclear`
+1. **Use the knowledge base content above as your primary source**
+2. **Adapt and customize** content to match the client's specific context
+3. **Maintain compliance** with relevant regulations
+4. **Fill gaps** using your expertise when the knowledge base doesn't cover something
+5. **Ask clarifying questions** if requirements are unclear
+6. **Format in markdown** for easy editing
+7. **Be thorough but concise** - professional documentation style
+8. **Reference specific regulations** where applicable`
 
-  return systemPrompt
-}
-
-/**
- * Search knowledge base for relevant documents
- */
-async function searchKnowledgeBase(query, orgId, limit = 5) {
-  try {
-    // Simple keyword-based search in knowledge base
-    const kbRef = db.collection('knowledgeBase')
-    const snapshot = await kbRef
-      .where('organizationId', '==', orgId)
-      .limit(20)
-      .get()
-
-    if (snapshot.empty) {
-      return []
-    }
-
-    // Score documents based on keyword matching
-    const queryTerms = query.toLowerCase().split(/\s+/)
-    const scoredDocs = snapshot.docs.map(doc => {
-      const data = doc.data()
-      const text = `${data.title || ''} ${data.content || ''} ${(data.tags || []).join(' ')}`.toLowerCase()
-
-      let score = 0
-      queryTerms.forEach(term => {
-        if (text.includes(term)) {
-          score += 1
-        }
-      })
-
-      return { id: doc.id, ...data, score }
-    })
-
-    // Return top matches
-    return scoredDocs
-      .filter(d => d.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
-  } catch (error) {
-    functions.logger.error('Error searching knowledge base:', error)
-    return []
+  return {
+    systemPrompt,
+    knowledgeContext: kbContext
   }
 }
 
@@ -318,6 +316,42 @@ async function storeMessage(documentId, role, content, tokenUsage = null, contex
   })
 }
 
+/**
+ * Perform web search for additional research (using Claude's built-in capabilities)
+ * This is called when we detect gaps in the knowledge base
+ */
+async function performResearch(gaps, context, anthropic) {
+  if (!gaps || gaps.length === 0) return null
+
+  const researchPrompt = `Based on the following context and gaps, provide brief, factual information that would help create professional documentation:
+
+Context: ${context}
+
+Topics needing research:
+${gaps.map(g => `- ${g}`).join('\n')}
+
+Provide concise, factual information for each topic. Focus on:
+1. Industry best practices
+2. Common regulatory requirements
+3. Standard procedures or approaches
+4. Key considerations
+
+Format as bullet points, keeping each topic to 2-3 key points.`
+
+  try {
+    const response = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: researchPrompt }]
+    })
+
+    return response.content[0].text
+  } catch (error) {
+    functions.logger.error('Research request failed:', error)
+    return null
+  }
+}
+
 // ============================================
 // Callable Functions
 // ============================================
@@ -334,7 +368,7 @@ const sendDocumentMessage = functions.https.onCall(async (data, context) => {
     )
   }
 
-  const { documentId, message } = data
+  const { documentId, message, enableResearch = true } = data
   const userId = context.auth.uid
 
   // Input validation
@@ -390,24 +424,40 @@ const sendDocumentMessage = functions.https.onCall(async (data, context) => {
 
     const project = projectSnap.data()
 
-    // Search knowledge base for relevant content
-    const knowledgeBaseDocs = await searchKnowledgeBase(message, orgId)
+    // Build enhanced system prompt with knowledge base
+    const { systemPrompt, knowledgeContext } = await buildEnhancedSystemPrompt(document, project)
 
-    // Build system prompt
-    const systemPrompt = await buildSystemPrompt(document, project, knowledgeBaseDocs)
+    // Perform research if gaps detected and enabled
+    let researchContent = null
+    if (enableResearch && knowledgeContext.gaps.length > 0) {
+      researchContent = await performResearch(
+        knowledgeContext.gaps,
+        `${project.sharedContext?.operationsScope || ''} ${message}`,
+        anthropic
+      )
+    }
 
     // Get conversation history
     const conversationHistory = await getConversationHistory(documentId)
 
     // Store user message
     await storeMessage(documentId, 'user', message, null, {
-      knowledgeBaseDocsUsed: knowledgeBaseDocs.map(d => d.id)
+      knowledgePoliciesUsed: knowledgeContext.includedPolicies.map(p => p.number),
+      knowledgeProceduresUsed: knowledgeContext.includedProcedures.map(p => p.number),
+      gapsIdentified: knowledgeContext.gaps,
+      researchPerformed: !!researchContent
     })
+
+    // Build final message with research if available
+    let finalMessage = message
+    if (researchContent) {
+      finalMessage += `\n\n[Additional research conducted on identified gaps:]\n${researchContent}`
+    }
 
     // Build messages array for Claude
     const messages = [
       ...conversationHistory,
-      { role: 'user', content: message }
+      { role: 'user', content: finalMessage }
     ]
 
     // Call Claude API
@@ -436,7 +486,13 @@ const sendDocumentMessage = functions.https.onCall(async (data, context) => {
       success: true,
       message: assistantMessage,
       tokenUsage,
-      knowledgeBaseDocsUsed: knowledgeBaseDocs.length
+      knowledgeUsed: {
+        policies: knowledgeContext.includedPolicies.length,
+        procedures: knowledgeContext.includedProcedures.length,
+        includesDroneOps: knowledgeContext.includesDroneOps
+      },
+      gapsIdentified: knowledgeContext.gaps,
+      researchPerformed: !!researchContent
     }
   } catch (error) {
     functions.logger.error('Error in sendDocumentMessage:', error)
@@ -464,7 +520,7 @@ const generateSectionContent = functions.https.onCall(async (data, context) => {
     )
   }
 
-  const { documentId, sectionId, prompt } = data
+  const { documentId, sectionId, prompt, enableResearch = true } = data
   const userId = context.auth.uid
 
   // Input validation
@@ -521,25 +577,38 @@ const generateSectionContent = functions.https.onCall(async (data, context) => {
     const projectSnap = await projectRef.get()
     const project = projectSnap.data()
 
-    // Search knowledge base
-    const knowledgeBaseDocs = await searchKnowledgeBase(`${section.title} ${prompt}`, orgId)
+    // Build enhanced system prompt
+    const { systemPrompt, knowledgeContext } = await buildEnhancedSystemPrompt(document, project)
 
-    // Build system prompt
-    const systemPrompt = await buildSystemPrompt(document, project, knowledgeBaseDocs)
+    // Perform research if gaps detected
+    let researchContent = null
+    if (enableResearch && knowledgeContext.gaps.length > 0) {
+      researchContent = await performResearch(
+        knowledgeContext.gaps,
+        `${section.title} ${prompt}`,
+        anthropic
+      )
+    }
 
     // Build section-specific prompt
-    const sectionPrompt = `Generate comprehensive content for the "${section.title}" section.
+    let sectionPrompt = `Generate comprehensive content for the "${section.title}" section.
 
 User instructions: ${prompt}
 
 ${section.content ? `Current section content to expand/improve:\n${section.content}` : 'This section is currently empty. Generate complete content.'}
 
 Requirements:
+- Use the internal knowledge base content provided as your primary source
+- Adapt content to match the client's specific context and industry
 - Generate well-structured, professional content
 - Use markdown formatting (headers, lists, tables as appropriate)
 - Ensure compliance with applicable regulations
 - Be thorough but concise
 - Include specific, actionable content where appropriate`
+
+    if (researchContent) {
+      sectionPrompt += `\n\n[Research on identified gaps:]\n${researchContent}`
+    }
 
     // Call Claude API
     const response = await anthropic.messages.create({
@@ -561,14 +630,27 @@ Requirements:
       'system',
       `Generated content for section: ${section.title}`,
       tokenUsage,
-      { sectionId, knowledgeBaseDocsUsed: knowledgeBaseDocs.map(d => d.id) }
+      {
+        sectionId,
+        knowledgePoliciesUsed: knowledgeContext.includedPolicies.map(p => p.number),
+        knowledgeProceduresUsed: knowledgeContext.includedProcedures.map(p => p.number),
+        gapsIdentified: knowledgeContext.gaps,
+        researchPerformed: !!researchContent
+      }
     )
 
     return {
       success: true,
       content: generatedContent,
       sectionId,
-      tokenUsage
+      tokenUsage,
+      knowledgeUsed: {
+        policies: knowledgeContext.includedPolicies.length,
+        procedures: knowledgeContext.includedProcedures.length,
+        includesDroneOps: knowledgeContext.includesDroneOps
+      },
+      gapsIdentified: knowledgeContext.gaps,
+      researchPerformed: !!researchContent
     }
   } catch (error) {
     functions.logger.error('Error in generateSectionContent:', error)
@@ -580,6 +662,114 @@ Requirements:
     throw new functions.https.HttpsError(
       'internal',
       'An error occurred while generating section content'
+    )
+  }
+})
+
+/**
+ * Search the knowledge base for relevant content
+ */
+const searchKnowledgeBase = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'User must be authenticated'
+    )
+  }
+
+  const { query, type = 'all', limit = 10 } = data
+
+  if (!query || typeof query !== 'string') {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Query is required'
+    )
+  }
+
+  try {
+    let results = { policies: [], procedures: [] }
+
+    if (type === 'all' || type === 'policies') {
+      results.policies = knowledgeBase.searchPolicies(query, limit)
+        .map(p => ({
+          number: p.number,
+          title: p.title,
+          category: p.category,
+          description: p.description,
+          score: p._score
+        }))
+    }
+
+    if (type === 'all' || type === 'procedures') {
+      results.procedures = knowledgeBase.searchProcedures(query, limit)
+        .map(p => ({
+          number: p.number,
+          title: p.title,
+          category: p.category,
+          description: p.description,
+          score: p._score
+        }))
+    }
+
+    return {
+      success: true,
+      results
+    }
+  } catch (error) {
+    functions.logger.error('Error searching knowledge base:', error)
+    throw new functions.https.HttpsError(
+      'internal',
+      'An error occurred while searching'
+    )
+  }
+})
+
+/**
+ * Get knowledge base content for a specific document type
+ */
+const getKnowledgeForDocumentType = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'User must be authenticated'
+    )
+  }
+
+  const { documentType, projectContext = {} } = data
+
+  if (!documentType) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Document type is required'
+    )
+  }
+
+  try {
+    const relevant = knowledgeBase.getRelevantContent(documentType, projectContext)
+
+    return {
+      success: true,
+      includesDroneOps: relevant.includesDroneOps,
+      policies: relevant.policies.map(p => ({
+        number: p.number,
+        title: p.title,
+        category: p.category,
+        description: p.description
+      })),
+      procedures: relevant.procedures.map(p => ({
+        number: p.number,
+        title: p.title,
+        category: p.category,
+        description: p.description
+      })),
+      gaps: relevant.gaps,
+      documentTypeInfo: relevant.mapping
+    }
+  } catch (error) {
+    functions.logger.error('Error getting knowledge for document type:', error)
+    throw new functions.https.HttpsError(
+      'internal',
+      'An error occurred'
     )
   }
 })
@@ -659,5 +849,7 @@ const getOrganizationTokenUsage = functions.https.onCall(async (data, context) =
 module.exports = {
   sendDocumentMessage,
   generateSectionContent,
+  searchKnowledgeBase,
+  getKnowledgeForDocumentType,
   getOrganizationTokenUsage
 }
