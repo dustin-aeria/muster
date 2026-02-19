@@ -207,7 +207,7 @@ export async function getDocumentProjects(organizationId, options = {}) {
 /**
  * Subscribe to document projects for real-time updates
  */
-export function subscribeToDocumentProjects(organizationId, callback) {
+export function subscribeToDocumentProjects(organizationId, callback, onError) {
   const q = query(
     collection(db, 'documentProjects'),
     where('organizationId', '==', organizationId),
@@ -222,6 +222,11 @@ export function subscribeToDocumentProjects(organizationId, callback) {
       updatedAt: doc.data().updatedAt?.toDate()
     }))
     callback(projects)
+  }, (error) => {
+    console.error('Error subscribing to document projects:', error)
+    if (onError) {
+      onError(error)
+    }
   })
 }
 

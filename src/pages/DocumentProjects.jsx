@@ -21,6 +21,7 @@ export default function DocumentProjects() {
   const { organization } = useOrganization()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Subscribe to projects
@@ -28,10 +29,20 @@ export default function DocumentProjects() {
     if (!organization?.id) return
 
     setLoading(true)
-    const unsubscribe = subscribeToDocumentProjects(organization.id, (data) => {
-      setProjects(data)
-      setLoading(false)
-    })
+    setError(null)
+    const unsubscribe = subscribeToDocumentProjects(
+      organization.id,
+      (data) => {
+        setProjects(data)
+        setLoading(false)
+        setError(null)
+      },
+      (err) => {
+        console.error('Subscription error:', err)
+        setError(err.message || 'Failed to load projects')
+        setLoading(false)
+      }
+    )
 
     return () => unsubscribe()
   }, [organization?.id])
@@ -85,8 +96,19 @@ export default function DocumentProjects() {
         </button>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700 font-medium">Error loading projects</p>
+          <p className="text-red-600 text-sm mt-1">{error}</p>
+          <p className="text-red-500 text-xs mt-2">
+            Try refreshing the page. If the issue persists, the Firestore indexes may need to be deployed.
+          </p>
+        </div>
+      )}
+
       {/* Feature Highlight */}
-      {projects.length === 0 && !loading && (
+      {projects.length === 0 && !loading && !error && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-blue-100 rounded-lg">
