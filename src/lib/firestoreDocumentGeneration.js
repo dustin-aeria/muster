@@ -715,6 +715,27 @@ export async function generateSectionContent(documentId, sectionId, prompt, user
 }
 
 /**
+ * Populate all sections of a document with baseline content from knowledge base
+ * This generates complete content for all empty sections at once
+ * @param {string} documentId - Document ID
+ * @returns {Promise<Object>} Result with sections updated count
+ */
+export async function populateAllSections(documentId) {
+  const functions = getFunctions()
+  const populate = httpsCallable(functions, 'populateAllSections', {
+    timeout: 540000 // 9 minute timeout for full document generation
+  })
+
+  try {
+    const result = await populate({ documentId })
+    return result.data
+  } catch (error) {
+    console.error('Error populating all sections:', error)
+    throw error
+  }
+}
+
+/**
  * Search the knowledge base for relevant policies and procedures
  * @param {string} query - Search query
  * @param {string} type - 'all', 'policies', or 'procedures'
@@ -830,6 +851,7 @@ export default {
   recordDocumentExport,
   sendDocumentMessage,
   generateSectionContent,
+  populateAllSections,
   searchKnowledgeBase,
   getKnowledgeForDocumentType,
   getDocumentTypeInfo,

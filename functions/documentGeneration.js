@@ -846,9 +846,207 @@ const getOrganizationTokenUsage = functions.https.onCall(async (data, context) =
   }
 })
 
+/**
+ * Populate ALL sections of a document with baseline content from knowledge base
+ * This is the main function for auto-generating complete document content
+ */
+const populateAllSections = functions
+  .runWith({ timeoutSeconds: 540, memory: '1GB' }) // Extended timeout for full document generation
+  .https.onCall(async (data, context) => {
+  // Verify authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'User must be authenticated'
+    )
+  }
+
+  const { documentId } = data
+  const userId = context.auth.uid
+
+  if (!documentId) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Document ID is required'
+    )
+  }
+
+  if (!anthropic) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'AI service not configured'
+    )
+  }
+
+  // Verify access
+  const accessResult = await verifyDocumentAccess(documentId, userId)
+  if (!accessResult.authorized) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      accessResult.error
+    )
+  }
+
+  const { document, orgId } = accessResult
+
+  // Check rate limit
+  const withinLimit = await checkRateLimit(orgId)
+  if (!withinLimit) {
+    throw new functions.https.HttpsError(
+      'resource-exhausted',
+      'Rate limit exceeded. Please try again later.'
+    )
+  }
+
+  try {
+    // Get project context
+    const projectRef = db.collection('documentProjects').doc(document.documentProjectId)
+    const projectSnap = await projectRef.get()
+
+    if (!projectSnap.exists) {
+      throw new functions.https.HttpsError('not-found', 'Project not found')
+    }
+
+    const project = projectSnap.data()
+
+    // Build enhanced system prompt with knowledge base
+    const { systemPrompt, knowledgeContext } = await buildEnhancedSystemPrompt(document, project)
+
+    // Generate content for all sections in a single request
+    const sectionsToGenerate = document.sections.filter(s => !s.content || s.content.trim() === '')
+
+    if (sectionsToGenerate.length === 0) {
+      return {
+        success: true,
+        message: 'All sections already have content',
+        sectionsUpdated: 0
+      }
+    }
+
+    // Build the generation prompt
+    const allSectionsPrompt = `Generate comprehensive baseline content for this ${document.type} document.
+Client: ${project.clientName}
+${project.sharedContext?.operationsScope ? `Operations: ${project.sharedContext.operationsScope}` : ''}
+
+Generate professional, compliance-ready content for EACH of the following sections. Use the knowledge base content provided as your primary source and adapt it to this client's specific context.
+
+For each section, provide complete, well-structured content with:
+- Clear headers and organization
+- Specific, actionable details (not generic placeholders)
+- Relevant regulatory references where applicable
+- Markdown formatting
+
+Sections to generate:
+${sectionsToGenerate.map((s, i) => `${i + 1}. ${s.title}`).join('\n')}
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+===SECTION: [Section Title]===
+[Content for that section]
+
+===SECTION: [Next Section Title]===
+[Content for that section]
+
+And so on for each section. Make sure each section is substantial and professional.`
+
+    // Call Claude API with extended context
+    const response = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: allSectionsPrompt }]
+    })
+
+    const generatedText = response.content[0].text
+    const tokenUsage = {
+      promptTokens: response.usage.input_tokens,
+      completionTokens: response.usage.output_tokens
+    }
+
+    // Parse the response into sections
+    const sectionPattern = /===SECTION:\s*(.+?)===\s*([\s\S]*?)(?====SECTION:|$)/gi
+    const parsedSections = {}
+    let match
+
+    while ((match = sectionPattern.exec(generatedText)) !== null) {
+      const sectionTitle = match[1].trim()
+      const sectionContent = match[2].trim()
+      parsedSections[sectionTitle.toLowerCase()] = sectionContent
+    }
+
+    // Update sections in Firestore
+    const updatedSections = document.sections.map(section => {
+      // Try to find matching generated content
+      const matchKey = Object.keys(parsedSections).find(key =>
+        section.title.toLowerCase().includes(key) ||
+        key.includes(section.title.toLowerCase()) ||
+        // Fuzzy match for similar titles
+        key.split(' ').some(word => section.title.toLowerCase().includes(word))
+      )
+
+      if (matchKey && parsedSections[matchKey] && (!section.content || section.content.trim() === '')) {
+        return {
+          ...section,
+          content: parsedSections[matchKey],
+          generatedFrom: new Date().toISOString()
+        }
+      }
+      return section
+    })
+
+    // Count how many were actually updated
+    const sectionsUpdated = updatedSections.filter((s, i) =>
+      s.content !== document.sections[i].content
+    ).length
+
+    // Save to Firestore
+    await db.collection('generatedDocuments').doc(documentId).update({
+      sections: updatedSections,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    })
+
+    // Store the generation in conversation history
+    await storeMessage(
+      documentId,
+      'system',
+      `Auto-populated ${sectionsUpdated} sections with baseline content`,
+      tokenUsage,
+      {
+        action: 'populateAllSections',
+        sectionsUpdated,
+        knowledgePoliciesUsed: knowledgeContext.includedPolicies.map(p => p.number),
+        knowledgeProceduresUsed: knowledgeContext.includedProcedures.map(p => p.number)
+      }
+    )
+
+    return {
+      success: true,
+      sectionsUpdated,
+      totalSections: document.sections.length,
+      tokenUsage,
+      knowledgeUsed: {
+        policies: knowledgeContext.includedPolicies.length,
+        procedures: knowledgeContext.includedProcedures.length,
+        includesDroneOps: knowledgeContext.includesDroneOps
+      }
+    }
+  } catch (error) {
+    functions.logger.error('Error in populateAllSections:', error)
+
+    if (error instanceof functions.https.HttpsError) {
+      throw error
+    }
+
+    throw new functions.https.HttpsError(
+      'internal',
+      'An error occurred while generating document content'
+    )
+  }
+})
+
 module.exports = {
   sendDocumentMessage,
   generateSectionContent,
+  populateAllSections,
   searchKnowledgeBase,
   getKnowledgeForDocumentType,
   getOrganizationTokenUsage

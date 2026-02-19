@@ -17,7 +17,9 @@ import {
   Settings,
   Link2,
   MoreVertical,
-  Palette
+  Palette,
+  Sparkles,
+  Wand2
 } from 'lucide-react'
 import {
   getGeneratedDocument,
@@ -31,7 +33,8 @@ import {
   updateSharedContext,
   addCrossReference,
   removeCrossReference,
-  updateProjectBranding
+  updateProjectBranding,
+  populateAllSections
 } from '../lib/firestoreDocumentGeneration'
 import {
   ConversationPanel,
@@ -77,6 +80,10 @@ export default function DocumentEditor() {
 
   // Header menu state
   const [showHeaderMenu, setShowHeaderMenu] = useState(false)
+
+  // Auto-populate state
+  const [populatingAll, setPopulatingAll] = useState(false)
+  const [populateResult, setPopulateResult] = useState(null)
 
   // Load document and project
   useEffect(() => {
@@ -311,6 +318,47 @@ export default function DocumentEditor() {
     setShowPreview(false)
   }
 
+  // Auto-populate all sections with baseline content
+  const handlePopulateAll = async () => {
+    if (populatingAll) return
+
+    // Check if any sections are empty
+    const emptySections = document?.sections?.filter(s => !s.content || s.content.trim() === '')
+    if (!emptySections?.length) {
+      setPopulateResult({ type: 'info', message: 'All sections already have content' })
+      setTimeout(() => setPopulateResult(null), 3000)
+      return
+    }
+
+    if (!window.confirm(`Generate baseline content for ${emptySections.length} empty section(s)? This will use your internal policies and procedures as a foundation.`)) {
+      return
+    }
+
+    setPopulatingAll(true)
+    setPopulateResult(null)
+
+    try {
+      const result = await populateAllSections(documentId)
+
+      if (result.success) {
+        setPopulateResult({
+          type: 'success',
+          message: `Generated content for ${result.sectionsUpdated} sections using ${result.knowledgeUsed?.policies || 0} policies and ${result.knowledgeUsed?.procedures || 0} procedures`
+        })
+      }
+    } catch (err) {
+      console.error('Error populating sections:', err)
+      setPopulateResult({
+        type: 'error',
+        message: err.message || 'Failed to generate content'
+      })
+    } finally {
+      setPopulatingAll(false)
+      // Auto-dismiss success message
+      setTimeout(() => setPopulateResult(null), 5000)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -382,6 +430,30 @@ export default function DocumentEditor() {
                 <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
                   {document.crossReferences.length}
                 </span>
+              )}
+            </button>
+
+            {/* Generate All Content Button */}
+            <button
+              onClick={handlePopulateAll}
+              disabled={populatingAll}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                populatingAll
+                  ? 'bg-purple-100 text-purple-700 cursor-wait'
+                  : 'bg-purple-600 text-white hover:bg-purple-700'
+              }`}
+              title="Generate baseline content for all empty sections"
+            >
+              {populatingAll ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4" />
+                  Generate All
+                </>
               )}
             </button>
 
@@ -467,6 +539,26 @@ export default function DocumentEditor() {
           </div>
         </div>
       </header>
+
+      {/* Auto-populate Result Notification */}
+      {populateResult && (
+        <div className={`px-4 py-2 text-sm font-medium flex items-center justify-between ${
+          populateResult.type === 'success' ? 'bg-green-50 text-green-800' :
+          populateResult.type === 'error' ? 'bg-red-50 text-red-800' :
+          'bg-blue-50 text-blue-800'
+        }`}>
+          <div className="flex items-center gap-2">
+            {populateResult.type === 'success' && <Sparkles className="w-4 h-4" />}
+            {populateResult.message}
+          </div>
+          <button
+            onClick={() => setPopulateResult(null)}
+            className="p-1 hover:bg-black/5 rounded"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
