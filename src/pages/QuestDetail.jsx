@@ -29,7 +29,7 @@ import { BadgeEarnedCelebration } from '../components/gamification/shared/BadgeD
 
 export default function QuestDetail() {
   const { questId } = useParams()
-  const { currentUser, loading: authLoading } = useAuth()
+  const { user: currentUser, loading: authLoading } = useAuth()
   const { organization, loading: orgLoading } = useOrganization()
   const navigate = useNavigate()
 

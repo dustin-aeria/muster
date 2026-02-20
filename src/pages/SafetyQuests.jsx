@@ -26,7 +26,7 @@ import { Badge } from '../components/gamification/shared/BadgeDisplay'
 import ProgressRing, { MiniProgressRing } from '../components/gamification/shared/ProgressRing'
 
 export default function SafetyQuests() {
-  const { currentUser, loading: authLoading } = useAuth()
+  const { user: currentUser, loading: authLoading } = useAuth()
   const { organizationId, loading: orgLoading } = useOrganizationContext()
   const navigate = useNavigate()
 

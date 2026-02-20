@@ -104,7 +104,7 @@ const IMSAFE_CATEGORIES = {
 }
 
 export default function OperatorReady() {
-  const { currentUser, loading: authLoading } = useAuth()
+  const { user: currentUser, loading: authLoading } = useAuth()
   const { organizationId, loading: orgLoading } = useOrganizationContext()
 
   const [loading, setLoading] = useState(true)

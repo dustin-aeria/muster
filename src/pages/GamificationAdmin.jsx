@@ -14,7 +14,7 @@ import {
 import { seedGamificationContent } from '../lib/seedGamificationContent'
 
 export default function GamificationAdmin() {
-  const { currentUser } = useAuth()
+  const { user: currentUser } = useAuth()
   const { organization } = useOrganization()
 
   const [seeding, setSeeding] = useState(false)
