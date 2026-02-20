@@ -73,17 +73,19 @@ const QCards = lazy(() => import('./pages/QCards'))
 const Inspections = lazy(() => import('./pages/Inspections'))
 const Calendar = lazy(() => import('./pages/Calendar'))
 
+// Gamification Module Pages - lazy-loaded
+const SafetyQuests = lazy(() => import('./pages/SafetyQuests'))
+const QuestDetail = lazy(() => import('./pages/QuestDetail'))
+const ScenarioChallenges = lazy(() => import('./pages/ScenarioChallenges'))
+const OperatorReady = lazy(() => import('./pages/OperatorReady'))
+const GamificationAdmin = lazy(() => import('./pages/GamificationAdmin'))
+
 // Maintenance Module Pages - lazy-loaded
 const MaintenanceDashboard = lazy(() => import('./pages/MaintenanceDashboard'))
 const MaintenanceItemList = lazy(() => import('./pages/MaintenanceItemList'))
 const MaintenanceSchedulesPage = lazy(() => import('./pages/MaintenanceSchedulesPage'))
 const MaintenanceItemDetail = lazy(() => import('./pages/MaintenanceItemDetail'))
 // MaintenanceCalendar removed - now redirects to unified Calendar
-
-// Document Generation Module Pages - lazy-loaded
-const DocumentProjects = lazy(() => import('./pages/DocumentProjects'))
-const DocumentProjectView = lazy(() => import('./pages/DocumentProjectView'))
-const DocumentEditor = lazy(() => import('./pages/DocumentEditor'))
 
 // Safety Declaration Module Pages - lazy-loaded
 const SafetyDeclarationHub = lazy(() => import('./pages/SafetyDeclarationHub'))
@@ -299,6 +301,14 @@ function App() {
           <Route path="training/qcards" element={<Suspense fallback={<PageLoader />}><QCards /></Suspense>} />
           <Route path="inspections" element={<Suspense fallback={<PageLoader />}><Inspections /></Suspense>} />
 
+          {/* Gamification Module Routes - lazy-loaded */}
+          <Route path="safety-quests" element={<Suspense fallback={<PageLoader />}><SafetyQuests /></Suspense>} />
+          <Route path="safety-quests/:questId" element={<Suspense fallback={<PageLoader />}><QuestDetail /></Suspense>} />
+          <Route path="scenario-challenges" element={<Suspense fallback={<PageLoader />}><ScenarioChallenges /></Suspense>} />
+          <Route path="scenario-challenges/:scenarioId" element={<Suspense fallback={<PageLoader />}><QuestDetail /></Suspense>} />
+          <Route path="operator-ready" element={<Suspense fallback={<PageLoader />}><OperatorReady /></Suspense>} />
+          <Route path="admin/gamification" element={<Suspense fallback={<PageLoader />}><GamificationAdmin /></Suspense>} />
+
           {/* Maintenance Module Routes - lazy-loaded */}
           <Route path="maintenance" element={<Suspense fallback={<PageLoader />}><MaintenanceDashboard /></Suspense>} />
           <Route path="maintenance/items" element={<Suspense fallback={<PageLoader />}><MaintenanceItemList /></Suspense>} />
@@ -306,11 +316,6 @@ function App() {
           {/* Maintenance calendar now redirects to unified calendar */}
           <Route path="maintenance/calendar" element={<Navigate to="/calendar" replace />} />
           <Route path="maintenance/item/:itemType/:itemId" element={<Suspense fallback={<PageLoader />}><MaintenanceItemDetail /></Suspense>} />
-
-          {/* Document Generation Module Routes - lazy-loaded */}
-          <Route path="document-projects" element={<Suspense fallback={<PageLoader />}><DocumentProjects /></Suspense>} />
-          <Route path="document-projects/:projectId" element={<Suspense fallback={<PageLoader />}><DocumentProjectView /></Suspense>} />
-          <Route path="document-projects/:projectId/documents/:documentId" element={<Suspense fallback={<PageLoader />}><DocumentEditor /></Suspense>} />
 
           {/* Safety Declaration Module Routes - lazy-loaded */}
           <Route path="safety-declarations" element={<Suspense fallback={<PageLoader />}><SafetyDeclarationHub /></Suspense>} />

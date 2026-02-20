@@ -1249,3 +1249,20 @@ Example format:
     )
   }
 })
+
+
+// ============================================
+// Gamification Functions
+// ============================================
+
+const gamification = require("./gamification")
+
+exports.generateQuizQuestions = gamification.generateQuizQuestions
+exports.generateWrongAnswerExplanation = gamification.generateWrongAnswerExplanation
+exports.generateScenario = gamification.generateScenario
+exports.generateScenarioDebrief = gamification.generateScenarioDebrief
+exports.generateReadinessNudge = gamification.generateReadinessNudge
+exports.generateTrendInsight = gamification.generateTrendInsight
+exports.chunkDocumentContent = gamification.chunkDocumentContent
+exports.generateLessonContent = gamification.generateLessonContent
+exports.getAdaptiveDifficulty = gamification.getAdaptiveDifficulty

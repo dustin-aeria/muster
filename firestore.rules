@@ -67,6 +67,58 @@ service cloud.firestore {
 
       // Only admins can delete the organization
       allow delete: if hasRole(orgId, ['admin']);
+
+      // ============================================
+      // Gamification Subcollections
+      // ============================================
+
+      // Quest Tracks - learning paths
+      match /questTracks/{trackId} {
+        allow read: if isMemberOf(orgId);
+        allow write: if isMemberOf(orgId);
+      }
+
+      // Quests - individual learning units
+      match /quests/{questId} {
+        allow read: if isMemberOf(orgId);
+        allow write: if isMemberOf(orgId);
+      }
+
+      // Lessons - content within quests
+      match /lessons/{lessonId} {
+        allow read: if isMemberOf(orgId);
+        allow write: if isMemberOf(orgId);
+      }
+
+      // Scenarios - branching decision simulations
+      match /scenarios/{scenarioId} {
+        allow read: if isMemberOf(orgId);
+        allow write: if isMemberOf(orgId);
+      }
+
+      // Scenario Nodes - decision points in scenarios
+      match /scenarioNodes/{nodeId} {
+        allow read: if isMemberOf(orgId);
+        allow write: if isMemberOf(orgId);
+      }
+
+      // Gamification config
+      match /gamificationConfig/{configId} {
+        allow read: if isMemberOf(orgId);
+        allow write: if isMemberOf(orgId);
+      }
+
+      // Readiness categories
+      match /readinessCategories/{categoryId} {
+        allow read: if isMemberOf(orgId);
+        allow write: if isMemberOf(orgId);
+      }
+
+      // Badges
+      match /badges/{badgeId} {
+        allow read: if isMemberOf(orgId);
+        allow write: if isMemberOf(orgId);
+      }
     }
 
     // ============================================
@@ -787,6 +839,40 @@ service cloud.firestore {
     // ============================================
     match /userPreferences/{userId} {
       allow read, write: if isOwner(userId);
+    }
+
+    // ============================================
+    // Gamification User Data Collections
+    // ============================================
+
+    // User Gamification Profiles
+    match /gamificationProfiles/{odMemberId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // User Readiness Check-Ins (IMSAFE)
+    match /readinessCheckIns/{checkInId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // User Scenario Attempts
+    match /scenarioAttempts/{attemptId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // User Quest Progress
+    match /questProgress/{progressId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Spaced Repetition Queue
+    match /spacedRepetition/{itemId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Gamification Activity Logs
+    match /gamificationActivity/{activityId} {
+      allow read, write: if isAuthenticated();
     }
 
     // ============================================

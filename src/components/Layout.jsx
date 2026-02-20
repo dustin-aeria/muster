@@ -31,10 +31,12 @@ import {
   Wrench,
   Clock,
   CheckSquare,
-  Sparkles,
   DollarSign,
   Scale,
-  Layers
+  Layers,
+  Trophy,
+  GitBranch,
+  Activity
 } from 'lucide-react'
 import FeedbackModal from './FeedbackModal'
 import NotificationBell from './NotificationBell'
@@ -64,11 +66,16 @@ const safetyNavigation = [
 const trainingNavigation = [
   { name: 'Training Records', href: '/training', icon: GraduationCap },
   { name: 'Q-Cards', href: '/training/qcards', icon: Layers },
+  { name: 'Safety Quests', href: '/safety-quests', icon: Trophy },
+  { name: 'Scenario Challenges', href: '/scenario-challenges', icon: GitBranch },
+]
+
+const operatorReadyNavigation = [
+  { name: 'Operator Ready', href: '/operator-ready', icon: Activity },
 ]
 
 const complianceNavigation = [
   { name: 'Policies & Procedures', href: '/policies', icon: BookOpen },
-  { name: 'Document Generator', href: '/document-projects', icon: Sparkles },
   { name: 'Safety Declarations', href: '/safety-declarations', icon: FileCheck },
   { name: 'SFOC Applications', href: '/sfoc', icon: Scale },
   { name: 'SORA Assessments', href: '/sora', icon: Target },
@@ -97,6 +104,7 @@ function Sidebar({ mobile, onClose }) {
   const [librariesOpen, setLibrariesOpen] = useState(true)
   const [safetyOpen, setSafetyOpen] = useState(true)
   const [trainingOpen, setTrainingOpen] = useState(true)
+  const [operatorReadyOpen, setOperatorReadyOpen] = useState(true)
   const [complianceOpen, setComplianceOpen] = useState(true)
   const [maintenanceOpen, setMaintenanceOpen] = useState(true)
 
@@ -198,6 +206,30 @@ function Sidebar({ mobile, onClose }) {
           {trainingOpen && (
             <div id="training-nav" className="mt-1 space-y-1">
               {trainingNavigation.map((item) => (
+                <NavItem key={item.name} item={item} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Operator Ready section */}
+        <div className="pt-4">
+          <button
+            type="button"
+            onClick={() => setOperatorReadyOpen(!operatorReadyOpen)}
+            className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700"
+            aria-expanded={operatorReadyOpen}
+            aria-controls="operator-ready-nav"
+          >
+            <span className="flex items-center gap-2">
+              <Activity className="w-4 h-4" aria-hidden="true" />
+              Operator Ready
+            </span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${operatorReadyOpen ? '' : '-rotate-90'}`} aria-hidden="true" />
+          </button>
+          {operatorReadyOpen && (
+            <div id="operator-ready-nav" className="mt-1 space-y-1">
+              {operatorReadyNavigation.map((item) => (
                 <NavItem key={item.name} item={item} />
               ))}
             </div>
