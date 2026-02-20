@@ -108,22 +108,23 @@ export default function SafetyQuests() {
   }
 
   function getQuestStatus(quest) {
-    if (!profile?.completedQuests) return 'locked'
+    const completedQuests = profile?.completedQuests || []
+    const currentQuests = profile?.currentQuests || []
 
-    if (profile.completedQuests.includes(quest.id)) {
+    if (completedQuests.includes(quest.id)) {
       return 'completed'
     }
 
     // Check prerequisites
     if (quest.prerequisites?.length > 0) {
       const hasAllPrereqs = quest.prerequisites.every(
-        prereq => profile.completedQuests.includes(prereq)
+        prereq => completedQuests.includes(prereq)
       )
       if (!hasAllPrereqs) return 'locked'
     }
 
     // Check if in progress
-    if (profile.currentQuests?.includes(quest.id)) {
+    if (currentQuests.includes(quest.id)) {
       return 'in_progress'
     }
 

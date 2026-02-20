@@ -77,6 +77,7 @@ const Calendar = lazy(() => import('./pages/Calendar'))
 const SafetyQuests = lazy(() => import('./pages/SafetyQuests'))
 const QuestDetail = lazy(() => import('./pages/QuestDetail'))
 const ScenarioChallenges = lazy(() => import('./pages/ScenarioChallenges'))
+const ScenarioDetail = lazy(() => import('./pages/ScenarioDetail'))
 const OperatorReady = lazy(() => import('./pages/OperatorReady'))
 const GamificationAdmin = lazy(() => import('./pages/GamificationAdmin'))
 
@@ -305,7 +306,7 @@ function App() {
           <Route path="safety-quests" element={<Suspense fallback={<PageLoader />}><SafetyQuests /></Suspense>} />
           <Route path="safety-quests/:questId" element={<Suspense fallback={<PageLoader />}><QuestDetail /></Suspense>} />
           <Route path="scenario-challenges" element={<Suspense fallback={<PageLoader />}><ScenarioChallenges /></Suspense>} />
-          <Route path="scenario-challenges/:scenarioId" element={<Suspense fallback={<PageLoader />}><QuestDetail /></Suspense>} />
+          <Route path="scenario-challenges/:scenarioId" element={<Suspense fallback={<PageLoader />}><ScenarioDetail /></Suspense>} />
           <Route path="operator-ready" element={<Suspense fallback={<PageLoader />}><OperatorReady /></Suspense>} />
           <Route path="admin/gamification" element={<Suspense fallback={<PageLoader />}><GamificationAdmin /></Suspense>} />
 
