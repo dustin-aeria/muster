@@ -26,7 +26,7 @@ import { Badge } from '../components/gamification/shared/BadgeDisplay'
 import ProgressRing, { MiniProgressRing } from '../components/gamification/shared/ProgressRing'
 
 export default function SafetyQuests() {
-  const { currentUser } = useAuth()
+  const { currentUser, loading: authLoading } = useAuth()
   const { organizationId, loading: orgLoading } = useOrganizationContext()
   const navigate = useNavigate()
 
@@ -40,11 +40,11 @@ export default function SafetyQuests() {
   const [reviewItems, setReviewItems] = useState([])
 
   useEffect(() => {
-    console.log('SafetyQuests useEffect - orgLoading:', orgLoading, 'uid:', currentUser?.uid, 'orgId:', organizationId)
+    console.log('SafetyQuests useEffect - authLoading:', authLoading, 'orgLoading:', orgLoading, 'uid:', currentUser?.uid, 'orgId:', organizationId)
 
-    // Wait for org context to finish loading
-    if (orgLoading) {
-      console.log('SafetyQuests: still loading org context')
+    // Wait for both auth and org context to finish loading
+    if (authLoading || orgLoading) {
+      console.log('SafetyQuests: still loading contexts')
       return
     }
 
@@ -56,7 +56,7 @@ export default function SafetyQuests() {
       // No org or user - stop loading
       setLoading(false)
     }
-  }, [currentUser, organizationId, orgLoading])
+  }, [currentUser, organizationId, authLoading, orgLoading])
 
   async function loadData() {
     if (!organizationId || !currentUser?.uid) return

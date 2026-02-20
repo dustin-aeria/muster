@@ -68,7 +68,7 @@ const CATEGORY_CONFIG = {
 }
 
 export default function ScenarioChallenges() {
-  const { currentUser } = useAuth()
+  const { currentUser, loading: authLoading } = useAuth()
   const { organizationId, loading: orgLoading } = useOrganizationContext()
   const navigate = useNavigate()
 
@@ -82,15 +82,15 @@ export default function ScenarioChallenges() {
   const [sortBy, setSortBy] = useState('recommended')
 
   useEffect(() => {
-    // Wait for org context to finish loading
-    if (orgLoading) return
+    // Wait for both auth and org context to finish loading
+    if (authLoading || orgLoading) return
 
     if (currentUser?.uid && organizationId) {
       loadData()
     } else {
       setLoading(false)
     }
-  }, [currentUser, organizationId, orgLoading])
+  }, [currentUser, organizationId, authLoading, orgLoading])
 
   async function loadData() {
     if (!organizationId || !currentUser?.uid) return

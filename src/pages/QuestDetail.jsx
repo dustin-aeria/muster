@@ -29,8 +29,8 @@ import { BadgeEarnedCelebration } from '../components/gamification/shared/BadgeD
 
 export default function QuestDetail() {
   const { questId } = useParams()
-  const { currentUser } = useAuth()
-  const { organization } = useOrganization()
+  const { currentUser, loading: authLoading } = useAuth()
+  const { organization, loading: orgLoading } = useOrganization()
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
@@ -51,10 +51,15 @@ export default function QuestDetail() {
   const [wrongAnswerExplanation, setWrongAnswerExplanation] = useState(null)
 
   useEffect(() => {
+    // Wait for both auth and org context to finish loading
+    if (authLoading || orgLoading) return
+
     if (currentUser?.uid && questId && organization?.id) {
       loadData()
+    } else {
+      setLoading(false)
     }
-  }, [currentUser, questId, organization])
+  }, [currentUser, questId, organization, authLoading, orgLoading])
 
   async function loadData() {
     if (!organization?.id) return
