@@ -842,7 +842,40 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Gamification User Data Collections
+    // Users Collection (for gamification user data)
+    // ============================================
+    match /users/{userId} {
+      // Users can read/write their own data
+      allow read, write: if isOwner(userId);
+
+      // Gamification profile subcollection
+      match /gamificationProfile/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Quest progress subcollection
+      match /questProgress/{progressId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Spaced repetition queue subcollection
+      match /spacedRepetitionQueue/{itemId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Readiness check-ins subcollection
+      match /readinessCheckIns/{checkInId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Scenario attempts subcollection
+      match /scenarioAttempts/{attemptId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // ============================================
+    // Gamification User Data Collections (legacy root-level)
     // ============================================
 
     // User Gamification Profiles
