@@ -40,12 +40,19 @@ export default function SafetyQuests() {
   const [reviewItems, setReviewItems] = useState([])
 
   useEffect(() => {
+    console.log('SafetyQuests useEffect - orgLoading:', orgLoading, 'uid:', currentUser?.uid, 'orgId:', organizationId)
+
     // Wait for org context to finish loading
-    if (orgLoading) return
+    if (orgLoading) {
+      console.log('SafetyQuests: still loading org context')
+      return
+    }
 
     if (currentUser?.uid && organizationId) {
+      console.log('SafetyQuests: calling loadData')
       loadData()
     } else {
+      console.log('SafetyQuests: no user or org, setting loading false')
       // No org or user - stop loading
       setLoading(false)
     }
@@ -66,11 +73,13 @@ export default function SafetyQuests() {
         getSpacedRepetitionDue(currentUser.uid)
       ])
 
-      console.log('SafetyQuests loaded tracks:', tracksData)
-      console.log('SafetyQuests tracks count:', tracksData?.length)
+      console.log('SafetyQuests loaded - profile:', profileData)
+      console.log('SafetyQuests loaded - tracks:', tracksData)
+      console.log('SafetyQuests loaded - tracks count:', tracksData?.length)
+      console.log('SafetyQuests loaded - reviewItems:', reviewData)
 
       setProfile(profileData)
-      setTracks(tracksData)
+      setTracks(tracksData || [])
       setReviewItems(reviewData || [])
 
       if (tracksData.length > 0) {
@@ -80,8 +89,10 @@ export default function SafetyQuests() {
       }
     } catch (err) {
       console.error('Error loading quests data:', err)
+      console.error('Error details:', err.code, err.message)
       setError('Failed to load quests. Please try again.')
     } finally {
+      console.log('SafetyQuests loadData complete, setting loading=false')
       setLoading(false)
     }
   }
