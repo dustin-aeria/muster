@@ -546,11 +546,15 @@ function evaluateBadgeCriteria(criteria, profile, context) {
  * Get all quest tracks
  */
 export async function getQuestTracks(organizationId) {
+  console.log('getQuestTracks called with orgId:', organizationId)
   try {
     const tracksRef = collection(db, 'organizations', organizationId, 'questTracks')
     // Simple query to avoid compound index requirement
     const q = query(tracksRef, where('isActive', '==', true))
     const snapshot = await getDocs(q)
+
+    console.log('getQuestTracks snapshot size:', snapshot.size)
+    console.log('getQuestTracks snapshot empty:', snapshot.empty)
 
     // Sort by order in memory
     const tracks = snapshot.docs.map(doc => ({
@@ -558,8 +562,10 @@ export async function getQuestTracks(organizationId) {
       ...doc.data()
     }))
 
+    console.log('getQuestTracks returning tracks:', tracks.length)
     return tracks.sort((a, b) => (a.order || 0) - (b.order || 0))
   } catch (error) {
+    console.error('getQuestTracks ERROR:', error)
     logger.error('Error getting quest tracks:', error)
     throw error
   }

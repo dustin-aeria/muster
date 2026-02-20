@@ -57,12 +57,17 @@ export default function SafetyQuests() {
     setLoading(true)
     setError(null)
 
+    console.log('SafetyQuests loadData called, orgId:', organizationId)
+
     try {
       const [profileData, tracksData, reviewData] = await Promise.all([
         getUserGamificationProfile(currentUser.uid),
         getQuestTracks(organizationId),
         getSpacedRepetitionDue(currentUser.uid)
       ])
+
+      console.log('SafetyQuests loaded tracks:', tracksData)
+      console.log('SafetyQuests tracks count:', tracksData?.length)
 
       setProfile(profileData)
       setTracks(tracksData)
