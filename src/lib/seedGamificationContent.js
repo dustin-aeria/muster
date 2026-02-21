@@ -444,6 +444,276 @@ export async function seedGamificationContent(organizationId) {
         summary: 'Apply the hierarchy of controls systematically. Prefer elimination and engineering controls over administrative and PPE where practical.',
         references: ['WorkSafeBC Part 4', 'OHS Regulation 4.14', 'CSA Z1000']
       }
+    },
+
+    // Airspace Awareness Quest
+    {
+      id: 'aa-controlled-airspace',
+      questId: 'airspace-awareness',
+      title: 'Understanding Controlled Airspace',
+      order: 1,
+      xpReward: 35,
+      estimatedMinutes: 8,
+      content: {
+        introduction: 'Canadian airspace is divided into controlled and uncontrolled areas. Understanding these classifications is essential for legal RPAS operations.',
+        sections: [
+          {
+            heading: 'Airspace Classes',
+            content: 'Class A: High altitude, IFR only (18,000ft+). Class B: Major airports, IFR/VFR with clearance. Class C: Busy airports with radar, clearance required. Class D: Airports with towers, two-way communication required. Class E: Controlled but fewer restrictions. Class F: Special use (restricted, advisory). Class G: Uncontrolled airspace.',
+            keyPoint: 'Classes A-E are controlled; RPAS operations require authorization'
+          },
+          {
+            heading: 'The 5.6km Rule',
+            content: 'Under CARs 901.71, you cannot fly within 5.6 km (3 nautical miles) of an airport without authorization. This applies to aerodromes with towers. For heliports and uncontrolled airports, different rules may apply.',
+            keyPoint: 'Never fly within 5.6km of an airport without authorization'
+          }
+        ],
+        summary: 'Always verify airspace classification before flying. Use NAV DRONE app and obtain necessary authorizations.',
+        references: ['CARs 901.71', 'CARs 901.72', 'Transport Canada AIM']
+      }
+    },
+
+    // Weather Decision Making Quest
+    {
+      id: 'wdm-basics',
+      questId: 'weather-decision-making',
+      title: 'Weather Minimums for RPAS',
+      order: 1,
+      xpReward: 30,
+      estimatedMinutes: 6,
+      content: {
+        introduction: 'Weather conditions directly impact flight safety. Know your limits and the regulatory requirements.',
+        sections: [
+          {
+            heading: 'Visibility Requirements',
+            content: 'Basic operations require at least 3 statute miles visibility. Advanced operations may have different requirements based on your certificate. Always maintain visual line-of-sight with the aircraft.',
+            keyPoint: 'Minimum 3 statute miles visibility for basic operations'
+          },
+          {
+            heading: 'Wind Limitations',
+            content: 'Each aircraft has maximum wind specifications. Typical limits are 30-40 km/h sustained winds. Gusts can exceed your aircraft\'s capability quickly. High winds increase battery consumption significantly.',
+            keyPoint: 'Know your aircraft\'s wind limits - they vary by model'
+          }
+        ],
+        summary: 'Check weather before and during operations. When in doubt, don\'t fly.',
+        references: ['CARs 901.20', 'Aircraft flight manual']
+      }
+    },
+
+    // Battery Management Quest
+    {
+      id: 'bm-fundamentals',
+      questId: 'battery-management',
+      title: 'LiPo Battery Safety',
+      order: 1,
+      xpReward: 30,
+      estimatedMinutes: 7,
+      content: {
+        introduction: 'Lithium polymer batteries power most RPAS. Proper handling prevents fires, extends battery life, and ensures reliable performance.',
+        sections: [
+          {
+            heading: 'Storage & Charging',
+            content: 'Store batteries at 40-60% charge for long-term storage. Never charge unattended. Use a fireproof charging bag or container. Allow batteries to cool before charging after flight.',
+            keyPoint: 'Never charge batteries unattended'
+          },
+          {
+            heading: 'Signs of Damage',
+            content: 'Swelling (puffing) indicates internal damage - stop using immediately. Physical damage to the casing is dangerous. Unusual heat during charging is a warning sign. Reduced flight times may indicate cell degradation.',
+            keyPoint: 'Swollen batteries are fire hazards - dispose of them properly'
+          }
+        ],
+        summary: 'Proper battery care extends lifespan and prevents fires. Inspect batteries before every flight.',
+        references: ['Manufacturer guidelines', 'Transport of Dangerous Goods Act']
+      }
+    },
+
+    // PPE Requirements Quest
+    {
+      id: 'ppe-field',
+      questId: 'ppe-requirements',
+      title: 'Field PPE Essentials',
+      order: 1,
+      xpReward: 25,
+      estimatedMinutes: 5,
+      content: {
+        introduction: 'Personal protective equipment protects you from site-specific hazards. Know what\'s required and when to use it.',
+        sections: [
+          {
+            heading: 'Basic Field PPE',
+            content: 'High-visibility vest: Required on most industrial sites. Safety glasses: Protect against debris and UV. Hard hat: Required in areas with overhead hazards. Safety boots: Steel toe on construction sites.',
+            keyPoint: 'Site requirements vary - always confirm with the site contact'
+          },
+          {
+            heading: 'RPAS-Specific Considerations',
+            content: 'Safety glasses during prop changes and maintenance. Hearing protection when flying larger aircraft. Sun protection (hat, sunscreen) for outdoor operations. Gloves when handling hot batteries.',
+            keyPoint: 'Spinning props are the most common RPAS injury cause'
+          }
+        ],
+        summary: 'PPE requirements vary by site. When in doubt, bring more than you think you need.',
+        references: ['WorkSafeBC Part 8', 'Site safety plans']
+      }
+    },
+
+    // Flyaway Procedures Quest
+    {
+      id: 'fp-response',
+      questId: 'flyaway-procedures',
+      title: 'Responding to Flyaways',
+      order: 1,
+      xpReward: 40,
+      estimatedMinutes: 8,
+      content: {
+        introduction: 'A flyaway occurs when you lose control of the aircraft. Quick, correct response can prevent injury and property damage.',
+        sections: [
+          {
+            heading: 'Immediate Actions',
+            content: '1. Attempt to regain control (switch modes, use RTH). 2. Alert all personnel in the area verbally. 3. Track the aircraft visually as long as possible. 4. Note last known heading and position. 5. Contact ATC if near controlled airspace.',
+            keyPoint: 'First priority: warn people in the area'
+          },
+          {
+            heading: 'Post-Flyaway',
+            content: 'Do not leave the area until you\'ve searched for the aircraft. Report to your supervisor immediately. Document everything (time, location, conditions, actions taken). File an incident report within 24 hours if required.',
+            keyPoint: 'Document everything - it\'s required for incident reporting'
+          }
+        ],
+        summary: 'Stay calm, warn others, track the aircraft, and document everything.',
+        references: ['CARs 901.49', 'Company SOP']
+      }
+    },
+
+    // Incident Reporting Quest
+    {
+      id: 'ir-basics',
+      questId: 'incident-reporting',
+      title: 'When & How to Report',
+      order: 1,
+      xpReward: 35,
+      estimatedMinutes: 7,
+      content: {
+        introduction: 'Incident reporting is both a legal requirement and a professional responsibility. Proper reporting helps prevent future incidents.',
+        sections: [
+          {
+            heading: 'Reportable Events',
+            content: 'CARs 901.49 requires reporting: Injuries to persons. Damage to property. Risk of collision with manned aircraft. Flyaways. Any event compromising safety of others.',
+            keyPoint: 'When in doubt, report it'
+          },
+          {
+            heading: 'Reporting Process',
+            content: 'Internal reports: Submit within 24 hours. TSB reports: Required for serious incidents. Include: Date, time, location, conditions, what happened, actions taken, damage/injuries. Preserve evidence (logs, photos, video).',
+            keyPoint: 'Report within 24 hours - preserve all evidence'
+          }
+        ],
+        summary: 'Timely, accurate reporting improves safety for everyone and protects you legally.',
+        references: ['CARs 901.49', 'TSB Regulations', 'Company incident policy']
+      }
+    },
+
+    // First Aid Basics Quest
+    {
+      id: 'fa-field',
+      questId: 'first-aid-basics',
+      title: 'Field First Aid Essentials',
+      order: 1,
+      xpReward: 30,
+      estimatedMinutes: 6,
+      content: {
+        introduction: 'Field operations often occur far from medical facilities. Basic first aid knowledge can save lives.',
+        sections: [
+          {
+            heading: 'First Aid Kit Requirements',
+            content: 'WorkSafeBC requires appropriate first aid based on crew size and distance from medical facilities. Minimum: bandages, gauze, antiseptic, tweezers, emergency blanket, CPR mask. Check expiration dates regularly.',
+            keyPoint: 'Your kit must match your crew size and remoteness'
+          },
+          {
+            heading: 'Emergency Response',
+            content: 'Know the address/coordinates of your work site. Know the nearest hospital location. Have emergency contacts programmed in your phone. Designate someone to guide emergency responders if needed.',
+            keyPoint: 'Know your location - emergency services need accurate coordinates'
+          }
+        ],
+        summary: 'Preparation is key. Know your location, have a stocked kit, and know how to get help.',
+        references: ['WorkSafeBC Part 3', 'OHS Regulation 3.16']
+      }
+    },
+
+    // Vessel Safety Quest
+    {
+      id: 'vs-basics',
+      questId: 'vessel-safety',
+      title: 'Operating from Vessels',
+      order: 1,
+      xpReward: 35,
+      estimatedMinutes: 8,
+      content: {
+        introduction: 'Marine-based RPAS operations add complexity. Vessel movement, wind, and water create unique challenges.',
+        sections: [
+          {
+            heading: 'Vessel-Based Launch',
+            content: 'Coordinate with the captain/helmsman. Launch from stable platforms when possible. Account for vessel movement in takeoff. Use a spotter to watch for approaching waves. Secure all equipment against wave action.',
+            keyPoint: 'Always coordinate with the vessel operator before launch'
+          },
+          {
+            heading: 'Marine Safety Requirements',
+            content: 'PFDs (life jackets) required on deck. Know emergency procedures for man-overboard. Understand vessel communication systems. Be aware of other vessel traffic.',
+            keyPoint: 'Wear your PFD - falling overboard while watching a drone is a real risk'
+          }
+        ],
+        summary: 'Marine ops require coordination with vessel crew and extra safety precautions.',
+        references: ['Transport Canada Marine', 'Vessel safety plans']
+      }
+    },
+
+    // Coastal Hazards Quest
+    {
+      id: 'ch-awareness',
+      questId: 'coastal-hazards',
+      title: 'Coastal Environment Hazards',
+      order: 1,
+      xpReward: 30,
+      estimatedMinutes: 6,
+      content: {
+        introduction: 'Coastal and shoreline operations present unique environmental hazards. Be prepared for rapidly changing conditions.',
+        sections: [
+          {
+            heading: 'Weather Hazards',
+            content: 'Sea breezes can develop rapidly in afternoon. Fog can roll in quickly, reducing visibility. Salt spray affects equipment - clean after coastal flights. Tides can trap you on shorelines.',
+            keyPoint: 'Coastal weather changes faster than inland - check frequently'
+          },
+          {
+            heading: 'Wildlife Considerations',
+            content: 'Nesting birds may attack aircraft near colonies. Marine mammals are protected - maintain distance. Bears frequent coastal areas - be aware. Avoid disturbing wildlife - it may be illegal.',
+            keyPoint: 'Know what wildlife is in your area before operations'
+          }
+        ],
+        summary: 'Coastal environments are dynamic. Stay aware of weather, tides, and wildlife.',
+        references: ['Wildlife Act (BC)', 'Migratory Birds Convention Act']
+      }
+    },
+
+    // Wildlife Encounters Quest
+    {
+      id: 'we-response',
+      questId: 'wildlife-encounters',
+      title: 'Wildlife Awareness & Response',
+      order: 1,
+      xpReward: 35,
+      estimatedMinutes: 7,
+      content: {
+        introduction: 'Working in remote areas means encountering wildlife. Know how to prevent and respond to encounters safely.',
+        sections: [
+          {
+            heading: 'Prevention',
+            content: 'Make noise while moving through brush. Store food properly - use bear caches or vehicle. Be extra alert during dawn and dusk. Know what wildlife is active in your area seasonally.',
+            keyPoint: 'Prevention is better than reaction - make noise and be aware'
+          },
+          {
+            heading: 'Bear Encounters',
+            content: 'Don\'t run - back away slowly. Speak calmly to identify yourself as human. If attacked by black bear - fight back. If attacked by grizzly - play dead (protect neck/stomach). Carry bear spray and know how to use it.',
+            keyPoint: 'Carry bear spray and know the difference between black and grizzly responses'
+          }
+        ],
+        summary: 'Be aware, be prepared, and know appropriate responses for different wildlife.',
+        references: ['WildSafeBC', 'Bear Smart guidelines']
+      }
     }
   ]
 
@@ -817,6 +1087,192 @@ export async function seedGamificationContent(organizationId) {
       isEnding: true,
       endingType: 'failure',
       finalScore: 15
+    },
+
+    // Wildlife Encounter Scenario Nodes
+    {
+      id: 'we-start',
+      scenarioId: 'wildlife-encounter',
+      type: 'narrative',
+      order: 1,
+      content: 'You\'re 20 minutes into a forestry survey flight when your VO calls out: "Bear, 50 meters, coming this way." You look and see a black bear moving through the brush toward your launch site. The aircraft is at 80m altitude, 150m from your position. Your vehicle is 30m behind you.',
+      decisions: [
+        {
+          id: 'we1a',
+          text: 'Land immediately and retreat to the vehicle',
+          nextNodeId: 'we-land-retreat',
+          scoreImpact: 30,
+          isOptimal: true,
+          rationale: 'Safety first - secure the situation before worrying about equipment'
+        },
+        {
+          id: 'we1b',
+          text: 'Keep flying while the VO monitors the bear',
+          nextNodeId: 'we-keep-flying',
+          scoreImpact: -10,
+          isOptimal: false,
+          rationale: 'Continuing operations with wildlife approaching puts crew at risk'
+        },
+        {
+          id: 'we1c',
+          text: 'Fly the drone toward the bear to scare it away',
+          nextNodeId: 'we-scare',
+          scoreImpact: -30,
+          isOptimal: false,
+          rationale: 'Harassing wildlife is illegal and can make bears more dangerous'
+        }
+      ]
+    },
+    {
+      id: 'we-land-retreat',
+      scenarioId: 'wildlife-encounter',
+      type: 'ending',
+      content: 'You land the aircraft quickly and both of you move calmly to the vehicle. The bear passes through your launch area, sniffs the Pelican case, and moves on. After waiting 15 minutes, you retrieve your equipment and finish the survey from a different launch point. Good wildlife awareness and appropriate response.',
+      isEnding: true,
+      endingType: 'success',
+      finalScore: 90
+    },
+    {
+      id: 'we-keep-flying',
+      scenarioId: 'wildlife-encounter',
+      type: 'ending',
+      content: 'The bear reaches your launch site while the aircraft is still flying. Your VO is now focused on the bear instead of the aircraft. The bear shows interest in your equipment. You need to land but now the landing zone isn\'t clear. You land 30m away and the bear investigates the aircraft. Eventually it loses interest, but you\'ve lost your visual observer coverage and the bear has learned that drones equal food containers.',
+      isEnding: true,
+      endingType: 'partial',
+      finalScore: 40
+    },
+    {
+      id: 'we-scare',
+      scenarioId: 'wildlife-encounter',
+      type: 'ending',
+      content: 'You fly the drone toward the bear. It charges the aircraft, swatting at it. The drone crashes. Worse, a Conservation Officer saw the incident and cites you for wildlife harassment under the Wildlife Act. The fine is significant, and the incident is reported to Transport Canada. Your company reviews your field privileges.',
+      isEnding: true,
+      endingType: 'failure',
+      finalScore: 10
+    },
+
+    // Client Pressure Scenario Nodes
+    {
+      id: 'cp-start',
+      scenarioId: 'client-pressure',
+      type: 'narrative',
+      order: 1,
+      content: 'Rain is falling lightly and winds are 20 km/h. Visibility is 5km. The client needs aerial photos for an investor presentation tomorrow and is clearly stressed. They say "The photos are critical - can\'t you just do a quick flight?" Your aircraft is rated for light rain, but your company SOP says no flights in precipitation.',
+      decisions: [
+        {
+          id: 'cp1a',
+          text: 'Explain the SOP and politely decline to fly',
+          nextNodeId: 'cp-decline',
+          scoreImpact: 30,
+          isOptimal: true,
+          rationale: 'SOPs exist for good reason - explaining professionally maintains the relationship'
+        },
+        {
+          id: 'cp1b',
+          text: 'Offer alternatives (reschedule, stock photos, ground photos)',
+          nextNodeId: 'cp-alternatives',
+          scoreImpact: 25,
+          isOptimal: false,
+          rationale: 'Good customer service, but should decline first and then offer alternatives'
+        },
+        {
+          id: 'cp1c',
+          text: 'Fly anyway - the aircraft can handle it',
+          nextNodeId: 'cp-fly',
+          scoreImpact: -25,
+          isOptimal: false,
+          rationale: 'Violating SOP for client pressure sets a dangerous precedent'
+        }
+      ]
+    },
+    {
+      id: 'cp-decline',
+      scenarioId: 'client-pressure',
+      type: 'ending',
+      content: 'You explain that your company\'s safety procedures don\'t allow flight in precipitation, and that these rules exist to protect the aircraft, the data quality, and everyone involved. The client is disappointed but respects your professionalism. You offer to return first thing tomorrow if weather permits, and they agree. The next morning is clear, and you deliver excellent imagery.',
+      isEnding: true,
+      endingType: 'success',
+      finalScore: 90
+    },
+    {
+      id: 'cp-alternatives',
+      scenarioId: 'client-pressure',
+      type: 'ending',
+      content: 'You jump straight to alternatives without clearly explaining why you can\'t fly. The client pushes back: "But other drone companies fly in rain." You eventually decline, but the client feels like you\'re making excuses. The relationship is strained. You complete the job the next day, but they don\'t call again.',
+      isEnding: true,
+      endingType: 'partial',
+      finalScore: 55
+    },
+    {
+      id: 'cp-fly',
+      scenarioId: 'client-pressure',
+      type: 'ending',
+      content: 'You fly in the rain. Water gets into a motor, causing a partial power loss. The aircraft descends rapidly and you barely avoid hitting a parked excavator. The aircraft is damaged and the imagery is unusable due to water droplets on the lens. The client now has no photos AND a near-miss incident report. Your supervisor wants to discuss your decision-making.',
+      isEnding: true,
+      endingType: 'failure',
+      finalScore: 15
+    },
+
+    // Lost Link Scenario Nodes
+    {
+      id: 'll-start',
+      scenarioId: 'lost-link',
+      type: 'narrative',
+      order: 1,
+      content: 'You\'re flying at 100m AGL, 200m from your position. Without warning, your screen shows "Connection Lost." The aircraft should execute its failsafe, but you can\'t confirm what it\'s doing. You last saw it holding position. There are people and equipment in the area.',
+      decisions: [
+        {
+          id: 'll1a',
+          text: 'Warn everyone nearby and watch for the aircraft',
+          nextNodeId: 'll-warn',
+          scoreImpact: 30,
+          isOptimal: true,
+          rationale: 'First priority is always safety of people in the area'
+        },
+        {
+          id: 'll1b',
+          text: 'Try moving around to re-establish connection',
+          nextNodeId: 'll-move',
+          scoreImpact: 15,
+          isOptimal: false,
+          rationale: 'Acceptable, but warning others should come first'
+        },
+        {
+          id: 'll1c',
+          text: 'Run toward where the aircraft was to try to see it',
+          nextNodeId: 'll-run',
+          scoreImpact: -10,
+          isOptimal: false,
+          rationale: 'Running toward an uncontrolled aircraft is dangerous'
+        }
+      ]
+    },
+    {
+      id: 'll-warn',
+      scenarioId: 'lost-link',
+      type: 'ending',
+      content: 'You shout a warning to nearby workers and point to where the aircraft was. Everyone stops and looks up. Thirty seconds later, the aircraft executes its RTH failsafe and lands safely at the home point. You document the incident and later discover interference from a radio tower you hadn\'t identified. Good situational awareness and proper response.',
+      isEnding: true,
+      endingType: 'success',
+      finalScore: 90
+    },
+    {
+      id: 'll-move',
+      scenarioId: 'lost-link',
+      type: 'ending',
+      content: 'You start moving around trying different positions. Connection briefly returns, then drops again. Meanwhile, the aircraft has started its RTH but you didn\'t notice there\'s an excavator in the return path. The aircraft clips the excavator boom and crashes. No one is hurt, but the aircraft is destroyed and the excavator needs inspection. You should have warned people first.',
+      isEnding: true,
+      endingType: 'partial',
+      finalScore: 40
+    },
+    {
+      id: 'll-run',
+      scenarioId: 'lost-link',
+      type: 'ending',
+      content: 'You run toward where the aircraft was. The connection returns just as you trip on uneven ground and fall. You drop the controller. The aircraft, now reconnected, receives erratic inputs from the tumbling controller and descends rapidly. It narrowly misses a worker. You\'re shaken and bruised, and the near-miss requires a full investigation.',
+      isEnding: true,
+      endingType: 'failure',
+      finalScore: 20
     }
   ]
 

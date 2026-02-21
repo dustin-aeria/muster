@@ -18,8 +18,7 @@ import {
   getLessonsForQuest,
   getUserGamificationProfile,
   updateQuestProgress,
-  markLessonComplete,
-  submitQuizAttempt
+  markLessonComplete
 } from '../lib/firestoreGamification'
 
 import { generateQuizQuestions, generateWrongAnswerExplanation } from '../lib/safetyAI'
@@ -120,10 +119,10 @@ export default function QuestDetail() {
   }
 
   async function handleLessonComplete() {
-    if (!currentLesson) return
+    if (!currentLesson || !organization?.id) return
 
     try {
-      const result = await markLessonComplete(currentUser.uid, questId, currentLesson.id)
+      const result = await markLessonComplete(currentUser.uid, questId, currentLesson.id, organization.id)
 
       if (result.xpAwarded) {
         setXpGain(result.xpAwarded)
@@ -232,30 +231,17 @@ export default function QuestDetail() {
       setShowExplanation(false)
       setWrongAnswerExplanation(null)
     } else {
-      // Quiz complete
-      const correctCount = quizResults.filter(r => r.isCorrect).length
-      const score = Math.round((correctCount / quizQuestions.length) * 100)
-
+      // Quiz complete - mark lesson complete (which awards XP)
       try {
-        const result = await submitQuizAttempt(currentUser.uid, questId, currentLesson.id, {
-          score,
-          correctCount,
-          totalQuestions: quizQuestions.length,
-          timestamp: new Date().toISOString()
-        })
-
-        if (result.xpGained) {
-          setXpGain(result.xpGained)
-          setTimeout(() => setXpGain(null), 2000)
-        }
-
-        // Complete the lesson after quiz
         await handleLessonComplete()
       } catch (err) {
-        console.error('Error submitting quiz:', err)
+        console.error('Error completing lesson after quiz:', err)
       }
 
       setQuizMode(false)
+      setQuizQuestions([])
+      setQuizResults([])
+      setCurrentQuestionIndex(0)
     }
   }
 
@@ -524,8 +510,10 @@ export default function QuestDetail() {
 
         <div className="divide-y divide-gray-100">
           {lessons.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              No lessons available yet.
+            <div className="p-8 text-center">
+              <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">Content Coming Soon</p>
+              <p className="text-gray-400 text-sm mt-1">This quest's lessons are being developed.</p>
             </div>
           ) : (
             lessons.map((lesson, index) => {

@@ -66,11 +66,17 @@ export default function ScenarioDetail() {
       }
 
       setScenario(scenarioData)
-      setNodes(scenarioData.nodes || [])
+      const nodesData = scenarioData.nodes || []
+      setNodes(nodesData)
       setProfile(profileData)
 
+      // Check if scenario has nodes
+      if (nodesData.length === 0) {
+        setError('This scenario is still being developed. Please try another one.')
+        return
+      }
+
       // Find the starting node (order: 1 or first narrative node)
-      const nodesData = scenarioData.nodes || []
       const startNode = nodesData.find(n => n.order === 1) || nodesData.find(n => n.type === 'narrative') || nodesData[0]
       setCurrentNode(startNode)
       setScore(50) // Start with base score
@@ -117,16 +123,19 @@ export default function ScenarioDetail() {
     // Calculate final score
     const finalScore = endingNode?.finalScore || score
 
-    // Submit attempt
+    // Submit attempt - convert decisionHistory to pathTaken format
     try {
-      const result = await submitScenarioAttempt(currentUser.uid, {
+      const pathTaken = decisionHistory.map(d => ({
+        nodeId: d.nodeId,
+        decisionId: d.decisionId
+      }))
+
+      const result = await submitScenarioAttempt(
+        currentUser.uid,
         scenarioId,
-        organizationId: organization.id,
-        score: finalScore,
-        decisions: decisionHistory,
-        completedAt: new Date().toISOString(),
-        endingType: endingNode?.endingType || 'neutral'
-      })
+        pathTaken,
+        organization.id
+      )
 
       if (result?.xpEarned) {
         setXpGain(result.xpEarned)

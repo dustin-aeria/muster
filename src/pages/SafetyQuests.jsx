@@ -40,20 +40,12 @@ export default function SafetyQuests() {
   const [reviewItems, setReviewItems] = useState([])
 
   useEffect(() => {
-    console.log('SafetyQuests useEffect - authLoading:', authLoading, 'orgLoading:', orgLoading, 'uid:', currentUser?.uid, 'orgId:', organizationId)
-
     // Wait for both auth and org context to finish loading
-    if (authLoading || orgLoading) {
-      console.log('SafetyQuests: still loading contexts')
-      return
-    }
+    if (authLoading || orgLoading) return
 
     if (currentUser?.uid && organizationId) {
-      console.log('SafetyQuests: calling loadData')
       loadData()
     } else {
-      console.log('SafetyQuests: no user or org, setting loading false')
-      // No org or user - stop loading
       setLoading(false)
     }
   }, [currentUser, organizationId, authLoading, orgLoading])
@@ -64,19 +56,12 @@ export default function SafetyQuests() {
     setLoading(true)
     setError(null)
 
-    console.log('SafetyQuests loadData called, orgId:', organizationId)
-
     try {
       const [profileData, tracksData, reviewData] = await Promise.all([
         getUserGamificationProfile(currentUser.uid),
         getQuestTracks(organizationId),
         getSpacedRepetitionDue(currentUser.uid)
       ])
-
-      console.log('SafetyQuests loaded - profile:', profileData)
-      console.log('SafetyQuests loaded - tracks:', tracksData)
-      console.log('SafetyQuests loaded - tracks count:', tracksData?.length)
-      console.log('SafetyQuests loaded - reviewItems:', reviewData)
 
       setProfile(profileData)
       setTracks(tracksData || [])
@@ -89,10 +74,8 @@ export default function SafetyQuests() {
       }
     } catch (err) {
       console.error('Error loading quests data:', err)
-      console.error('Error details:', err.code, err.message)
       setError('Failed to load quests. Please try again.')
     } finally {
-      console.log('SafetyQuests loadData complete, setting loading=false')
       setLoading(false)
     }
   }
