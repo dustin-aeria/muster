@@ -14,6 +14,7 @@ import {
   Trophy,
   Target,
   ChevronRight,
+  ChevronLeft,
   Lock,
   CheckCircle,
   Play,
@@ -22,7 +23,11 @@ import {
   Award,
   Zap,
   ArrowRight,
-  Sparkles
+  ArrowLeft,
+  Sparkles,
+  AlertTriangle,
+  Lightbulb,
+  Info
 } from 'lucide-react'
 
 // Import quest tracks data
@@ -54,6 +59,7 @@ export default function LearningHub() {
 
   const [selectedTrack, setSelectedTrack] = useState(null)
   const [selectedQuest, setSelectedQuest] = useState(null)
+  const [selectedLesson, setSelectedLesson] = useState(null)
   const [userProgress, setUserProgress] = useState({})
   const [loading, setLoading] = useState(false)
 
@@ -408,7 +414,13 @@ export default function LearningHub() {
                     <span className="text-sm text-indigo-600">+{lesson.xpReward} XP</span>
                   </div>
                   {index === 0 ? (
-                    <button className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedLesson({ ...lesson, index })
+                      }}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
                       <Play className="w-3.5 h-3.5" />
                       Start
                     </button>
@@ -460,10 +472,173 @@ export default function LearningHub() {
     )
   }
 
+  // Render lesson view
+  const renderLessonView = () => {
+    if (!selectedLesson) return null
+
+    const currentIndex = selectedLesson.index
+    const lessons = selectedQuest.lessons || []
+    const isLastLesson = currentIndex === lessons.length - 1
+    const nextLesson = !isLastLesson ? lessons[currentIndex + 1] : null
+
+    // Handle completing lesson and moving to next
+    const handleCompleteLesson = () => {
+      // TODO: Save progress to Firestore
+      if (nextLesson) {
+        setSelectedLesson({ ...nextLesson, index: currentIndex + 1 })
+      } else {
+        // All lessons complete - go back to quest view
+        setSelectedLesson(null)
+      }
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Header with navigation */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setSelectedLesson(null)}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to {selectedQuest.title}
+          </button>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Lesson {currentIndex + 1} of {lessons.length}</span>
+            <div className="flex gap-1">
+              {lessons.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`w-2 h-2 rounded-full ${
+                    idx === currentIndex
+                      ? 'bg-indigo-600'
+                      : idx < currentIndex
+                      ? 'bg-green-500'
+                      : 'bg-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Lesson card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Lesson header */}
+          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4 text-white">
+            <div className="flex items-center gap-2 text-indigo-100 text-sm mb-1">
+              <BookOpen className="w-4 h-4" />
+              {selectedTrack.title} • {selectedQuest.title}
+            </div>
+            <h1 className="text-2xl font-bold">{selectedLesson.title}</h1>
+            <div className="flex items-center gap-4 mt-2 text-sm text-indigo-100">
+              <span className="flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                ~{selectedLesson.estimatedDuration || 10} min
+              </span>
+              <span className="flex items-center gap-1">
+                <Zap className="w-4 h-4" />
+                +{selectedLesson.xpReward} XP
+              </span>
+            </div>
+          </div>
+
+          {/* Lesson content */}
+          <div className="p-6">
+            {/* Key points summary */}
+            {selectedLesson.keyPoints && selectedLesson.keyPoints.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-2 text-blue-700 font-medium mb-2">
+                  <Info className="w-4 h-4" />
+                  Key Points
+                </div>
+                <ul className="space-y-1">
+                  {selectedLesson.keyPoints.map((point, idx) => (
+                    <li key={idx} className="text-sm text-blue-700 flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Main content - render HTML content with styling */}
+            <div
+              className="prose prose-gray max-w-none
+                prose-headings:text-gray-900 prose-headings:font-semibold
+                prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3
+                prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2
+                prose-h4:text-base prose-h4:mt-3 prose-h4:mb-2
+                prose-p:text-gray-700 prose-p:leading-relaxed
+                prose-ul:my-3 prose-li:my-1 prose-li:text-gray-700
+                prose-strong:text-gray-900
+                [&_.key-concept]:bg-emerald-50 [&_.key-concept]:border [&_.key-concept]:border-emerald-200 [&_.key-concept]:rounded-lg [&_.key-concept]:p-4 [&_.key-concept]:my-4
+                [&_.key-concept_h3]:text-emerald-700 [&_.key-concept_h3]:text-sm [&_.key-concept_h3]:font-semibold [&_.key-concept_h3]:mb-2 [&_.key-concept_h3]:mt-0
+                [&_.key-concept_p]:text-emerald-800 [&_.key-concept_p]:mb-0
+                [&_.think-about-it]:bg-amber-50 [&_.think-about-it]:border [&_.think-about-it]:border-amber-200 [&_.think-about-it]:rounded-lg [&_.think-about-it]:p-4 [&_.think-about-it]:my-4
+                [&_.think-about-it_h4]:text-amber-700 [&_.think-about-it_h4]:text-sm [&_.think-about-it_h4]:font-semibold [&_.think-about-it_h4]:mb-2 [&_.think-about-it_h4]:mt-0
+                [&_.think-about-it_p]:text-amber-800 [&_.think-about-it_p]:mb-0
+                [&_.key-takeaway]:bg-purple-50 [&_.key-takeaway]:border [&_.key-takeaway]:border-purple-200 [&_.key-takeaway]:rounded-lg [&_.key-takeaway]:p-4 [&_.key-takeaway]:my-4
+                [&_.key-takeaway_h4]:text-purple-700 [&_.key-takeaway_h4]:text-sm [&_.key-takeaway_h4]:font-semibold [&_.key-takeaway_h4]:mb-2 [&_.key-takeaway_h4]:mt-0
+                [&_.key-takeaway_p]:text-purple-800 [&_.key-takeaway_p]:mb-0
+                [&_.warning]:bg-red-50 [&_.warning]:border [&_.warning]:border-red-200 [&_.warning]:rounded-lg [&_.warning]:p-4 [&_.warning]:my-4
+                [&_.warning_h4]:text-red-700 [&_.warning_h4]:text-sm [&_.warning_h4]:font-semibold [&_.warning_h4]:mb-2 [&_.warning_h4]:mt-0
+                [&_.warning_p]:text-red-800 [&_.warning_p]:mb-0
+              "
+              dangerouslySetInnerHTML={{ __html: selectedLesson.content || '<p>Lesson content loading...</p>' }}
+            />
+
+            {/* Regulatory references */}
+            {selectedLesson.regulatoryRefs && selectedLesson.regulatoryRefs.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <h4 className="text-sm font-medium text-gray-500 mb-2">Regulatory References</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedLesson.regulatoryRefs.map((ref, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded"
+                    >
+                      {ref.type} {ref.reference} - {ref.section}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer with actions */}
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Zap className="w-4 h-4 text-amber-500" />
+              <span>Complete this lesson to earn <strong className="text-amber-600">{selectedLesson.xpReward} XP</strong></span>
+            </div>
+            <button
+              onClick={handleCompleteLesson}
+              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              {isLastLesson ? (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Complete Quest
+                </>
+              ) : (
+                <>
+                  Next Lesson
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Main render
   return (
     <div className="space-y-6">
-      {selectedQuest ? renderQuestDetail() : selectedTrack ? renderTrackDetail() : renderTrackList()}
+      {selectedLesson ? renderLessonView() : selectedQuest ? renderQuestDetail() : selectedTrack ? renderTrackDetail() : renderTrackList()}
     </div>
   )
 }
