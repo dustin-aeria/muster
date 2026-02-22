@@ -64,6 +64,7 @@ const safetyNavigation = [
 ]
 
 const trainingNavigation = [
+  { name: 'Learning Hub', href: '/learning', icon: BookOpen },
   { name: 'Training Records', href: '/training', icon: GraduationCap },
   { name: 'Q-Cards', href: '/training/qcards', icon: Layers },
 ]

@@ -75,6 +75,7 @@ const Calendar = lazy(() => import('./pages/Calendar'))
 
 // Gamification Module Pages - lazy-loaded
 const OperatorReady = lazy(() => import('./pages/OperatorReady'))
+const LearningHub = lazy(() => import('./pages/LearningHub'))
 
 // Maintenance Module Pages - lazy-loaded
 const MaintenanceDashboard = lazy(() => import('./pages/MaintenanceDashboard'))
@@ -299,6 +300,7 @@ function App() {
 
           {/* Gamification Module Routes - lazy-loaded */}
           <Route path="operator-ready" element={<Suspense fallback={<PageLoader />}><OperatorReady /></Suspense>} />
+          <Route path="learning" element={<Suspense fallback={<PageLoader />}><LearningHub /></Suspense>} />
 
           {/* Maintenance Module Routes - lazy-loaded */}
           <Route path="maintenance" element={<Suspense fallback={<PageLoader />}><MaintenanceDashboard /></Suspense>} />
