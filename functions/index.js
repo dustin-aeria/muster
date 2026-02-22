@@ -672,19 +672,6 @@ exports.processReceiptOCR = functions.firestore
   })
 
 // ============================================
-// Document Generation Functions
-// ============================================
-
-const documentGeneration = require('./documentGeneration')
-
-exports.sendDocumentMessage = documentGeneration.sendDocumentMessage
-exports.generateSectionContent = documentGeneration.generateSectionContent
-exports.populateAllSections = documentGeneration.populateAllSections
-exports.getOrganizationTokenUsage = documentGeneration.getOrganizationTokenUsage
-exports.searchKnowledgeBase = documentGeneration.searchKnowledgeBase
-exports.getKnowledgeForDocumentType = documentGeneration.getKnowledgeForDocumentType
-
-// ============================================
 // Safety Declaration AI Functions
 // ============================================
 
@@ -1144,6 +1131,36 @@ if (ANTHROPIC_API_KEY) {
  * Q-Cards AI Study Assistant
  * Answers questions about L1C RPAS flashcards
  */
+// ============================================
+// Training Content AI Functions
+// ============================================
+
+const trainingContentAI = require('./trainingContentAI')
+
+exports.enhanceLessonContent = trainingContentAI.enhanceLessonContent
+exports.generateQuizFromContent = trainingContentAI.generateQuizFromContent
+exports.generateScenarioFromProcedure = trainingContentAI.generateScenarioFromProcedure
+exports.generateFlashcardsFromContent = trainingContentAI.generateFlashcardsFromContent
+exports.generateWrongAnswerExplanation = trainingContentAI.generateWrongAnswerExplanation
+exports.generateScenarioDebrief = trainingContentAI.generateScenarioDebrief
+
+// ============================================
+// Study Recommendations Functions
+// ============================================
+
+const studyRecommendations = require('./studyRecommendations')
+
+exports.analyzeUserPerformance = studyRecommendations.analyzeUserPerformance
+exports.generateStudyPlan = studyRecommendations.generateStudyPlan
+exports.getSpacedRepetitionSchedule = studyRecommendations.getSpacedRepetitionSchedule
+exports.updateReviewItem = studyRecommendations.updateReviewItem
+exports.addToReviewQueue = studyRecommendations.addToReviewQueue
+exports.getNextQuestRecommendations = studyRecommendations.getNextQuestRecommendations
+
+// ============================================
+// Q-Cards AI Study Assistant
+// ============================================
+
 exports.askQCardQuestion = functions.https.onCall(async (data, context) => {
   // Verify authentication
   if (!context.auth) {
@@ -1250,7 +1267,6 @@ Example format:
   }
 })
 
-
 // ============================================
 // Gamification Functions
 // ============================================
@@ -1266,3 +1282,158 @@ exports.generateTrendInsight = gamification.generateTrendInsight
 exports.chunkDocumentContent = gamification.chunkDocumentContent
 exports.generateLessonContent = gamification.generateLessonContent
 exports.getAdaptiveDifficulty = gamification.getAdaptiveDifficulty
+
+// ============================================
+// AI Tutor for Training System
+// ============================================
+
+/**
+ * AI Tutor - Context-aware learning assistant
+ * Provides explanations, examples, and guidance during training
+ */
+exports.askAITutor = functions.https.onCall(async (data, context) => {
+  // Verify authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'User must be authenticated'
+    )
+  }
+
+  if (!anthropic) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'AI service not configured'
+    )
+  }
+
+  const { message, context: tutorContext } = data
+  const callerUid = context.auth.uid
+
+  // Input validation
+  if (!message || typeof message !== 'string' || message.length > 2000) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Valid message is required (max 2000 characters)'
+    )
+  }
+
+  // Rate limiting
+  const withinLimit = await checkRateLimit(callerUid, 'ai_tutor')
+  if (!withinLimit) {
+    throw new functions.https.HttpsError(
+      'resource-exhausted',
+      'Too many requests. Please try again later.'
+    )
+  }
+
+  // Build context-aware system prompt
+  let contextInfo = ''
+  if (tutorContext?.lessonTitle) {
+    contextInfo += `\nCurrent lesson: "${tutorContext.lessonTitle}"`
+  }
+  if (tutorContext?.questTitle) {
+    contextInfo += `\nCurrent quest: "${tutorContext.questTitle}"`
+  }
+  if (tutorContext?.trackId) {
+    contextInfo += `\nTraining track: ${tutorContext.trackId}`
+  }
+  if (tutorContext?.lessonContent) {
+    contextInfo += `\n\nLesson content excerpt:\n${tutorContext.lessonContent.substring(0, 1500)}`
+  }
+
+  const systemPrompt = `You are an expert RPAS (Remotely Piloted Aircraft Systems) training instructor and AI tutor embedded within Muster, a field operations platform. Your role is to help students understand aviation safety concepts, Canadian RPAS regulations, and operational procedures.
+
+${contextInfo ? `**Current Learning Context:**${contextInfo}` : ''}
+
+**Your Capabilities:**
+1. Explain complex concepts in clear, accessible language
+2. Provide real-world examples from RPAS operations
+3. Reference relevant Canadian regulations (CARs, Standards, SORA)
+4. Connect topics to practical safety applications
+5. Answer follow-up questions with accuracy
+6. Encourage and support learners
+
+**Response Guidelines:**
+- Be concise but thorough (2-4 paragraphs typical)
+- Use **bold** for key terms and important points
+- Use bullet points for lists
+- Include regulatory references when relevant (e.g., CAR 901.XX)
+- Be encouraging and supportive
+- If uncertain about specific regulations, say so rather than guessing
+
+**Important Topics You Cover:**
+- Safety Management Systems (SMS)
+- Crew Resource Management (CRM)
+- RPAS flight operations and procedures
+- Canadian regulations (CARs Part IX, Standards 921/922/923)
+- SORA methodology and risk assessment
+- Wildlife and environmental considerations
+- Emergency procedures
+- Infrastructure inspection operations
+- Marine and specialized operations`
+
+  try {
+    // Build conversation with history if provided
+    const messages = []
+
+    if (tutorContext?.conversationHistory) {
+      for (const msg of tutorContext.conversationHistory.slice(-4)) {
+        messages.push({
+          role: msg.role === 'assistant' ? 'assistant' : 'user',
+          content: msg.content
+        })
+      }
+    }
+
+    messages.push({ role: 'user', content: message })
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-haiku-20240307', // Use Haiku for fast, cost-effective responses
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages
+    })
+
+    const responseText = response.content?.[0]?.text || 'No response generated.'
+
+    functions.logger.info('AI Tutor question answered', {
+      userId: callerUid,
+      questionLength: message.length,
+      responseLength: responseText.length,
+      track: tutorContext?.trackId
+    })
+
+    // Extract any regulatory references mentioned
+    const references = []
+    const carMatches = responseText.match(/CAR\s*\d+\.\d+/gi) || []
+    const standardMatches = responseText.match(/Standard\s*\d+\.\d+/gi) || []
+
+    carMatches.forEach(match => {
+      references.push({
+        title: match,
+        url: 'https://tc.canada.ca/en/corporate-services/acts-regulations/list-regulations/canadian-aviation-regulations-sor-96-433'
+      })
+    })
+
+    standardMatches.forEach(match => {
+      references.push({
+        title: match,
+        url: 'https://tc.canada.ca/en/aviation/publications/standards'
+      })
+    })
+
+    return {
+      success: true,
+      response: responseText,
+      references: references.slice(0, 3) // Limit to 3 references
+    }
+
+  } catch (error) {
+    functions.logger.error('AI Tutor error:', error)
+    throw new functions.https.HttpsError(
+      'internal',
+      'Failed to get AI response. Please try again.'
+    )
+  }
+})
