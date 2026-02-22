@@ -66,8 +66,6 @@ const safetyNavigation = [
 const trainingNavigation = [
   { name: 'Training Records', href: '/training', icon: GraduationCap },
   { name: 'Q-Cards', href: '/training/qcards', icon: Layers },
-  { name: 'Safety Quests', href: '/safety-quests', icon: Trophy },
-  { name: 'Scenario Challenges', href: '/scenario-challenges', icon: GitBranch },
 ]
 
 const operatorReadyNavigation = [

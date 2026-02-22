@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react'
 import { TrendingUp, Star, Zap } from 'lucide-react'
-import { getLevelProgress, getLevelTitle } from '../../../lib/gamificationEngine'
+import { getLevelProgress } from '../../../lib/gamificationEngine'
 
 export default function XPDisplay({
   totalXP = 0,

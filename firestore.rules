@@ -848,12 +848,27 @@ service cloud.firestore {
       // Users can read/write their own data
       allow read, write: if isOwner(userId);
 
-      // Gamification profile subcollection
+      // Gamification subcollection - new structure
+      match /gamification/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Gamification quest progress subcollection
+      match /gamification/questProgress/{questId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Gamification scenario attempts subcollection
+      match /gamification/scenarioAttempts/{attemptId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Legacy: Gamification profile subcollection
       match /gamificationProfile/{docId} {
         allow read, write: if isOwner(userId);
       }
 
-      // Quest progress subcollection
+      // Legacy: Quest progress subcollection
       match /questProgress/{progressId} {
         allow read, write: if isOwner(userId);
       }
@@ -868,7 +883,7 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
 
-      // Scenario attempts subcollection
+      // Legacy: Scenario attempts subcollection
       match /scenarioAttempts/{attemptId} {
         allow read, write: if isOwner(userId);
       }
