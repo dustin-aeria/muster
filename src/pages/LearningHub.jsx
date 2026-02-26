@@ -545,49 +545,152 @@ export default function LearningHub() {
 
           {/* Lesson content */}
           <div className="p-6">
-            {/* Key points summary */}
-            {selectedLesson.keyPoints && selectedLesson.keyPoints.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center gap-2 text-blue-700 font-medium mb-2">
-                  <Info className="w-4 h-4" />
-                  Key Points
+            {/* Key points summary - check both direct keyPoints and content.keyPoints */}
+            {(() => {
+              const keyPoints = selectedLesson.keyPoints || selectedLesson.content?.keyPoints || []
+              return keyPoints.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center gap-2 text-blue-700 font-medium mb-2">
+                    <Info className="w-4 h-4" />
+                    Key Points
+                  </div>
+                  <ul className="space-y-1">
+                    {keyPoints.map((point, idx) => (
+                      <li key={idx} className="text-sm text-blue-700 flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="space-y-1">
-                  {selectedLesson.keyPoints.map((point, idx) => (
-                    <li key={idx} className="text-sm text-blue-700 flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                      {point}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              )
+            })()}
 
-            {/* Main content - render HTML content with styling */}
-            <div
-              className="prose prose-gray max-w-none
-                prose-headings:text-gray-900 prose-headings:font-semibold
-                prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3
-                prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2
-                prose-h4:text-base prose-h4:mt-3 prose-h4:mb-2
-                prose-p:text-gray-700 prose-p:leading-relaxed
-                prose-ul:my-3 prose-li:my-1 prose-li:text-gray-700
-                prose-strong:text-gray-900
-                [&_.key-concept]:bg-emerald-50 [&_.key-concept]:border [&_.key-concept]:border-emerald-200 [&_.key-concept]:rounded-lg [&_.key-concept]:p-4 [&_.key-concept]:my-4
-                [&_.key-concept_h3]:text-emerald-700 [&_.key-concept_h3]:text-sm [&_.key-concept_h3]:font-semibold [&_.key-concept_h3]:mb-2 [&_.key-concept_h3]:mt-0
-                [&_.key-concept_p]:text-emerald-800 [&_.key-concept_p]:mb-0
-                [&_.think-about-it]:bg-amber-50 [&_.think-about-it]:border [&_.think-about-it]:border-amber-200 [&_.think-about-it]:rounded-lg [&_.think-about-it]:p-4 [&_.think-about-it]:my-4
-                [&_.think-about-it_h4]:text-amber-700 [&_.think-about-it_h4]:text-sm [&_.think-about-it_h4]:font-semibold [&_.think-about-it_h4]:mb-2 [&_.think-about-it_h4]:mt-0
-                [&_.think-about-it_p]:text-amber-800 [&_.think-about-it_p]:mb-0
-                [&_.key-takeaway]:bg-purple-50 [&_.key-takeaway]:border [&_.key-takeaway]:border-purple-200 [&_.key-takeaway]:rounded-lg [&_.key-takeaway]:p-4 [&_.key-takeaway]:my-4
-                [&_.key-takeaway_h4]:text-purple-700 [&_.key-takeaway_h4]:text-sm [&_.key-takeaway_h4]:font-semibold [&_.key-takeaway_h4]:mb-2 [&_.key-takeaway_h4]:mt-0
-                [&_.key-takeaway_p]:text-purple-800 [&_.key-takeaway_p]:mb-0
-                [&_.warning]:bg-red-50 [&_.warning]:border [&_.warning]:border-red-200 [&_.warning]:rounded-lg [&_.warning]:p-4 [&_.warning]:my-4
-                [&_.warning_h4]:text-red-700 [&_.warning_h4]:text-sm [&_.warning_h4]:font-semibold [&_.warning_h4]:mb-2 [&_.warning_h4]:mt-0
-                [&_.warning_p]:text-red-800 [&_.warning_p]:mb-0
-              "
-              dangerouslySetInnerHTML={{ __html: selectedLesson.content || '<p>Lesson content loading...</p>' }}
-            />
+            {/* Main content - handle both HTML string and structured sections */}
+            {(() => {
+              const content = selectedLesson.content
+
+              // If content is a string, render as HTML
+              if (typeof content === 'string') {
+                return (
+                  <div
+                    className="prose prose-gray max-w-none
+                      prose-headings:text-gray-900 prose-headings:font-semibold
+                      prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3
+                      prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2
+                      prose-h4:text-base prose-h4:mt-3 prose-h4:mb-2
+                      prose-p:text-gray-700 prose-p:leading-relaxed
+                      prose-ul:my-3 prose-li:my-1 prose-li:text-gray-700
+                      prose-strong:text-gray-900
+                      [&_.key-concept]:bg-emerald-50 [&_.key-concept]:border [&_.key-concept]:border-emerald-200 [&_.key-concept]:rounded-lg [&_.key-concept]:p-4 [&_.key-concept]:my-4
+                      [&_.key-concept_h3]:text-emerald-700 [&_.key-concept_h3]:text-sm [&_.key-concept_h3]:font-semibold [&_.key-concept_h3]:mb-2 [&_.key-concept_h3]:mt-0
+                      [&_.key-concept_p]:text-emerald-800 [&_.key-concept_p]:mb-0
+                      [&_.think-about-it]:bg-amber-50 [&_.think-about-it]:border [&_.think-about-it]:border-amber-200 [&_.think-about-it]:rounded-lg [&_.think-about-it]:p-4 [&_.think-about-it]:my-4
+                      [&_.think-about-it_h4]:text-amber-700 [&_.think-about-it_h4]:text-sm [&_.think-about-it_h4]:font-semibold [&_.think-about-it_h4]:mb-2 [&_.think-about-it_h4]:mt-0
+                      [&_.think-about-it_p]:text-amber-800 [&_.think-about-it_p]:mb-0
+                      [&_.key-takeaway]:bg-purple-50 [&_.key-takeaway]:border [&_.key-takeaway]:border-purple-200 [&_.key-takeaway]:rounded-lg [&_.key-takeaway]:p-4 [&_.key-takeaway]:my-4
+                      [&_.key-takeaway_h4]:text-purple-700 [&_.key-takeaway_h4]:text-sm [&_.key-takeaway_h4]:font-semibold [&_.key-takeaway_h4]:mb-2 [&_.key-takeaway_h4]:mt-0
+                      [&_.key-takeaway_p]:text-purple-800 [&_.key-takeaway_p]:mb-0
+                      [&_.warning]:bg-red-50 [&_.warning]:border [&_.warning]:border-red-200 [&_.warning]:rounded-lg [&_.warning]:p-4 [&_.warning]:my-4
+                      [&_.warning_h4]:text-red-700 [&_.warning_h4]:text-sm [&_.warning_h4]:font-semibold [&_.warning_h4]:mb-2 [&_.warning_h4]:mt-0
+                      [&_.warning_p]:text-red-800 [&_.warning_p]:mb-0
+                    "
+                    dangerouslySetInnerHTML={{ __html: content }}
+                  />
+                )
+              }
+
+              // If content has sections array, render structured content
+              if (content?.sections) {
+                return (
+                  <div className="space-y-4">
+                    {content.sections.map((section, idx) => {
+                      switch (section.type) {
+                        case 'heading':
+                          return (
+                            <h3 key={idx} className="text-lg font-semibold text-gray-900 mt-6 mb-2">
+                              {section.content}
+                            </h3>
+                          )
+                        case 'text':
+                          return (
+                            <div
+                              key={idx}
+                              className="text-gray-700 leading-relaxed whitespace-pre-line"
+                              dangerouslySetInnerHTML={{
+                                __html: section.content
+                                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                  .replace(/\n/g, '<br/>')
+                              }}
+                            />
+                          )
+                        case 'list':
+                          return (
+                            <ul key={idx} className="list-disc list-inside space-y-1 text-gray-700 ml-4">
+                              {section.items?.map((item, i) => (
+                                <li key={i}>{item}</li>
+                              ))}
+                            </ul>
+                          )
+                        case 'callout':
+                          const variants = {
+                            info: 'bg-blue-50 border-blue-200 text-blue-800',
+                            warning: 'bg-amber-50 border-amber-200 text-amber-800',
+                            danger: 'bg-red-50 border-red-200 text-red-800',
+                            success: 'bg-green-50 border-green-200 text-green-800',
+                            tip: 'bg-purple-50 border-purple-200 text-purple-800'
+                          }
+                          const variantClass = variants[section.variant] || variants.info
+                          return (
+                            <div key={idx} className={`p-4 rounded-lg border ${variantClass}`}>
+                              {section.title && (
+                                <div className="font-medium mb-1">{section.title}</div>
+                              )}
+                              <div className="text-sm">{section.content}</div>
+                            </div>
+                          )
+                        case 'table':
+                          return (
+                            <div key={idx} className="overflow-x-auto">
+                              <table className="min-w-full divide-y divide-gray-200">
+                                {section.headers && (
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      {section.headers.map((header, i) => (
+                                        <th key={i} className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                          {header}
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                )}
+                                <tbody className="divide-y divide-gray-100">
+                                  {section.rows?.map((row, i) => (
+                                    <tr key={i}>
+                                      {row.map((cell, j) => (
+                                        <td key={j} className="px-4 py-2 text-sm text-gray-600">
+                                          {cell}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )
+                        default:
+                          return (
+                            <p key={idx} className="text-gray-700">{section.content}</p>
+                          )
+                      }
+                    })}
+                  </div>
+                )
+              }
+
+              // Fallback for missing content
+              return <p className="text-gray-500 italic">Lesson content not available.</p>
+            })()}
 
             {/* Regulatory references */}
             {selectedLesson.regulatoryRefs && selectedLesson.regulatoryRefs.length > 0 && (
