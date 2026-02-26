@@ -8,8 +8,8 @@
  */
 
 const fieldSafetyTrack = {
-  id: 'field-safety-procedures',
-  slug: 'field-safety',
+  id: 'fieldSafety',
+  slug: 'field-safety-procedures',
   title: 'Field Safety Procedures',
   description: 'Master field safety practices for RPAS operations including site assessment, crew safety, environmental hazards, and incident response.',
   category: 'safety',

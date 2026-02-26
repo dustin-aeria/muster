@@ -8,8 +8,8 @@
  */
 
 const specializedOpsTrack = {
-  id: 'specialized-ops',
-  slug: 'specialized-ops',
+  id: 'specializedOps',
+  slug: 'specialized-operations',
   title: 'Specialized Operations',
   description: 'Master operation-specific procedures for infrastructure inspection, survey/mapping, agricultural, marine/coastal, night/BVLOS, and emergency response support operations.',
   category: 'specialized',

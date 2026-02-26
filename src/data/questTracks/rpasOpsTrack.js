@@ -10,9 +10,9 @@
  */
 
 const rpasOpsTrack = {
-  id: 'track_rpas_operations',
+  id: 'rpasOps',
   slug: 'rpas-flight-operations',
-  name: 'RPAS Flight Operations',
+  title: 'RPAS Flight Operations',
   description: 'Master the complete flight operations lifecycle from pre-flight planning through post-flight documentation. Learn proper procedures, emergency response, and maintenance fundamentals for safe RPAS operations.',
   category: 'operations',
   icon: 'Plane',

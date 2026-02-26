@@ -8,8 +8,8 @@
  */
 
 const regulatoryTrack = {
-  id: 'regulatory-compliance',
-  slug: 'regulatory',
+  id: 'regulatory',
+  slug: 'regulatory-compliance',
   title: 'Regulatory Compliance',
   description: 'Master Canadian RPAS regulations, SORA 2.5 methodology, and operational compliance requirements for professional drone operations.',
   category: 'regulatory',

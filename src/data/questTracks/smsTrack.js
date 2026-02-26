@@ -10,9 +10,9 @@
  */
 
 const smsTrack = {
-  id: 'track_sms_foundation',
+  id: 'sms',
   slug: 'safety-management-systems',
-  name: 'Safety Management Systems',
+  title: 'Safety Management Systems',
   description: 'Master the fundamentals of Safety Management Systems (SMS) including safety culture, risk assessment, hazard identification, and continuous improvement. This foundational track is essential for all RPAS operators.',
   category: 'safety',
   icon: 'Shield',

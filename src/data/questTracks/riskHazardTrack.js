@@ -8,8 +8,8 @@
  */
 
 const riskHazardTrack = {
-  id: 'risk-hazard-management',
-  slug: 'risk-hazard',
+  id: 'riskHazard',
+  slug: 'risk-hazard-management',
   title: 'Risk & Hazard Management',
   description: 'Master the principles and practices of hazard identification, risk assessment, and control measure implementation for RPAS operations.',
   category: 'safety',

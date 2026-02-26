@@ -10,9 +10,9 @@
  */
 
 const crmTrack = {
-  id: 'track_crm_expert',
+  id: 'crm',
   slug: 'crew-resource-management',
-  name: 'Crew Resource Management',
+  title: 'Crew Resource Management',
   description: 'Master the human factors that make or break safe operations. Learn communication, decision-making, situational awareness, stress management, and team coordination skills essential for RPAS operations.',
   category: 'human-factors',
   icon: 'Users',

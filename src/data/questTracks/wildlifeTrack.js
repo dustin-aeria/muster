@@ -8,8 +8,8 @@
  */
 
 const wildlifeTrack = {
-  id: 'wildlife-environmental-safety',
-  slug: 'wildlife',
+  id: 'wildlife',
+  slug: 'wildlife-environmental-safety',
   title: 'Wildlife & Environmental Safety',
   description: 'Learn to conduct RPAS operations with minimal impact on wildlife and the environment while meeting regulatory requirements.',
   category: 'specialized',
