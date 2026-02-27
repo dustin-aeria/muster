@@ -33,10 +33,11 @@ import {
   Percent,
   TrendingDown
 } from 'lucide-react'
-import { getServices } from '../../lib/firestore'
+import { getServices, getRateCardItems, initializeRateCard } from '../../lib/firestore'
 import { useOrganization } from '../../hooks/useOrganization'
 import { formatCurrency } from '../../lib/costEstimator'
 import { PRICING_TYPES, UNIT_TYPES } from '../../pages/Services'
+import { DEFAULT_RATE_CARD_ITEMS, RATE_CARD_CATEGORIES } from '../../data/rateCard'
 
 // Service categories for display
 const SERVICE_CATEGORIES = {
@@ -157,6 +158,14 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
   const [selectedRateType, setSelectedRateType] = useState(null)
   const [quantity, setQuantity] = useState('')
 
+  // Rate card state
+  const [rateCardItems, setRateCardItems] = useState([])
+  const [rateCardLoading, setRateCardLoading] = useState(false)
+  const [selectedRateCardItem, setSelectedRateCardItem] = useState(null)
+  const [selectedRateCardCategory, setSelectedRateCardCategory] = useState(null)
+  const [rateCardRateType, setRateCardRateType] = useState(null)
+  const [rateCardQuantity, setRateCardQuantity] = useState('1')
+
   // Custom service form
   const [customForm, setCustomForm] = useState({
     name: '',
@@ -170,9 +179,14 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
   useEffect(() => {
     if (isOpen) {
       loadServices()
+      loadRateCard()
       setSelectedService(null)
       setSelectedRateType(null)
       setQuantity('')
+      setSelectedRateCardItem(null)
+      setSelectedRateCardCategory(null)
+      setRateCardRateType(null)
+      setRateCardQuantity('1')
       setCustomForm({
         name: '',
         category: 'other',
@@ -213,6 +227,31 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
       console.error('Failed to load services:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadRateCard = async () => {
+    if (!organizationId) return
+    setRateCardLoading(true)
+    try {
+      let items = await getRateCardItems(organizationId)
+      // If no items, initialize with defaults
+      if (items.length === 0) {
+        await initializeRateCard(organizationId, DEFAULT_RATE_CARD_ITEMS)
+        items = await getRateCardItems(organizationId)
+      }
+      // Merge with defaults to ensure all items are present
+      const mergedItems = DEFAULT_RATE_CARD_ITEMS.map(defaultItem => {
+        const orgItem = items.find(item => item.id === defaultItem.id)
+        return orgItem || { ...defaultItem, organizationId }
+      })
+      setRateCardItems(mergedItems.filter(item => item.isActive !== false))
+    } catch (error) {
+      console.error('Failed to load rate card:', error)
+      // Fallback to defaults
+      setRateCardItems(DEFAULT_RATE_CARD_ITEMS.filter(item => item.isActive !== false))
+    } finally {
+      setRateCardLoading(false)
     }
   }
 
@@ -274,6 +313,85 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
       // Project-level modifiers (user adds these)
       projectModifiers: [],
       notes: ''
+    }
+
+    onAdd(projectService)
+    onClose()
+  }
+
+  const handleAddFromRateCard = () => {
+    if (!selectedRateCardItem || !rateCardRateType) return
+
+    const item = selectedRateCardItem
+    const rates = item.rates || {}
+    const rate = rates[rateCardRateType] || 0
+
+    // Map rate card categories to service categories
+    const categoryMapping = {
+      'services-consulting': 'other',
+      'services-training': 'training',
+      'services-field': 'aerial_survey',
+      'data-processing': 'data_processing',
+      'deliverables': 'other',
+      'personnel-pic': 'other',
+      'personnel-field': 'other',
+      'personnel-travel': 'other',
+      'personnel-office': 'other',
+      'mob-demob': 'other',
+      'equipment-rpas-small': 'other',
+      'equipment-rpas-medium': 'other',
+      'equipment-water': 'other',
+      'equipment-sensors': 'other',
+      'specialized': 'emergency',
+      'insurance': 'other',
+      'travel-expenses': 'other'
+    }
+
+    // Build available rates
+    const availableRates = Object.keys(rates).filter(k => rates[k] > 0)
+
+    // Determine rate type mapping
+    let selectedRateType = 'fixed'
+    if (rateCardRateType === 'day' || rateCardRateType === 'daily') selectedRateType = 'daily'
+    else if (rateCardRateType === 'hourly') selectedRateType = 'hourly'
+    else if (rateCardRateType === 'week' || rateCardRateType === 'weekly') selectedRateType = 'weekly'
+    else if (rateCardRateType === 'fixed' || rateCardRateType === 'perProject') selectedRateType = 'fixed'
+    else if (rateCardRateType.startsWith('per')) selectedRateType = 'per_unit'
+
+    const projectService = {
+      id: generateId(),
+      sourceId: item.id,
+      sourceType: 'rate-card',
+      name: item.name,
+      category: categoryMapping[item.category] || 'other',
+      description: item.description || '',
+      availableRates: availableRates.map(r => {
+        if (r === 'day' || r === 'daily') return 'daily'
+        if (r === 'hourly') return 'hourly'
+        if (r === 'week' || r === 'weekly') return 'weekly'
+        if (r === 'fixed' || r === 'perProject') return 'fixed'
+        return 'per_unit'
+      }),
+      selectedRateType,
+      quantity: selectedRateType === 'fixed' ? '' : (rateCardQuantity || '1'),
+      // Map rates
+      hourlyRate: rates.hourly || 0,
+      dailyRate: rates.day || rates.daily || 0,
+      weeklyRate: rates.week || rates.weekly || 0,
+      fixedRate: rates.fixed || rates.perProject || 0,
+      unitType: item.baseUnit || 'unit',
+      unitRate: rate,
+      baseFee: 0,
+      minimumCharge: 0,
+      deliverables: [],
+      selectedDeliverables: [],
+      projectModifiers: [],
+      notes: item.notes || '',
+      rateCardItem: {
+        id: item.id,
+        category: item.category,
+        baseUnit: item.baseUnit
+      }
     }
 
     onAdd(projectService)
@@ -356,6 +474,19 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
               From Library
             </button>
             <button
+              onClick={() => setActiveTab('rate-card')}
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'rate-card'
+                  ? 'border-aeria-navy text-aeria-navy'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1">
+                <DollarSign className="w-4 h-4" />
+                Rate Card
+              </span>
+            </button>
+            <button
               onClick={() => setActiveTab('custom')}
               className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'custom'
@@ -363,7 +494,7 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              Custom Service
+              Custom
             </button>
           </div>
 
@@ -585,6 +716,199 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
                   </div>
                 )}
               </>
+            ) : activeTab === 'rate-card' ? (
+              /* Rate Card Selection */
+              <div className="space-y-4">
+                {/* Category Filter */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setSelectedRateCardCategory(null)}
+                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                      !selectedRateCardCategory
+                        ? 'bg-aeria-navy text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {Object.entries(RATE_CARD_CATEGORIES).map(([id, cat]) => (
+                    <button
+                      key={id}
+                      onClick={() => setSelectedRateCardCategory(id)}
+                      className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                        selectedRateCardCategory === id
+                          ? 'bg-aeria-navy text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search rate card items..."
+                    className="input pl-10"
+                  />
+                </div>
+
+                {/* Rate Card Items List */}
+                <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
+                  {rateCardLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                    </div>
+                  ) : (() => {
+                    const filteredRateCard = rateCardItems.filter(item => {
+                      if (selectedRateCardCategory && item.category !== selectedRateCardCategory) return false
+                      if (!searchQuery) return true
+                      const query = searchQuery.toLowerCase()
+                      return (
+                        item.name?.toLowerCase().includes(query) ||
+                        item.description?.toLowerCase().includes(query)
+                      )
+                    })
+
+                    if (filteredRateCard.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-gray-500">
+                          No matching rate card items
+                        </div>
+                      )
+                    }
+
+                    return filteredRateCard.map(item => {
+                      const isSelected = selectedRateCardItem?.id === item.id
+                      const rates = item.rates || {}
+                      const firstRate = Object.entries(rates).find(([k, v]) => v > 0)
+
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setSelectedRateCardItem(item)
+                            // Auto-select first rate type
+                            const availableRates = Object.keys(rates).filter(k => rates[k] > 0)
+                            setRateCardRateType(availableRates[0] || null)
+                            setRateCardQuantity('1')
+                          }}
+                          className={`w-full p-3 text-left border-b border-gray-100 last:border-b-0 transition-colors ${
+                            isSelected ? 'bg-aeria-navy/5 ring-1 ring-inset ring-aeria-navy' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900">{item.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {RATE_CARD_CATEGORIES[item.category]?.name || item.category}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0 ml-3">
+                              {firstRate && (
+                                <p className="text-sm font-medium text-gray-700">
+                                  {formatCurrency(firstRate[1])}/{item.baseUnit}
+                                </p>
+                              )}
+                              {isSelected && (
+                                <Check className="w-5 h-5 text-aeria-navy mt-1 ml-auto" />
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })
+                  })()}
+                </div>
+
+                {/* Selected Rate Card Item Preview */}
+                {selectedRateCardItem && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">Selected:</p>
+                      <p className="font-medium text-gray-900">{selectedRateCardItem.name}</p>
+                      <p className="text-sm text-gray-600 mt-1">{selectedRateCardItem.description}</p>
+                    </div>
+
+                    {/* Rate Selection */}
+                    {(() => {
+                      const rates = selectedRateCardItem.rates || {}
+                      const availableRates = Object.entries(rates).filter(([k, v]) => v > 0)
+
+                      if (availableRates.length === 0) {
+                        return (
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-sm text-amber-800">Variable pricing - enter manually after adding</p>
+                          </div>
+                        )
+                      }
+
+                      return (
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-700 mb-2">Select Rate:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {availableRates.map(([rateType, rate]) => {
+                                const isSelected = rateCardRateType === rateType
+                                const displayRate = typeof rate === 'number' && rate < 10
+                                  ? `${rate}x multiplier`
+                                  : formatCurrency(rate)
+
+                                return (
+                                  <button
+                                    key={rateType}
+                                    type="button"
+                                    onClick={() => setRateCardRateType(rateType)}
+                                    className={`px-3 py-2 text-sm rounded-lg border transition-all ${
+                                      isSelected
+                                        ? 'bg-aeria-navy text-white border-aeria-navy'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                                    }`}
+                                  >
+                                    {rateType}: {displayRate}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Quantity */}
+                          {rateCardRateType && !['fixed', 'perProject'].includes(rateCardRateType) && (
+                            <div className="p-3 bg-blue-50 rounded-lg">
+                              <label className="block text-xs font-medium text-blue-800 mb-1">
+                                Quantity ({selectedRateCardItem.baseUnit})
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  value={rateCardQuantity}
+                                  onChange={(e) => setRateCardQuantity(e.target.value)}
+                                  min="0"
+                                  step="0.5"
+                                  className="input w-24"
+                                  placeholder="1"
+                                />
+                                <span className="text-sm text-blue-700">
+                                  × {formatCurrency(rates[rateCardRateType] || 0)}
+                                  {' = '}
+                                  <strong>
+                                    {formatCurrency((parseFloat(rateCardQuantity) || 0) * (rates[rateCardRateType] || 0))}
+                                  </strong>
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
+              </div>
             ) : (
               /* Custom Service Form */
               <div className="space-y-4">
@@ -690,11 +1014,19 @@ function AddServiceModal({ isOpen, onClose, onAdd, existingServiceIds = [] }) {
               Cancel
             </button>
             <button
-              onClick={activeTab === 'library' ? handleAddFromLibrary : handleAddCustom}
-              disabled={activeTab === 'library' ? (!selectedService || !selectedRateType) : !customForm.name.trim()}
+              onClick={
+                activeTab === 'library' ? handleAddFromLibrary :
+                activeTab === 'rate-card' ? handleAddFromRateCard :
+                handleAddCustom
+              }
+              disabled={
+                activeTab === 'library' ? (!selectedService || !selectedRateType) :
+                activeTab === 'rate-card' ? (!selectedRateCardItem || !rateCardRateType) :
+                !customForm.name.trim()
+              }
               className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add Service
+              {activeTab === 'rate-card' ? 'Add Line Item' : 'Add Service'}
             </button>
           </div>
         </div>
