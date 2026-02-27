@@ -92,6 +92,7 @@ const libraries = [
   { name: 'Fleet', href: '/aircraft', icon: Plane },
   { name: 'Equipment', href: '/equipment', icon: Package },
   { name: 'Services', href: '/services', icon: Briefcase },
+  { name: 'Rate Card', href: '/rate-card', icon: DollarSign },
   { name: 'Clients', href: '/clients', icon: Building2 },
   { name: 'Insurance', href: '/insurance', icon: ShieldCheck },
 ]

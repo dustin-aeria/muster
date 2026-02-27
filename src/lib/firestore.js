@@ -2108,6 +2108,213 @@ export async function getFeedbackStats(organizationId) {
 }
 
 // ============================================
+// RATE CARD FUNCTIONS
+// Organization-specific rate card management
+// ============================================
+
+/**
+ * Get organization's rate card items
+ * Returns custom rates merged with defaults
+ */
+export async function getRateCardItems(organizationId, categoryId = null) {
+  try {
+    const rateCardRef = collection(db, 'organizations', organizationId, 'rateCardItems')
+    let q = rateCardRef
+
+    if (categoryId) {
+      q = query(rateCardRef, where('category', '==', categoryId))
+    }
+
+    const snapshot = await getDocs(q)
+    const items = []
+
+    snapshot.forEach((doc) => {
+      items.push({
+        id: doc.id,
+        ...doc.data()
+      })
+    })
+
+    return items
+  } catch (error) {
+    logger.error('Error getting rate card items:', error)
+    throw error
+  }
+}
+
+/**
+ * Get a single rate card item
+ */
+export async function getRateCardItem(organizationId, itemId) {
+  try {
+    const itemRef = doc(db, 'organizations', organizationId, 'rateCardItems', itemId)
+    const snapshot = await getDoc(itemRef)
+
+    if (!snapshot.exists()) {
+      return null
+    }
+
+    return {
+      id: snapshot.id,
+      ...snapshot.data()
+    }
+  } catch (error) {
+    logger.error('Error getting rate card item:', error)
+    throw error
+  }
+}
+
+/**
+ * Create or update a rate card item
+ * Uses setDoc with merge to allow partial updates
+ */
+export async function saveRateCardItem(organizationId, itemId, data) {
+  try {
+    const itemRef = doc(db, 'organizations', organizationId, 'rateCardItems', itemId)
+
+    await setDoc(itemRef, {
+      ...data,
+      updatedAt: serverTimestamp()
+    }, { merge: true })
+
+    return { id: itemId, ...data }
+  } catch (error) {
+    logger.error('Error saving rate card item:', error)
+    throw error
+  }
+}
+
+/**
+ * Update rate for a specific item and rate type
+ */
+export async function updateRateCardRate(organizationId, itemId, rateType, rate) {
+  try {
+    const itemRef = doc(db, 'organizations', organizationId, 'rateCardItems', itemId)
+
+    await updateDoc(itemRef, {
+      [`rates.${rateType}`]: rate,
+      updatedAt: serverTimestamp()
+    })
+
+    return true
+  } catch (error) {
+    logger.error('Error updating rate card rate:', error)
+    throw error
+  }
+}
+
+/**
+ * Bulk update multiple rates at once
+ */
+export async function bulkUpdateRateCardRates(organizationId, updates) {
+  try {
+    // Updates is an array of { itemId, rateType, rate }
+    const promises = updates.map(({ itemId, rateType, rate }) =>
+      updateRateCardRate(organizationId, itemId, rateType, rate)
+    )
+
+    await Promise.all(promises)
+    return true
+  } catch (error) {
+    logger.error('Error bulk updating rate card rates:', error)
+    throw error
+  }
+}
+
+/**
+ * Initialize rate card with default items
+ * Called when organization first accesses rate card
+ */
+export async function initializeRateCard(organizationId, defaultItems) {
+  try {
+    const batch = []
+
+    for (const item of defaultItems) {
+      const itemRef = doc(db, 'organizations', organizationId, 'rateCardItems', item.id)
+
+      batch.push(
+        setDoc(itemRef, {
+          ...item,
+          organizationId,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, { merge: true })
+      )
+    }
+
+    await Promise.all(batch)
+
+    logger.info(`Initialized ${defaultItems.length} rate card items for org ${organizationId}`)
+    return true
+  } catch (error) {
+    logger.error('Error initializing rate card:', error)
+    throw error
+  }
+}
+
+/**
+ * Toggle item active status
+ */
+export async function toggleRateCardItemActive(organizationId, itemId, isActive) {
+  try {
+    const itemRef = doc(db, 'organizations', organizationId, 'rateCardItems', itemId)
+
+    await updateDoc(itemRef, {
+      isActive,
+      updatedAt: serverTimestamp()
+    })
+
+    return true
+  } catch (error) {
+    logger.error('Error toggling rate card item:', error)
+    throw error
+  }
+}
+
+/**
+ * Add a custom rate card item
+ */
+export async function addCustomRateCardItem(organizationId, data) {
+  try {
+    const rateCardRef = collection(db, 'organizations', organizationId, 'rateCardItems')
+
+    const docRef = await addDoc(rateCardRef, {
+      ...data,
+      isCustom: true,
+      organizationId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    })
+
+    return { id: docRef.id, ...data }
+  } catch (error) {
+    logger.error('Error adding custom rate card item:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete a custom rate card item
+ */
+export async function deleteCustomRateCardItem(organizationId, itemId) {
+  try {
+    const itemRef = doc(db, 'organizations', organizationId, 'rateCardItems', itemId)
+
+    // Verify it's a custom item before deleting
+    const snapshot = await getDoc(itemRef)
+    if (snapshot.exists() && !snapshot.data().isCustom) {
+      throw new Error('Cannot delete a default rate card item')
+    }
+
+    await deleteDoc(itemRef)
+    return true
+  } catch (error) {
+    logger.error('Error deleting rate card item:', error)
+    throw error
+  }
+}
+
+// ============================================
 // UTILITY EXPORTS
 // ============================================
 
