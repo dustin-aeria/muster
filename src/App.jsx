@@ -99,13 +99,6 @@ const ManufacturerDeclarationDetail = lazy(() => import('./pages/ManufacturerDec
 
 // SORA Assessment Module Pages - lazy-loaded
 const SORAHub = lazy(() => import('./pages/SORAHub'))
-
-// Phase 4: Workflows & Fillable Forms - lazy-loaded
-const FillForm = lazy(() => import('./pages/FillForm'))
-const FormSubmissions = lazy(() => import('./pages/FormSubmissions'))
-const WorkflowTasks = lazy(() => import('./pages/WorkflowTasks'))
-const Workflows = lazy(() => import('./pages/Workflows'))
-const WorkflowTemplates = lazy(() => import('./pages/WorkflowTemplates'))
 const SORADetail = lazy(() => import('./pages/SORADetail'))
 
 // Suspense fallback component
@@ -334,13 +327,6 @@ function App() {
           {/* SORA Assessment Module Routes - lazy-loaded */}
           <Route path="sora" element={<Suspense fallback={<PageLoader />}><SORAHub /></Suspense>} />
           <Route path="sora/:assessmentId" element={<Suspense fallback={<PageLoader />}><SORADetail /></Suspense>} />
-
-          {/* Phase 4: Fillable Forms & Workflows Routes - lazy-loaded */}
-          <Route path="forms/:formId/fill" element={<Suspense fallback={<PageLoader />}><FillForm /></Suspense>} />
-          <Route path="form-submissions" element={<Suspense fallback={<PageLoader />}><FormSubmissions /></Suspense>} />
-          <Route path="workflow-tasks" element={<Suspense fallback={<PageLoader />}><WorkflowTasks /></Suspense>} />
-          <Route path="workflows" element={<Suspense fallback={<PageLoader />}><Workflows /></Suspense>} />
-          <Route path="workflow-templates" element={<Suspense fallback={<PageLoader />}><WorkflowTemplates /></Suspense>} />
         </Route>
 
         {/* Catch all - redirect to dashboard */}

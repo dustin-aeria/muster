@@ -87,12 +87,6 @@ const maintenanceNavigation = [
   { name: 'Schedules', href: '/maintenance/schedules', icon: Settings },
 ]
 
-const workflowNavigation = [
-  { name: 'My Tasks', href: '/workflow-tasks', icon: CheckSquare },
-  { name: 'All Workflows', href: '/workflows', icon: GitBranch },
-  { name: 'Templates', href: '/workflow-templates', icon: ClipboardList },
-]
-
 const libraries = [
   { name: 'Operators', href: '/operators', icon: Users },
   { name: 'Fleet', href: '/aircraft', icon: Plane },
@@ -113,7 +107,6 @@ function Sidebar({ mobile, onClose }) {
   const [operatorReadyOpen, setOperatorReadyOpen] = useState(true)
   const [complianceOpen, setComplianceOpen] = useState(true)
   const [maintenanceOpen, setMaintenanceOpen] = useState(true)
-  const [workflowOpen, setWorkflowOpen] = useState(true)
 
   const handleSignOut = async () => {
     await signOut()
@@ -285,30 +278,6 @@ function Sidebar({ mobile, onClose }) {
           {maintenanceOpen && (
             <div id="maintenance-nav" className="mt-1 space-y-1">
               {maintenanceNavigation.map((item) => (
-                <NavItem key={item.name} item={item} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Workflow section */}
-        <div className="pt-4">
-          <button
-            type="button"
-            onClick={() => setWorkflowOpen(!workflowOpen)}
-            className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700"
-            aria-expanded={workflowOpen}
-            aria-controls="workflow-nav"
-          >
-            <span className="flex items-center gap-2">
-              <GitBranch className="w-4 h-4" aria-hidden="true" />
-              Workflows
-            </span>
-            <ChevronDown className={`w-4 h-4 transition-transform ${workflowOpen ? '' : '-rotate-90'}`} aria-hidden="true" />
-          </button>
-          {workflowOpen && (
-            <div id="workflow-nav" className="mt-1 space-y-1">
-              {workflowNavigation.map((item) => (
                 <NavItem key={item.name} item={item} />
               ))}
             </div>
