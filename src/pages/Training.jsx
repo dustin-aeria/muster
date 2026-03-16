@@ -4,6 +4,7 @@
  *
  * COR Element 3: Training & Instruction of Workers (10-15% weight)
  * Manages training courses, records, and compliance tracking
+ * Includes interactive training sessions with inline document viewer and flight skills
  *
  * @location src/pages/Training.jsx
  */
@@ -21,6 +22,7 @@ import {
   Plus,
   RefreshCw,
   ChevronRight,
+  ChevronDown,
   Award,
   Calendar,
   Filter,
@@ -29,7 +31,14 @@ import {
   List,
   Search,
   Eye,
-  Edit
+  Edit,
+  FileText,
+  Plane,
+  ClipboardCheck,
+  X,
+  CheckCircle2,
+  Circle,
+  Play
 } from 'lucide-react'
 
 import {
@@ -42,9 +51,166 @@ import {
 } from '../lib/firestoreTraining'
 import { exportTrainingReport } from '../lib/safetyExportService'
 import { usePermissions } from '../hooks/usePermissions'
+import { getPoliciesEnhanced } from '../lib/firestorePolicies'
 
 import TrainingCourseModal from '../components/training/TrainingCourseModal'
 import TrainingRecordModal from '../components/training/TrainingRecordModal'
+
+// ============================================
+// TRAINING TRACKS CONFIGURATION
+// ============================================
+
+const TRAINING_TRACKS = [
+  {
+    id: 'onboarding',
+    name: 'New Employee Onboarding',
+    description: 'Essential policies and procedures for new team members',
+    icon: Users,
+    color: 'bg-blue-500',
+    docTypes: ['policy', 'procedure'],
+    docCategories: ['safety', 'operations', 'hr']
+  },
+  {
+    id: 'pilot',
+    name: 'Pilot Training',
+    description: 'Flight operations training with supervisor sign-off',
+    icon: Plane,
+    color: 'bg-indigo-500',
+    docTypes: ['procedure', 'guide'],
+    docCategories: ['operations', 'safety'],
+    hasFlightSkills: true
+  },
+  {
+    id: 'field_ops',
+    name: 'Field Operations',
+    description: 'Site safety and field procedures',
+    icon: ClipboardCheck,
+    color: 'bg-green-500',
+    docTypes: ['procedure', 'fha'],
+    docCategories: ['safety', 'operations']
+  }
+]
+
+// Flight skills with descriptions and checkpoints for supervisor review
+const FLIGHT_SKILLS = [
+  {
+    id: 'preflight',
+    name: 'Pre-flight Inspection',
+    description: 'Complete walk-around and systems check before flight',
+    checkpoints: [
+      'Propellers secure, no damage',
+      'Battery charged, seated properly',
+      'Camera/gimbal operational',
+      'GPS lock confirmed',
+      'Control surfaces responsive'
+    ]
+  },
+  {
+    id: 'takeoff',
+    name: 'Takeoff Procedures',
+    description: 'Safe launch and initial climb procedures',
+    checkpoints: [
+      'Clear takeoff area verified',
+      'Wind assessment completed',
+      'Hover check at 2m altitude',
+      'System status confirmed green',
+      'Smooth vertical climb executed'
+    ]
+  },
+  {
+    id: 'navigation',
+    name: 'Basic Navigation',
+    description: 'Controlled flight patterns and waypoint navigation',
+    checkpoints: [
+      'Maintains safe altitude',
+      'Smooth directional control',
+      'Proper use of flight modes',
+      'Situational awareness maintained',
+      'Responds to telemetry data'
+    ]
+  },
+  {
+    id: 'emergency',
+    name: 'Emergency Procedures',
+    description: 'Response to in-flight emergencies and system failures',
+    checkpoints: [
+      'Knows RTH procedure',
+      'Can execute manual landing',
+      'Responds to low battery alerts',
+      'Handles signal loss protocol',
+      'Demonstrates controlled descent'
+    ]
+  },
+  {
+    id: 'landing',
+    name: 'Landing Procedures',
+    description: 'Safe approach and touchdown techniques',
+    checkpoints: [
+      'Proper approach pattern',
+      'Controlled descent rate',
+      'Hover check before landing',
+      'Smooth touchdown executed',
+      'Post-landing checks completed'
+    ]
+  },
+  {
+    id: 'postflight',
+    name: 'Post-flight Procedures',
+    description: 'Equipment securing and documentation',
+    checkpoints: [
+      'Aircraft powered down properly',
+      'Battery removed and stored',
+      'Equipment inspected for damage',
+      'Flight log completed',
+      'Data/media secured'
+    ]
+  }
+]
+
+// ============================================
+// MARKDOWN PREVIEW COMPONENT
+// ============================================
+
+function MarkdownPreview({ content }) {
+  if (!content) return <p className="text-gray-500 italic">No content available</p>
+
+  // Simple markdown to HTML converter for common patterns
+  const renderMarkdown = (text) => {
+    let html = text
+      // Headers
+      .replace(/^#### (.+)$/gm, '<h4 class="text-base font-semibold text-gray-800 mt-4 mb-2">$1</h4>')
+      .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold text-gray-900 mt-5 mb-2">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold text-gray-900 mt-6 mb-3">$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold text-gray-900 mt-6 mb-4">$1</h1>')
+      // Bold and italic
+      .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      // Bullet lists
+      .replace(/^- (.+)$/gm, '<li class="ml-4 text-gray-700">$1</li>')
+      .replace(/^• (.+)$/gm, '<li class="ml-4 text-gray-700">$1</li>')
+      // Numbered lists
+      .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 text-gray-700">$1</li>')
+      // Horizontal rules
+      .replace(/^---$/gm, '<hr class="my-4 border-gray-200" />')
+      // Line breaks
+      .replace(/\n\n/g, '</p><p class="text-gray-700 mb-3">')
+      .replace(/\n/g, '<br />')
+
+    // Wrap in paragraph if not already structured
+    if (!html.startsWith('<')) {
+      html = `<p class="text-gray-700 mb-3">${html}</p>`
+    }
+
+    return html
+  }
+
+  return (
+    <div
+      className="prose prose-sm max-w-none text-gray-700"
+      dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+    />
+  )
+}
 
 export default function Training() {
   const { user } = useAuth()
@@ -173,9 +339,85 @@ export default function Training() {
     return matchesSearch && matchesStatus
   })
 
+  // Training session state
+  const [activeSession, setActiveSession] = useState(null)
+  const [sessionDocuments, setSessionDocuments] = useState([])
+  const [expandedDoc, setExpandedDoc] = useState(null)
+  const [expandedSkill, setExpandedSkill] = useState(null)
+  const [completedDocs, setCompletedDocs] = useState(new Set())
+  const [completedSkills, setCompletedSkills] = useState(new Set())
+  const [skillSignoffs, setSkillSignoffs] = useState({})
+  const [traineeName, setTraineeName] = useState('')
+  const [supervisorName, setSupervisorName] = useState('')
+
+  // Load documents for training session
+  const loadSessionDocuments = useCallback(async (track) => {
+    try {
+      const policies = await getPoliciesEnhanced()
+      // Filter documents by track's doc types and categories
+      const filtered = policies.filter(doc => {
+        const matchesType = !track.docTypes || track.docTypes.includes(doc.doc_type || doc.category?.toLowerCase())
+        const matchesCategory = !track.docCategories || track.docCategories.some(cat =>
+          doc.category?.toLowerCase().includes(cat) || doc.keywords?.some(k => k.toLowerCase().includes(cat))
+        )
+        return matchesType || matchesCategory
+      })
+      setSessionDocuments(filtered.slice(0, 10)) // Limit to 10 docs for training
+    } catch (error) {
+      console.error('Error loading session documents:', error)
+      setSessionDocuments([])
+    }
+  }, [])
+
+  // Start training session
+  const handleStartSession = async (track) => {
+    setActiveSession(track)
+    setCompletedDocs(new Set())
+    setCompletedSkills(new Set())
+    setSkillSignoffs({})
+    setExpandedDoc(null)
+    setExpandedSkill(null)
+    await loadSessionDocuments(track)
+  }
+
+  // Complete document
+  const handleCompleteDoc = (docId) => {
+    setCompletedDocs(prev => new Set([...prev, docId]))
+    setExpandedDoc(null)
+  }
+
+  // Sign off flight skill
+  const handleSkillSignoff = (skillId) => {
+    if (!supervisorName.trim()) {
+      alert('Please enter supervisor name for sign-off')
+      return
+    }
+    setCompletedSkills(prev => new Set([...prev, skillId]))
+    setSkillSignoffs(prev => ({
+      ...prev,
+      [skillId]: {
+        supervisor: supervisorName,
+        timestamp: new Date().toISOString()
+      }
+    }))
+    setExpandedSkill(null)
+  }
+
+  // Calculate session progress
+  const getSessionProgress = () => {
+    if (!activeSession) return 0
+    const totalDocs = sessionDocuments.length
+    const totalSkills = activeSession.hasFlightSkills ? FLIGHT_SKILLS.length : 0
+    const total = totalDocs + totalSkills
+    if (total === 0) return 0
+    const completed = completedDocs.size + completedSkills.size
+    return Math.round((completed / total) * 100)
+  }
+
   // Tabs configuration
   const tabs = [
     { id: 'overview', name: 'Overview', icon: GraduationCap },
+    { id: 'sessions', name: 'Training Sessions', icon: Play },
     { id: 'courses', name: 'Courses', icon: BookOpen, count: courses.length },
     { id: 'records', name: 'Training Records', icon: Award, count: records.length }
   ]
@@ -413,6 +655,348 @@ export default function Training() {
                 })}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Training Sessions Tab */}
+        {activeTab === 'sessions' && (
+          <div className="space-y-6">
+            {!activeSession ? (
+              // Track Selection
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Training Track</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {TRAINING_TRACKS.map((track) => {
+                    const TrackIcon = track.icon
+                    return (
+                      <div
+                        key={track.id}
+                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-aeria-blue cursor-pointer transition-all group"
+                        onClick={() => handleStartSession(track)}
+                      >
+                        <div className={`w-12 h-12 ${track.color} rounded-xl flex items-center justify-center mb-4`}>
+                          <TrackIcon className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="font-semibold text-gray-900 group-hover:text-aeria-blue transition-colors">
+                          {track.name}
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">{track.description}</p>
+                        {track.hasFlightSkills && (
+                          <span className="inline-flex items-center gap-1 mt-3 px-2 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full">
+                            <Plane className="w-3 h-3" />
+                            Includes flight skills
+                          </span>
+                        )}
+                        <div className="flex items-center gap-2 mt-4 text-aeria-blue text-sm font-medium">
+                          Start Training
+                          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : (
+              // Active Training Session
+              <div>
+                {/* Session Header */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setActiveSession(null)}
+                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                      <div className={`w-10 h-10 ${activeSession.color} rounded-lg flex items-center justify-center`}>
+                        <activeSession.icon className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="font-semibold text-gray-900">{activeSession.name}</h2>
+                        <p className="text-sm text-gray-500">{activeSession.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500">Progress</p>
+                        <p className="text-xl font-bold text-aeria-blue">{getSessionProgress()}%</p>
+                      </div>
+                      <div className="w-24 h-3 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-aeria-blue rounded-full transition-all duration-300"
+                          style={{ width: `${getSessionProgress()}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trainee Name Input */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+                  <div className="flex items-center gap-4">
+                    <label className="text-sm font-medium text-gray-700 min-w-[100px]">Trainee Name:</label>
+                    <input
+                      type="text"
+                      value={traineeName}
+                      onChange={(e) => setTraineeName(e.target.value)}
+                      placeholder="Enter trainee name"
+                      className="flex-1 max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aeria-blue focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Documents Section */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                  <div className="p-4 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-gray-500" />
+                      Required Documents
+                      <span className="text-sm font-normal text-gray-500">
+                        ({completedDocs.size}/{sessionDocuments.length} completed)
+                      </span>
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {sessionDocuments.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500">
+                        <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                        <p>No documents found for this training track</p>
+                      </div>
+                    ) : (
+                      sessionDocuments.map((doc) => {
+                        const isCompleted = completedDocs.has(doc.id)
+                        const isExpanded = expandedDoc === doc.id
+
+                        return (
+                          <div key={doc.id} className="transition-all">
+                            {/* Document Card */}
+                            <div
+                              className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                                isCompleted ? 'bg-green-50' : ''
+                              }`}
+                              onClick={() => setExpandedDoc(isExpanded ? null : doc.id)}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className={`flex-shrink-0 ${isCompleted ? 'text-green-500' : 'text-gray-300'}`}>
+                                  {isCompleted ? (
+                                    <CheckCircle2 className="w-6 h-6" />
+                                  ) : (
+                                    <Circle className="w-6 h-6" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className={`font-medium ${isCompleted ? 'text-green-700' : 'text-gray-900'}`}>
+                                      {doc.title || doc.number}
+                                    </h4>
+                                    {doc.doc_type && (
+                                      <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                                        {doc.doc_type}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-500 line-clamp-1">
+                                    {doc.description || 'Click to read document'}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isCompleted ? (
+                                    <span className="text-sm text-green-600 font-medium">Completed</span>
+                                  ) : (
+                                    <span className="text-sm text-gray-400">Click to read</span>
+                                  )}
+                                  {isExpanded ? (
+                                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                                  ) : (
+                                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Expanded Document Content */}
+                            {isExpanded && (
+                              <div className="px-4 pb-4 animate-in slide-in-from-top-2">
+                                <div className="ml-10 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                  <div className="max-h-96 overflow-y-auto mb-4">
+                                    <MarkdownPreview content={doc.content} />
+                                  </div>
+                                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setExpandedDoc(null)
+                                      }}
+                                      className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                    >
+                                      Collapse
+                                    </button>
+                                    {!isCompleted && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleCompleteDoc(doc.id)
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                      >
+                                        <CheckCircle className="w-4 h-4" />
+                                        Mark Complete
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Flight Skills Section */}
+                {activeSession.hasFlightSkills && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div className="p-4 border-b border-gray-200">
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <Plane className="w-5 h-5 text-indigo-500" />
+                        Flight Skills
+                        <span className="text-sm font-normal text-gray-500">
+                          ({completedSkills.size}/{FLIGHT_SKILLS.length} signed off)
+                        </span>
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">Requires supervisor observation and sign-off</p>
+                    </div>
+
+                    {/* Supervisor Name Input */}
+                    <div className="p-4 border-b border-gray-100 bg-indigo-50">
+                      <div className="flex items-center gap-4">
+                        <label className="text-sm font-medium text-indigo-700 min-w-[120px]">Supervisor Name:</label>
+                        <input
+                          type="text"
+                          value={supervisorName}
+                          onChange={(e) => setSupervisorName(e.target.value)}
+                          placeholder="Enter supervisor name for sign-off"
+                          className="flex-1 max-w-xs px-3 py-2 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="divide-y divide-gray-100">
+                      {FLIGHT_SKILLS.map((skill) => {
+                        const isCompleted = completedSkills.has(skill.id)
+                        const isExpanded = expandedSkill === skill.id
+                        const signoff = skillSignoffs[skill.id]
+
+                        return (
+                          <div key={skill.id} className="transition-all">
+                            {/* Skill Card */}
+                            <div
+                              className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                                isCompleted ? 'bg-green-50' : ''
+                              }`}
+                              onClick={() => setExpandedSkill(isExpanded ? null : skill.id)}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className={`flex-shrink-0 ${isCompleted ? 'text-green-500' : 'text-gray-300'}`}>
+                                  {isCompleted ? (
+                                    <CheckCircle2 className="w-6 h-6" />
+                                  ) : (
+                                    <Circle className="w-6 h-6" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className={`font-medium ${isCompleted ? 'text-green-700' : 'text-gray-900'}`}>
+                                    {skill.name}
+                                  </h4>
+                                  <p className="text-sm text-gray-500">{skill.description}</p>
+                                  {isCompleted && signoff && (
+                                    <p className="text-xs text-green-600 mt-1">
+                                      Signed off by {signoff.supervisor} on {new Date(signoff.timestamp).toLocaleDateString()}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isCompleted ? (
+                                    <span className="text-sm text-green-600 font-medium">Signed Off</span>
+                                  ) : (
+                                    <span className="text-sm text-gray-400">Review checkpoints</span>
+                                  )}
+                                  {isExpanded ? (
+                                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                                  ) : (
+                                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Expanded Skill Checkpoints */}
+                            {isExpanded && (
+                              <div className="px-4 pb-4 animate-in slide-in-from-top-2">
+                                <div className="ml-10 bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                                  <h5 className="font-medium text-indigo-900 mb-3">Observer Checkpoints</h5>
+                                  <ul className="space-y-2 mb-4">
+                                    {skill.checkpoints.map((checkpoint, idx) => (
+                                      <li key={idx} className="flex items-start gap-2 text-sm text-indigo-800">
+                                        <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-indigo-400" />
+                                        {checkpoint}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  <div className="flex items-center justify-between pt-4 border-t border-indigo-200">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setExpandedSkill(null)
+                                      }}
+                                      className="px-4 py-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
+                                    >
+                                      Collapse
+                                    </button>
+                                    {!isCompleted && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleSkillSignoff(skill.id)
+                                        }}
+                                        disabled={!supervisorName.trim()}
+                                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        <Award className="w-4 h-4" />
+                                        Sign Off Skill
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Completion Summary */}
+                {getSessionProgress() === 100 && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-6 mt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-green-100 rounded-full">
+                        <Award className="w-8 h-8 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-green-900">Training Complete!</h3>
+                        <p className="text-green-700">
+                          {traineeName ? `${traineeName} has` : 'Trainee has'} successfully completed all requirements for {activeSession.name}.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
